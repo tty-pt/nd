@@ -2,6 +2,7 @@
 #include <string.h>
 /* #include <strings.h> */
 #include <ctype.h>
+#include <stdlib.h>
 
 
 #define HRULE_TEXT "----------------------------------------------------------------------------"
@@ -47,11 +48,12 @@ const char* doccmd = "";
 char *
 string_dup(const char *s)
 {
+	unsigned l = strlen(s) + 1;
 	char *p;
 
-	p = (char *) malloc(strlen(s) + 1);
+	p = (char *) malloc(l);
 	if (p)
-		strcpy(p, s);  /* Guaranteed enough space. */
+		memcpy(p, s, l);
 	return p;
 }
 
@@ -483,8 +485,8 @@ find_topics(FILE * infile)
 					strcpyn(sect, sizeof(sect), (buf + 10));
 					add_section(sect);
 				} else if (!strncmp(buf, "~~title ", 8)) {
-					buf[strlen(buf) - 1] = '\0';
-					title = string_dup(buf+8);
+					buf[strlen(buf) - 1] = '\0'; // omg?
+					title = string_dup(&buf[8]);
 				} else if (!strncmp(buf, "~~author ", 9)) {
 					buf[strlen(buf) - 1] = '\0';
 					author = string_dup(buf+9);

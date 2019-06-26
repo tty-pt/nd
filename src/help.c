@@ -198,7 +198,7 @@ index_file(dbref player, const char *onwhat, const char *file)
 				found = 0;
 				buf[strlen(buf) - 1] = '|';
 				while (*p && !found) {
-					if (strncasecmp(p, topic, arglen)) {
+					if (strncmp(p, topic, arglen)) {
 						while (*p && (*p != '|'))
 							p++;
 						if (*p)

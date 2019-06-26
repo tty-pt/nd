@@ -453,6 +453,22 @@ get_property_value(dbref player, const char *pname)
 	}
 }
 
+int
+get_property_hash(dbref player, const char *pname, int idx)
+{
+	char buf[BUFSIZ];
+	snprintf(buf, sizeof(buf), "%s/%d", pname, idx);
+	return get_property_value(player, buf);
+}
+
+const char *
+get_property_mark(dbref player, const char *pname, char mark)
+{
+	char buf[BUFSIZ];
+	snprintf(buf, sizeof(buf), "%s/%c", pname, mark);
+	return get_property_class(player, buf);
+}
+
 /* return float value of a property */
 double
 get_property_fvalue(dbref player, const char *pname)

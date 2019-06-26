@@ -76,6 +76,15 @@ unparse_flags(dbref thing)
 	return buf;
 }
 
+static const char *rarity_str[] = {
+	ANSI_BOLD ANSI_FG_BLACK "Poor" ANSI_RESET,
+	"",
+	ANSI_BOLD "Uncommon" ANSI_RESET,
+	ANSI_BOLD ANSI_FG_CYAN "Rare" ANSI_RESET,
+	ANSI_BOLD ANSI_FG_GREEN "Epic" ANSI_RESET,
+	ANSI_BOLD ANSI_FG_MAGENTA "Mythical" ANSI_RESET
+};
+
 const char *
 unparse_object(dbref player, dbref loc)
 {
@@ -96,17 +105,28 @@ islog:
 		if (loc < 0 || loc >= db_top)
 			return "*INVALID*";
 
+		char *s = buf;
+		unsigned n = GETSTACK(loc);
+		if (n)
+			s += snprintf(s, sizeof(buf), "(%ux) ", n);
+
+		if (GETEQW(loc)) {
+			n = GETRARE(loc);
+
+			if (n != 1)
+				s += snprintf(s, sizeof(buf) - (s - buf), "(%s) ", rarity_str[n]);
+		}
+
+		s += snprintf(s, sizeof(buf) - (s - buf), "%.*s", (BUFFER_LEN / 2), NAME(loc));
+
 		if ((player == NOTHING) || (!(FLAGS(player) & STICKY) &&
 			(can_link_to(player, NOTYPE, loc) ||
 			 ((Typeof(loc) != TYPE_PLAYER) &&
-			  (controls_link(player, loc) || (FLAGS(loc) & CHOWN_OK)))))) {
-			/* show everything */
-			snprintf(buf, sizeof(buf), "%.*s(#%d%s)", (BUFFER_LEN / 2), NAME(loc), loc, unparse_flags(loc));
-			return buf;
-		} else {
-			/* show only the name */
-			return NAME(loc);
-		}
+			  (controls_link(player, loc) || (FLAGS(loc) & CHOWN_OK))))))
+
+			snprintf(s, sizeof(buf) - (s - buf), "(#%d%s)", loc, unparse_flags(loc));
+
+		return buf;
 	}
 }
 

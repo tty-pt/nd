@@ -1,0 +1,52 @@
+.EQ
+lpile {
+  rare_max = 6 above
+  g(x) = x sup { 1 over 3 } above
+  dmg_g(x) = def_g(x) = spell_g(x) = dodge_g(x) = g(x) above
+  dmg_base(p) = dmg_g(getstat(p, STR)) above
+  dodge_base(p) = dodge_g(getstat(p, DEX)) above
+  spell_dmg_base(p) = spell_g(getstat(p, INT)) above
+  mp_g(x) = hp_g(x) = g(x) times 10 above
+  hp_max(p) = hp_g(getstat(p, CON)) above
+  mp_max(p) = mp_g(getstat(p, INT))
+}
+.EN
+
+TODO do something about helmet protecting as much as chest
+
+.EQ
+lpile {
+  msra(ms, ra, g) = { g(ms) times (ra + 1) } over rare_max above
+
+  ie(x, g) = msra(getmsv(x), getrare(x), g) above
+  dmg_weapon(x) = ie(x, dmg_g) above
+  def_armor(x) = { ie(x, def_g) } over aux(x) above
+  dodge_armor(def) = def over 4 above
+
+  hs(sp) = msra(sp.ms, sp.ra, spell_g) above
+  spell_dmg(p, sp) = spell_dmg_base(p) + hs(sp) above
+  spell_cost(dmg, y) = dmg times ( 1 + 1 over 2 sup y ) above
+  buf_duration(ra) = 20 { rare_max - ra } over rare_max above
+  buf_dmg(p, sp) = { spell_dmg(p, sp) } over buf_duration(sp)
+}
+.EN
+
+.ce
+Damage is actually stored and changed on equip and unequip. These are here for reference.
+
+.EQ
+lpile {
+  eqd(p, eql) = def_armor(geteq(p, eql)) above
+  def(p) = eqd(p, HEAD) + eqd(p, CHEST) + eqd(p, PANTS) above
+  dmg(p) = dmg_base(p) + dmg_weapon(geteq(p, RHAND)) - def(target(p)) above
+  btf(p, t) = sum from { i = 0 } to 8 left {
+  matrix{
+    lcol{ buf_dmg(p, buf_spell(p, buf(p, i))) above 0 }
+    lcol{ buf_type(p, i) roman{"=="} t above roman{"else"} }
+  } above
+  mdef(p) = btf(p, DEBUF_C_DEFENSE) above
+  mdmg(p) = btf(p, DEBUF_C_DMG) - mdef(target(p)) above
+  da(p, eql) = dodge_armor(geteq(p, eql)) above
+  dodge(p) = lpile { dodge_base(p) - da(p, HEAD) - da(p, CHEST) - above da(p, PANTS) + btf(p, DEBUF_C_DODGE) }
+}
+.EN

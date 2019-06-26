@@ -272,6 +272,10 @@ could_doit(int descr, dbref player, dbref thing)
 		source = DBFETCH(player)->location;
 		dest = *(DBFETCH(thing)->sp.exit.dest);
 
+		// FIXME
+		if (dest == NOTHING)
+			return 1;
+
 		if (Typeof(dest) == TYPE_PLAYER) {
 			/* Check for additional restrictions related to player dests */
 			dbref destplayer = dest;
@@ -346,8 +350,13 @@ can_doit(int descr, dbref player, dbref thing, const char *default_fail_msg)
 {
 	dbref loc;
 
+	if (thing != NOTHING && Typeof(thing) == TYPE_EXIT
+	    && DBFETCH(thing)->sp.exit.ndest == 0) {
+		return 1;
+	}
 	if ((loc = getloc(player)) == NOTHING)
-		return 0;
+		return 1; // FIXME
+		/* return geo_can_01(descr, player, thing); */
 
 	if (!Wizard(OWNER(player)) && Typeof(player) == TYPE_THING &&
 			(FLAGS(thing) & ZOMBIE)) {

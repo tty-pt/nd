@@ -25,6 +25,7 @@
 #include "match.h"
 #include "externs.h"
 #include "fbstrings.h"
+#include "geography.h"
 
 void
 do_teleport(int descr, dbref player, const char *arg1, const char *arg2)
@@ -130,8 +131,7 @@ do_teleport(int descr, dbref player, const char *arg1, const char *arg2)
 				break;
 			}
 			notify(victim, "You feel a wrenching sensation...");
-			enter_room(descr, victim, destination, DBFETCH(victim)->location);
-			notify(player, "Teleported.");
+			enter_room(descr, victim, destination, DBFETCH(victim)->location, 1);
 			break;
 		case TYPE_THING:
 			if (parent_loop_check(victim, destination)) {
@@ -156,7 +156,7 @@ do_teleport(int descr, dbref player, const char *arg1, const char *arg2)
 				&& !(FLAGS(destination) & STICKY))
 						destination = DBFETCH(destination)->sp.room.dropto;
 			if (tp_thing_movement && (Typeof(victim) == TYPE_THING)) {
-				enter_room(descr, victim, destination, DBFETCH(victim)->location);
+				enter_room(descr, victim, destination, DBFETCH(victim)->location, 1);
 			} else {
 				moveto(victim, destination);
 			}
@@ -815,6 +815,7 @@ do_pcreate(dbref player, const char *user, const char *password)
 		notify(player, "Create failed.");
 	} else {
 		log_status("PCREATED %s(%d) by %s(%d)", NAME(newguy), newguy, NAME(player), player);
+		_do_advitam(newguy, getloc(player));
 		snprintf(buf, sizeof(buf), "Player %s created as object #%d.", user, newguy);
 		notify(player, buf);
 	}

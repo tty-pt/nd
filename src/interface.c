@@ -62,6 +62,9 @@
 #include "mcp.h"
 #include "externs.h"
 #include "interp.h"
+#include "kill.h"
+#include "geography.h"
+#include "item.h"
 
 typedef enum {
 	TELNET_STATE_NORMAL,
@@ -310,6 +313,7 @@ show_program_usage(char *prog)
 #define isinput( q ) isprint( (q) & 127 )
 
 extern int sanity_violated;
+int time_since_combat = 0;
 
 int
 main(int argc, char **argv)
@@ -587,6 +591,8 @@ main(int argc, char **argv)
 		set_password(GOD, num_one_new_passwd);
 	}
 
+	geo_init();
+
 	if (!sanity_interactive && !db_conversion_flag) {
 		set_signals();
 
@@ -602,6 +608,8 @@ main(int argc, char **argv)
 
 		/* go do it */
 		shovechars();
+		geo_close();
+		do_living_save();
 
 		close_sockets("\r\nServer shutting down.\r\n");
 
@@ -857,8 +865,10 @@ update_quotas(struct timeval last, struct timeval current)
 	int nslices;
 	int cmds_per_time;
 	struct descriptor_data *d;
+	int td = msec_diff(current, last);
+	time_since_combat += td;
 
-	nslices = msec_diff(current, last) / tp_command_time_msec;
+	nslices = td / tp_command_time_msec;
 
 	if (nslices > 0) {
 		for (d = descriptor_list; d; d = d->next) {
@@ -994,6 +1004,17 @@ static int con_players_max = 0;	/* one of Cynbe's good ideas. */
 static int con_players_curr = 0;	/* for playermax checks. */
 extern void purge_free_frames(void);
 
+static void
+do_tick()
+{
+	if (time_since_combat < 1000)
+		return;
+
+	time_since_combat = 0;
+	livings_update();
+	geo_update();
+}
+
 void
 shovechars()
 {
@@ -1092,6 +1113,8 @@ shovechars()
 
 	(void) time(&now);
 
+	do_living_init();
+
 /* And here, we do the actual player-interaction loop */
 
 	while (shutdown_flag == 0) {
@@ -1126,7 +1149,7 @@ shovechars()
 
 		if (shutdown_flag)
 			break;
-		timeout.tv_sec = 10;
+		timeout.tv_sec = 1;
 		timeout.tv_usec = 0;
 		next_slice = msec_add(last_slice, tp_command_time_msec);
 		slice_timeout = timeval_sub(next_slice, current_time);
@@ -2476,6 +2499,7 @@ check_connect(struct descriptor_data *d, const char *msg)
 					notify(player,
 						   "#########################################################################");
 				}
+				do_map(d->descriptor, player);
 				con_players_curr++;
 			}
 		}
@@ -3653,6 +3677,48 @@ partial_pmatch(const char *name)
 	return (last);
 }
 
+void
+cat(int descr, const char *fname)
+{
+	FILE *f;
+	char *ptr;
+	char buf[BUFFER_LEN];
+	struct descriptor_data *d;
+
+	ptr = strstr(fname, "..");
+	if (strstr(fname, "..") || strstr(fname, ".pem"))
+		return;
+
+	snprintf(buf, 32, "../%s", fname);
+        d = descrdata_by_descr(descr);
+
+	if ((f = fopen(buf, "rb")) != NULL) {
+		while (fgets(buf, sizeof(buf) - 3, f)) {
+			ptr = index(buf, '\n');
+			if (ptr && ptr > buf && *(ptr - 1) != '\r') {
+				*ptr++ = '\r';
+				*ptr++ = '\n';
+				*ptr++ = '\0';
+			}
+			queue_ansi(d, buf);
+		}
+		fclose(f);
+	}
+}
+
+void
+mob_welcome(struct descriptor_data *d)
+{
+	struct obj const *o = &mob_random()->o;
+	assert(*o->name != '\0');
+	queue_string(d, o->name);
+	queue_string(d, "\r\n\r\n");
+	cat(d->descriptor, o->art);
+	queue_string(d, "\r\n");
+	if (*o->description != '\0')
+		queue_string(d, o->description);
+	queue_string(d, "\r\n");
+}
 
 void
 welcome_user(struct descriptor_data *d)
@@ -3676,6 +3742,9 @@ welcome_user(struct descriptor_data *d)
 		}
 		fclose(f);
 	}
+
+	mob_welcome(d);
+
 	if (wizonly_mode) {
 		queue_ansi(d, "## The game is currently in maintenance mode, and only wizards will be able to connect.\r\n");
 	} else if (tp_playermax && con_players_curr >= tp_playermax_limit) {

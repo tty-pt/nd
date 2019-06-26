@@ -68,10 +68,10 @@
 
 /* magic command cookies (oh me, oh my!) */
 
-#define SAY_TOKEN '"'
-#define POSE_TOKEN ':'
+#define SAY_TOKEN '\''
+#define POSE_TOKEN ';'
 #define OVERIDE_TOKEN '!'
-
+#define COMMAND_TOKEN ':'
 
 /* @edit'or stuff */
 
@@ -113,6 +113,9 @@
 #define ANSI_FLASH	"\033[5m"
 #define ANSI_REVERSE	"\033[7m"
 #define ANSI_OSTRIKE	"\033[9m"
+
+/* #define ANSI_RESET_BOLD	"\033[21m" */
+#define ANSI_RESET_BOLD	ANSI_DIM
 
 #define ANSI_FG_BLACK	"\033[30m"
 #define ANSI_FG_RED	"\033[31m"

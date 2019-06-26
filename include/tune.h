@@ -130,7 +130,6 @@ extern int tp_diskbase_propvals;
 extern int tp_idleboot;
 extern int tp_playermax;
 extern int tp_allow_home;
-extern int tp_enable_prefix;
 extern int tp_enable_match_yield;
 extern int tp_idle_ping_enable;
 extern int tp_thing_movement;

@@ -13,7 +13,7 @@ LDFLAGS = -L/usr/local/lib -L/usr/lib ${libs-y}
 CFLAGS := -g -Wall -Wno-initializer-overrides -I${INCLUDE} \
 	-I/usr/include -I/usr/local/include
 
-obj-y := crt_malloc.o geometry.o noise.o geography.o item.o kill.o shop.o sit.o \
+obj-y := crt_malloc.o geometry.o noise.o geography.o item.o kill.o shop.o \
         array.o boolexp.o compile.o create.o db.o db_header.o debugger.o \
 	disassem.o diskprop.o edit.o events.o game.o hashtab.o help.o inst.o \
 	interp.o log.o look.o match.o mcp.o mcpgui.o mcppkgs.o mfuns2.o \
@@ -37,8 +37,8 @@ version.o: version.h version.c
 version.h:
 	{ \
 		DATE=`date` ; git=${srcdir}/.git ; \
-		HASH=`git branch -v | awk '{ print $$3 }'` ; \
-		printf "#define HASH \"$$HASH\"\n#define DATE \"$$DATE\"" ; \
+		HASH=`git branch -v | head -n1 | awk '{ print $$3 }'` ; \
+		printf "#define HASH \"$$HASH\"\n#define DATE \"$$DATE\"\n" ; \
 	} > $@
 
 fbmuck: ${obj-y}

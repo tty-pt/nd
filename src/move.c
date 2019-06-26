@@ -11,6 +11,8 @@
 #include "match.h"
 #include "externs.h"
 #include "fb.h"
+#include "geography.h"
+#include "item.h"
 
 void
 moveto(dbref what, dbref where)
@@ -108,7 +110,7 @@ send_contents(int descr, dbref loc, dbref dest)
 			if (tp_thing_movement && (Typeof(first) == TYPE_THING)) {
 				enter_room(descr, first,
 						   parent_loop_check(first, where) ? loc : where,
-						   DBFETCH(first)->location);
+						   DBFETCH(first)->location, 1);
 			} else {
 				moveto(first, parent_loop_check(first, where) ? loc : where);
 			}
@@ -163,6 +165,10 @@ location_loop_check(dbref source, dbref dest)
   if (source == dest) {
     return 1;
   }
+
+  if (dest == NOTHING)
+	  return 0;
+
   pstack[0] = source;
   pstack[1] = dest;
 
@@ -252,7 +258,7 @@ parent_loop_check(dbref source, dbref dest)
 
 static int donelook = 0;
 void
-enter_room(int descr, dbref player, dbref loc, dbref exit)
+enter_room(int descr, dbref player, dbref loc, dbref exit, int drmap)
 {
 	dbref old;
 	dbref dropto;
@@ -287,13 +293,20 @@ enter_room(int descr, dbref player, dbref loc, dbref exit)
 	  }
 	}
 
+	if (exit >= 0 && Typeof(exit) == TYPE_EXIT && geo_is(exit)
+	    && door_auto_open(descr, player, exit))
+		loc = old;
+
 	/* check for self-loop */
 	/* self-loops don't do move or other player notification */
 	/* but you still get autolook and penny check */
 	if (loc != old) {
-
+		do_stand_silent(player);
 		/* go there */
 		moveto(player, loc);
+
+		if (exit >= 0 && Typeof(exit) == TYPE_EXIT && geo_is(exit))
+			notify_fmt(player, "You go %s.", geo_expand(NAME(exit)[0]));
 
 		if (old != NOTHING) {
 			propqueue(descr, player, old, exit, player, NOTHING, "_depart", "Depart", 1, 1);
@@ -303,10 +316,10 @@ enter_room(int descr, dbref player, dbref loc, dbref exit)
 			envpropqueue(descr, player, old, exit, old, NOTHING, "_odepart", "Odepart", 1, 0);
 
 			/* notify others unless DARK */
-			if (!Dark(old) && !Dark(player) &&
+			if (exit == NOTHING || (!Dark(old) && !Dark(player) &&
 				((Typeof(player) != TYPE_THING) ||
 				 ((Typeof(player) == TYPE_THING) && (FLAGS(player) & (ZOMBIE | VEHICLE))))
-				&& (Typeof(exit) != TYPE_EXIT || !Dark(exit))) {
+				&& (Typeof(exit) != TYPE_EXIT || !Dark(exit)))) {
 #if !defined(QUIET_MOVES)
 				snprintf(buf, sizeof(buf), "%s has left.", NAME(player));
 				notify_except(DBFETCH(old)->contents, player, buf, player);
@@ -320,17 +333,27 @@ enter_room(int descr, dbref player, dbref loc, dbref exit)
 			maybe_dropto(descr, old, dropto);
 		}
 
+		untmp_clean(descr, player, old);
+
 		/* tell other folks in new location if not DARK */
-		if (!Dark(loc) && !Dark(player) &&
-			((Typeof(player) != TYPE_THING) ||
+		if (loc != NOTHING && !Dark(loc) && !Dark(player) &&
+			 ((Typeof(player) != TYPE_THING) ||
 			 ((Typeof(player) == TYPE_THING) && (FLAGS(player) & (ZOMBIE | VEHICLE))))
-			&& (Typeof(exit) != TYPE_EXIT || !Dark(exit))) {
+			&& (exit == NOTHING || Typeof(exit) != TYPE_EXIT || !Dark(exit))) {
 #if !defined(QUIET_MOVES)
 			snprintf(buf, sizeof(buf), "%s has arrived.", NAME(player));
 			notify_except(DBFETCH(loc)->contents, player, buf, player);
 #endif
 		}
+
+		if (exit >= 0 && Typeof(exit) == TYPE_EXIT && geo_is(exit) && GETDOOR(exit))
+			door_auto_close(descr, player, exit);
+
+		mobs_aggro(descr, player);
 	}
+
+
+
 	/* autolook */
 	if ((Typeof(player) != TYPE_THING) ||
 		((Typeof(player) == TYPE_THING) && (FLAGS(player) & (ZOMBIE | VEHICLE)))) {
@@ -345,6 +368,9 @@ enter_room(int descr, dbref player, dbref loc, dbref exit)
 		} else {
 			notify(player, "Look aborted because of look action loop.");
 		}
+
+		if (drmap)
+			do_map(descr, player);
 	}
 
 	if (tp_penny_rate != 0) {
@@ -372,13 +398,13 @@ send_home(int descr, dbref thing, int puppethome)
 		/* send his possessions home first! */
 		/* that way he sees them when he arrives */
 		send_contents(descr, thing, HOME);
-		enter_room(descr, thing, PLAYER_HOME(thing), DBFETCH(thing)->location);
+		enter_room(descr, thing, PLAYER_HOME(thing), DBFETCH(thing)->location, 1);
 		break;
 	case TYPE_THING:
 		if (puppethome)
 			send_contents(descr, thing, HOME);
 		if (tp_thing_movement || (FLAGS(thing) & (ZOMBIE | LISTENER))) {
-			enter_room(descr, thing, PLAYER_HOME(thing), DBFETCH(thing)->location);
+			enter_room(descr, thing, PLAYER_HOME(thing), DBFETCH(thing)->location, 1);
 			break;
 		}
 		moveto(thing, HOME);	/* home */
@@ -449,6 +475,15 @@ trigger(int descr, dbref player, dbref exit, int pflag)
 				continue;
 			}
 		}
+
+		if (dest == NOTHING) {
+			dbref aux;
+			geo_enter_room(&aux, descr, player, exit, 1, 0);
+			do_map(descr, player);
+			succ = 1;
+			continue;
+		}
+
 		switch (Typeof(dest)) {
 		case TYPE_ROOM:
 			if (pflag) {
@@ -471,7 +506,8 @@ trigger(int descr, dbref player, dbref exit, int pflag)
 					parse_oprop(descr, player, dest, exit, MESGPROP_ODROP,
 								   NAME(player), "(@Odrop)");
 				}
-				enter_room(descr, player, dest, exit);
+				if (geo_is(exit))
+					enter_room(descr, player, dest, exit, 1);
 				succ = 1;
 			}
 			break;
@@ -488,7 +524,7 @@ trigger(int descr, dbref player, dbref exit, int pflag)
 						parse_oprop(descr, player, dest, exit, MESGPROP_ODROP,
 									   NAME(player), "(@Odrop)");
 					}
-					enter_room(descr, player, dest, exit);
+					enter_room(descr, player, dest, exit, 1);
 					succ = 1;
 				}
 			} else {
@@ -499,7 +535,7 @@ trigger(int descr, dbref player, dbref exit, int pflag)
 					}
 					if (tp_thing_movement) {
 						enter_room(descr, dest, DBFETCH(DBFETCH(exit)->location)->location,
-								   exit);
+								   exit, 1);
 					} else {
 						moveto(dest, DBFETCH(DBFETCH(exit)->location)->location);
 					}
@@ -513,7 +549,7 @@ trigger(int descr, dbref player, dbref exit, int pflag)
 						break;
 					}
 					if (tp_thing_movement) {
-						enter_room(descr, dest, DBFETCH(exit)->location, exit);
+						enter_room(descr, dest, DBFETCH(exit)->location, exit, 1);
 					} else {
 						moveto(dest, DBFETCH(exit)->location);
 					}
@@ -543,7 +579,7 @@ trigger(int descr, dbref player, dbref exit, int pflag)
 						parse_oprop(descr, player, getloc(dest), exit,
 									   MESGPROP_ODROP, NAME(player), "(@Odrop)");
 					}
-					enter_room(descr, player, DBFETCH(dest)->location, exit);
+					enter_room(descr, player, DBFETCH(dest)->location, exit, 1);
 				} else {
 					notify(player, "That player does not wish to be disturbed.");
 				}
@@ -581,10 +617,6 @@ do_move(int descr, dbref player, const char *direction, int lev)
 			notify_except(DBFETCH(loc)->contents, player, buf, player);
 		}
 		/* give the player the messages */
-		notify(player, "There's no place like home...");
-		notify(player, "There's no place like home...");
-		notify(player, "There's no place like home...");
-		notify(player, "You wake up back home, without your possessions.");
 		send_home(descr, player, 1);
 	} else {
 		/* find the exit */
@@ -603,9 +635,11 @@ do_move(int descr, dbref player, const char *direction, int lev)
 			/* check to see if we got through */
 			ts_useobject(exit);
 			loc = DBFETCH(player)->location;
-			if (can_doit(descr, player, exit, "You can't go that way.")) {
-				trigger(descr, player, exit, 1);
-			}
+
+			if (!can_doit(descr, player, exit, "You can't go that way."))
+				break;
+
+			trigger(descr, player, exit, 1);
 			break;
 		}
 	}
@@ -648,7 +682,7 @@ do_leave(int descr, dbref player)
 	}
 
 	notify(player, "You exit the vehicle.");
-	enter_room(descr, player, dest, loc);
+	enter_room(descr, player, dest, loc, 1);
 }
 
 
@@ -717,7 +751,7 @@ do_get(int descr, dbref player, const char *what, const char *obj)
 			}
 			if (cando) {
 				if (tp_thing_movement && (Typeof(thing) == TYPE_THING)) {
-					enter_room(descr, thing, player, DBFETCH(thing)->location);
+					enter_room(descr, thing, player, DBFETCH(thing)->location, 1);
 				} else {
 					moveto(thing, player);
 				}
@@ -792,7 +826,7 @@ do_drop(int descr, dbref player, const char *name, const char *obj)
 
 			if (tp_thing_movement && (Typeof(thing) == TYPE_THING)) {
 				enter_room(descr, thing,
-						   immediate_dropto ? DBFETCH(cont)->sp.room.dropto : cont, player);
+						   immediate_dropto ? DBFETCH(cont)->sp.room.dropto : cont, player, 1);
 			} else {
 				moveto(thing, immediate_dropto ? DBFETCH(cont)->sp.room.dropto : cont);
 			}
@@ -1108,7 +1142,7 @@ recycle(int descr, dbref player, dbref thing)
 			(Typeof(first) == TYPE_THING &&
 			 (FLAGS(first) & (ZOMBIE | VEHICLE) || tp_thing_movement))
 		) {
-			enter_room(descr, first, HOME, DBFETCH(thing)->location);
+			enter_room(descr, first, HOME, DBFETCH(thing)->location, 1);
 			/* If the room is set to drag players back, there'll be no
 			 * reasoning with it.  DRAG the player out.
 			 */
@@ -1122,6 +1156,7 @@ recycle(int descr, dbref player, dbref thing)
 	}
 
 
+	geo_delete(thing);
 	moveto(thing, NOTHING);
 
 	depth--;

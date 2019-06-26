@@ -4,7 +4,7 @@
 #include "copyright.h"
 #include "config.h"
 
-/* rob and kill */
+/* rob and give */
 
 #include "db.h"
 #include "props.h"
@@ -58,102 +58,6 @@ do_rob(int descr, dbref player, const char *what)
 			notify(thing, buf);
 		}
 		break;
-	}
-}
-
-void
-do_kill(int descr, dbref player, const char *what, int cost)
-{
-	dbref victim;
-	char buf[BUFFER_LEN];
-	struct match_data md;
-
-	init_match(descr, player, what, TYPE_PLAYER, &md);
-	match_neighbor(&md);
-	match_me(&md);
-	if (Wizard(OWNER(player))) {
-		match_player(&md);
-		match_absolute(&md);
-	}
-	victim = match_result(&md);
-
-	switch (victim) {
-	case NOTHING:
-		notify(player, "I don't see that player here.");
-		break;
-	case AMBIGUOUS:
-		notify(player, "I don't know who you mean!");
-		break;
-	default:
-		if (Typeof(victim) != TYPE_PLAYER) {
-			notify(player, "Sorry, you can only kill other players.");
-		} else {
-			/* go for it */
-			/* set cost */
-			if (cost < tp_kill_min_cost)
-				cost = tp_kill_min_cost;
-
-			if (FLAGS(DBFETCH(player)->location) & HAVEN) {
-				notify(player, "You can't kill anyone here!");
-				break;
-			}
-
-			if (tp_restrict_kill) {
-				if (!(FLAGS(player) & KILL_OK)) {
-					notify(player, "You have to be set Kill_OK to kill someone.");
-					break;
-				}
-				if (!(FLAGS(victim) & KILL_OK)) {
-					notify(player, "They don't want to be killed.");
-					break;
-				}
-			}
-
-			/* see if it works */
-			if (!payfor(player, cost)) {
-				notify_fmt(player, "You don't have enough %s.", tp_pennies);
-			} else if ((RANDOM() % tp_kill_base_cost) < cost && !Wizard(OWNER(victim))) {
-				/* you killed him */
-				if (GETDROP(victim))
-					/* give him the drop message */
-					notify(player, GETDROP(victim));
-				else {
-					snprintf(buf, sizeof(buf), "You killed %s!", NAME(victim));
-					notify(player, buf);
-				}
-
-				/* now notify everybody else */
-				if (GETODROP(victim)) {
-					snprintf(buf, sizeof(buf), "%s killed %s! ", NAME(player), NAME(victim));
-					parse_oprop(descr, player, getloc(player), victim,
-								   MESGPROP_ODROP, buf, "(@Odrop)");
-				} else {
-					snprintf(buf, sizeof(buf), "%s killed %s!", NAME(player), NAME(victim));
-				}
-				notify_except(DBFETCH(DBFETCH(player)->location)->contents, player, buf,
-							  player);
-
-				/* maybe pay off the bonus */
-				if (GETVALUE(victim) < tp_max_pennies) {
-					snprintf(buf, sizeof(buf), "Your insurance policy pays %d %s.",
-							tp_kill_bonus, tp_pennies);
-					notify(victim, buf);
-					SETVALUE(victim, GETVALUE(victim) + tp_kill_bonus);
-					DBDIRTY(victim);
-				} else {
-					notify(victim, "Your insurance policy has been revoked.");
-				}
-				/* send him home */
-				send_home(descr, victim, 1);
-
-			} else {
-				/* notify player and victim only */
-				notify(player, "Your murder attempt failed.");
-				snprintf(buf, sizeof(buf), "%s tried to kill you!", NAME(player));
-				notify(victim, buf);
-			}
-			break;
-		}
 	}
 }
 

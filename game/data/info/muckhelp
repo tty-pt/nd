@@ -20,6 +20,7 @@ The word 'me' refers to yourself. Some things to do when starting out:
     "@set me=sex:female" (or "@set me=sex:neuter" to be an 'it').
 
 
+
 "<message>
 SAY <message>
 
@@ -193,15 +194,77 @@ to yourself, you can rob yourself and set off your @success and @osuccess
 messages.
 
 
-KILL <player> [=<cost>]
+
+KILL <target>
+
+  Starts combat with target, as long at it is living. This includes a set
+of mechanics you can inspect in https://qnixsoft.com/kill-math.pdf.
+This includes equipment, spells, stats, bufs, etc.
 
   A successful kill sends the player home, sends all objects in the
-player's inventory to their respective homes.  The probability of
-killing the player is <cost> percent.  Spending 100 pennies always
-works except against Wizards who cannot be killed.  Players cannot
+player's inventory to their respective homes. Players cannot
 be killed in rooms which have the HAVEN flag set.  On systems where
 the KILL_OK flag is used, you cannot kill someone unless both you
 and they are set Kill_OK.
+
+  On the other hand, mobs can attack you anywhere, when they die,
+they sometimes drop loot. There are wild mobs and respawn mobs.
+
+
+
+train <char>[...]=<number>
+
+  Trains a stat <number> times.
+
+<char> may be: (s)trength, (c)onstitution, (d)exterity,
+(i)ntelligence or (w)izdom.
+
+
+
+equip <name>
+
+  Equip item.
+
+
+
+unequip <char>
+
+  Unequip item worn on bodypart denoted by <char>, which
+can be any of the following:
+
+  (h)ead, (n)eck, (c)hest, (b)ack, (w)eapon,
+  (l)eft finger, (r)ight finger or (g)rieves.
+
+
+
+status
+
+  Shows you your hp, mp, dmg, def, mdef, active debuf mask, etc.
+
+
+
+c<number>
+
+  Casts the spell in the <number> slot.
+
+
+
+<number>
+
+  Each living thing has a list of 8 (0-7) spells it can use during combat,
+and also a mask that indicates which of those spells will be attempted
+during the next turns. This is called the combo.
+
+  For example, if you have Fireball in spell slot 0, and you type in "1",
+Fireball will be cast next turn, as long as you have enough mana. If you
+have "Fire Focus" in slot 2 and you type in "5", you select both spells.
+
+
+
+select <number>
+
+  Selects <number> as the index to match in the next list match operation.
+
 
 
 EXAMINE <object>[=proppattern]
@@ -238,6 +301,133 @@ NEWS [<topic>]
 
   Displays the current news file for the game. Must be typed in full.  If a
 topic is given, then it displays the information on that specific topic.
+
+
+Walking
+[<number>]<direction>
+
+  Moves you in the specified direction. They are:
+
+Dir	Keys
+
+West	  h
+South	  j
+North	n k
+East	e l
+Up	u K
+Down	  J
+
+  For example, if you wanted to move north you could just type "n", or
+if you wanted to move 2 tiles north and 1 east, you could type "2ne".
+
+  Some characters are missing from the table, right?
+
+  Though you can still type "west" or "down" to move in these directions,
+It must be followed by return / enter, and not have anything preceding it.
+
+  This is because these characters are reserved for other operations.
+These, like walking, and contrary to other commands, can be typed
+one after the other. Just like in VI's NORMAL MODE.
+You can learn more about them in the help pages listed below.
+
+
+
+<op>[<number>]<direction>
+
+  The available operations are r, R, d, D, w and W.
+
+  For example, you can make a door to your north by typing "dn",
+or make two parallel doors to your north with "d2n".
+
+
+
+r[<number>]<direction>
+
+  Takes a room from Gaia, into your possession (-80p).
+
+
+
+R[<number>]<direction>
+
+
+
+
+d[<number>]<direction>
+
+  Creates a door in the specified direction, claiming any rooms necessary.
+
+
+
+D[<number>]<direction>
+
+  Removes the door from the geographical exit in the specified direction.
+
+
+
+w[<number>]<direction>
+
+  Turns an geographical exit into a wall, claiming any rooms necessary.
+
+
+
+W[<number>]<direction>
+
+  Restores a geographical exit in the specified direction, claiming
+any rooms necessary.
+
+
+
+Geographical commands.
+
+  These are commands that have to do with geography but do not follow
+the conventions of directional commands.
+
+  For example, you can see your current position by typing t.
+
+
+
+t
+
+  Shows you your position in the world.
+
+
+
+T[y[,x[,z[,extra]]]]
+
+  Teleports you to a position in the universe.
+Where y, x and z are your position in the world, and extra is
+what world you are in.
+
+
+
+x (*)
+
+  Shows you the morton number of your position.
+
+
+
+[<number>]X (*)
+
+  Teleports you to a morton number position in the universe.
+
+
+
+m<char>
+
+  Marks the current position as <char>.
+
+
+
+"<char>	(*)
+
+  Restores you to the position stored in <char>.
+
+
+
+#<number> (*)
+
+  Transports the room with the specified id
+to the current geographical position.
 
 
 @PASSWORD <old password>=<new password>

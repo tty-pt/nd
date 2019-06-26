@@ -147,13 +147,21 @@ look_contents(dbref player, dbref loc, const char *contents_name)
 	}
 }
 
+extern void cat(dbref descr, const char *fname);
+
 static void
 look_simple(int descr, dbref player, dbref thing)
 {
+	char const *art = GETMESG(thing, MESGPROP_ART);
+	if (art) {
+		cat(descr, art);
+		notify(player," ");
+	}
+
 	if (GETDESC(thing)) {
 		exec_or_notify(descr, player, thing, GETDESC(thing), "(@Desc)",
 				Prop_Blessed(thing, MESGPROP_DESC)? MPI_ISBLESSED : 0);
-	} else {
+	} else if (!art) {
 		notify(player, "You see nothing special.");
 	}
 }
@@ -164,7 +172,10 @@ look_room(int descr, dbref player, dbref loc, int verbose)
 	char obj_num[20];
 
 	/* tell him the name, and the number if he can link to it */
-	notify(player, unparse_object(player, loc));
+	if (!GETTMP(loc))
+		notify(player, unparse_object(player, loc));
+	else
+		notify_fmt(player, "#%d", loc);
 
 	/* tell him the description */
 	if (Typeof(loc) == TYPE_ROOM) {
@@ -183,7 +194,7 @@ look_room(int descr, dbref player, dbref loc, int verbose)
 	ts_useobject(loc);
 
 	/* tell him the contents */
-	look_contents(player, loc, "Contents:");
+	look_contents(player, loc, "You see:");
 	if (tp_look_propqueues) {
 		snprintf(obj_num, sizeof(obj_num), "#%d", loc);
 		envpropqueue(descr, player, loc, player, loc, NOTHING, "_lookq", obj_num, 1, 1);

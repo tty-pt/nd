@@ -67,8 +67,8 @@ typedef int dbref;				/* offset into db */
 
 #define TIME_INFINITE ((sizeof(time_t) == 4)? 0xefffffff : 0xefffffffffffffff)
 
-#define DB_READLOCK(x)
-#define DB_WRITELOCK(x)
+/* #define DB_READLOCK(x) */
+/* #define DB_WRITELOCK(x) */
 #define DB_RELEASE(x)
 
 #ifdef GDBM_DATABASE
@@ -170,6 +170,118 @@ typedef int dbref;				/* offset into db */
 #define GETVALUE(x)	get_property_value(x, MESGPROP_VALUE)
 #define SETVALUE(x,y)	add_property(x, MESGPROP_VALUE, NULL, y)
 #define LOADVALUE(x,y)	add_prop_nofetch(x, MESGPROP_VALUE, NULL, y)
+
+#define MESGPROP_STACK	"_/stack"
+#define SETSTACK(x,y)	set_property_value(x, MESGPROP_STACK, y)
+#define GETSTACK(x)	get_property_value(x, MESGPROP_STACK)
+#define USETSTACK(x)	remove_property(x, MESGPROP_STACK)
+
+#define MESGPROP_FOOD	"_/food"
+#define GETFOOD(x)	(get_property_value(x, MESGPROP_FOOD) - 1)
+#define SETFOOD(x,y)	set_property_value(x, MESGPROP_FOOD, y + 1)
+
+#define MESGPROP_DRINK	"_/drink"
+#define GETDRINK(x)	(get_property_value(x, MESGPROP_DRINK) - 1)
+#define SETDRINK(x, y)	set_property_value(x, MESGPROP_DRINK, y + 1)
+
+#define MESGPROP_CONSUM	"_/consu_m"
+#define GETCONSUM(x)	get_property_value(x, MESGPROP_CONSUM)
+#define SETCONSUM(x, y)	set_property_value(x, MESGPROP_CONSUM, y)
+
+#define MESGPROP_CONSUN	"_/consu_n"
+#define GETCONSUN(x)	get_property_value(x, MESGPROP_CONSUN)
+#define SETCONSUN(x, y)	set_property_value(x, MESGPROP_CONSUN, y)
+
+#define MESGPROP_DOOR	"_/door"
+#define GETDOOR(x)	get_property_value(x, MESGPROP_DOOR)
+#define SETDOOR(x, y)	set_property_value(x, MESGPROP_DOOR, y)
+
+#define MESGPROP_OPEN	"_/open"
+#define GETOPEN(x)	get_property_value(x, MESGPROP_OPEN)
+#define SETOPEN(x, y)	set_property_value(x, MESGPROP_OPEN, y)
+
+#define MESGPROP_TMP	"_/tmp"
+#define GETTMP(x)	get_property_value(x, MESGPROP_TMP)
+#define SETTMP(x, y)	set_property_value(x, MESGPROP_TMP, y)
+
+#define MESGPROP_FLOOR	"_/floor"
+#define GETFLOOR(x)	(get_property_value(x, MESGPROP_FLOOR) - 1)
+#define SETFLOOR(x, y)	set_property_value(x, MESGPROP_FLOOR, y + 1)
+
+#define MESGPROP_LVL	"_/lvl"
+#define GETLVL(x)	1 + get_property_value(x, MESGPROP_LVL)
+#define SETLVL(x, y)	set_property_value(x, MESGPROP_LVL, y)
+
+#define SETHASH(w, x, y, z)	set_property_hash(w, x, y, z)
+#define GETHASH(w, x, y)	get_property_hash(w, x, y)
+
+/* stat props {{{ */
+
+enum st { NOSTAT, STR, CON, DEX, INT, WIZ };
+#define STAT_MAX 5
+
+#define MESGPROP_STAT	"_/st"
+#define GETSTAT(x, y)	(1 + GETHASH(x, MESGPROP_STAT, y))
+#define SETSTAT(x, y, z) SETHASH(x, MESGPROP_STAT, y, z)
+
+/* }}} */
+
+/* equipment props {{{ */
+
+// what is equipped (player)
+
+enum eq { NOEQ, HEAD, NECK, CHEST, BACK, RHAND, LFINGER, RFINGER, PANTS };
+enum wt { PUNCH, PECK, SLASH, BITE, STRIKE, };
+enum at { ARMOR_LIGHT, ARMOR_MEDIUM, ARMOR_HEAVY, };
+/* enum at { NAKED, CLOTH, LEATHER, }; */
+
+#define EQ_MAX		9
+#define EQT(x)		(x>>6)
+#define EQ(i, t)	(i | (t<<6))
+#define EQL(x)		(x & 15)
+
+#define MESGPROP_EQ	"_/eq"
+#define GETEQ(x, y)	((dbref) GETHASH(x, MESGPROP_EQ, y))
+#define SETEQ(x, y, z)	SETHASH(x, MESGPROP_EQ, EQL(y), z)
+
+// where to equip / type of equip (item)
+#define GETEQW(x)	get_property_value(x, MESGPROP_EQ)
+#define SETEQW(x, y)	set_property_value(x, MESGPROP_EQ, y)
+#define GETEQT(x)	EQT(GETEQW(x))
+#define GETEQL(x)	EQL(GETEQW(x))
+
+// mininum stat value (item)
+#define MESGPROP_MSV	"_/msv"
+#define GETMSV(x)	get_property_value(x, MESGPROP_MSV)
+#define SETMSV(x, y)	set_property_value(x, MESGPROP_MSV, y)
+
+// rarity (item)
+#define MESGPROP_RARE	"_/rare"
+#define GETRARE(x)	get_property_value(x, MESGPROP_RARE)
+#define SETRARE(x, y)	set_property_value(x, MESGPROP_RARE, y)
+
+/* }}} */
+
+#define MESGPROP_CUR	"_/cur"
+
+#define MESGPROP_COMBO	MESGPROP_CUR "/combo"
+#define GETCOMBO(x)    get_property_value(x, MESGPROP_COMBO)
+#define SETCOMBO(x, y) set_property_value(x, MESGPROP_COMBO, y)
+
+#define MESGPROP_CUR_SPELLS MESGPROP_CUR "/@spells"
+#define GETCURSPELLS(x)  GETMESG(x, MESGPROP_CUR_SPELLS)
+#define SETCURSPELLS(x, y)  SETMESG(x, MESGPROP_CUR_SPELLS, y)
+
+#define MESGPROP_SPELLS "@/spells"
+#define GETSPELLS(x, a)  get_property_mark(x, MESGPROP_SPELLS, a)
+#define SETSPELLS(x, a, v)  set_property_mark(x, MESGPROP_SPELLS, a, v)
+
+#define MESGPROP_SHOP	"_/shop"
+#define GETSHOP(x)	get_property_value(x, MESGPROP_SHOP)
+
+#define MESGPROP_ART	"@/art"
+#define GETART(x)	envpropstr(x, MESGPROP_ART)
+#define SETART(x, y)	SETMESG(x, MESGPROP_ART, y)
 
 #define ISGUEST(x)	(get_property(x, MESGPROP_GUEST) != NULL)
 #define NOGUEST(_cmd,x) if(ISGUEST(x)) { char tmpstr[BUFFER_LEN]; log_status("Guest %s(#%d) failed attempt to %s.\n",NAME(x),x,_cmd); snprintf(tmpstr, sizeof(tmpstr), "Guests are not allowed to %s.\r", _cmd); notify_nolisten(x,tmpstr,1); return; }
@@ -316,6 +428,7 @@ struct boolexp {
 #define NOTHING ((dbref) -1)	/* null dbref */
 #define AMBIGUOUS ((dbref) -2)	/* multiple possibilities, for matchers */
 #define HOME ((dbref) -3)		/* virtual room, represents mover's home */
+#define WATER ((dbref) -4)	/* water tile */
 
 /* editor data structures */
 

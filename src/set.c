@@ -17,6 +17,7 @@
 #include "match.h"
 #include "interface.h"
 #include "externs.h"
+#include "geography.h"
 
 
 static dbref
@@ -513,6 +514,11 @@ do_lock(int descr, dbref player, const char *name, const char *keyname)
 		notify(player, "I don't know which one you want to lock!");
 		return;
 	default:
+		if (Typeof(thing) == TYPE_EXIT
+		    && geo_is(thing)
+		    && room_claim(player, getloc(thing)))
+			return;
+
 		if (!controls(player, thing)) {
 			notify(player, "You can't lock that!");
 			return;
@@ -526,6 +532,11 @@ do_lock(int descr, dbref player, const char *name, const char *keyname)
 			notify(player, "I don't understand that key.");
 		} else {
 			/* everything ok, do it */
+			if (Typeof(thing) == TYPE_EXIT
+			    && geo_is(thing)
+			    && room_claim(player, getloc(thing)))
+				return;
+
 			SETLOCK(thing, key);
 			ts_modifyobject(thing);
 			notify(player, "Locked.");

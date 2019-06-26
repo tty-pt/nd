@@ -14,6 +14,7 @@
 #include "externs.h"
 #include "speech.h"
 #include <ctype.h>
+#include <stdarg.h>
 
 /* Commands which involve speaking */
 
@@ -228,6 +229,40 @@ notify_except(dbref first, dbref exception, const char *msg, dbref who)
 	}
 }
 
+void
+notify_except_fmt(dbref first, dbref exception, char *format, ...)
+{
+	va_list args;
+	char buf[BUFFER_LEN];
+	va_start(args, format);
+	vsnprintf(buf, sizeof(buf), format, args);
+	notify_except(first, exception, buf, exception);
+	va_end(args);
+}
+
+void
+notify_wts(dbref who, char const *a, char const *b, char *format, ...)
+{
+	va_list args;
+	char buf[BUFFER_LEN];
+	va_start(args, format);
+	vsnprintf(buf, sizeof(buf), format, args);
+	notify_fmt(who, "You %s%s.", a, buf);
+	ONOTIFYF(who, "%s %s%s.", NAME(who), b, buf);
+	va_end(args);
+}
+
+void
+notify_wts_to(dbref who, dbref tar, char const *a, char const *b, char *format, ...)
+{
+	va_list args;
+	char buf[BUFFER_LEN];
+	va_start(args, format);
+	vsnprintf(buf, sizeof(buf), format, args);
+	notify_fmt(who, "You %s %s%s.", a, NAME(tar), buf);
+	ONOTIFYF(who, "%s %s %s%s.", NAME(who), b, NAME(tar), buf);
+	va_end(args);
+}
 
 void
 parse_oprop(int descr, dbref player, dbref dest, dbref exit, const char *propname,

@@ -463,10 +463,53 @@ do_restrict(dbref player, const char *arg)
 
 
 /* use this only in process_command */
-#define Matched(string) { if(!string_prefix((string), command)) goto bad; }
+#define Matched(string) if (!string_prefix(string, command)) \
+	goto bad; else matched = 1;
 
 int force_level = 0;
 dbref force_prog = NOTHING; /* Set when a program is the source of FORCE */
+
+static inline int
+do_v(int descr, dbref player, char const *cmd)
+{
+	int n = strlen(cmd);
+	int drmap = 0, ignore;
+	int ofs;
+	char const *s = cmd;
+
+	for (ofs = 1; s < cmd + n; s += ofs, ofs = 1) {
+		int ofs2 = 0;
+
+		switch (*s) {
+		case COMMAND_TOKEN:
+			return s - cmd;
+		case SAY_TOKEN:
+			do_say(player, s + 1);
+			return n;
+		case POSE_TOKEN:
+			do_pose(player, s + 1);
+			return n;
+		}
+
+		ofs = geo_v(&drmap, descr, player, s);
+		if (ofs < 0)
+			ofs = 1;
+		else
+			ofs2 = ofs;
+		ofs2 = kill_v(&ignore, descr, player, s + ofs2);
+		if (ofs <= 0 && ofs2 <= 0) {
+			if (drmap)
+				do_map(descr, player);
+			return cmd - s;
+		}
+		ofs += ofs2;
+	}
+
+	if (drmap)
+		do_map(descr, player);
+
+	return s - cmd;
+}
 
 void
 process_command(int descr, dbref player, char *command)
@@ -475,7 +518,6 @@ process_command(int descr, dbref player, char *command)
 	char *arg2;
 	char *full_command;
 	char *p;					/* utility */
-	char pbuf[BUFFER_LEN];
 	char xbuf[BUFFER_LEN];
 	char ybuf[BUFFER_LEN];
 	struct timeval starttime;
@@ -494,15 +536,17 @@ process_command(int descr, dbref player, char *command)
 
 	if ((tp_log_commands || Wizard(OWNER(player)))) {
 		if (!(FLAGS(player) & (INTERACTIVE | READMODE))) {
-			if (!*command) {
+			dbref here;
+			if (!*command)
 				return; 
-			}
+			here = getloc(player);
 			log_command("%s%s%s%s(%d) in %s(%d):%s %s",
 						Wizard(OWNER(player)) ? "WIZ: " : "",
 						(Typeof(player) != TYPE_PLAYER) ? NAME(player) : "",
 						(Typeof(player) != TYPE_PLAYER) ? " owned by " : "",
 						NAME(OWNER(player)), (int) player,
-						NAME(DBFETCH(player)->location),
+						
+						here == NOTHING ? "NOWHERE" : NAME(here),
 						(int) DBFETCH(player)->location, " ", command);
 		} else {
 			if (tp_log_interactive) {
@@ -530,57 +574,39 @@ process_command(int descr, dbref player, char *command)
 	if (!*command)
 		return;
 
-	/* check for single-character commands */
-	if (!tp_enable_prefix) {
-		if (*command == SAY_TOKEN) {
-			snprintf(pbuf, sizeof(pbuf), "say %s", command + 1);
-			command = &pbuf[0];
-		} else if (*command == POSE_TOKEN) {
-			snprintf(pbuf, sizeof(pbuf), "pose %s", command + 1);
-			command = &pbuf[0];
-		} else if (*command == EXIT_DELIMITER) {
-			snprintf(pbuf, sizeof(pbuf), "delimiter %s", command + 1);
-			command = &pbuf[0];
-		}
-	}
-
 	/* profile how long command takes. */
 	gettimeofday(&starttime, NULL);
 
 	/* if player is a wizard, and uses overide token to start line... */
 	/* ... then do NOT run actions, but run the command they specify. */
-	if (!(TrueWizard(OWNER(player)) && (*command == OVERIDE_TOKEN))) {
-		if (can_move(descr, player, command, 0)) {
-			do_move(descr, player, command, 0);	/* command is exact match for exit */
-			*match_args = 0;
-			*match_cmdname = 0;
-		} else {
-			if (tp_enable_prefix) {
-				if (*command == SAY_TOKEN) {
-					snprintf(pbuf, sizeof(pbuf), "say %s", command + 1);
-					command = &pbuf[0];
-				} else if (*command == POSE_TOKEN) {
-					snprintf(pbuf, sizeof(pbuf), "pose %s", command + 1);
-					command = &pbuf[0];
-				} else if (*command == EXIT_DELIMITER) {
-					snprintf(pbuf, sizeof(pbuf), "delimiter %s", command + 1);
-					command = &pbuf[0];
-				} else {
-					goto bad_pre_command;
-				}
-				if (can_move(descr, player, command, 0)) {
-					do_move(descr, player, command, 0);	/* command is exact match for exit */
-					*match_args = 0;
-					*match_cmdname = 0;
-				} else {
-					goto bad_pre_command;
-				}
-			} else {
-				goto bad_pre_command;
-			}
-		}
-	} else {
-	  bad_pre_command:
+	if (!(TrueWizard(OWNER(player)) && (*command == OVERIDE_TOKEN))
+	    && can_move(descr, player, command, 0))
+	{
+		do_move(descr, player, command, 0);	/* command is exact match for exit */
+		*match_args = 0;
+		*match_cmdname = 0;
+		return;
+	}
+
+	{
+		int matched;
+		int v_ret;
+		v_ret = do_v(descr, player, command);
+
+		matched = 0;
+		if (v_ret < 0)
+			v_ret = -v_ret;
+
+		command += v_ret;
+		if (*command == COMMAND_TOKEN) {
+			command++;
+			matched = 1;
+		} else if (*command == '\0') {
+			command -= v_ret;
+			goto end_of_command;
+		} else
+			goto bad;
+
 		if (TrueWizard(OWNER(player)) && (*command == OVERIDE_TOKEN))
 			command++;
 		full_command = strcpyn(xbuf, sizeof(xbuf), command);
@@ -621,12 +647,17 @@ process_command(int descr, dbref player, char *command)
 			switch (command[1]) {
 			case 'a':
 			case 'A':
-				/* @action, @armageddon, @attach */
+				/* @action, @advitam, @armageddon, @attach */
 				switch (command[2]) {
 				case 'c':
 				case 'C':
 					Matched("@action");
 					do_action(descr, player, arg1, arg2);
+					break;
+				case 'd':
+				case 'D':
+					Matched("@advitam");
+					do_advitam(descr, player, arg1);
 					break;
 				case 'r':
 				case 'R':
@@ -829,6 +860,11 @@ process_command(int descr, dbref player, char *command)
 				default:
 					goto bad;
 				}
+				break;
+			case 'h':
+				/* @heal */
+				Matched("@heal");
+				do_heal(descr, player, arg1);
 				break;
 			case 'i':
 			case 'I':
@@ -1113,8 +1149,8 @@ process_command(int descr, dbref player, char *command)
 				break;
 			case 'u':
 			case 'U':
-				/* @unbless, @unlink, @unlock, @uncompile,
-				   @usage */
+				/* @unbless, @unlink,
+				 * @unlock, @uncompile, @usage */
 				switch (command[2]) {
 				case 'N':
 				case 'n':
@@ -1163,9 +1199,27 @@ process_command(int descr, dbref player, char *command)
 				goto bad;
 			}
 			break;
+		case 'b':
+			/* buy */
+			Matched("buy");
+			do_buy(descr, player, arg1, arg2);
+			break;
+		case 'c':
+			/* close, cat */
+			switch (command[1]) {
+			case 'l':
+				Matched("close");
+				do_door_close(descr, player, arg1[0]);
+				break;
+			case 'a':
+				Matched("cat");
+				cat(descr, arg1);
+				break;
+			}
+			break;
 		case 'd':
 		case 'D':
-			/* disembark, drop */
+			/* disembark, drink, drop */
 			switch (command[1]) {
 			case 'i':
 			case 'I':
@@ -1174,8 +1228,20 @@ process_command(int descr, dbref player, char *command)
 				break;
 			case 'r':
 			case 'R':
-				Matched("drop");
-				do_drop(descr, player, arg1, arg2);
+				switch (command[2]) {
+				case 'i':
+				case 'I':
+					Matched("drink");
+					do_drink(descr, player, arg1);
+					break;
+				case 'o':
+				case 'O':
+					Matched("drop");
+					do_drop(descr, player, arg1, arg2);
+					break;
+				default:
+					goto bad;
+				}
 				break;
 			default:
 				goto bad;
@@ -1183,9 +1249,26 @@ process_command(int descr, dbref player, char *command)
 			break;
 		case 'e':
 		case 'E':
-			/* examine */
-			Matched("examine");
-			do_examine(descr, player, arg1, arg2);
+			/* equip, examine */
+			switch (command[1]) {
+			case 'a':
+				Matched("eat");
+				do_eat(descr, player, arg1);
+				break;
+			case 'x':
+				Matched("examine");
+				do_examine(descr, player, arg1, arg2);
+				break;
+			default:
+				Matched("equip");
+				do_equip(descr, player, arg1);
+			}
+			break;
+		case 'f':
+		case 'F':
+			/* fill */
+			Matched("fill");
+			do_fill(descr, player, arg1, arg2);
 			break;
 		case 'g':
 		case 'G':
@@ -1237,7 +1320,7 @@ process_command(int descr, dbref player, char *command)
 		case 'K':
 			/* kill */
 			Matched("kill");
-			do_kill(descr, player, arg1, atoi(arg2));
+			do_kill(descr, player, arg1);
 			break;
 		case 'l':
 		case 'L':
@@ -1263,6 +1346,9 @@ process_command(int descr, dbref player, char *command)
 			} else if (!string_compare(command, "mpi")) {
 				do_mpihelp(player, arg1, arg2);
 				break;
+			} else if (!string_compare(command, "map")) {
+				do_map(descr, player);
+				break;
 			} else {
 				if (string_compare(command, "man"))
 					goto bad;
@@ -1274,6 +1360,11 @@ process_command(int descr, dbref player, char *command)
 			/* news */
 			Matched("news");
 			do_news(player, arg1, arg2);
+			break;
+		case 'o':
+			/* open */
+			Matched("open");
+			do_door_open(descr, player, arg1[0], 1);
 			break;
 		case 'p':
 		case 'P':
@@ -1318,7 +1409,7 @@ process_command(int descr, dbref player, char *command)
 			break;
 		case 's':
 		case 'S':
-			/* say, score */
+			/* say, score, sell, shop, sit, stand, status */
 			switch (command[1]) {
 			case 'a':
 			case 'A':
@@ -1329,6 +1420,45 @@ process_command(int descr, dbref player, char *command)
 			case 'C':
 				Matched("score");
 				do_score(player);
+				break;
+			case 'e':
+			case 'E':
+				switch (command[3]) {
+				case 'l':
+					Matched("sell");
+					do_sell(descr, player, arg1, arg2);
+					break;
+				case 'e':
+					Matched("select");
+					do_select(player, arg1);
+					break;
+				default:
+					goto bad;
+				}
+				break;
+			case 'h':
+			case 'H':
+				Matched("shop");
+				do_shop(player);
+				break;
+			case 'i':
+			case 'I':
+				Matched("sit");
+				do_sit(descr, player, arg1);
+				break;
+			case 't':
+			case 'T':
+				switch (command[3]) {
+				case 'n':
+					Matched("stand");
+					do_stand(player);
+					break;
+				case 't':
+					Matched("status");
+					do_status(player);
+					break;
+				default: goto bad;
+				}
 				break;
 			default:
 				goto bad;
@@ -1348,9 +1478,20 @@ process_command(int descr, dbref player, char *command)
 				Matched("throw");
 				do_drop(descr, player, arg1, arg2);
 				break;
+			case 'r':
+			case 'R':
+				Matched("train");
+				do_train(player, arg1, arg2);
+				break;
 			default:
 				goto bad;
 			}
+			break;
+		case 'u':
+		case 'U':
+			/* unequip */
+			Matched("unequip");
+			do_unequip(descr, player, arg1);
 			break;
 		case 'w':
 		case 'W':
@@ -1378,10 +1519,13 @@ process_command(int descr, dbref player, char *command)
 						   DBFETCH(player)->location,
 						   NAME(OWNER(DBFETCH(player)->location)), command, full_command);
 			}
+			matched = 1;
 			break;
 		}
+
 	}
 
+end_of_command:
 	/* calculate time command took. */
 	gettimeofday(&endtime, NULL);
 	if (starttime.tv_usec > endtime.tv_usec) {

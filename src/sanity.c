@@ -16,8 +16,7 @@
 
 #include "params.h"
 #include "props.h"
-
-
+#include "geography.h"
 
 #define TYPEOF(i)   (DBFETCH((i))->flags & TYPE_MASK)
 #define LOCATION(x) (DBFETCH((x))->location)
@@ -261,6 +260,13 @@ find_orphan_objects(dbref player)
 				FLAGS(NEXTOBJ(i)) |= SANEBIT;
 			}
 		}
+
+		if (i && LOCATION(i) == NOTHING && Typeof(i) != TYPE_GARBAGE) {
+			if (geo_has(i))
+				FLAGS(i) |= SANEBIT;
+			else
+				violate(player, i, "is nowhere");
+		}
 	}
 
 	for (i = 0; i < db_top; i++) {
@@ -464,7 +470,11 @@ check_object(dbref player, dbref obj)
 		 */
 		if (!valid_obj(LOCATION(obj)) &&
 			!(obj == GLOBAL_ENVIRONMENT && LOCATION(obj) == NOTHING)) {
-			violate(player, obj, "has an invalid object as it's location");
+			if (Typeof(obj) == TYPE_PLAYER) {
+				if (!geo_has(obj))
+					violate(player, obj, "is nowhere");
+			} else
+				violate(player, obj, "has an invalid object as it's location");
 		}
 	}
 

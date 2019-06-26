@@ -140,9 +140,42 @@ extern void exec_or_notify(int descr, dbref player, dbref thing,
 						   const char *message, const char *whatcalled,
 						   int mpiflags);
 
+/* From geo.c */
+extern int do_door_open(int descr, dbref player, const char dir, int v);
+extern void do_door_close(int descr, dbref player, const char dir);
+extern void do_map(int descr, dbref player);
+extern int geo_v(int *drmap, int descr, dbref player, const char *cmd);
+
+/* from item.c */
+extern void do_select(dbref player, const char *n_s);
+extern void do_equip(int descr, dbref player, const char *name);
+extern void do_unequip(int descr, dbref player, char const *name);
+extern void do_drink(int descr, dbref player, const char *what);
+extern void do_eat(int descr, dbref player, const char *what);
+extern void do_fill(int descr, dbref player, const char *vial_s, const char *source_s);
+
+/* from shop.c */
+extern void do_shop(dbref player);
+extern void do_buy(int descr, dbref player, const char *name, const char *amount);
+extern void do_sell(int descr, dbref player, const char *name, const char *amount);
+extern int p_vendor(dbref obj);
+
+/* from kill.c */
+extern void do_kill(int descr, dbref player, const char *what);
+extern void do_advitam(int descr, dbref player, const char *what);
+extern void do_heal(int descr, dbref player, const char *what);
+extern void do_status(dbref player);
+extern void do_train(dbref player, const char *what, const char *amount);
+extern void _do_advitam(dbref target, dbref here);
+extern int kill_v(int *drmap, int descr, dbref player, const char *cmd);
+
+int do_stand_silent(dbref player);
+extern void do_sit(int descr, dbref player, const char *what);
+extern void do_stand(dbref player);
+
 /* From move.c */
 extern void moveto(dbref what, dbref where);
-extern void enter_room(int descr, dbref player, dbref loc, dbref exit);
+extern void enter_room(int descr, dbref player, dbref loc, dbref exit, int drmap);
 extern void send_home(int descr, dbref thing, int homepuppet);
 extern int parent_loop_check(dbref source, dbref dest);
 extern int can_move(int descr, dbref player, const char *direction, int lev);
@@ -179,7 +212,6 @@ extern int ok_name(const char *name);
 extern int isancestor(dbref parent, dbref child);
 
 /* From rob.c */
-extern void do_kill(int descr, dbref player, const char *what, int cost);
 extern void do_give(int descr, dbref player, const char *recipient, int amount);
 extern void do_rob(int descr, dbref player, const char *what);
 
@@ -206,12 +238,16 @@ extern void do_conlock(int descr, dbref player, const char *name, const char *ke
 extern void set_flags_from_tunestr(dbref obj, const char* flags);
 
 /* From speech.c */
+#define ONOTIFYF(who, ...) notify_except_fmt(DBFETCH(getloc(who))->contents, who, __VA_ARGS__)
 extern void do_wall(dbref player, const char *message);
 extern void do_gripe(dbref player, const char *message);
 extern void do_say(dbref player, const char *message);
 extern void do_page(dbref player, const char *arg1, const char *arg2);
 extern void notify_listeners(dbref who, dbref xprog, dbref obj, dbref room, const char *msg, int isprivate);
 extern void notify_except(dbref first, dbref exception, const char *msg, dbref who);
+extern void notify_except_fmt(dbref first, dbref exception, char *format, ...);
+extern void notify_wts(dbref who, char const *a, char const *b, char *format, ...);
+extern void notify_wts_to(dbref who, dbref tar, char const *a, char const *b, char *format, ...);
 extern void parse_oprop(int descr, dbref player, dbref dest, dbref exit, const char *propname, const char *prefix, const char *whatcalled);
 extern void parse_omessage(int descr, dbref player, dbref dest, dbref exit, const char *msg, const char *prefix, const char *whatcalled, int mpiflags) ;
 

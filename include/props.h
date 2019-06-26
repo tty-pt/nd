@@ -138,6 +138,10 @@ extern PropPtr delete_prop(PropPtr * list, char *name);
 
 
 extern void set_property(dbref player, const char *pname, PData * dat);
+void set_property_value(dbref obj, const char *propstr, int val);
+void set_property_hash(dbref obj, const char *propstr, int idx, int val);
+void set_property_mark(dbref obj, const char *propstr, char mark, char *value);
+void set_property_dbref(dbref obj, const char *propstr, dbref val);
 extern void add_property(dbref player, const char *type, const char *strval, int value);
 
 extern void remove_property_list(dbref player, int all);
@@ -151,6 +155,8 @@ extern int has_property_strict(int descr, dbref player, dbref what, const char *
 extern const char *get_property_class(dbref player, const char *type);
 extern double get_property_fvalue(dbref player, const char *type);
 extern int get_property_value(dbref player, const char *type);
+extern int get_property_hash(dbref player, const char *type, int idx);
+extern const char *get_property_mark(dbref player, const char *type, char mark);
 extern struct boolexp *get_property_lock(dbref player, const char *type);
 extern dbref get_property_dbref(dbref player, const char *pname);
 extern const char *envpropstr(dbref * where, const char *propname);

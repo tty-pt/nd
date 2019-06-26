@@ -14,6 +14,7 @@
 #include "match.h"
 #include "interface.h"
 #include "externs.h"
+#include "kill.h"
 
 
 #define DOWNCASE(x) (tolower(x))
@@ -181,11 +182,13 @@ match_home(struct match_data *md)
 		md->exact_match = HOME;
 }
 
-
 static void
 match_list(dbref first, struct match_data *md)
 {
 	dbref absolute;
+	struct living *liv = living_get(md->match_who);
+	unsigned nth = liv->select;
+	liv->select = 0;
 
 	absolute = absolute_name(md);
 	if (!controls(OWNER(md->match_from), absolute))
@@ -195,10 +198,10 @@ match_list(dbref first, struct match_data *md)
 		if (first == absolute) {
 			md->exact_match = first;
 			return;
-		} else if (!string_compare(NAME(first), md->match_name)) {
-			/* if there are multiple exact matches, randomly choose one */
-			md->exact_match = choose_thing(md->match_descr, md->exact_match, first, md);
 		} else if (string_match(NAME(first), md->match_name)) {
+			if (md->exact_match <= 0 && nth <= 0)
+				md->exact_match = first;
+			nth--;
 			md->last_match = first;
 			(md->match_count)++;
 		}
@@ -250,11 +253,12 @@ match_exits(dbref first, struct match_data *md)
 		if (FLAGS(exit) & HAVEN) {
 			exitprog = 1;
 		} else if (DBFETCH(exit)->sp.exit.dest) {
-			for (i = 0; i < DBFETCH(exit)->sp.exit.ndest; i++)
-				if (Typeof((DBFETCH(exit)->sp.exit.dest)[i]) == TYPE_PROGRAM)
-					exitprog = 1;
+			if (*DBFETCH(exit)->sp.exit.dest != NOTHING)
+				for (i = 0; i < DBFETCH(exit)->sp.exit.ndest; i++)
+					if (Typeof((DBFETCH(exit)->sp.exit.dest)[i]) == TYPE_PROGRAM)
+						exitprog = 1;
 		}
-		if (tp_enable_prefix && exitprog && md->partial_exits &&
+		if (exitprog && md->partial_exits &&
 			(FLAGS(exit) & XFORCIBLE) && FLAGS(OWNER(exit)) & WIZARD) {
 			partial = 1;
 		} else {
