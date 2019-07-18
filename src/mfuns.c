@@ -1496,11 +1496,7 @@ mfn_time(MFUNARGS)
 		lt += (3600 * atoi(argv[0]));
 		lt += get_tz_offset();
 	}
-#ifndef WIN32
 	tm = localtime(&lt);
-#else
-	tm = uw32localtime(&lt);
-#endif
 	format_time(buf, BUFFER_LEN - 1, "%T", tm);
 	return buf;
 }
@@ -1517,11 +1513,7 @@ mfn_date(MFUNARGS)
 		lt += (3600 * atoi(argv[0]));
 		lt += get_tz_offset();
 	}
-#ifndef WIN32
 	tm = localtime(&lt);
-#else
-	tm = uw32localtime(&lt);
-#endif
 	format_time(buf, BUFFER_LEN - 1, "%D", tm);
 	return buf;
 }
@@ -1547,11 +1539,7 @@ mfn_ftime(MFUNARGS)
 		}
 		lt += get_tz_offset();
 	}
-#ifndef WIN32
 	tm = localtime(&lt);
-#else
-	tm = uw32localtime(&lt);
-#endif
 	format_time(buf, BUFFER_LEN - 1, argv[0], tm);
 	return buf;
 }
@@ -1587,9 +1575,9 @@ mfn_convtime(MFUNARGS)
 	otm.tm_sec = sc;
 	otm.tm_year = (yr >= 70) ? yr : (yr + 100);
 #ifdef SUNOS
-	snprintf(buf, BUFFER_LEN, "%ld", timelocal(&otm));
+	snprintf(buf, BUFFER_LEN, "%ld", (long) timelocal(&otm));
 #else
-	snprintf(buf, BUFFER_LEN, "%ld", mktime(&otm));
+	snprintf(buf, BUFFER_LEN, "%ld", (long) mktime(&otm));
 #endif
 	return buf;
 }
@@ -1730,7 +1718,7 @@ mfn_secs(MFUNARGS)
 	time_t lt;
 
 	time(&lt);
-	snprintf(buf, BUFFER_LEN, "%ld", lt);
+	snprintf(buf, BUFFER_LEN, "%ld", (long) lt);
 	return buf;
 }
 
@@ -2025,7 +2013,7 @@ mfn_created(MFUNARGS)
 	if (obj == PERMDENIED)
 		ABORT_MPI("CREATED", "Permission denied.");
 
-	snprintf(buf, BUFFER_LEN, "%ld", DBFETCH(obj)->ts.created);
+	snprintf(buf, BUFFER_LEN, "%ld", (long) DBFETCH(obj)->ts.created);
 
 	return buf;
 }
@@ -2042,7 +2030,7 @@ mfn_lastused(MFUNARGS)
 	if (obj == PERMDENIED)
 		ABORT_MPI("LASTUSED", "Permission denied.");
 
-	snprintf(buf, BUFFER_LEN, "%ld", DBFETCH(obj)->ts.lastused);
+	snprintf(buf, BUFFER_LEN, "%ld", (long) DBFETCH(obj)->ts.lastused);
 
 	return buf;
 }
@@ -2059,7 +2047,7 @@ mfn_modified(MFUNARGS)
 	if (obj == PERMDENIED)
 		ABORT_MPI("MODIFIED", "Permission denied.");
 
-	snprintf(buf, BUFFER_LEN, "%ld", DBFETCH(obj)->ts.modified);
+	snprintf(buf, BUFFER_LEN, "%ld", (long) DBFETCH(obj)->ts.modified);
 
 	return buf;
 }

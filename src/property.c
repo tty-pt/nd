@@ -126,6 +126,68 @@ set_property(dbref player, const char *name, PData * dat)
 }
 
 void
+set_property_value(dbref obj, const char *propstr, int val)
+{
+	PData mydat;
+	mydat.flags = PROP_INTTYP;
+	mydat.data.val = val;
+	set_property_nofetch(obj, propstr, &mydat);
+	DBDIRTY(obj);
+}
+
+int // FIXME
+addc_property_value(dbref obj, const char *pname, int val, int cap)
+{
+	PropPtr p = get_property(obj, pname);
+	int cur;
+	if (p) {
+#ifdef DISKBASE
+		propfetch(what, p);
+#endif
+		cur = PropDataVal(p);
+		cur += val;
+		if (cur > cap)
+			cur = cap;
+		PropDataVal(p) = cur;
+		DBDIRTY(obj);
+	} else {
+		cur = val > cap ? cap : val;
+		add_prop_nofetch(obj, pname, "", cur);
+	}
+	return cur;
+}
+
+void
+set_property_hash(dbref obj, const char *propstr, int idx, int val)
+{
+	char buf[BUFSIZ];
+	snprintf(buf, sizeof(buf), "%s/%d", propstr, idx);
+	set_property_value(obj, buf, val);
+}
+
+void
+set_property_mark(dbref obj, const char *propstr, char mark, char *value)
+{
+	char buf[BUFSIZ];
+	PData dat;
+	snprintf(buf, sizeof(buf), "%s/%c", propstr, mark);
+	dat.data.str = value;
+	dat.flags = PROP_STRTYP;
+	remove_property_nofetch(obj, buf);
+	set_property_nofetch(obj, buf, &dat);
+}
+
+void
+set_property_dbref(dbref obj, const char *propstr, dbref val)
+{
+	PData mydat;
+	mydat.flags = PROP_REFTYP;
+	mydat.data.ref = val;
+	set_property_nofetch(obj, propstr, &mydat);
+	DBDIRTY(obj);
+}
+
+void
 set_lock_property(dbref player, const char *pname, const char *lok)
 {
 	PData mydat;

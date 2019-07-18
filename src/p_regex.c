@@ -8,15 +8,10 @@
 #include <time.h>
 #include <ctype.h>
 
-#ifdef WIN32
-# define __STDC__ 1
-# include "./pcre.h"
+#ifdef HAVE_PCREINCDIR
+#include <pcre/pcre.h>
 #else
-# ifdef HAVE_PCREINCDIR
-#  include <pcre/pcre.h>
-# else
-#  include <pcre.h>
-# endif
+#include <pcre.h>
 #endif
 
 #include "db.h"

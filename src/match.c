@@ -54,41 +54,6 @@ init_match_remote(int descr, dbref player, dbref what, const char *name, int typ
 	md->match_from = what;
 }
 
-static dbref
-choose_thing(int descr, dbref thing1, dbref thing2, struct match_data *md)
-{
-	int has1;
-	int has2;
-	int preferred = md->preferred_type;
-
-	if (thing1 == NOTHING) {
-		return thing2;
-	} else if (thing2 == NOTHING) {
-		return thing1;
-	}
-	if (preferred != NOTYPE) {
-		if (Typeof(thing1) == preferred) {
-			if (Typeof(thing2) != preferred) {
-				return thing1;
-			}
-		} else if (Typeof(thing2) == preferred) {
-			return thing2;
-		}
-	}
-	if (md->check_keys) {
-		has1 = could_doit(descr, md->match_who, thing1);
-		has2 = could_doit(descr, md->match_who, thing2);
-
-		if (has1 && !has2) {
-			return thing1;
-		} else if (has2 && !has1) {
-			return thing2;
-		}
-		/* else fall through */
-	}
-	return (RANDOM() % 2 ? thing1 : thing2);
-}
-
 void
 match_player(struct match_data *md)
 {
@@ -347,31 +312,25 @@ match_exits(dbref first, struct match_data *md)
 						} else if ((strlen(md->match_name) - strlen(p) ==
 									md->longest_match) && !((lev == md->match_level) &&
 															(md->block_equals))) {
+							md->exact_match = exit;
 							if (lev > md->match_level) {
-								md->exact_match = exit;
 								md->match_level = lev;
 								md->block_equals = 0;
-							} else {
-								md->exact_match =
-										choose_thing(md->match_descr, md->exact_match, exit,
-													 md);
 							}
-							if (md->exact_match == exit) {
-								if ((*p == ' ') || (partial && notnull)) {
-									strcpyn(match_args, sizeof(match_args), (partial && notnull) ? p : (p + 1));
-									{
-										char *pp;
-										int ip;
+							if ((*p == ' ') || (partial && notnull)) {
+								strcpyn(match_args, sizeof(match_args), (partial && notnull) ? p : (p + 1));
+								{
+									char *pp;
+									int ip;
 
-										for (ip = 0, pp = (char *) md->match_name;
-											 *pp && (pp != p); pp++)
-											match_cmdname[ip++] = *pp;
-										match_cmdname[ip] = '\0';
-									}
-								} else {
-									*match_args = '\0';
-									strcpyn(match_cmdname, sizeof(match_cmdname), (char *) md->match_name);
+									for (ip = 0, pp = (char *) md->match_name;
+									     *pp && (pp != p); pp++)
+										match_cmdname[ip++] = *pp;
+									match_cmdname[ip] = '\0';
 								}
+							} else {
+								*match_args = '\0';
+								strcpyn(match_cmdname, sizeof(match_cmdname), (char *) md->match_name);
 							}
 						}
 					}

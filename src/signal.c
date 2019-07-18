@@ -19,7 +19,6 @@
 #include "externs.h"
 #include "version.h"
 
-#ifndef WIN32
 #include <signal.h>
 #include <sys/wait.h>
 
@@ -187,6 +186,7 @@ void
 set_signals(void)
 {
 	set_sigs_intern(FALSE);
+	our_signal(SIGTERM, sig_shutdown);
 }
 
 /*
@@ -231,7 +231,6 @@ RETSIGTYPE sig_shutdown(int i)
 {
 	log_status("SHUTDOWN: via SIGNAL");
 	shutdown_flag = 1;
-	restart_flag = 0;
 #if !defined(SYSV) && !defined(_POSIX_VERSION) && !defined(ULTRIX)
 	return 0;
 #endif
@@ -274,17 +273,8 @@ RETSIGTYPE sig_reap(int i)
 		fprintf(stderr, "SIG_CHILD signal handler called with no pid!\n");
 #endif
 	} else {
-		if (reapedpid == global_resolver_pid) {
-			log_status("resolver exited with status %d", status);
-			if (WIFEXITED(status) && WEXITSTATUS(status) != 0) {
-				/* If the resolver exited with an error, respawn it. */
-				spawn_resolver();
-			} else if (WIFSIGNALED(status)) {
-				/* If the resolver exited due to a signal, respawn it. */
-				spawn_resolver();
-			}
 #ifndef DISKBASE
-		} else if(reapedpid == global_dumper_pid) {
+		if (reapedpid == global_dumper_pid) {
 			int warnflag = 0;
 
 			log_status("forked DB dump task exited with status %d", status);
@@ -307,69 +297,14 @@ RETSIGTYPE sig_reap(int i)
 			}
 			global_dumpdone = 1;
 			global_dumper_pid = 0;
+		} else
 #endif
-		} else {
+		{
 			fprintf(stderr, "unknown child process (pid %d) exited with status %d\n", reapedpid, status);
 		}
 	}
 	return RETSIGVAL;
 }
 
-
-
-#else /* WIN32 */
-
-#include <wincon.h>
-#include <windows.h>
-#include <signal.h>
-#define VK_C         0x43
-#define CONTROL_KEY (RIGHT_CTRL_PRESSED | LEFT_CTRL_PRESSED) 
-
-
-
-void sig_reap(int i) {}
-void sig_shutdown(int i) {}
-void sig_dumpstatus(int i) {}
-void set_sigs_intern(int bail) {}
-void set_signals() {}
-
-void bailout(int sig) {
-	char message[1024];
-	snprintf(message, sizeof(message), "BAILOUT: caught signal %d", sig);
-	panic(message);
-	exit(7);
-}
-
-
-BOOL WINAPI HandleConsole(DWORD mesg) {
-   switch(mesg) {
-      case CTRL_C_EVENT:
-      case CTRL_BREAK_EVENT:
-         break;
-
-      case CTRL_CLOSE_EVENT:
-      case CTRL_LOGOFF_EVENT:
-      case CTRL_SHUTDOWN_EVENT:
-         shutdown_flag = 1;
-         restart_flag = 0;
-         log_status("SHUTDOWN: via SIGNAL");
-         break;
-
-      default:
-         return false;
-   }
-
-   return true;
-}
-
-void set_console() {
-	HANDLE InputHandle;
-
-      SetConsoleCtrlHandler(HandleConsole, true);
-	SetConsoleTitle(VERSION);
-}
-
-
-#endif /* WIN32 */
 static const char *signal_c_version = "$RCSfile$ $Revision: 1.21 $";
 const char *get_signal_c_version(void) { return signal_c_version; }

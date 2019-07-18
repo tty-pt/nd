@@ -14,11 +14,9 @@
 
 #include <sys/types.h>
 
-#ifndef WIN32
 #include <sys/file.h>
 #include <sys/ioctl.h>
 #include <sys/wait.h>
-#endif
 
 #include <fcntl.h>
 #if defined (HAVE_ERRNO_H)
@@ -32,7 +30,6 @@
 #endif
 #include <ctype.h>
 
-#ifndef WIN32
 # define NEED_SOCKLEN_T
 //"do not include netinet6/in6.h directly, include netinet/in.h.  see RFC2553"
 # include <sys/socket.h>
@@ -40,9 +37,6 @@
 # include <netinet/tcp.h>
 # include <netdb.h>
 # include <arpa/inet.h>
-#else
-  typedef int socklen_t;
-#endif
 
 #ifdef AIX
 # include <sys/select.h>
@@ -99,7 +93,6 @@ typedef enum {
 #define TELOPT_STARTTLS   46
 
 int shutdown_flag = 0;
-int restart_flag = 0;
 
 static const char *connect_fail =
 		"Either that player does not exist, or has a different password.\r\n";
@@ -245,21 +238,12 @@ void do_setuid(char *user);
 void do_setgid(char *group);
 #endif /* MUD_GID */
 
-#ifdef SPAWN_HOST_RESOLVER
-void kill_resolver(void);
-#endif
-
 #ifdef USE_SSL /* SSL for NIX and WinFuzz */
 ssize_t socket_read(struct descriptor_data *d, void *buf, size_t count);
 ssize_t socket_write(struct descriptor_data *d, const void *buf, size_t count);
 #else /* NOT SSL */
-# ifndef WIN32 /* NOT WinFuzz */
-#  define socket_write(d, buf, count) write(d->descriptor, buf, count)
-#  define socket_read(d, buf, count) read(d->descriptor, buf, count)
-# else /* WinFuzz */
-#  define socket_write(d, buf, count) send(d->descriptor, buf, count,0)
-#  define socket_read(d, buf, count) recv(d->descriptor, buf, count,0)
-# endif
+# define socket_write(d, buf, count) write(d->descriptor, buf, count)
+# define socket_read(d, buf, count) read(d->descriptor, buf, count)
 #endif
  
 
@@ -319,9 +303,6 @@ show_program_usage(char *prog)
 	fprintf(stderr, "        -ipv6            enable listening on ipv6 sockets.\n");
 	fprintf(stderr, "        -version         display this server's version.\n");
 	fprintf(stderr, "        -help            display this message.\n");
-#ifdef WIN32
-      fprintf(stderr, "        -freeconsole     free the console window and run in the background\n");
-#endif
 	exit(1);
 }
 
@@ -342,12 +323,6 @@ main(int argc, char **argv)
 	int sanity_interactive;
 	int sanity_autofix;
 	int val;
-#ifdef WIN32
-	int freeconsole = 0;
-	WORD wVersionRequested;
-	WSADATA wsaData;
-	int err;
-#endif /* WIN32 */
 #ifdef DEBUG
 	/* This makes glibc's malloc abort() on heap errors. */
 	if(strcmp(DoNull(getenv("MALLOC_CHECK_")),"2") != 0) {
@@ -394,10 +369,6 @@ main(int argc, char **argv)
 				wizonly_mode = 1;
 			} else if (!strcmp(argv[i], "-sanfix")) {
 				sanity_autofix = 1;
-#ifdef WIN32
-                  } else if (!strcmp(argv[i], "-freeconsole")) {
-                        freeconsole = 1;
-#endif
 			} else if (!strcmp(argv[i], "-version")) {
 				printf("%s\n", VERSION);
 				exit(0);
@@ -528,7 +499,6 @@ main(int argc, char **argv)
                 log_status("INIT: TinyMUCK %s starting.", "version");
 
 #ifdef DETACH
-# ifndef WIN32
 		/* Go into the background unless requested not to */
 		if (!sanity_interactive && !db_conversion_flag) {
 			fclose(stdin);
@@ -537,19 +507,6 @@ main(int argc, char **argv)
 			if (fork() != 0)
 				_exit(0);
 		}
-# endif
-#endif
-
-#ifdef WIN32
-		if (!sanity_interactive && !db_conversion_flag && freeconsole) {
-			fclose(stdin);
-			fclose(stdout);
-			fclose(stderr);
-                  FreeConsole();
-		} else {
-               FreeConsole();
-               AllocConsole();
-            }
 #endif
 
 		/* save the PID for future use */
@@ -561,7 +518,6 @@ main(int argc, char **argv)
 
 
 #ifdef DETACH
-# ifndef WIN32
 		if (!sanity_interactive && !db_conversion_flag) {
 			/* Detach from the TTY, log whatever output we have... */
 			freopen(LOG_ERR_FILE, "a", stderr);
@@ -570,16 +526,16 @@ main(int argc, char **argv)
 			setbuf(stdout, NULL);
 
 			/* Disassociate from Process Group */
-#  ifdef _POSIX_SOURCE
+# ifdef _POSIX_SOURCE
 			setsid();
-#  else
-#   ifdef SYSV
+# else
+#  ifdef SYSV
 			setpgrp();			/* The SysV way */
-#   else
+#  else
 			setpgid(0, getpid());	/* The POSIX way. */
-#   endif						/* SYSV */
+#  endif						/* SYSV */
 
-#   ifdef  TIOCNOTTY				/* we can force this, POSIX / BSD */
+#  ifdef  TIOCNOTTY				/* we can force this, POSIX / BSD */
 			{
 				int fd;
 				if ((fd = open("/dev/tty", O_RDWR)) >= 0) {
@@ -587,20 +543,11 @@ main(int argc, char **argv)
 					close(fd);
 				}
 			}
-#   endif						/* TIOCNOTTY */
-#  endif							/* !_POSIX_SOURCE */
+#  endif						/* TIOCNOTTY */
+# endif							/* !_POSIX_SOURCE */
 		}
-# endif /* WIN32 */
 #endif							/* DETACH */
 
-#ifdef WIN32
-		if (!sanity_interactive && !db_conversion_flag && freeconsole) {
-			freopen(LOG_ERR_FILE, "a", stderr);
-			setbuf(stderr, NULL);
-			freopen(LOG_FILE, "a", stdout);
-			setbuf(stdout, NULL);
-            }
-#endif
 	}
 
 
@@ -621,15 +568,6 @@ main(int argc, char **argv)
 		do_setuid(MUD_ID);
 	}
 #endif							/* MUD_ID */
-
-	/* Have to do this after setting GID/UID, else we can't kill
-	 * the bloody thing... */
-#ifdef SPAWN_HOST_RESOLVER
-	if (!db_conversion_flag) {
-		spawn_resolver();
-	}
-#endif
-
 
 	/* Initialize MCP and some packages. */
 	mcp_initialize();
@@ -662,41 +600,12 @@ main(int argc, char **argv)
 			}
 		}
 
-
-#ifdef WIN32
-	wVersionRequested = MAKEWORD( 2, 0 );
- 
-	err = WSAStartup( wVersionRequested, &wsaData );
-	if ( err != 0 ) {
-		perror("Unable to start socket layer");
-		return 1;
-	}
- 
-	if ( LOBYTE( wsaData.wVersion ) != 2 ||
-			HIBYTE( wsaData.wVersion ) != 0 ) {
-		perror("Winsock 2.0 or later is required to run this application.");
-		WSACleanup( );
-		return 1; 
-	}
-
-	set_console(); 
-#endif
-
 		/* go do it */
 		shovechars();
 
-		if (restart_flag) {
-			close_sockets("\r\nServer restarting.  Try logging back on in a few minutes.\r\n");
-		} else {
-			close_sockets("\r\nServer shutting down normally.\r\n");
-		}
+		close_sockets("\r\nServer shutting down.\r\n");
 
 		do_dequeue(-1, (dbref) 1, "all");
-
-#ifdef WIN32
-		WSACleanup();
-#endif
-
 	}
 
 	if (sanity_interactive) {
@@ -704,10 +613,6 @@ main(int argc, char **argv)
 	} else {
 		dump_database();
 		tune_save_parmsfile();
-
-#ifdef SPAWN_HOST_RESOLVER
-		kill_resolver();
-#endif
 
 #ifdef MALLOC_PROFILING
 		db_free();
@@ -735,51 +640,6 @@ main(int argc, char **argv)
 #ifdef MALLOC_PROFILING
 		CrT_summarize_to_file("malloc_log", "Shutdown");
 #endif
-
-		if (restart_flag) {
-#ifndef WIN32
-			char **argslist;
-			char numbuf[32];
-			int argcnt = numports + 2;
-			int argnum = 1;
-
-#ifdef USE_SSL
-			argcnt += ssl_numports;
-#endif
-
-			argslist = (char**)calloc(argcnt, sizeof(char*));
-
-			for (i = 0; i < numports; i++) {
-				int alen = strlen(numbuf)+1;
-				snprintf(numbuf, sizeof(numbuf), "%d", listener_port[i]);
-				argslist[argnum] = (char*)malloc(alen);
-				strcpyn(argslist[argnum++], alen, numbuf);
-			}
-
-#ifdef USE_SSL
-			for (i = 0; i < ssl_numports; i++) {
-				int alen = strlen(numbuf)+1;
-				snprintf(numbuf, sizeof(numbuf), "-sport %d", ssl_listener_port[i]);
-				argslist[argnum] = (char*)malloc(alen);
-				strcpyn(argslist[argnum++], alen, numbuf);
-			}
-#endif
-
-			if (!fork()) {
-				argslist[0] = "./restart";
-				execv(argslist[0], argslist);
-
-				argslist[0] = "restart";
-				execv(argslist[0], argslist);
-
-				fprintf(stderr, "Could not find restart script!\n");
-			}
-#else	/* WIN32 */
-			char* argbuf[1];
-			argbuf[0] = NULL;
-			execv("restart", argbuf);
-#endif	/* WIN32 */
-		}
 	}
 
 	exit(0);
@@ -1067,9 +927,7 @@ max_open_files(void)
 
 	return (long) file_limit.rlim_cur;
 
-# elif WIN32					/* !RLIMIT && WIN32 */
-	return FD_SETSIZE;
-# else							/* !RLIMIT && !WIN32 */
+# else							/* !RLIMIT */
 /*
  * Don't know what else to do, try getdtablesize().
  * email other bright ideas to me. :) (whitefire)
@@ -1131,6 +989,7 @@ int pem_passwd_cb(char *buf, int size, int rwflag, void *userdata)
 }
 #endif
 
+int send_keepalive(struct descriptor_data *d);
 static int con_players_max = 0;	/* one of Cynbe's good ideas. */
 static int con_players_curr = 0;	/* for playermax checks. */
 extern void purge_free_frames(void);
@@ -1242,9 +1101,7 @@ shovechars()
 		next_muckevent();
 		process_commands();
 		muf_event_process();
-#ifdef WIN32
-/*		check_console();*/ /* Handle possible CTRL+C */
-#endif
+		do_tick();
 
 		for (d = descriptor_list; d; d = dnext) {
 			dnext = d->next;
@@ -1343,9 +1200,6 @@ shovechars()
 #endif
 
 		}
-#ifdef SPAWN_HOST_RESOLVER
-		FD_SET(resolver_sock[1], &input_set);
-#endif
 
 		tmptq = next_muckevent_time();
 		if ((tmptq >= 0L) && (timeout.tv_sec > tmptq)) {
@@ -1353,19 +1207,11 @@ shovechars()
 			timeout.tv_usec = (tp_pause_min % 1000) * 1000L;
 		}
 		gettimeofday(&sel_in,NULL);
-#ifndef WIN32
 		if (select(maxd, &input_set, &output_set, (fd_set *) 0, &timeout) < 0) {
 			if (errno != EINTR) {
 				perror("select");
 				return;
 			}
-#else
-		if (select(maxd, &input_set, &output_set, (fd_set *) 0, &timeout) == SOCKET_ERROR) {
-			if (WSAGetLastError() != WSAEINTR) {
-				perror("select");
-				return;
-			}
-#endif
 		} else {
 			gettimeofday(&sel_out,NULL);
 			if (sel_out.tv_usec < sel_in.tv_usec) {
@@ -1385,17 +1231,10 @@ shovechars()
 			for (i = 0; i < numsocks; i++) {
 				if (FD_ISSET(sock[i], &input_set)) {
 					if (!(newd = new_connection(listener_port[i], sock[i], 0))) {
-#ifndef WIN32
 						if (errno && errno != EINTR && errno != EMFILE && errno != ENFILE) {
 							perror("new_connection");
 							/* return; */
 						}
-#else	/* WIN32 */
-						if (WSAGetLastError() != WSAEINTR && WSAGetLastError() != EMFILE) {
-							perror("new_connection");
-							/* return; */
-						}
-#endif	/* WIN32 */
 					} else {
 						if (newd->descriptor >= maxd)
 							maxd = newd->descriptor + 1;
@@ -1406,17 +1245,10 @@ shovechars()
 			for (i = 0; i < numsocks_v6; i++) {
 				if (FD_ISSET(sock_v6[i], &input_set)) {
 					if (!(newd = new_connection_v6(listener_port[i], sock_v6[i], 0))) {
-# ifndef WIN32
 						if (errno && errno != EINTR && errno != EMFILE && errno != ENFILE) {
 							perror("new_connection");
 							/* return; */
 						}
-# else	/* WIN32 */
-						if (WSAGetLastError() != WSAEINTR && WSAGetLastError() != EMFILE) {
-							perror("new_connection");
-							/* return; */
-						}
-# endif	/* WIN32 */
 					} else {
 						if (newd->descriptor >= maxd)
 							maxd = newd->descriptor + 1;
@@ -1428,17 +1260,10 @@ shovechars()
 			for (i = 0; i < ssl_numsocks; i++) {
 				if (FD_ISSET(ssl_sock[i], &input_set)) {
 					if (!(newd = new_connection(ssl_listener_port[i], ssl_sock[i], 1))) {
-# ifndef WIN32
 						if (errno && errno != EINTR && errno != EMFILE && errno != ENFILE) {
 							perror("new_connection");
 							/* return; */
 						}
-# else
-						if (WSAGetLastError() != WSAEINTR && WSAGetLastError() != EMFILE) {
-							perror("new_connection");
-							/* return; */
-						}
-# endif
 					} else {
 						if (newd->descriptor >= maxd)
 							maxd = newd->descriptor + 1;
@@ -1453,17 +1278,10 @@ shovechars()
 			for (i = 0; i < ssl_numsocks_v6; i++) {
 				if (FD_ISSET(ssl_sock_v6[i], &input_set)) {
 					if (!(newd = new_connection_v6(ssl_listener_port[i], ssl_sock_v6[i], 1))) {
-#  ifndef WIN32
 						if (errno && errno != EINTR && errno != EMFILE && errno != ENFILE) {
 							perror("new_connection");
 							/* return; */
 						}
-#  else
-						if (WSAGetLastError() != WSAEINTR && WSAGetLastError() != EMFILE) {
-							perror("new_connection");
-							/* return; */
-						}
-#  endif
 					} else {
 						if (newd->descriptor >= maxd)
 							maxd = newd->descriptor + 1;
@@ -1475,11 +1293,6 @@ shovechars()
 				}
 			}
 # endif
-#endif
-#ifdef SPAWN_HOST_RESOLVER
-			if (FD_ISSET(resolver_sock[1], &input_set)) {
-				resolve_hostnames();
-			}
 #endif
 			for (cnt = 0, d = descriptor_list; d; d = dnext) {
 				dnext = d->next;
@@ -1642,133 +1455,6 @@ new_connection(int port, int sock, int is_ssl)
 	}
 }
 
-
-#ifdef SPAWN_HOST_RESOLVER
-
-void
-kill_resolver(void)
-{
-	int i;
-	pid_t p;
-
-	write(resolver_sock[1], "QUIT\n", 5);
-	p = wait(&i);
-}
-
-
-
-static time_t resolver_spawn_time = 0;
-
-void
-spawn_resolver(void)
-{
-	if (time(NULL) - resolver_spawn_time < 5) {
-		return;
-	}
-	resolver_spawn_time = time(NULL);
-
-	socketpair(AF_UNIX, SOCK_STREAM, 0, resolver_sock);
-	make_nonblocking(resolver_sock[1]);
-	if ((global_resolver_pid=fork())==0) {
-		close(0);
-		close(1);
-		dup(resolver_sock[0]);
-		dup(resolver_sock[0]);
-#ifdef BINDIR
-		{
-			char resolverpath[BUFFER_LEN];
-			snprintf(resolverpath, sizeof(resolverpath), "%s/fb-resolver", BINDIR);
-			execl(resolverpath, "fb-resolver", NULL);
-			snprintf(resolverpath, sizeof(resolverpath), "%s/resolver", BINDIR);
-			execl(resolverpath, "resolver", NULL);
-		}
-#endif
-		execl("/usr/local/bin/fb-resolver", "resolver", NULL);
-		execl("/usr/local/bin/resolver", "resolver", NULL);
-		execl("/usr/bin/fb-resolver", "resolver", NULL);
-		execl("/usr/bin/resolver", "resolver", NULL);
-		execl("./fb-resolver", "resolver", NULL);
-		execl("./resolver", "resolver", NULL);
-#if 0
-		execl("@bindir@/resolver", "resolver", NULL);
-		execl("./bin/resolver", "resolver", NULL);
-		execl("/usr/lib/fbmuck/resolver", "resolver", NULL);
-		execl("/usr/local/fbmuck/bin/resolver", "resolver", NULL);
-		execl("/usr/local/bin/resolver", "resolver", NULL);
-		execl("../src/resolver", "resolver", NULL);
-		execl("./resolver", "resolver", NULL);
-		execl("resolver", "resolver", NULL);
-#endif
-		log_status("%s","Unable to spawn host resolver!");
-		_exit(1);
-	}
-}
-
-
-void
-resolve_hostnames()
-{
-	char buf[BUFFER_LEN];
-	char *ptr, *ptr2, *ptr3, *hostip, *port, *hostname, *username, *tempptr;
-	struct descriptor_data *d;
-	int got, dc;
-
-	got = read(resolver_sock[1], buf, sizeof(buf));
-	if (got < 0)
-		return;
-	if (got == sizeof(buf)) {
-		got--;
-		while (got > 0 && buf[got] != '\n')
-			buf[got--] = '\0';
-	}
-	ptr = buf;
-	dc = 0;
-	do {
-		for (ptr2 = ptr; *ptr && *ptr != '\n' && dc < got; ptr++, dc++) ;
-		if (*ptr) {
-			*ptr++ = '\0';
-			dc++;
-		}
-		if (*ptr2) {
-			ptr3 = index(ptr2, '|');
-			if (!ptr3)
-				return;
-			hostip = ptr2;
-			port = index(ptr2, '(');
-			if (!port)
-				return;
-			tempptr = index(port, ')');
-			if (!tempptr)
-				return;
-			*tempptr = '\0';
-			hostname = ptr3;
-			username = index(ptr3, '(');
-			if (!username)
-				return;
-			tempptr = index(username, ')');
-			if (!tempptr)
-				return;
-			*tempptr = '\0';
-			if (*port && *hostname && *username) {
-				*port++ = '\0';
-				*hostname++ = '\0';
-				*username++ = '\0';
-				for (d = descriptor_list; d; d = d->next) {
-					if (!strcmp(d->hostname, hostip) && !strcmp(d->username, port)) {
-						FREE(d->hostname);
-						FREE(d->username);
-						d->hostname = string_dup(hostname);
-						d->username = string_dup(username);
-					}
-				}
-			}
-		}
-	} while (dc < got && *ptr);
-}
-
-#endif
-
-
 /*  addrout_v6 -- Translate IPV6 address 'a' from addr struct to text.		*/
 #ifdef USE_IPV6
 const char *
@@ -1782,7 +1468,6 @@ addrout_v6(int lport, struct in6_addr *a, unsigned short prt)
 
 	prt = ntohs(prt);
 
-# ifndef SPAWN_HOST_RESOLVER
 	if (tp_hostnames) {
 		/* One day the nameserver Qwest uses decided to start */
 		/* doing halfminute lags, locking up the entire muck  */
@@ -1819,15 +1504,8 @@ addrout_v6(int lport, struct in6_addr *a, unsigned short prt)
 			}
 		}
 	}
-# endif							/* SPAWN_HOST_RESOLVER */
 
 	inet_ntop(AF_INET6, a, ip6addr, 128);
-# ifdef SPAWN_HOST_RESOLVER
-	snprintf(buf, sizeof(buf), "%s(%u)%u\n", ip6addr, prt, lport);
-	if (tp_hostnames) {
-		write(resolver_sock[1], buf, strlen(buf));
-	}
-# endif
 	snprintf(buf, sizeof(buf), "%s(%u)\n", ip6addr, prt);
 
 	return buf;
@@ -1847,7 +1525,6 @@ addrout(int lport, long a, unsigned short prt)
 
 	prt = ntohs(prt);
 
-#ifndef SPAWN_HOST_RESOLVER
 	if (tp_hostnames) {
 		/* One day the nameserver Qwest uses decided to start */
 		/* doing halfminute lags, locking up the entire muck  */
@@ -1885,18 +1562,8 @@ addrout(int lport, long a, unsigned short prt)
 			}
 		}
 	}
-#endif							/* SPAWN_HOST_RESOLVER */
 
 	a = ntohl(a);
-
-#ifdef SPAWN_HOST_RESOLVER
-	snprintf(buf, sizeof(buf), "%ld.%ld.%ld.%ld(%u)%u\n",
-			(a >> 24) & 0xff,
-			(a >> 16) & 0xff, (a >> 8) & 0xff, a & 0xff, prt, lport);
-	if (tp_hostnames) {
-		write(resolver_sock[1], buf, strlen(buf));
-	}
-#endif
 
 	snprintf(buf, sizeof(buf), "%ld.%ld.%ld.%ld(%u)",
 			(a >> 24) & 0xff, (a >> 16) & 0xff, (a >> 8) & 0xff, a & 0xff, prt);
@@ -1981,8 +1648,6 @@ initializesock(int s, const char *hostname, int is_ssl)
 {
 	struct descriptor_data *d;
 	char buf[128], *ptr;
-	int optval = 1;
-	socklen_t optvallen = sizeof(optval);
 
 	MALLOC(d, struct descriptor_data, 1);
 
@@ -2258,14 +1923,6 @@ send_keepalive(struct descriptor_data *d)
 	} else {
 		cnt = socket_write(d, "", 0);
 	}
-#ifdef WIN32
-	/* We expect a 0 return */
-	if (cnt < 0 || cnt == SOCKET_ERROR) {
-		if (WSAGetLastError() == WSAEWOULDBLOCK)
-			return 1;
-		return 0;
-	}
-#else
 	/* We expect a 0 return */
 	if (cnt < 0) {
 		if (errno == EWOULDBLOCK)
@@ -2275,7 +1932,6 @@ send_keepalive(struct descriptor_data *d)
 		log_status("keepalive socket write descr=%i, errno=%i", d->descriptor, errno);
 		return 0;
 	}
-#endif
 	return 1;
 }
 
@@ -2303,19 +1959,11 @@ process_output(struct descriptor_data *d)
 	for (qp = &d->output.head; (cur = *qp);) {
 		cnt = socket_write(d, cur->start, cur->nchars);
 
-#ifdef WIN32
-		if (cnt <= 0 || cnt == SOCKET_ERROR) {
-			if (WSAGetLastError() == WSAEWOULDBLOCK)
-				return 1;
-			return 0;
-		}
-#else
 		if (cnt <= 0) {
 			if (errno == EWOULDBLOCK)
 				return 1;
 			return 0;
 		}
-#endif
 		d->output_size -= cnt;
 		if (cnt == cur->nchars) {
 			d->output.lines--;
@@ -2334,16 +1982,12 @@ process_output(struct descriptor_data *d)
 	return 1;
 }
 
-#ifdef WIN32
-# define O_NONBLOCK 1
-#else
-# if !defined(O_NONBLOCK) || defined(ULTRIX)	/* POSIX ME HARDER */
-#  ifdef FNDELAY					/* SUN OS */
-#   define O_NONBLOCK FNDELAY
-#  else
-#   ifdef O_NDELAY				/* SyseVil */
-#    define O_NONBLOCK O_NDELAY
-#   endif
+#if !defined(O_NONBLOCK) || defined(ULTRIX)	/* POSIX ME HARDER */
+# ifdef FNDELAY					/* SUN OS */
+#  define O_NONBLOCK FNDELAY
+# else
+#  ifdef O_NDELAY				/* SyseVil */
+#   define O_NONBLOCK O_NDELAY
 #  endif
 # endif
 #endif
@@ -2351,18 +1995,10 @@ process_output(struct descriptor_data *d)
 void
 make_nonblocking(int s)
 {
-#ifdef WIN32
-	unsigned long val = O_NONBLOCK;
-	if (ioctlsocket(s, FIONBIO, &val) == SOCKET_ERROR) {
-		perror("make_nonblocking: ioctlsocket");
-		panic("O_NONBLOCK ioctlsocket failed");
-	}
-#else
 	if (fcntl(s, F_SETFL, O_NONBLOCK) == -1) {
 		perror("make_nonblocking: fcntl");
 		panic("O_NONBLOCK fcntl failed");
 	}
-#endif
 }
 
 void
@@ -2416,29 +2052,14 @@ process_input(struct descriptor_data *d)
 	}
 	got = socket_read(d, buf, maxget);
 
-#ifdef WIN32
-# ifdef USE_SSL
-	if (got <= 0 || got == SOCKET_ERROR) {
-		if (WSAGetLastError() != WSAEWOULDBLOCK) {
-			return 0;
-		}
-	}
-# else
-	if (got <= 0 || got == SOCKET_ERROR) {
-		return 0;
-	}
-# endif
-#else
-
-# ifdef USE_SSL
+#ifdef USE_SSL
 	if (got <= 0 && errno != EWOULDBLOCK) {
 		return 0;
 	}
-# else
+#else
 	if (got <= 0) {
 		return 0;
 	}
-# endif
 #endif
 
 	if (!d->raw_input) {
@@ -3033,10 +2654,6 @@ do_armageddon(dbref player, const char *msg)
 	fprintf(stderr, "ARMAGEDDON initiated by %s(%d): %s\n", NAME(player), player, msg);
 	close_sockets(buf);
 
-#ifdef SPAWN_HOST_RESOLVER
-	kill_resolver();
-#endif
-
 	exit(1);
 }
 
@@ -3045,11 +2662,6 @@ void
 emergency_shutdown(void)
 {
 	close_sockets("\r\nEmergency shutdown due to server crash.");
-
-#ifdef SPAWN_HOST_RESOLVER
-	kill_resolver();
-#endif
-
 }
 
 
@@ -3424,46 +3036,10 @@ descrdata_by_count(int c)
 
 struct descriptor_data *descr_lookup_table[FD_SETSIZE];
 
-#ifdef WIN32
-int descr_hash_table[FD_SETSIZE];
-
-int sethash_descr(int d) {
-   for (int i = 0; i < FD_SETSIZE; i++) {
-      if (descr_hash_table[i] == -1) { descr_hash_table[i] = d; return i; }
-   }
-   fprintf(stderr,"descr hash table full!", NULL); /* Should NEVER happen */
-   return -1;
-}
-
-int gethash_descr(int d) {
-   for (int i = 0; i < FD_SETSIZE; i++) {
-      if (descr_hash_table[i] == d) return i;
-   }
-   fprintf(stderr,"descr hash value missing!", NULL); /* Should NEVER happen */
-   return -1;
- 
-}
-
-void unsethash_descr(int d) {
-   for (int i = 0; i < FD_SETSIZE; i++) {
-      if (descr_hash_table[i] == d) {
-         descr_hash_table[i] = -1;
-         return;
-      }
-   }
-   fprintf(stderr,"descr hash value missing!", NULL); /* Should NEVER happen */
-}
-#endif
-
 void
 init_descriptor_lookup()
 {
 	int i;
-#ifdef WIN32
-	for (i = 0; i < FD_SETSIZE; i++) {
-		descr_hash_table[i] = -1;
-	}
-#endif
 	for (i = 0; i < FD_SETSIZE; i++) {
 		descr_lookup_table[i] = NULL;
 	}
@@ -3565,38 +3141,24 @@ void
 remember_descriptor(struct descriptor_data *d)
 {
 	if (d) {
-#ifdef WIN32
-		descr_lookup_table[sethash_descr(d->descriptor)] = d;
-#else
 		descr_lookup_table[d->descriptor] = d;
-#endif
 	}
 }
 
 void
 forget_descriptor(struct descriptor_data *d)
 {
-	if (d) {
-#ifdef WIN32
-		unsethash_descr(d->descriptor);
-#else
+	if (d)
 		descr_lookup_table[d->descriptor] = NULL;
-#endif
-	}
 }
 
 struct descriptor_data *
 lookup_descriptor(int c)
 {
-#ifdef WIN32
-	if ( c < 0 ) return NULL;
-	return descr_lookup_table[gethash_descr(c)];
-#else 
-	if (c >= FD_SETSIZE || c < 0) {
+	if (c >= FD_SETSIZE || c < 0)
 		return NULL;
-	}
-	return descr_lookup_table[c];
-#endif
+	else
+		return descr_lookup_table[c];
 }
 
 struct descriptor_data *
@@ -4184,39 +3746,25 @@ ssize_t socket_read(struct descriptor_data *d, void *buf, size_t count) {
 	int i;
  
 	if (! d->ssl_session) {
-#ifdef WIN32
-		return recv(d->descriptor, (char *) buf, count, 0);
-#else
 		return read(d->descriptor, buf, count);
-#endif
 	} else {
 		i = SSL_read(d->ssl_session, buf, count);
 		if (i < 0) {
 			i = SSL_get_error(d->ssl_session, i);
 			if (i == SSL_ERROR_WANT_READ || i == SSL_ERROR_WANT_WRITE) {
 				/* log_ssl_error("read 0", d->descriptor, i); */
-#ifdef WIN32
-				WSASetLastError(WSAEWOULDBLOCK);
-#else
  				errno = EWOULDBLOCK;
-#endif
 				return -1;
 			} else if (d->is_starttls && (i == SSL_ERROR_ZERO_RETURN || i == SSL_ERROR_SSL)) {
 				/* log_ssl_error("read 1", d->descriptor, i); */
 				d->is_starttls = 0;
 				SSL_free(d->ssl_session);
 				d->ssl_session = NULL;
-#ifdef WIN32
-				WSASetLastError(WSAEWOULDBLOCK);
-#else
 				errno = EWOULDBLOCK;
-#endif
 				return -1;
 			} else {
 				/* log_ssl_error("read 1", d->descriptor, i); */
-#ifndef WIN32
 				errno = EBADF;
-#endif
 				return -1;
 			}
 		}
@@ -4228,40 +3776,26 @@ ssize_t socket_write(struct descriptor_data *d, const void *buf, size_t count) {
 	int i;
 
 	d->last_pinged_at = time(NULL);
-	if (! d->ssl_session) {
-#ifdef WIN32
-		return send(d->descriptor, (char *) buf, count, 0);
-#else
+	if (! d->ssl_session)
 		return write(d->descriptor, buf, count);
-#endif
-	} else {
+	else {
 		i = SSL_write(d->ssl_session, buf, count);
 		if (i < 0) {
 			i = SSL_get_error(d->ssl_session, i);
 			if (i == SSL_ERROR_WANT_READ || i == SSL_ERROR_WANT_WRITE) {
 				/* log_ssl_error("write 0", d->descriptor, i); */
-#ifdef WIN32
-				WSASetLastError(WSAEWOULDBLOCK);
-#else
  				errno = EWOULDBLOCK;
-#endif
 				return -1;
 			} else if (d->is_starttls && (i == SSL_ERROR_ZERO_RETURN || i == SSL_ERROR_SSL)) {
 				/* log_ssl_error("write 1", d->descriptor, i); */
 			    d->is_starttls = 0;
 				SSL_free(d->ssl_session);
 				d->ssl_session = NULL;
-#ifdef WIN32
-				WSASetLastError(WSAEWOULDBLOCK);
-#else
  				errno = EWOULDBLOCK;
-#endif
 				return -1;
 			} else { 
 				/* log_ssl_error("write 2", d->descriptor, i); */
-#ifndef WIN32
 				errno = EBADF;
-#endif
 				return -1;
 			}
 		}

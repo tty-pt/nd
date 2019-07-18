@@ -7,12 +7,7 @@
 #include <ctype.h>
 #include <signal.h>
 
-#ifndef WIN32
 #include <sys/wait.h>
-#else
-#include <windows.h>
-#include <process.h>
-#endif
 
 #include "db.h"
 #include "props.h"
@@ -89,26 +84,11 @@ do_shutdown(dbref player)
 	if (Wizard(player)) {
 		log_status("SHUTDOWN: by %s", unparse_object(player, player));
 		shutdown_flag = 1;
-		restart_flag = 0;
 	} else {
 		notify(player, "Your delusions of grandeur have been duly noted.");
 		log_status("ILLEGAL SHUTDOWN: tried by %s", unparse_object(player, player));
 	}
 }
-
-void
-do_restart(dbref player)
-{
-	if (Wizard(player)) {
-		log_status("SHUTDOWN & RESTART: by %s", unparse_object(player, player));
-		shutdown_flag = 1;
-		restart_flag = 1;
-	} else {
-		notify(player, "Your delusions of grandeur have been duly noted.");
-		log_status("ILLEGAL RESTART: tried by %s", unparse_object(player, player));
-	}
-}
-
 
 #ifdef DISKBASE
 extern long propcache_hits;
@@ -137,10 +117,6 @@ dump_database_internal(void)
 #ifdef DELTADUMPS
 		fclose(delta_outfile);
 		fclose(delta_infile);
-#endif
-
-#ifdef WIN32
-		(void) unlink(dumpfile); /* Delete old file before rename */
 #endif
 
 		if (rename(tmpfile, dumpfile) < 0)
@@ -175,9 +151,6 @@ dump_database_internal(void)
 	if ((f = fopen(tmpfile, "wb")) != NULL) {
 		macrodump(macrotop, f);
 		fclose(f);
-#ifdef WIN32
-		unlink(MACRO_FILE);
-#endif
 		if (rename(tmpfile, MACRO_FILE) < 0)
 			perror(tmpfile);
 	} else {
@@ -275,17 +248,6 @@ dump_database(void)
 	log_status("DUMPING: %s.#%d# (done)", dumpfile, epoch);
 }
 
-#ifdef WIN32
-/* TODO: This is not thread safe - disabled for now... */
-/*void fork_dump_thread(void *arg) {
-	forked_dump_process_flag = 1;
-	dump_database_internal();
-        global_dumper_pid = 0;
-	_endthread();
-}*/
-#endif
-
-
 /*
  * Named "fork_and_dump()" mostly for historical reasons...
  */
@@ -310,15 +272,14 @@ fork_and_dump(void)
 #ifdef DISKBASE
 	dump_database_internal();
 #else
-# ifndef WIN32
 	if ((global_dumper_pid=fork())==0) {
 	/* We are the child. */
 		forked_dump_process_flag = 1;
-#  ifdef NICEVAL
+# ifdef NICEVAL
 	/* Requested by snout of SPR, reduce the priority of the
 	 * dumper child. */
 		nice(NICEVAL);
-#  endif /* NICEVAL */
+# endif /* NICEVAL */
 		set_dumper_signals();
 		dump_database_internal();
 		_exit(0);
@@ -328,14 +289,6 @@ fork_and_dump(void)
 	    wall_wizards("## Could not fork for database dumping.  Possibly out of memory.");
 	    wall_wizards("## Please restart the server when next convenient.");
 	}
-# else /* !WIN32 */
-	dump_database_internal();
-	/* TODO: This is not thread safe - disabled for now... */
-	/*global_dumper_pid = (long) _beginthread(fork_dump_thread, 0, 0);
-	if (global_dumper_pid == -1L) {
-		wall_wizards("## Could not create thread for database dumping");
-	}*/
-# endif
 #endif
 }
 
@@ -1054,7 +1007,7 @@ process_command(int descr, dbref player, char *command)
 				break;
 			case 'r':
 			case 'R':
-				/* @recycle, @relink, @restart, @restrict */
+				/* @recycle, @relink, @restrict */
 				switch (command[3]) {
 				case 'c':
 				case 'C':
@@ -1068,13 +1021,8 @@ process_command(int descr, dbref player, char *command)
 					break;
 				case 's':
 				case 'S':
-					if (!strcmp(command, "@restart")) {
-						do_restart(player);
-					} else if (!strcmp(command, "@restrict")) {
-						do_restrict(player, arg1);
-					} else {
-						goto bad;
-					}
+					Matched("@restrict");
+					do_restrict(player, arg1);
 					break;
 				default:
 					goto bad;

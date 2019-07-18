@@ -1,0 +1,137 @@
+let s:muckb = 0
+let s:muckw = 0
+let s:muckO = 0
+
+func s:Continue()
+	if s:muckb == 0 && s:muckO == 1
+		call s:Connect()
+	endif
+endfunc
+
+func s:nothing()
+endfunc
+
+func Quit()
+	if s:muckb != 0 && bufexists(s:muckb)
+		exe s:muckb . 'bwipe!'
+	endif
+	let s:muckw = 0
+	let s:muckb = 0
+endfunc
+
+func s:GdbOut(msg)
+	if a:msg =~ '^Done\.$'
+		let s:muckO = 1
+		call s:Connect()
+	" elseif msg =~ '^\[Inferior .* exited normally\]$'
+	" 	call s:End()
+	endif
+endfunc
+
+let g:Continue = function("s:Continue")
+let g:Stop = function('s:nothing')
+let g:Run = function("s:nothing")
+let g:GdbQuit = function("Quit")
+let g:GdbOut = function('s:GdbOut')
+
+packadd qgdb
+
+func MuckBuffer()
+	if s:muckw != 0
+		call win_gotoid(s:muckw)
+		let mid = win_getid()
+		if mid == s:muckw && bufexists(s:muckb)
+			exe s:muckb . 'b'
+			return
+		endif
+	endif
+
+	DebugFocus
+	belowr split
+endfunc
+
+func s:Connect()
+	let id = win_getid()
+	call MuckBuffer()
+	let muckt = term_start('telnet qnixsoft.com 4201', {
+				\ "term_kill": "int",
+				\ "curwin": 1,
+				\ })
+	call term_sendkeys(muckt, "connect One qovmjbl\<cr>")
+	let s:muckw = win_getid()
+	let s:muckb = bufnr('%')
+	call win_gotoid(id)
+endfunc
+
+func s:SigTerm()
+	if s:muckO == 1
+		Stop
+		Gdb signal SIGTERM
+		let s:muckO = 0
+		Continue
+		return 0
+	else
+		return 1
+	endif
+endfunc
+
+func ConnectIgnore()
+	if s:muckb == 0 || !bufexists(s:muckb)
+		call s:Connect()
+	endif
+endfunc
+
+func FullQuit()
+	call s:SigTerm()
+	GdbQuit
+endfunc
+
+func Kill()
+	if s:SigTerm()
+		GdbQuit
+	endif
+endfunc
+
+func Restart()
+	if !g:GdbStopped()
+		call s:SigTerm()
+	else
+		Continue
+	endif
+	Run
+endfunc
+
+autocmd! QuickfixCmdPost make call Restart()
+
+File ./src/fbmuck
+Args -gamedir ./game -dbin ../game/data/std-db.db -dbout ../game/data/std-db.db
+StartRun
+
+nmap <leader>d :StartRun<cr>
+nmap <leader>c :call ConnectIgnore()<cr>
+nmap <leader>b :Break<cr>
+nmap <leader>C :Clear<cr>
+nmap <leader>k :call Kill()<cr>
+nmap <leader>kk :call FullQuit()<cr>
+nmap <leader>q :call Quit()<cr>
+tno <esc>k <c-w>:call Kill()<cr>
+tno <esc>kk <c-w>:call FullQuit()<cr>
+tno <esc>q <c-w>:call Quit()<cr>
+
+set efm +=%Dmake\ -C\ %f\ %.%#
+set efm +=%Xcd\ ..
+
+fu! Ctof(c)
+	let l:r = a:c * 9 / 6 + 32
+	return l:r
+endfu
+
+fu! Ictof()
+	call inputsave()
+	let l:c = input('Celsius ')
+	call inputrestore()
+	let l:r = Ctof(l:c)
+	echo "\n" . l:r
+endfu
+
+let @u = 'ggyG"0'

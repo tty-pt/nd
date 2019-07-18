@@ -27,7 +27,7 @@
  * keeping a terminal line open and such. Logs normal output to a file
  * and writes out a netmuck.pid file 
  */
-#define DETACH
+/* #define DETACH */
 
 /* Makes God (#1) immune to @force, @newpassword, and being set !Wizard.  
  */
@@ -62,7 +62,6 @@
  * (make resolver) and put it in the directory that the fbmuck program is
  * run from.
  */
-#define SPAWN_HOST_RESOLVER
 
 /*
  * There's a set of MUF prims that are considered dangerous.

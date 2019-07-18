@@ -760,7 +760,7 @@ prim_nextprop(PRIM_PROTOTYPE)
 		abort_interp("Invalid dbref. (1)");
 
 	ref = oper1->data.objref;
-	(void) strcpyn(buf, sizeof(buf), ((oper2->data.string) && (oper2->data.string->data)) ?
+	(void) strcpyn(buf, sizeof(buf), ((oper2->data.string)) ?
 				  oper2->data.string->data : "");
 	CLEAR(oper1);
 	CLEAR(oper2);
@@ -1105,7 +1105,7 @@ prim_blessedp(PRIM_PROTOTYPE)
 	if (!oper2->data.string)
 		abort_interp("Null string not allowed. (2)");
 	ref = oper1->data.objref;
-	(void) strcpyn(buf, sizeof(buf), oper2->data.string->data ? oper2->data.string->data : "");
+	(void) strcpyn(buf, sizeof(buf), oper2->data.string->data);
 	CLEAR(oper1);
 	CLEAR(oper2);
 

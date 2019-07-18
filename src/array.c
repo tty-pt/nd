@@ -218,9 +218,7 @@ array_tree_height_diff(array_tree * node)
 |*| Note to self: don't do : max (x++,y)
 |*| Kim
 \*/
-#ifndef WIN32
 #define max(a, b)       (a > b ? a : b)
-#endif
 
 static void
 array_tree_fixup_height(array_tree * node)

@@ -1914,7 +1914,7 @@ do_directive(COMPSTATE * cstat, char *direct)
 			snprintf(defstr, sizeof(defstr), "#%i \"%s\" call", cstat->program, tmpname);
 
 			if (doitset) {
-				if (defstr && *defstr) {
+				if (*defstr) {
 					add_property(cstat->program, propname, defstr, 0);
 				} else {
 					remove_property(cstat->program, propname);
@@ -1927,7 +1927,7 @@ do_directive(COMPSTATE * cstat, char *direct)
 
 		advance_line(cstat);
 
-		free(holder);		
+		free(holder);
 	} else if (!string_compare(temp, "include")) {
 		struct match_data md;
 
@@ -3911,7 +3911,7 @@ size_prog(dbref prog)
 		} else if (c[i].type == PROG_STRING && c[i].data.string) {
 			byts += strlen(c[i].data.string->data) + 1;
 			byts += sizeof(struct shared_string);
-		} else if ((c[i].type == PROG_ADD))
+		} else if (c[i].type == PROG_ADD)
 			byts += sizeof(struct prog_addr);
 	}
 	byts += size_pubs(PROGRAM_PUBS(prog));

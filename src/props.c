@@ -53,9 +53,7 @@ height_diff(PropPtr node)
 		return 0;
 }
 
-#ifndef WIN32
 # define max(a, b)       (a > b ? a : b)
-#endif
 
 static void
 fixup_height(PropPtr node)
