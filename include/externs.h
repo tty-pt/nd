@@ -140,9 +140,7 @@ extern void exec_or_notify(int descr, dbref player, dbref thing,
 						   const char *message, const char *whatcalled,
 						   int mpiflags);
 
-/* From geo.c */
-extern int do_door_open(int descr, dbref player, const char dir, int v);
-extern void do_door_close(int descr, dbref player, const char dir);
+/* From geography.c */
 extern void do_map(int descr, dbref player);
 extern int geo_v(int *drmap, int descr, dbref player, const char *cmd);
 

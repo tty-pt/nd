@@ -699,19 +699,9 @@ geo_exit_simm(int descr, dbref player, dbref exit)
 {
 	dbref ref = geo_exit(descr, player, exit_dest(exit),
 			     getloc(exit), geo_simm(NAME(exit)[0]));
-	if (!GETTMP(getloc(exit))) {
+	if (!GETTMP(getloc(exit)))
 		SETDOOR(ref, GETDOOR(exit));
-		SETOPEN(ref, GETOPEN(exit));
-	}
 	return ref;
-}
-
-static inline dbref
-geo_exit_there(int descr, dbref player, char dir)
-{
-	return geo_exit_where(descr, player,
-			      geo_there(getloc(player), dir),
-			      geo_simm(dir));
 }
 
 static inline dbref
@@ -817,7 +807,6 @@ exits_infer(dbref *exit_here, int descr, dbref player, dbref here, dbref exit)
 
 		oexit = geo_exit(descr, player, here, there, *s);
 		SETDOOR(oexit, GETDOOR(exit_there));
-		SETOPEN(oexit, GETOPEN(exit_there));
 		exit_dest_set(exit_there, here);
 	}
 }
@@ -898,110 +887,6 @@ geo_enter_room(dbref *exit_there, int descr, dbref player, dbref exit, int v, in
 
 /* OPS {{{ */
 
-/* DOOR OPEN / CLOSE {{{ */
-
-// if walk is possible, return 1.
-
-int
-do_door_open(int descr, dbref player, const char dir, int v)
-{
-	dbref here, there, exit, exit_there = NOTHING;
-
-	here = getloc(player);
-	there = geo_there(here, dir);
-
-	exit = geo_exit_here(descr, player, dir);
-
-	if (exit < 0) {
-		notify(player, "You can't go that way.");
-		return 0;
-	}
-
-	if (!GETDOOR(exit)) {
-		if (v) notify(player, "This is not a door.");
-		return 1;
-	}
-
-	if (GETOPEN(exit)) {
-		if (v) notify(player, "This door is already open.");
-		return 1;
-	}
-
-	if (!can_doit(descr, player, exit, "This door is locked"))
-		return 0;
-
-	if (there >= 0) {
-		exit_there = geo_exit_there(descr, player, dir);
-		assert(exit_there >= 0);
-		/* SETDOOR(exit_there, 1); // dont uncomment */
-		SETOPEN(exit_there, 1);
-	}
-
-	SETOPEN(exit, 1);
-
-	notify(player, "You open the door.");
-	return 1;
-}
-
-int
-door_auto_open(int descr, dbref player, dbref exit)
-{
-	if (GETDOOR(exit)) {
-		const char dir = NAME(exit)[0];
-		return !(get_property_value(player, "_/iod")
-			 && do_door_open(descr, player, dir, 0));
-	}
-	return 0;
-}
-
-void
-do_door_close(int descr, dbref player, const char dir)
-{
-	dbref there = geo_there(getloc(player), geo_simm(dir));
-	dbref exit = geo_exit_here(descr, player, dir);
-
-	if (exit < 0) {
-		notify(player, "There is no exit here.");
-		return;
-	}
-
-	if (!GETDOOR(exit)) {
-		notify(player, "This is no door.");
-		return;
-	}
-
-	if (!GETOPEN(exit)) {
-		notify(player, "This door is closed.");
-		return;
-	}
-
-	if (there >= 0) {
-		dbref exit_there = geo_exit_there(descr, player, dir);
-		assert(exit_there >= 0);
-		SETOPEN(exit_there, 0);
-	}
-
-	SETOPEN(exit, 0);
-
-	notify(player, "You close the door.");
-}
-
-void
-door_auto_close(int descr, dbref player, dbref exit)
-{
-	if (get_property_value(player, "_/icd")) {
-		const char dir = NAME(exit)[0];
-		dbref exit_here = geo_exit_here(descr, player, geo_simm(dir));
-		assert(exit_here >= 0);
-		assert(exit >= 0);
-		SETOPEN(exit, 0);
-		SETOPEN(exit_here, 0);
-		notify(player, "You close the door.");
-	}
-}
-
-/* }}} */
-
 /* UNTMP {{{ */
 
 static inline int
@@ -1081,10 +966,8 @@ walk(int descr, dbref player, const char dir) {
 	dbref there;
 	int ret = 1;
 
-	if (exit < 0) {
-		notify(player, "You can't go that way.");
+	if (!can_doit(descr, player, exit, "You can't go that way."))
 		return 0;
-	}
 
 #ifdef PRECOVERY
 	there = exit_dest(exit);

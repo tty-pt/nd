@@ -172,6 +172,7 @@
 #include "params.h"
 #include "defaults.h"
 #include "externs.h"
+#include "geography.h"
 
 int
 OkObj(dbref obj)
@@ -263,20 +264,18 @@ could_doit(int descr, dbref player, dbref thing)
 	dbref source, dest, owner;
 
 	if (Typeof(thing) == TYPE_EXIT) {
-			/* If exit is unlinked, can't do it. */
-		if (DBFETCH(thing)->sp.exit.ndest == 0) {
+		/* If exit is unlinked, can't do it. */
+		if (DBFETCH(thing)->sp.exit.ndest == 0)
 			return 0;
-		}
 
 		owner = OWNER(thing);
 		source = DBFETCH(player)->location;
 		dest = *(DBFETCH(thing)->sp.exit.dest);
 
-		// FIXME
-		if (dest == NOTHING)
-			return 1;
+		if (dest == NOTHING && geo_is(thing))
+			goto out;
 
-		if (Typeof(dest) == TYPE_PLAYER) {
+		else if (Typeof(dest) == TYPE_PLAYER) {
 			/* Check for additional restrictions related to player dests */
 			dbref destplayer = dest;
 
@@ -316,7 +315,7 @@ could_doit(int descr, dbref player, dbref thing)
 			}
 		}
 	}
-
+out:
 		/* Check the @lock on the thing, as a final test. */
 	return (eval_boolexp(descr, player, GETLOCK(thing), thing));
 }
@@ -344,25 +343,25 @@ test_lock_false_default(int descr, dbref player, dbref thing, const char *lockpr
 	return (eval_boolexp(descr, player, lok, thing));
 }
 
-
 int
 can_doit(int descr, dbref player, dbref thing, const char *default_fail_msg)
 {
-	dbref loc;
+	if (thing == NOTHING) {
+		notify(player, default_fail_msg);
+		return 0;
+	}
 
-	if (thing != NOTHING && Typeof(thing) == TYPE_EXIT
+	if (Typeof(thing) == TYPE_EXIT
 	    && DBFETCH(thing)->sp.exit.ndest == 0) {
 		return 1;
 	}
-	if ((loc = getloc(player)) == NOTHING)
-		return 1; // FIXME
-		/* return geo_can_01(descr, player, thing); */
 
 	if (!Wizard(OWNER(player)) && Typeof(player) == TYPE_THING &&
 			(FLAGS(thing) & ZOMBIE)) {
 		notify(player, "Sorry, but zombies can't do that.");
 		return 0;
 	}
+
 	if (!could_doit(descr, player, thing)) {
 		/* can't do it */
 		if (GETFAIL(thing)) {
@@ -371,7 +370,7 @@ can_doit(int descr, dbref player, dbref thing, const char *default_fail_msg)
 			notify(player, default_fail_msg);
 		}
 		if (GETOFAIL(thing) && !Dark(player)) {
-			parse_oprop(descr, player, loc, thing, MESGPROP_OFAIL,
+			parse_oprop(descr, player, getloc(player), thing, MESGPROP_OFAIL,
 						   NAME(player), "(@Ofail)");
 		}
 		return 0;
@@ -381,7 +380,7 @@ can_doit(int descr, dbref player, dbref thing, const char *default_fail_msg)
 			exec_or_notify_prop(descr, player, thing, MESGPROP_SUCC, "(@Succ)");
 		}
 		if (GETOSUCC(thing) && !Dark(player)) {
-			parse_oprop(descr, player, loc, thing, MESGPROP_OSUCC,
+			parse_oprop(descr, player, getloc(player), thing, MESGPROP_OSUCC,
 						   NAME(player), "(@Osucc)");
 		}
 		return 1;

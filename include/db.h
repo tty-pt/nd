@@ -196,10 +196,6 @@ typedef int dbref;				/* offset into db */
 #define GETDOOR(x)	get_property_value(x, MESGPROP_DOOR)
 #define SETDOOR(x, y)	set_property_value(x, MESGPROP_DOOR, y)
 
-#define MESGPROP_OPEN	"_/open"
-#define GETOPEN(x)	get_property_value(x, MESGPROP_OPEN)
-#define SETOPEN(x, y)	set_property_value(x, MESGPROP_OPEN, y)
-
 #define MESGPROP_TMP	"_/tmp"
 #define GETTMP(x)	get_property_value(x, MESGPROP_TMP)
 #define SETTMP(x, y)	set_property_value(x, MESGPROP_TMP, y)

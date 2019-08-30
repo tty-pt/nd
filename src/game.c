@@ -1199,17 +1199,9 @@ process_command(int descr, dbref player, char *command)
 			do_buy(descr, player, arg1, arg2);
 			break;
 		case 'c':
-			/* close, cat */
-			switch (command[1]) {
-			case 'l':
-				Matched("close");
-				do_door_close(descr, player, arg1[0]);
-				break;
-			case 'a':
-				Matched("cat");
-				cat(descr, arg1);
-				break;
-			}
+			/* cat */
+			Matched("cat");
+			cat(descr, arg1);
 			break;
 		case 'd':
 		case 'D':
@@ -1354,11 +1346,6 @@ process_command(int descr, dbref player, char *command)
 			/* news */
 			Matched("news");
 			do_news(player, arg1, arg2);
-			break;
-		case 'o':
-			/* open */
-			Matched("open");
-			do_door_open(descr, player, arg1[0], 1);
 			break;
 		case 'p':
 		case 'P':

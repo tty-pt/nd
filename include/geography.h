@@ -14,8 +14,7 @@ extern unsigned short day_tick;
 
 const char * geo_expand(char c);
 int geo_is(dbref exit);
-int door_auto_open(int descr, dbref player, dbref exit);
-void door_auto_close(int descr, dbref player, dbref exit);
+
 dbref untmp_clean(int descr, dbref player, dbref here);
 dbref geo_enter_room(dbref *exit_there, int descr, dbref player, dbref exit, int v, int permanent);
 void do_map(int descr, dbref player);

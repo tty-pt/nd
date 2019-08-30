@@ -293,15 +293,16 @@ enter_room(int descr, dbref player, dbref loc, dbref exit, int drmap)
 	  }
 	}
 
-	if (exit >= 0 && Typeof(exit) == TYPE_EXIT && geo_is(exit)
-	    && door_auto_open(descr, player, exit))
-		loc = old;
-
 	/* check for self-loop */
 	/* self-loops don't do move or other player notification */
 	/* but you still get autolook and penny check */
 	if (loc != old) {
 		do_stand_silent(player);
+		const char dir = GETDOOR(exit) ? NAME(exit)[0] : '\0';
+
+		if (dir)
+			notify(player, "You open the door");
+
 		/* go there */
 		moveto(player, loc);
 
@@ -346,10 +347,9 @@ enter_room(int descr, dbref player, dbref loc, dbref exit, int drmap)
 #endif
 		}
 
-		if (exit >= 0 && Typeof(exit) == TYPE_EXIT && geo_is(exit) && GETDOOR(exit))
-			door_auto_close(descr, player, exit);
-
 		mobs_aggro(descr, player);
+		if (dir)
+			notify(player, "You close the door.");
 	}
 
 
