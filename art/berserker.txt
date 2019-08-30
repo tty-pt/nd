@@ -1,4 +1,4 @@
-BERSERKER: Tall human wearing no armor displaying his massive muscles. 
+BERSERKER
 
 @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@;  ,. .,.     ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 @@@@@@@@@@@@@@@@@# .;@@@@@@@@@@@. .  .:. *###*;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
@@ -23,3 +23,4 @@ BERSERKER: Tall human wearing no armor displaying his massive muscles.
 @@@@@@@@@:;;;;;;;#;;:.....:..  ..,,,:*:.,:.*;. *:..,,.:;;; ;@@@@@@@@@@@@@@@@@@@
 @@@@@@#..;.*;***;;;.;@  ,..,*,,,:*;;;;;;.;;. ,;;;;;:. ,*;;;.;@@@@@@@@@@@@@@@@@@
 
+Tall human wearing no armor displaying his massive muscles. 

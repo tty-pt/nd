@@ -1,4 +1,4 @@
-AYETH: Well Known Mage, Adventurer and Companion Of Lord Neverdark
+AYETH
 
 ,,,,...,,,,,:,. ##;;*#############;;###;;*::*;,;######* ,,.......,,,..
 ,,,:,..,,,,.,,,, ;##;###################;;;;;;; ;#;##  ,.,.,....,..,,.
@@ -22,3 +22,5 @@ AYETH: Well Known Mage, Adventurer and Companion Of Lord Neverdark
 *;;;;;*;;;;;;;;###  .*#####;#######;;*;:;#####;,,.;####;..,;::*:*;*;;*
 ;;*;;;;;;;;;::,:,  ;,;#####;#######;;;#;######:;:  :;#####;..:*:;*:**:
 *;;;;;;;...   .  ..:..##;########;;##;##;####;:*;*      .;###;. ,;;***
+
+Well Known Mage, Adventurer and Companion Of Lord Neverdark
