@@ -5,7 +5,7 @@
 #include "params.h"
 
 #include "db.h"
-#include "tune.h"
+#include "defaults.h"
 #include "mpi.h"
 #include "externs.h"
 #include "props.h"
@@ -50,7 +50,7 @@ mfn_func(MFUNARGS)
 const char *
 mfn_muckname(MFUNARGS)
 {
-	return tp_muckname;
+	return MUCKNAME;
 }
 
 
@@ -1795,7 +1795,7 @@ mfn_money(MFUNARGS)
 		ABORT_MPI("MONEY", "Match failed.");
 	if (obj == PERMDENIED)
 		ABORT_MPI("MONEY", "Permission denied.");
-	if (tp_pennies_muf_mlev > 1 && !(mesgtyp & MPI_ISBLESSED))
+	if (PENNIES_MUF_MLEV > 1 && !(mesgtyp & MPI_ISBLESSED))
 		ABORT_MPI("MONEY", "Permission denied.");
 	switch (Typeof(obj)) {
 	case TYPE_THING:

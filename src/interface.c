@@ -57,7 +57,7 @@
 #include "db.h"
 #include "interface.h"
 #include "params.h"
-#include "tune.h"
+#include "defaults.h"
 #include "props.h"
 #include "mcp.h"
 #include "externs.h"
@@ -620,7 +620,6 @@ main(int argc, char **argv)
 		san_main();
 	} else {
 		dump_database();
-		tune_save_parmsfile();
 
 #ifdef MALLOC_PROFILING
 		db_free();
@@ -707,7 +706,7 @@ notify_nolisten(dbref player, const char *msg, int isprivate)
             if (firstpass) retval++;
         }
 
-		if (tp_zombies) {
+		if (ZOMBIES) {
 			if ((Typeof(player) == TYPE_THING) && (FLAGS(player) & ZOMBIE) &&
 				!(FLAGS(OWNER(player)) & ZOMBIE) &&
 				(!(FLAGS(player) & DARK) || Wizard(OWNER(player)))) {
@@ -771,14 +770,14 @@ notify_from_echo(dbref from, dbref player, const char *msg, int isprivate)
 {
 	const char *ptr=msg;
 
-	if (tp_listeners) {
-		if (tp_listeners_obj || Typeof(player) == TYPE_ROOM) {
+	if (LISTENERS) {
+		if (LISTENERS_OBJ || Typeof(player) == TYPE_ROOM) {
 			listenqueue(-1, from, getloc(from), player, player, NOTHING,
-						"_listen", ptr, tp_listen_mlev, 1, 0);
+						"_listen", ptr, LISTEN_MLEV, 1, 0);
 			listenqueue(-1, from, getloc(from), player, player, NOTHING,
-						"~listen", ptr, tp_listen_mlev, 1, 1);
+						"~listen", ptr, LISTEN_MLEV, 1, 1);
 			listenqueue(-1, from, getloc(from), player, player, NOTHING,
-						"~olisten", ptr, tp_listen_mlev, 0, 1);
+						"~olisten", ptr, LISTEN_MLEV, 0, 1);
 		}
 	}
 
@@ -868,22 +867,22 @@ update_quotas(struct timeval last, struct timeval current)
 	int td = msec_diff(current, last);
 	time_since_combat += td;
 
-	nslices = td / tp_command_time_msec;
+	nslices = td / COMMAND_TIME_MSEC;
 
 	if (nslices > 0) {
 		for (d = descriptor_list; d; d = d->next) {
 			if (d->connected) {
 				cmds_per_time = ((FLAGS(d->player) & INTERACTIVE)
-								 ? (tp_commands_per_time * 8) : tp_commands_per_time);
+								 ? (COMMANDS_PER_TIME * 8) : COMMANDS_PER_TIME);
 			} else {
-				cmds_per_time = tp_commands_per_time;
+				cmds_per_time = COMMANDS_PER_TIME;
 			}
 			d->quota += cmds_per_time * nslices;
-			if (d->quota > tp_command_burst_size)
-				d->quota = tp_command_burst_size;
+			if (d->quota > COMMAND_BURST_SIZE)
+				d->quota = COMMAND_BURST_SIZE;
 		}
 	}
-	return msec_add(last, nslices * tp_command_time_msec);
+	return msec_add(last, nslices * COMMAND_TIME_MSEC);
 }
 
 /*
@@ -976,7 +975,7 @@ void
 goodbye_user(struct descriptor_data *d)
 {
 	queue_immediate(d, "\r\n");
-	queue_immediate(d, tp_leave_mesg);
+	queue_immediate(d, LEAVE_MESSAGE);
 	queue_immediate(d, "\r\n\r\n");
 }
 
@@ -984,7 +983,7 @@ void
 idleboot_user(struct descriptor_data *d)
 {
 	queue_immediate(d, "\r\n");
-	queue_immediate(d, tp_idle_mesg);
+	queue_immediate(d, IDLEBOOT_MESSAGE);
 	queue_immediate(d, "\r\n\r\n");
 	d->booted = 1;
 }
@@ -1064,7 +1063,7 @@ shovechars()
 	}
 	if (ssl_status_ok) {
 		SSL_CTX_set_default_passwd_cb(ssl_ctx, pem_passwd_cb);
-		SSL_CTX_set_default_passwd_cb_userdata(ssl_ctx, (void*)tp_ssl_keyfile_passwd);
+		SSL_CTX_set_default_passwd_cb_userdata(ssl_ctx, (void*)SSL_KEYFILE_PASSWD);
 
 		if (!SSL_CTX_use_PrivateKey_file (ssl_ctx, SSL_KEY_FILE, SSL_FILETYPE_PEM)) {
 			log_status("Could not load private key file %s", SSL_KEY_FILE);
@@ -1139,8 +1138,8 @@ shovechars()
 			}
 		}
 		if (global_dumpdone != 0) {
-			if (tp_dumpdone_warning) {
-				wall_and_flush(tp_dumpdone_mesg);
+			if (DUMPDONE_WARNING) {
+				wall_and_flush(DUMPDONE_MESG);
 			}
 			global_dumpdone = 0;
 		}
@@ -1151,7 +1150,7 @@ shovechars()
 			break;
 		timeout.tv_sec = 1;
 		timeout.tv_usec = 0;
-		next_slice = msec_add(last_slice, tp_command_time_msec);
+		next_slice = msec_add(last_slice, COMMAND_TIME_MSEC);
 		slice_timeout = timeval_sub(next_slice, current_time);
 
 		FD_ZERO(&input_set);
@@ -1192,7 +1191,7 @@ shovechars()
 				const long welcome_pause = 2; /* seconds */
 				long timeon = now - d->connected_at;
 
-				if (d->ssl_session || !tp_starttls_allow) {
+				if (d->ssl_session || !STARTTLS_ALLOW) {
 					FD_SET(d->descriptor, &output_set);
 				} else if (timeon >= welcome_pause) {
 					FD_SET(d->descriptor, &output_set);
@@ -1226,8 +1225,8 @@ shovechars()
 
 		tmptq = next_muckevent_time();
 		if ((tmptq >= 0L) && (timeout.tv_sec > tmptq)) {
-			timeout.tv_sec = tmptq + (tp_pause_min / 1000);
-			timeout.tv_usec = (tp_pause_min % 1000) * 1000L;
+			timeout.tv_sec = tmptq + (PAUSE_MIN / 1000);
+			timeout.tv_usec = (PAUSE_MIN % 1000) * 1000L;
 		}
 		gettimeofday(&sel_in,NULL);
 		if (select(maxd, &input_set, &output_set, (fd_set *) 0, &timeout) < 0) {
@@ -1331,7 +1330,7 @@ shovechars()
 				}
 				if (d->connected) {
 					cnt++;
-					if (tp_idleboot && ((now - d->last_time) > tp_maxidle) &&
+					if (IDLEBOOT && ((now - d->last_time) > MAXIDLE) &&
 						!Wizard(d->player)) {
 						idleboot_user(d);
 					}
@@ -1342,7 +1341,7 @@ shovechars()
 						d->booted = 1;
 					}
 				}
-				if ( d->connected && tp_idle_ping_enable && (tp_idle_ping_time > 0) && ((now - d->last_pinged_at) > tp_idle_ping_time) ) {
+				if ( d->connected && IDLE_PING_ENABLE && (IDLE_PING_TIME > 0) && ((now - d->last_pinged_at) > IDLE_PING_TIME) ) {
 					const char *tmpptr = get_property_class( d->player, "_/sys/no_idle_ping" );
 					if( !tmpptr && !send_keepalive(d)) {
 						d->booted = 1;
@@ -1491,7 +1490,7 @@ addrout_v6(int lport, struct in6_addr *a, unsigned short prt)
 
 	prt = ntohs(prt);
 
-	if (tp_hostnames) {
+	if (HOSTNAMES) {
 		/* One day the nameserver Qwest uses decided to start */
 		/* doing halfminute lags, locking up the entire muck  */
 		/* that long on every connect.  This is intended to   */
@@ -1548,7 +1547,7 @@ addrout(int lport, long a, unsigned short prt)
 
 	prt = ntohs(prt);
 
-	if (tp_hostnames) {
+	if (HOSTNAMES) {
 		/* One day the nameserver Qwest uses decided to start */
 		/* doing halfminute lags, locking up the entire muck  */
 		/* that long on every connect.  This is intended to   */
@@ -1701,7 +1700,7 @@ initializesock(int s, const char *hostname, int is_ssl)
 	d->telnet_state = TELNET_STATE_NORMAL;
 	d->telnet_sb_opt = 0;
 	d->short_reads = 0;
-	d->quota = tp_command_burst_size;
+	d->quota = COMMAND_BURST_SIZE;
 	d->last_time = d->connected_at;
 	d->last_pinged_at = d->connected_at;
 	mcp_frame_init(&d->mcpframe, d);
@@ -1721,7 +1720,7 @@ initializesock(int s, const char *hostname, int is_ssl)
 	remember_descriptor(d);
 
 #ifdef USE_SSL
-	if (!is_ssl && tp_starttls_allow) {
+	if (!is_ssl && STARTTLS_ALLOW) {
 		unsigned char telnet_do_starttls[] = {
 			TELNET_IAC, TELNET_DO, TELOPT_STARTTLS,'\0'
 		};
@@ -1912,7 +1911,7 @@ queue_write(struct descriptor_data *d, const char *b, int n)
 {
 	int space;
 
-	space = tp_max_output - d->output_size - n;
+	space = MAX_OUTPUT - d->output_size - n;
 	if (space < 0)
 		d->output_size -= flush_queue(&d->output, -space);
 	add_to_queue(&d->output, b, n);
@@ -2152,7 +2151,7 @@ process_input(struct descriptor_data *d)
 					if (d->telnet_sb_opt == TELOPT_STARTTLS) {
 						d->block_writes = 0;
 						d->short_reads = 0;
-						if (tp_starttls_allow) {
+						if (STARTTLS_ALLOW) {
 						    d->is_starttls = 1;
 						    d->ssl_session = SSL_new(ssl_ctx);
 						    SSL_set_fd(d->ssl_session, d->descriptor);
@@ -2180,7 +2179,7 @@ process_input(struct descriptor_data *d)
 			unsigned char sendbuf[8];
 #ifdef USE_SSL
             /* If we get a STARTTLS reply, negotiate SSL startup */
-			if (*q == TELOPT_STARTTLS && !d->ssl_session && tp_starttls_allow) {
+			if (*q == TELOPT_STARTTLS && !d->ssl_session && STARTTLS_ALLOW) {
 				sendbuf[0] = TELNET_IAC;
 				sendbuf[1] = TELNET_SB;
 				sendbuf[2] = TELOPT_STARTTLS;
@@ -2395,7 +2394,7 @@ do_command(struct descriptor_data *d, char *command)
 		strcatn(buf, sizeof(buf), " ");
 		strcatn(buf, sizeof(buf), command + sizeof(WHO_COMMAND) - 1);
 		if (!d->connected || (FLAGS(d->player) & INTERACTIVE)) {
-			if (tp_secure_who) {
+			if (SECURE_WHO) {
 				queue_ansi(d, "Sorry, WHO is unavailable at this point.\r\n");
 			} else {
 				dump_users(d, command + sizeof(WHO_COMMAND) - 1);
@@ -2469,12 +2468,12 @@ check_connect(struct descriptor_data *d, const char *msg)
 			log_status("FAILED CONNECT %s on descriptor %d", user, d->descriptor);
 		} else {
 			if ((wizonly_mode ||
-				 (tp_playermax && con_players_curr >= tp_playermax_limit)) &&
+				 (PLAYERMAX && con_players_curr >= PLAYERMAX_LIMIT)) &&
 				!TrueWizard(player)) {
 				if (wizonly_mode) {
 					queue_ansi(d, "Sorry, but the game is in maintenance mode currently, and only wizards are allowed to connect.  Try again later.");
 				} else {
-					queue_ansi(d, tp_playermax_bootmesg);
+					queue_ansi(d, PLAYERMAX_BOOTMESG);
 				}
 				queue_string(d, "\r\n");
 				d->booted = 1;
@@ -2504,12 +2503,12 @@ check_connect(struct descriptor_data *d, const char *msg)
 			}
 		}
 	} else if (!strncmp(command, "cr", 2)) {
-		if (!tp_registration) {
-			if (wizonly_mode || (tp_playermax && con_players_curr >= tp_playermax_limit)) {
+		if (!REGISTRATION) {
+			if (wizonly_mode || (PLAYERMAX && con_players_curr >= PLAYERMAX_LIMIT)) {
 				if (wizonly_mode) {
 					queue_ansi(d, "Sorry, but the game is in maintenance mode currently, and only wizards are allowed to connect.  Try again later.");
 				} else {
-					queue_ansi(d, tp_playermax_bootmesg);
+					queue_ansi(d, PLAYERMAX_BOOTMESG);
 				}
 				queue_string(d, "\r\n");
 				d->booted = 1;
@@ -2534,7 +2533,7 @@ check_connect(struct descriptor_data *d, const char *msg)
 				}
 			}
 		} else {
-			queue_ansi(d, tp_register_mesg);
+			queue_ansi(d, REG_MSG);
 			queue_string(d, "\r\n");
 			log_status("FAILED CREATE %s on descriptor %d", user, d->descriptor);
 		}
@@ -2701,19 +2700,19 @@ dump_users(struct descriptor_data *e, char *user)
 
 
 /* #ifdef GOD_PRIV */
-/* -- Wizard should always override tp_who_doing JES
-	if (tp_who_doing) {
+/* -- Wizard should always override WHO_DOING JES
+	if (WHO_DOING) {
 		wizard = e->connected && God(e->player);
 	} else {
 		wizard = e->connected && Wizard(e->player);
 	}
 */
 /* #else */
-	wizard = e->connected && Wizard(e->player) && !tp_who_doing;
+	wizard = e->connected && Wizard(e->player) && !WHO_DOING;
 /* #endif */
 
 	while (*user && (isspace(*user) || *user == '*')) {
-		if (tp_who_doing && *user == '*' && e->connected && Wizard(e->player))
+		if (WHO_DOING && *user == '*' && e->connected && Wizard(e->player))
 			wizard = 1;
 		user++;
 	}
@@ -2731,7 +2730,7 @@ dump_users(struct descriptor_data *e, char *user)
 	if (wizard) {
 		queue_ansi(e, "Player Name                Location     On For Idle   Host\r\n");
 	} else {
-		if (tp_who_doing) {
+		if (WHO_DOING) {
 			queue_ansi(e, "Player Name           On For Idle   Doing...\r\n");
 		} else {
 			queue_ansi(e, "Player Name           On For Idle\r\n");
@@ -2742,7 +2741,7 @@ dump_users(struct descriptor_data *e, char *user)
 	players = 0;
 	while (d) {
 		if (d->connected &&
-			(!tp_who_hides_dark ||
+			(!WHO_HIDES_DARK ||
 			 (wizard || !(FLAGS(d->player) & DARK))) &&
 			++players && (!user || string_prefix(NAME(d->player), user))
 				) {
@@ -2778,7 +2777,7 @@ dump_users(struct descriptor_data *e, char *user)
 							((FLAGS(d->player) & INTERACTIVE) ? '*' : ' '),
 							secchar, d->hostname, d->username);
 			} else {
-				if (tp_who_doing) {
+				if (WHO_DOING) {
 					/* Modified to take into account PLAYER_NAME_LIMIT changes */
 					snprintf(buf, sizeof(buf), "%-*s %10s %4s%c%c %.*s\r\n",
 							PLAYER_NAME_LIMIT + 1,
@@ -2901,8 +2900,8 @@ announce_connect(int descr, dbref player)
 	}
 
 	if (exit == NOTHING || !(FLAGS(exit) & STICKY)) {
-		if (can_move(descr, player, tp_autolook_cmd, 1)) {
-			do_move(descr, player, tp_autolook_cmd, 1);
+		if (can_move(descr, player, AUTOLOOK_CMD, 1)) {
+			do_move(descr, player, AUTOLOOK_CMD, 1);
 		} else {
 			do_look_around(descr, player);
 		}
@@ -3651,7 +3650,7 @@ pdescrbufsize(int c)
 	d = descrdata_by_descr(c);
 
 	if (d) {
-		return (tp_max_output - d->output_size);
+		return (MAX_OUTPUT - d->output_size);
 	}
 
 	return -1;
@@ -3747,9 +3746,9 @@ welcome_user(struct descriptor_data *d)
 
 	if (wizonly_mode) {
 		queue_ansi(d, "## The game is currently in maintenance mode, and only wizards will be able to connect.\r\n");
-	} else if (tp_playermax && con_players_curr >= tp_playermax_limit) {
-		if (tp_playermax_warnmesg && *tp_playermax_warnmesg) {
-			queue_ansi(d, tp_playermax_warnmesg);
+	} else if (PLAYERMAX && con_players_curr >= PLAYERMAX_LIMIT) {
+		if (PLAYERMAX_WARNMESG && *PLAYERMAX_WARNMESG) {
+			queue_ansi(d, PLAYERMAX_WARNMESG);
 			queue_string(d, "\r\n");
 		}
 	}
@@ -3880,7 +3879,7 @@ static int ignore_is_ignoring_sub(dbref Player, dbref Who)
 	int Top, Bottom;
 	dbref* List;
 
-	if (!tp_ignore_support)
+	if (!IGNORE_SUPPORT)
 		return 0;
 
 	if ((Player < 0) || (Player >= db_top) || (Typeof(Player) == TYPE_GARBAGE))
@@ -3934,7 +3933,7 @@ static int ignore_is_ignoring_sub(dbref Player, dbref Who)
 
 int ignore_is_ignoring(dbref Player, dbref Who)
 {
-	return ignore_is_ignoring_sub(Player, Who) || (tp_ignore_bidirectional && ignore_is_ignoring_sub(Who, Player));
+	return ignore_is_ignoring_sub(Player, Who) || (IGNORE_BIDIRECTIONAL && ignore_is_ignoring_sub(Who, Player));
 }
 
 static int ignore_dbref_compare(const void* Lhs, const void* Rhs)
@@ -3950,7 +3949,7 @@ int ignore_prime_cache(dbref Player)
 	int Count = 0;
 	int i;
 
-	if (!tp_ignore_support)
+	if (!IGNORE_SUPPORT)
 		return 0;
 
 	if ((Player < 0) || (Player >= db_top) || (Typeof(Player) != TYPE_PLAYER))
@@ -4054,7 +4053,7 @@ void ignore_flush_all_cache(void)
 
 void ignore_add_player(dbref Player, dbref Who)
 {
-	if (!tp_ignore_support)
+	if (!IGNORE_SUPPORT)
 		return;
 
 	if ((Player < 0) || (Player >= db_top) || (Typeof(Player) == TYPE_GARBAGE))
@@ -4070,7 +4069,7 @@ void ignore_add_player(dbref Player, dbref Who)
 
 void ignore_remove_player(dbref Player, dbref Who)
 {
-	if (!tp_ignore_support)
+	if (!IGNORE_SUPPORT)
 		return;
 
 	if ((Player < 0) || (Player >= db_top) || (Typeof(Player) == TYPE_GARBAGE))
@@ -4088,7 +4087,7 @@ void ignore_remove_from_all_players(dbref Player)
 {
 	int i;
 
-	if (!tp_ignore_support)
+	if (!IGNORE_SUPPORT)
 		return;
 
 	for(i = 0; i < db_top; i++)

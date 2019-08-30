@@ -13,7 +13,7 @@
 #include "match.h"
 #include "interface.h"
 #include "params.h"
-#include "tune.h"
+#include "defaults.h"
 #include "fbstrings.h"
 #include "interp.h"
 #include "inst.h"
@@ -160,8 +160,8 @@ prim_userlog(PRIM_PROTOTYPE)
 	oper1 = POP();
 	if (oper1->type != PROG_STRING)
 		abort_interp("Non-string argument.");
-	if (mlev < tp_userlog_mlev)
-		abort_interp("Permission Denied (mlev < tp_userlog_mlev)");
+	if (mlev < USERLOG_MLEV)
+		abort_interp("Permission Denied (mlev < USERLOG_MLEV)");
 	if(oper1->data.string) {
 		snprintf(buf,BUFFER_LEN,"%s",oper1->data.string->data);
 	} else {
@@ -617,28 +617,6 @@ prim_testlock(PRIM_PROTOTYPE)
 	PushInt(result);
 }
 
-
-void
-prim_sysparm(PRIM_PROTOTYPE)
-{
-	const char *ptr;
-	const char *tune_get_parmstring(const char *name, int mlev);
-
-	CHECKOP(1);
-	oper1 = POP();				/* string: system parm name */
-	if (oper1->type != PROG_STRING)
-		abort_interp("Invalid argument.");
-	if (oper1->data.string) {
-		ptr = tune_get_parmstring(oper1->data.string->data, mlev);
-	} else {
-		ptr = "";
-	}
-	CHECKOFLOW(1);
-	CLEAR(oper1);
-	PushString(ptr);
-}
-
-
 void
 prim_cancallp(PRIM_PROTOTYPE)
 {
@@ -689,72 +667,13 @@ prim_cancallp(PRIM_PROTOTYPE)
 }
 
 void
-prim_setsysparm(PRIM_PROTOTYPE)
-{
-	CHECKOP(2);
-	oper1 = POP();				/* string: new parameter value */
-	oper2 = POP();				/* string: parameter to tune */
-
-	if (mlev < 4)
-		abort_interp("Wizbit only primitive.");
-	if (oper2->type != PROG_STRING)
-		abort_interp("Invalid argument. (1)");
-	if (!oper2->data.string)
-		abort_interp("Null string argument. (1)");
-	if (oper1->type != PROG_STRING)
-		abort_interp("Invalid argument. (2)");
-	if (!oper1->data.string)
-		abort_interp("Null string argument. (2)");
-
-	result = tune_setparm(oper2->data.string->data, oper1->data.string->data);
-
-	switch (result) {
-	case 0:					/* TUNESET_SUCCESS */
-		log_status("TUNED (MUF): %s(%d) tuned %s to %s",
-				   NAME(player), player, oper2->data.string->data, oper1->data.string->data);
-		break;
-	case 1:					/* TUNESET_UNKNOWN */
-		abort_interp("Unknown parameter. (1)");
-		break;
-	case 2:					/* TUNESET_SYNTAX */
-		abort_interp("Bad parameter syntax. (2)");
-		break;
-	case 3:					/* TUNESET_BADVAL */
-		abort_interp("Bad parameter value. (2)");
-		break;
-	}
-	CLEAR(oper1);
-	CLEAR(oper2);
-}
-
-
-
-void
-prim_sysparm_array(PRIM_PROTOTYPE)
-{
-	stk_array *nu;
-
-	CHECKOP(1);
-	oper1 = POP();				/* string: match pattern */
-
-	if (oper1->type != PROG_STRING)
-		abort_interp("Expected a string smatch pattern.");
-	nu = tune_parms_array(DoNullInd(oper1->data.string), mlev);
-
-	CLEAR(oper1);
-	PushArrayRaw(nu);
-}
-
-
-
-void
 prim_timer_start(PRIM_PROTOTYPE)
 {
 	CHECKOP(2);
 	oper2 = POP();				/* string: timer id */
 	oper1 = POP();				/* int: delay length in seconds */
 
-	if (fr->timercount > tp_process_timer_limit)
+	if (fr->timercount > PROCESS_TIMER_LIMIT)
 		abort_interp("Too many timers!");
 	if (oper1->type != PROG_INTEGER)
 		abort_interp("Expected an integer delay time. (1)");

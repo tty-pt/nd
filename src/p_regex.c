@@ -15,7 +15,6 @@
 #endif
 
 #include "db.h"
-#include "tune.h"
 #include "inst.h"
 #include "externs.h"
 #include "match.h"

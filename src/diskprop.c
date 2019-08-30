@@ -3,7 +3,6 @@
 #include "params.h"
 
 #include "db.h"
-#include "tune.h"
 #include "props.h"
 #include "externs.h"
 #include "interface.h"

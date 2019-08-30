@@ -9,7 +9,7 @@
 #include "db.h"
 #include "props.h"
 #include "params.h"
-#include "tune.h"
+#include "defaults.h"
 #include "interface.h"
 #include "externs.h"
 #include "match.h"
@@ -44,7 +44,7 @@ parse_linkable_dest(int descr, dbref player, dbref exit, const char *dest_name)
 
 	}
 
-	if (!tp_teleport_to_player && Typeof(dobj) == TYPE_PLAYER) {
+	if (!TELEPORT_TO_PLAYER && Typeof(dobj) == TYPE_PLAYER) {
 		snprintf(buf, sizeof(buf), "You can't link to players.  Destination %s ignored.",
 				unparse_object(player, dobj));
 		notify(player, buf);
@@ -134,8 +134,8 @@ do_open(int descr, dbref player, const char *direction, const char *linkto)
 	if (!controls(player, loc)) {
 		notify(player, "Permission denied. (you don't control the location)");
 		return;
-	} else if (!payfor(player, tp_exit_cost)) {
-		notify_fmt(player, "Sorry, you don't have enough %s to open an exit.", tp_pennies);
+	} else if (!payfor(player, EXIT_COST)) {
+		notify_fmt(player, "Sorry, you don't have enough %s to open an exit.", PENNIES);
 		return;
 	} else {
 		/* create the exit */
@@ -160,8 +160,8 @@ do_open(int descr, dbref player, const char *direction, const char *linkto)
 		/* check second arg to see if we should do a link */
 		if (*qname != '\0') {
 			notify(player, "Trying to link...");
-			if (!payfor(player, tp_link_cost)) {
-				notify_fmt(player, "You don't have enough %s to link.", tp_pennies);
+			if (!payfor(player, LINK_COST)) {
+				notify_fmt(player, "You don't have enough %s to link.", PENNIES);
 			} else {
 				ndest = link_exit(descr, player, exit, (char *) qname, good_dest);
 				DBFETCH(exit)->sp.exit.ndest = ndest;
@@ -363,16 +363,16 @@ do_link(int descr, dbref player, const char *thing_name, const char *dest_name)
 		}
 		/* handle costs */
 		if (OWNER(thing) == OWNER(player)) {
-			if (!payfor(player, tp_link_cost)) {
+			if (!payfor(player, LINK_COST)) {
 				notify_fmt(player, "It costs %d %s to link this exit.",
-						   tp_link_cost, (tp_link_cost == 1) ? tp_penny : tp_pennies);
+						   LINK_COST, (LINK_COST == 1) ? PENNY : PENNIES);
 				return;
 			}
 		} else {
-			if (!payfor(player, tp_link_cost + tp_exit_cost)) {
+			if (!payfor(player, LINK_COST + EXIT_COST)) {
 				notify_fmt(player, "It costs %d %s to link this exit.",
-						   (tp_link_cost + tp_exit_cost),
-						   (tp_link_cost + tp_exit_cost == 1) ? tp_penny : tp_pennies);
+						   (LINK_COST + EXIT_COST),
+						   (LINK_COST + EXIT_COST == 1) ? PENNY : PENNIES);
 				return;
 			} else if (!Builder(player)) {
 				notify(player, "Only authorized builders may seize exits.");
@@ -381,7 +381,7 @@ do_link(int descr, dbref player, const char *thing_name, const char *dest_name)
 				/* pay the owner for his loss */
 				dbref owner = OWNER(thing);
 
-				SETVALUE(owner, GETVALUE(owner) + tp_exit_cost);
+				SETVALUE(owner, GETVALUE(owner) + EXIT_COST);
 				DBDIRTY(owner);
 			}
 		}
@@ -391,7 +391,7 @@ do_link(int descr, dbref player, const char *thing_name, const char *dest_name)
 		ndest = link_exit(descr, player, thing, (char *) dest_name, good_dest);
 		if (ndest == 0) {
 			notify(player, "No destinations linked.");
-			SETVALUE(player, GETVALUE(player) + tp_link_cost);
+			SETVALUE(player, GETVALUE(player) + LINK_COST);
 			DBDIRTY(player);
 			break;
 		}
@@ -498,8 +498,8 @@ do_dig(int descr, dbref player, const char *name, const char *pname)
 		notify(player, "That's a silly name for a room!");
 		return;
 	}
-	if (!payfor(player, tp_room_cost)) {
-		notify_fmt(player, "Sorry, you don't have enough %s to dig a room.", tp_pennies);
+	if (!payfor(player, ROOM_COST)) {
+		notify_fmt(player, "Sorry, you don't have enough %s to dig a room.", PENNIES);
 		return;
 	}
 	room = new_object();
@@ -509,7 +509,7 @@ do_dig(int descr, dbref player, const char *name, const char *pname)
 	while ((newparent != NOTHING) && !(FLAGS(newparent) & ABODE))
 		newparent = DBFETCH(newparent)->location;
 	if (newparent == NOTHING)
-		newparent = tp_default_room_parent;
+		newparent = GLOBAL_ENVIRONMENT;
 
 	NAME(room) = alloc_string(name);
 	DBFETCH(room)->location = newparent;
@@ -972,7 +972,7 @@ copy_props(dbref player, dbref source, dbref destination, const char *dir)
 		snprintf(buf, sizeof(buf), "%s%c%s", dir, PROPDIR_DELIMITER, propname);
 
 		/* notify player */
-		if(tp_verbose_clone && Wizard(OWNER(player))) {
+		if(VERBOSE_CLONE && Wizard(OWNER(player))) {
 			snprintf(buf2, sizeof(buf2), "copying property %s", buf);
 			notify(player, buf2);
 		}
@@ -1059,15 +1059,15 @@ do_clone(int descr, dbref player, char *name)
 
 	/* there ain't no such lunch as a free thing. */
 	cost = OBJECT_GETCOST(GETVALUE(thing));
-	if (cost < tp_object_cost) {
-		cost = tp_object_cost;
+	if (cost < OBJECT_COST) {
+		cost = OBJECT_COST;
 	}
 	
 	if (!payfor(player, cost)) {
-		notify_fmt(player, "Sorry, you don't have enough %s.", tp_pennies);
+		notify_fmt(player, "Sorry, you don't have enough %s.", PENNIES);
 		return;
 	} else {
-		if(tp_verbose_clone) {
+		if(VERBOSE_CLONE) {
 			snprintf(buf, sizeof(buf), "Now cloning %s...", unparse_object(player, thing));
 			notify(player, buf);
 		}
@@ -1089,8 +1089,8 @@ do_clone(int descr, dbref player, char *name)
 		copy_props(player, thing, clonedthing, "");
 
 		/* endow the object */
-		if (GETVALUE(thing) > tp_max_object_endowment) {
-			SETVALUE(thing, tp_max_object_endowment);
+		if (GETVALUE(thing) > MAX_OBJECT_ENDOWMENT) {
+			SETVALUE(thing, MAX_OBJECT_ENDOWMENT);
 		}
 		
 		/* Home, sweet home */
@@ -1153,11 +1153,11 @@ do_create(dbref player, char *name, char *acost)
 	} else if (cost < 0) {
 		notify(player, "You can't create an object for less than nothing!");
 		return;
-	} else if (cost < tp_object_cost) {
-		cost = tp_object_cost;
+	} else if (cost < OBJECT_COST) {
+		cost = OBJECT_COST;
 	}
 	if (!payfor(player, cost)) {
-		notify_fmt(player, "Sorry, you don't have enough %s.", tp_pennies);
+		notify_fmt(player, "Sorry, you don't have enough %s.", PENNIES);
 		return;
 	} else {
 		/* create the object */
@@ -1173,8 +1173,8 @@ do_create(dbref player, char *name, char *acost)
 		FLAGS(thing) = TYPE_THING;
 
 		/* endow the object */
-		if (GETVALUE(thing) > tp_max_object_endowment) {
-			SETVALUE(thing, tp_max_object_endowment);
+		if (GETVALUE(thing) > MAX_OBJECT_ENDOWMENT) {
+			SETVALUE(thing, MAX_OBJECT_ENDOWMENT);
 		}
 		if ((loc = DBFETCH(player)->location) != NOTHING && controls(player, loc)) {
 			THING_SET_HOME(thing, loc);	/* home */
@@ -1352,8 +1352,8 @@ do_action(int descr, dbref player, const char *action_name, const char *source_n
 	}
 	if (((source = parse_source(descr, player, qname)) == NOTHING))
 		return;
-        if (!payfor(player, tp_exit_cost)) {
-                notify_fmt(player, "Sorry, you don't have enough %s to make an action.", tp_pennies);
+        if (!payfor(player, EXIT_COST)) {
+                notify_fmt(player, "Sorry, you don't have enough %s to make an action.", PENNIES);
                 return;
         }
 

@@ -7,7 +7,7 @@
 #include "db.h"
 #include "externs.h"
 #include "params.h"
-#include "tune.h"
+#include "defaults.h"
 #include "interface.h"
 #include "props.h"
 
@@ -53,9 +53,9 @@ unparse_flags(dbref thing)
 			*p++ = 'X';
 		if (FLAGS(thing) & ZOMBIE)
 			*p++ = 'Z';
-                if (FLAGS(thing) & YIELD && tp_enable_match_yield)
+                if (FLAGS(thing) & YIELD && ENABLE_MATCH_YIELD)
                         *p++ = 'Y';
-                if (FLAGS(thing) & OVERT && tp_enable_match_yield)
+                if (FLAGS(thing) & OVERT && ENABLE_MATCH_YIELD)
                         *p++ = 'O';
 		if (MLevRaw(thing)) {
 			*p++ = 'M';

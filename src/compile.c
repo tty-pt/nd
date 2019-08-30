@@ -11,7 +11,7 @@
 #include "inst.h"
 #include "externs.h"
 #include "params.h"
-#include "tune.h"
+#include "defaults.h"
 #include "match.h"
 #include "interp.h"
 #include <ctype.h>
@@ -466,7 +466,7 @@ include_internal_defs(COMPSTATE * cstat)
 {
 	/* Create standard server defines */
 	insert_def(cstat, "__version", VERSION);
-	insert_def(cstat, "__muckname", tp_muckname);
+	insert_def(cstat, "__muckname", MUCKNAME);
 	insert_intdef(cstat, "__fuzzball__", 1);
 	insert_def(cstat, "strip", "striplead striptail");
 	insert_def(cstat, "instring", "tolower swap tolower swap instr");
@@ -629,7 +629,7 @@ free_unused_programs()
 
 	for (i = 0; i < db_top; i++) {
 		if ((Typeof(i) == TYPE_PROGRAM) && !(FLAGS(i) & (ABODE | INTERNAL)) &&
-			(now - DBFETCH(i)->ts.lastused > tp_clean_interval) && (PROGRAM_INSTANCES(i) == 0)) {
+			(now - DBFETCH(i)->ts.lastused > CLEAN_INTERVAL) && (PROGRAM_INSTANCES(i) == 0)) {
 			uncompile_program(i);
 		}
 	}
@@ -1296,7 +1296,7 @@ do_compile(int descr, dbref player_in, dbref program_in, int force_err_display)
 	cstat.curr_line = PROGRAM_FIRST(program_in);
 	cstat.lineno = 1;
 	cstat.start_comment = 0;
-	cstat.force_comment = tp_muf_comments_strict? 1 : 0;
+	cstat.force_comment = MUF_COMMENTS_STRICT? 1 : 0;
 	cstat.next_char = NULL;
 	if (cstat.curr_line)
 		cstat.next_char = cstat.curr_line->this_line;
@@ -1369,7 +1369,7 @@ do_compile(int descr, dbref player_in, dbref program_in, int force_err_display)
 	if (!cstat.procs)
 		v_abort_compile(&cstat, "Missing procedure definition.");
 
-	if (tp_optimize_muf) {
+	if (OPTIMIZE_MUF) {
 		int maxpasses = 5;
 		int passcount = 0;
 		int optimcount = 0;

@@ -3,7 +3,7 @@
 #include "config.h"
 
 #include "db.h"
-#include "tune.h"
+#include "defaults.h"
 #include "props.h"
 #include "inst.h"
 #include "externs.h"
@@ -98,7 +98,7 @@ insttotext(struct frame *fr, int lev, struct inst *theinst, char *buffer, int bu
 				*buffer = '\0';
 			break;
 		}
-		if (tp_expanded_debug && expandarrs) {
+		if (EXPANDED_DEBUG_TRACE && expandarrs) {
 #ifdef DEBUGARRAYS
 			length = snprintf(buffer, buflen, "R%dC%d{", theinst->data.array->links, theinst->data.array->items);
 #else

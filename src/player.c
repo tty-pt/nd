@@ -6,7 +6,7 @@
 
 #include "db.h"
 #include "params.h"
-#include "tune.h"
+#include "defaults.h"
 #include "interface.h"
 #include "externs.h"
 
@@ -111,14 +111,14 @@ create_player(const char *name, const char *password)
 
 	/* initialize everything */
 	NAME(player) = alloc_string(name);
-	DBFETCH(player)->location = tp_player_start;	/* home */
+	DBFETCH(player)->location = PLAYER_START;	/* home */
 	FLAGS(player) = TYPE_PLAYER;
 	OWNER(player) = player;
 	ALLOC_PLAYER_SP(player);
-	PLAYER_SET_HOME(player, tp_player_start);
+	PLAYER_SET_HOME(player, PLAYER_START);
 	DBFETCH(player)->exits = NOTHING;
 
-	SETVALUE(player, tp_start_pennies);
+	SETVALUE(player, START_PENNIES);
 	set_password_raw(player, NULL);
 	set_password(player, password);
 	PLAYER_SET_CURR_PROG(player, NOTHING);
@@ -127,13 +127,13 @@ create_player(const char *name, const char *password)
 	PLAYER_SET_IGNORE_COUNT(player, 0);
 	PLAYER_SET_IGNORE_LAST(player, NOTHING);
 
-	/* link him to tp_player_start */
-	PUSH(player, DBFETCH(tp_player_start)->contents);
+	/* link him to PLAYER_START */
+	PUSH(player, DBFETCH(PLAYER_START)->contents);
 	add_player(player);
 	DBDIRTY(player);
-	DBDIRTY(tp_player_start);
+	DBDIRTY(PLAYER_START);
 
-	set_flags_from_tunestr(player, tp_pcreate_flags);
+	set_flags_from_tunestr(player, PCREATE_FLAGS);
 
 	return player;
 }

@@ -9,7 +9,7 @@
 #include "interface.h"
 #include "match.h"
 #include "params.h"
-#include "tune.h"
+#include "defaults.h"
 #include "props.h"
 #include "externs.h"
 #include "speech.h"
@@ -133,8 +133,8 @@ do_page(dbref player, const char *arg1, const char *arg2)
 	char buf[BUFFER_LEN];
 	dbref target;
 
-	if (!payfor(player, tp_lookup_cost)) {
-		notify_fmt(player, "You don't have enough %s.", tp_pennies);
+	if (!payfor(player, LOOKUP_COST)) {
+		notify_fmt(player, "You don't have enough %s.", PENNIES);
 		return;
 	}
 	if ((target = lookup_player(arg1)) == NOTHING) {
@@ -168,13 +168,13 @@ notify_listeners(dbref who, dbref xprog, dbref obj, dbref room, const char *msg,
 	if (obj == NOTHING)
 		return;
 
-	if (tp_listeners && (tp_listeners_obj || Typeof(obj) == TYPE_ROOM)) {
-		listenqueue(-1, who, room, obj, obj, xprog, "_listen", msg, tp_listen_mlev, 1, 0);
-		listenqueue(-1, who, room, obj, obj, xprog, "~listen", msg, tp_listen_mlev, 1, 1);
-		listenqueue(-1, who, room, obj, obj, xprog, "~olisten", msg, tp_listen_mlev, 0, 1);
+	if (LISTENERS && (LISTENERS_OBJ || Typeof(obj) == TYPE_ROOM)) {
+		listenqueue(-1, who, room, obj, obj, xprog, "_listen", msg, LISTEN_MLEV, 1, 0);
+		listenqueue(-1, who, room, obj, obj, xprog, "~listen", msg, LISTEN_MLEV, 1, 1);
+		listenqueue(-1, who, room, obj, obj, xprog, "~olisten", msg, LISTEN_MLEV, 0, 1);
 	}
 
-	if (tp_zombies && Typeof(obj) == TYPE_THING && !isprivate) {
+	if (ZOMBIES && Typeof(obj) == TYPE_THING && !isprivate) {
 		if (FLAGS(obj) & VEHICLE) {
 			if (getloc(who) == getloc(obj)) {
 				char pbuf[BUFFER_LEN];
@@ -208,10 +208,10 @@ notify_except(dbref first, dbref exception, const char *msg, dbref who)
 
 		srch = room = DBFETCH(first)->location;
 
-		if (tp_listeners) {
+		if (LISTENERS) {
 			notify_from_echo(who, srch, msg, 0);
 
-			if (tp_listeners_env) {
+			if (LISTENERS_ENV) {
 				srch = DBFETCH(srch)->location;
 				while (srch != NOTHING) {
 					notify_from_echo(who, srch, msg, 0);

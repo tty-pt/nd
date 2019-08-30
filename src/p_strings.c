@@ -8,7 +8,7 @@
 #include <time.h>
 #include <ctype.h>
 #include "db.h"
-#include "tune.h"
+#include "defaults.h"
 #include "inst.h"
 #include "externs.h"
 #include "match.h"
@@ -1389,7 +1389,7 @@ prim_notify(PRIM_PROTOTYPE)
 	CHECKREMOTE(oper2->data.objref);
 
 	if (oper1->data.string) {
-		if (tp_force_mlev1_name_notify && mlev < 2 && player != oper2->data.objref) {
+		if (FORCE_MLEV1_NAME_NOTIFY && mlev < 2 && player != oper2->data.objref) {
 			prefix_message(buf, oper1->data.string->data, NAME(player), BUFFER_LEN, 1);
 		}
 		else
@@ -1421,7 +1421,7 @@ prim_notify_exclude(PRIM_PROTOTYPE)
 	if (oper1->type != PROG_STRING)
 		abort_interp("Non-string message argument (top)");
 
-	if (tp_force_mlev1_name_notify && mlev < 2) {
+	if (FORCE_MLEV1_NAME_NOTIFY && mlev < 2) {
 		prefix_message(buf, DoNullInd(oper1->data.string), NAME(player), BUFFER_LEN, 1);
 	}
 	else
@@ -1472,14 +1472,14 @@ prim_notify_exclude(PRIM_PROTOTYPE)
 			}
 		}
 
-		if (tp_listeners) {
+		if (LISTENERS) {
 			for (tmp = 0, i = count; i-- > 0;) {
 				if (excluded[i] == where)
 					tmp = 1;
 			}
 			if (!tmp)
 				notify_listeners(player, program, where, where, buf, 0);
-			if (tp_listeners_env && !tmp) {
+			if (LISTENERS_ENV && !tmp) {
 				what = DBFETCH(where)->location;
 				for (; what != NOTHING; what = DBFETCH(what)->location)
 					notify_listeners(player, program, what, where, buf, 0);

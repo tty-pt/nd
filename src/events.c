@@ -2,7 +2,6 @@
 #include "db.h"
 #include "props.h"
 #include "params.h"
-#include "tune.h"
 #include "externs.h"
 #include "fb.h"
 
@@ -22,19 +21,19 @@ next_dump_time(void)
 	if (!last_dump_time)
 		last_dump_time = (long) time((time_t *) NULL);
 
-	if (tp_dbdump_warning && !dump_warned) {
-		if (((last_dump_time + tp_dump_interval) - tp_dump_warntime)
+	if (DBDUMP_WARNING && !dump_warned) {
+		if (((last_dump_time + DUMP_INTERVAL) - DUMP_WARNTIME)
 			< currtime) {
 			return (0L);
 		} else {
-			return (last_dump_time + tp_dump_interval - tp_dump_warntime - currtime);
+			return (last_dump_time + DUMP_INTERVAL - DUMP_WARNTIME - currtime);
 		}
 	}
 
-	if ((last_dump_time + tp_dump_interval) < currtime)
+	if ((last_dump_time + DUMP_INTERVAL) < currtime)
 		return (0L);
 
-	return (last_dump_time + tp_dump_interval - currtime);
+	return (last_dump_time + DUMP_INTERVAL - currtime);
 }
 
 
@@ -47,18 +46,18 @@ check_dump_time(void)
 		last_dump_time = (long) time((time_t *) NULL);
 
 	if (!dump_warned) {
-		if (((last_dump_time + tp_dump_interval) - tp_dump_warntime)
+		if (((last_dump_time + DUMP_INTERVAL) - DUMP_WARNTIME)
 			< currtime) {
 			dump_warning();
 			dump_warned = 1;
 		}
 	}
 
-	if ((last_dump_time + tp_dump_interval) < currtime) {
+	if ((last_dump_time + DUMP_INTERVAL) < currtime) {
 		last_dump_time = currtime;
 		add_property((dbref) 0, "_sys/lastdumptime", NULL, (int) currtime);
 
-		if (tp_periodic_program_purge)
+		if (PERIODIC_PROGRAM_PURGE)
 			free_unused_programs();
 		purge_for_pool();
 		purge_try_pool();
@@ -115,10 +114,10 @@ next_clean_time(void)
 	if (!last_clean_time)
 		last_clean_time = (long) time((time_t *) NULL);
 
-	if ((last_clean_time + tp_clean_interval) < currtime)
+	if ((last_clean_time + CLEAN_INTERVAL) < currtime)
 		return (0L);
 
-	return (last_clean_time + tp_clean_interval - currtime);
+	return (last_clean_time + CLEAN_INTERVAL - currtime);
 }
 
 
@@ -130,10 +129,10 @@ check_clean_time(void)
 	if (!last_clean_time)
 		last_clean_time = (long) time((time_t *) NULL);
 
-	if ((last_clean_time + tp_clean_interval) < currtime) {
+	if ((last_clean_time + CLEAN_INTERVAL) < currtime) {
 		last_clean_time = currtime;
 		purge_for_pool();
-		if (tp_periodic_program_purge)
+		if (PERIODIC_PROGRAM_PURGE)
 			free_unused_programs();
 #ifdef DISKBASE
 		dispose_all_oldprops();

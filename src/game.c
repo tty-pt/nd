@@ -12,7 +12,7 @@
 #include "db.h"
 #include "props.h"
 #include "params.h"
-#include "tune.h"
+#include "defaults.h"
 #include "interface.h"
 #include "match.h"
 #include "externs.h"
@@ -160,8 +160,8 @@ dump_database_internal(void)
 
 #ifdef DISKBASE
 	/* Only show dumpdone mesg if not doing background saves. */
-	if (tp_dbdump_warning && tp_dumpdone_warning)
-		wall_and_flush(tp_dumpdone_mesg);
+	if (DBDUMP_WARNING && DUMPDONE_WARNING)
+		wall_and_flush(DUMPDONE_MESG);
 #endif
 
 #ifdef DISKBASE
@@ -266,8 +266,8 @@ fork_and_dump(void)
 	last_monolithic_time = time(NULL);
 	log_status("CHECKPOINTING: %s.#%d#", dumpfile, epoch);
 
-	if (tp_dbdump_warning)
-		wall_and_flush(tp_dumping_mesg);
+	if (DBDUMP_WARNING)
+		wall_and_flush(DUMPING_MESG);
 
 #ifdef DISKBASE
 	dump_database_internal();
@@ -304,7 +304,7 @@ time_for_monolithic(void)
 
 	if (!last_monolithic_time)
 		last_monolithic_time = time(NULL);
-	if (time(NULL) - last_monolithic_time >= (tp_monolithic_interval - tp_dump_warntime)
+	if (time(NULL) - last_monolithic_time >= (MONOLITHIC_INTERVAL - DUMP_WARNTIME)
 			) {
 		return 1;
 	}
@@ -312,7 +312,7 @@ time_for_monolithic(void)
 	for (i = 0; i < db_top; i++)
 		if (FLAGS(i) & (SAVED_DELTA | OBJECT_CHANGED))
 			count++;
-	if (((count * 100) / db_top) > tp_max_delta_objs) {
+	if (((count * 100) / db_top) > MAX_DELTA_OBJS) {
 		return 1;
 	}
 
@@ -330,17 +330,17 @@ time_for_monolithic(void)
 void
 dump_warning(void)
 {
-	if (tp_dbdump_warning) {
+	if (DBDUMP_WARNING) {
 #ifdef DELTADUMPS
 		if (time_for_monolithic()) {
-			wall_and_flush(tp_dumpwarn_mesg);
+			wall_and_flush(DUMPWARN_MESG);
 		} else {
-			if (tp_deltadump_warning) {
-				wall_and_flush(tp_deltawarn_mesg);
+			if (DELTADUMP_WARNING) {
+				wall_and_flush(DELTAWARN_MESG);
 			}
 		}
 #else
-		wall_and_flush(tp_dumpwarn_mesg);
+		wall_and_flush(DUMPWARN_MESG);
 #endif
 	}
 }
@@ -358,13 +358,13 @@ dump_deltas(void)
 	epoch++;
 	log_status("DELTADUMP: %s.#%d#", dumpfile, epoch);
 
-	if (tp_deltadump_warning)
-		wall_and_flush(tp_dumpdeltas_mesg);
+	if (DELTADUMP_WARNING)
+		wall_and_flush(DUMPDELTAS_MESG);
 
 	db_write_deltas(delta_outfile);
 
-	if (tp_deltadump_warning && tp_dumpdone_warning)
-		wall_and_flush(tp_dumpdone_mesg);
+	if (DELTADUMP_WARNING && DUMPDONE_WARNING)
+		wall_and_flush(DUMPDONE_MESG);
 
 #ifdef DISKBASE
 	propcache_hits = 0L;
@@ -403,7 +403,6 @@ init_game(const char *infile, const char *outfile)
 	init_primitives();			/* init muf compiler */
 	mesg_init();				/* init mpi interpreter */
 	SRANDOM(getpid());			/* init random number generator */
-	tune_load_parmsfile(NOTHING);	/* load @tune parms from file */
 
 	/* ok, read the db in */
 	log_status("LOADING: %s", infile);
@@ -421,8 +420,8 @@ init_game(const char *infile, const char *outfile)
 	if (!db_conversion_flag) {
 		/* initialize the _sys/startuptime property */
 		add_property((dbref) 0, "_sys/startuptime", NULL, (int) time((time_t *) NULL));
-		add_property((dbref) 0, "_sys/maxpennies", NULL, tp_max_pennies);
-		add_property((dbref) 0, "_sys/dumpinterval", NULL, tp_dump_interval);
+		add_property((dbref) 0, "_sys/maxpennies", NULL, MAX_PENNIES);
+		add_property((dbref) 0, "_sys/dumpinterval", NULL, DUMP_INTERVAL);
 		add_property((dbref) 0, "_sys/max_connects", NULL, 0);
 	}
 
@@ -534,7 +533,7 @@ process_command(int descr, dbref player, char *command)
 		return;
 	}
 
-	if ((tp_log_commands || Wizard(OWNER(player)))) {
+	if ((LOG_COMMANDS || Wizard(OWNER(player)))) {
 		if (!(FLAGS(player) & (INTERACTIVE | READMODE))) {
 			dbref here;
 			if (!*command)
@@ -549,7 +548,7 @@ process_command(int descr, dbref player, char *command)
 						here == NOTHING ? "NOWHERE" : NAME(here),
 						(int) DBFETCH(player)->location, " ", command);
 		} else {
-			if (tp_log_interactive) {
+			if (LOG_INTERACTIVE) {
 				log_command("%s%s%s%s(%d) in %s(%d):%s %s",
 							Wizard(OWNER(player)) ? "WIZ: " : "",
 							(Typeof(player) != TYPE_PLAYER) ? NAME(player) : "",
@@ -787,7 +786,7 @@ process_command(int descr, dbref player, char *command)
 				case 'o':
 				case 'O':
 					Matched("@doing");
-					if (!tp_who_doing)
+					if (!WHO_DOING)
 						goto bad;
 					do_doing(descr, player, arg1, arg2);
 					break;
@@ -1137,11 +1136,6 @@ process_command(int descr, dbref player, char *command)
 				case 'R':
 					Matched("@trace");
 					do_trace(descr, player, arg1, atoi(arg2));
-					break;
-				case 'u':
-				case 'U':
-					Matched("@tune");
-					do_tune(player, arg1, arg2);
 					break;
 				default:
 					goto bad;
@@ -1501,7 +1495,7 @@ process_command(int descr, dbref player, char *command)
 			break;
 		default:
 		  bad:
-			if (tp_m3_huh != 0)
+			if (M3_HUH != 0)
 			{
 				char hbuf[BUFFER_LEN];
 				snprintf(hbuf,BUFFER_LEN,"HUH? %s", command);
@@ -1512,8 +1506,8 @@ process_command(int descr, dbref player, char *command)
 					break;
 				}
 			}	
-			notify(player, tp_huh_mesg);
-			if (tp_log_failed_commands && !controls(player, DBFETCH(player)->location)) {
+			notify(player, HUH_MESSAGE);
+			if (LOG_FAILED_COMMANDS && !controls(player, DBFETCH(player)->location)) {
 				log_status("HUH from %s(%d) in %s(%d)[%s]: %s %s",
 						   NAME(player), player, NAME(DBFETCH(player)->location),
 						   DBFETCH(player)->location,
@@ -1536,7 +1530,7 @@ end_of_command:
 	endtime.tv_sec -= starttime.tv_sec;
 
 	totaltime = endtime.tv_sec + (endtime.tv_usec * 1.0e-6);
-	if (totaltime > (tp_cmd_log_threshold_msec / 1000.0)) {
+	if (totaltime > (CMD_LOG_THRESHOLD_MSEC / 1000.0)) {
 		log2file(LOG_CMD_TIMES, "%6.3fs, %.16s: %s%s%s%s(%d) in %s(%d):%s %s",
 					totaltime, ctime((time_t *)&starttime.tv_sec),
 					Wizard(OWNER(player)) ? "WIZ: " : "",

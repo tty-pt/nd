@@ -20,7 +20,7 @@
 #include "db.h"
 #include "props.h"
 #include "params.h"
-#include "tune.h"
+#include "defaults.h"
 #include "interface.h"
 #include "match.h"
 #include "externs.h"
@@ -103,7 +103,7 @@ do_teleport(int descr, dbref player, const char *arg1, const char *arg2)
 			destination = OWNER(victim);
 			break;
 		default:
-			destination = tp_player_start;	/* caught in the next
+			destination = PLAYER_START;	/* caught in the next
 											   * switch anyway */
 			break;
 		}
@@ -155,7 +155,7 @@ do_teleport(int descr, dbref player, const char *arg1, const char *arg2)
 				&& DBFETCH(destination)->sp.room.dropto != NOTHING
 				&& !(FLAGS(destination) & STICKY))
 						destination = DBFETCH(destination)->sp.room.dropto;
-			if (tp_thing_movement && (Typeof(victim) == TYPE_THING)) {
+			if (SECURE_THING_MOVEMENT && (Typeof(victim) == TYPE_THING)) {
 				enter_room(descr, victim, destination, DBFETCH(victim)->location, 1);
 			} else {
 				moveto(victim, destination);
@@ -350,7 +350,7 @@ do_force(int descr, dbref player, const char *what, char *command)
 		return;
 	}
 
-	if (!tp_zombies && (!Wizard(player) || Typeof(player) != TYPE_PLAYER)) {
+	if (!ZOMBIES && (!Wizard(player) || Typeof(player) != TYPE_PLAYER)) {
 		notify(player, "Zombies are not enabled here.");
 		return;
 #ifdef DEBUG	
@@ -492,7 +492,7 @@ do_stats(dbref player, const char *name)
 
 				/* if unused for 90 days, inc oldobj count */
 				if ((OWNER(i) == owner) &&
-					(currtime - DBFETCH(i)->ts.lastused) > tp_aging_time) oldobjs++;
+					(currtime - DBFETCH(i)->ts.lastused) > AGING_TIME) oldobjs++;
 
 				switch (Typeof(i)) {
 				case TYPE_ROOM:
@@ -537,7 +537,7 @@ do_stats(dbref player, const char *name)
 					altered++;
 
 				/* if unused for 90 days, inc oldobj count */
-				if ((currtime - DBFETCH(i)->ts.lastused) > tp_aging_time)
+				if ((currtime - DBFETCH(i)->ts.lastused) > AGING_TIME)
 					oldobjs++;
 
 				switch (Typeof(i)) {
@@ -720,7 +720,7 @@ do_toad(int descr, dbref player, const char *name, const char *recip)
 			}
 			if (Typeof(stuff) == TYPE_THING && THING_HOME(stuff) == victim) {
 				/* FIXME: Set a tunable "lost and found" area! */
-				THING_SET_HOME(stuff, tp_player_start);
+				THING_SET_HOME(stuff, PLAYER_START);
 			}
 		}
 		if (PLAYER_PASSWORD(victim)) {

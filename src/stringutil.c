@@ -4,7 +4,6 @@
 #include "copyright.h"
 #include "config.h"
 #include "db.h"
-#include "tune.h"
 #include "props.h"
 #include "params.h"
 #include "interface.h"

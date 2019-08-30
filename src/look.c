@@ -9,7 +9,7 @@
 
 #include <ctype.h>
 #include "db.h"
-#include "tune.h"
+#include "defaults.h"
 #include "mpi.h"
 #include "props.h"
 #include "interface.h"
@@ -195,7 +195,7 @@ look_room(int descr, dbref player, dbref loc, int verbose)
 
 	/* tell him the contents */
 	look_contents(player, loc, "You see:");
-	if (tp_look_propqueues) {
+	if (LOOK_PROPQUEUES) {
 		snprintf(obj_num, sizeof(obj_num), "#%d", loc);
 		envpropqueue(descr, player, loc, player, loc, NOTHING, "_lookq", obj_num, 1, 1);
 	}
@@ -255,7 +255,7 @@ do_look_at(int descr, dbref player, const char *name, const char *detail)
 				} else {
 					look_simple(descr, player, thing);
 					look_contents(player, thing, "Carrying:");
-					if (tp_look_propqueues) {
+					if (LOOK_PROPQUEUES) {
 						snprintf(obj_num, sizeof(obj_num), "#%d", thing);
 						envpropqueue(descr, player, thing, player, thing,
 									 NOTHING, "_lookq", obj_num, 1, 1);
@@ -272,7 +272,7 @@ do_look_at(int descr, dbref player, const char *name, const char *detail)
 						look_contents(player, thing, "Contains:");
 						ts_useobject(thing);
 					}
-					if (tp_look_propqueues) {
+					if (LOOK_PROPQUEUES) {
 						snprintf(obj_num, sizeof(obj_num), "#%d", thing);
 						envpropqueue(descr, player, thing, player, thing,
 									 NOTHING, "_lookq", obj_num, 1, 1);
@@ -283,7 +283,7 @@ do_look_at(int descr, dbref player, const char *name, const char *detail)
 				look_simple(descr, player, thing);
 				if (Typeof(thing) != TYPE_PROGRAM)
 					ts_useobject(thing);
-				if (tp_look_propqueues) {
+				if (LOOK_PROPQUEUES) {
 					snprintf(obj_num, sizeof(obj_num), "#%d", thing);
 					envpropqueue(descr, player, thing, player, thing,
 								 NOTHING, "_lookq", obj_num, 1, 1);
@@ -410,9 +410,9 @@ flag_description(dbref thing)
 			strcatn(buf, sizeof(buf), " JUMP_OK");
 		if (FLAGS(thing) & VEHICLE)
 			strcatn(buf, sizeof(buf), (Typeof(thing) == TYPE_PROGRAM) ? " VIEWABLE" : " VEHICLE");
-                if (tp_enable_match_yield && FLAGS(thing) & YIELD)
+                if (ENABLE_MATCH_YIELD && FLAGS(thing) & YIELD)
                         strcatn(buf, sizeof(buf), " YIELD");
-                if (tp_enable_match_yield && FLAGS(thing) & OVERT)
+                if (ENABLE_MATCH_YIELD && FLAGS(thing) & OVERT)
                         strcatn(buf, sizeof(buf), " OVERT");
 		if (FLAGS(thing) & XFORCIBLE) {
 			if (Typeof(thing) == TYPE_EXIT) {
@@ -570,9 +570,9 @@ do_examine(int descr, dbref player, const char *name, const char *dir)
 		break;
 	case TYPE_PLAYER:
 		snprintf(buf, sizeof(buf), "%.*s  %s: %d  ", 
-				(int) (BUFFER_LEN - strlen(tp_cpennies) - 35),
+				(int) (BUFFER_LEN - strlen(CPENNIES) - 35),
 				unparse_object(player, thing),
-				tp_cpennies, GETVALUE(thing));
+				CPENNIES, GETVALUE(thing));
 		break;
 	case TYPE_EXIT:
 	case TYPE_PROGRAM:
@@ -633,7 +633,7 @@ do_examine(int descr, dbref player, const char *name, const char *dir)
 		notify(player, buf);
 	}
 
-	if (tp_who_doing && GETDOING(thing)) {
+	if (WHO_DOING && GETDOING(thing)) {
 		snprintf(buf, sizeof(buf), "Doing: %s", GETDOING(thing));
 		notify(player, buf);
 	}
@@ -803,7 +803,7 @@ do_score(dbref player)
 	char buf[BUFFER_LEN];
 
 	snprintf(buf, sizeof(buf), "You have %d %s.", GETVALUE(player),
-			GETVALUE(player) == 1 ? tp_penny : tp_pennies);
+			GETVALUE(player) == 1 ? PENNY : PENNIES);
 	notify(player, buf);
 }
 
@@ -1045,7 +1045,7 @@ init_checkflags(dbref player, const char *flags, struct flgchkdat *check)
 				check->setflags |= LINK_OK;
 			break;
                 case 'O':
-                        if (tp_enable_match_yield) {
+                        if (ENABLE_MATCH_YIELD) {
                           if (mode)
                             check->clearflags |= OVERT;
                           else
@@ -1072,7 +1072,7 @@ init_checkflags(dbref player, const char *flags, struct flgchkdat *check)
 				check->setflags |= VEHICLE;
 			break;
                 case 'Y':
-                        if (tp_enable_match_yield) {
+                        if (ENABLE_MATCH_YIELD) {
                           if (mode)
                             check->clearflags |= YIELD;
                           else
@@ -1163,8 +1163,8 @@ checkflags(dbref what, struct flgchkdat check)
 		}
 	}
 	if (check.forold) {
-		if (((((time(NULL)) - DBFETCH(what)->ts.lastused) < tp_aging_time) ||
-			 (((time(NULL)) - DBFETCH(what)->ts.modified) < tp_aging_time))
+		if (((((time(NULL)) - DBFETCH(what)->ts.lastused) < AGING_TIME) ||
+			 (((time(NULL)) - DBFETCH(what)->ts.modified) < AGING_TIME))
 			!= (!check.isold))
 			return (0);
 	}
@@ -1250,8 +1250,8 @@ do_find(dbref player, const char *name, const char *flags)
 	strcatn(buf, sizeof(buf), name);
 	strcatn(buf, sizeof(buf), "*");
 
-	if (!payfor(player, tp_lookup_cost)) {
-		notify_fmt(player, "You don't have enough %s.", tp_pennies);
+	if (!payfor(player, LOOKUP_COST)) {
+		notify_fmt(player, "You don't have enough %s.", PENNIES);
 	} else {
 		for (i = 0; i < db_top; i++) {
 			if ((Wizard(OWNER(player)) || OWNER(i) == OWNER(player)) &&
@@ -1274,8 +1274,8 @@ do_owned(dbref player, const char *name, const char *flags)
 	int total = 0;
 	int output_type = init_checkflags(player, flags, &check);
 
-	if (!payfor(player, tp_lookup_cost)) {
-		notify_fmt(player, "You don't have enough %s.", tp_pennies);
+	if (!payfor(player, LOOKUP_COST)) {
+		notify_fmt(player, "You don't have enough %s.", PENNIES);
 		return;
 	}
 	if (Wizard(OWNER(player)) && *name) {

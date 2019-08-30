@@ -11,7 +11,7 @@
 #include <stdarg.h>
 
 #include "db.h"
-#include "tune.h"
+#include "defaults.h"
 #include "externs.h"
 
 #include "params.h"
@@ -750,7 +750,7 @@ create_lostandfound(dbref * player, dbref * room)
 		ALLOC_PLAYER_SP(*player);
 		PLAYER_SET_HOME(*player, *room);
 		EXITS(*player) = NOTHING;
-		SETVALUE(*player, tp_start_pennies);
+		SETVALUE(*player, START_PENNIES);
 		rpass = rand_password();
 		PLAYER_SET_PASSWORD(*player, NULL);
 		set_password(*player, rpass);
@@ -829,8 +829,8 @@ fix_player(dbref obj)
 	i = PLAYER_HOME(obj);
 
 	if (!valid_obj(i) || TYPEOF(i) != TYPE_ROOM) {
-		SanFixed2(obj, tp_player_start, "Setting the home on %s to %s");
-		PLAYER_SET_HOME(obj, tp_player_start);
+		SanFixed2(obj, PLAYER_START, "Setting the home on %s to %s");
+		PLAYER_SET_HOME(obj, PLAYER_START);
 		DBDIRTY(obj);
 	}
 }
@@ -919,7 +919,7 @@ find_misplaced_objects(void)
 								}
 							}
 					}
-					LOCATION(loop) = tp_player_start;
+					LOCATION(loop) = PLAYER_START;
 				} else {
 					if (player == NOTHING) {
 						create_lostandfound(&player, &room);
@@ -1044,11 +1044,6 @@ sanfix(dbref player)
 		FLAGS(loop) &= ~SANEBIT;
 	}
 	FLAGS(GLOBAL_ENVIRONMENT) |= SANEBIT;
-
-	if (!valid_obj(tp_player_start) || TYPEOF(tp_player_start) != TYPE_ROOM) {
-		SanFixed(GLOBAL_ENVIRONMENT, "Reset invalid player_start to %s");
-		tp_player_start = GLOBAL_ENVIRONMENT;
-	}
 
 	hacksaw_bad_chains();
 	find_misplaced_objects();

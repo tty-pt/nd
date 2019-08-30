@@ -6,7 +6,7 @@
 #include "db.h"
 #include "props.h"
 #include "params.h"
-#include "tune.h"
+#include "defaults.h"
 #include "interface.h"
 #include "match.h"
 #include "externs.h"
@@ -43,7 +43,7 @@ moveto(dbref what, dbref where)
 			if (parent_loop_check(what, where)) {
 			  where = PLAYER_HOME(OWNER(what));
 			  if (parent_loop_check(what, where))
-			    where = (dbref) tp_player_start;
+			    where = (dbref) PLAYER_START;
 			}
 			break;
 		case TYPE_ROOM:
@@ -65,7 +65,7 @@ moveto(dbref what, dbref where)
 			if (parent_loop_check(what, where)) {
 			  where = PLAYER_HOME(OWNER(what));
 			  if (parent_loop_check(what, where))
-			    where = (dbref) tp_player_start;
+			    where = (dbref) PLAYER_START;
 			}
 			break;
 		case TYPE_ROOM:
@@ -107,7 +107,7 @@ send_contents(int descr, dbref loc, dbref dest)
 			moveto(first, loc);
 		} else {
 			where = FLAGS(first) & STICKY ? HOME : dest;
-			if (tp_thing_movement && (Typeof(first) == TYPE_THING)) {
+			if (SECURE_THING_MOVEMENT && (Typeof(first) == TYPE_THING)) {
 				enter_room(descr, first,
 						   parent_loop_check(first, where) ? loc : where,
 						   DBFETCH(first)->location, 1);
@@ -281,7 +281,7 @@ enter_room(int descr, dbref player, dbref loc, dbref exit, int drmap)
 	    if (parent_loop_check(player, loc)) {
 	      loc = PLAYER_HOME(OWNER(player));
 	      if (parent_loop_check(player, loc))
-		loc = (dbref) tp_player_start;
+		loc = (dbref) PLAYER_START;
 	    }
 	    break;
 	  case TYPE_ROOM:
@@ -359,8 +359,8 @@ enter_room(int descr, dbref player, dbref loc, dbref exit, int drmap)
 		((Typeof(player) == TYPE_THING) && (FLAGS(player) & (ZOMBIE | VEHICLE)))) {
 		if (donelook < 8) {
 			donelook++;
-			if (can_move(descr, player, tp_autolook_cmd, 1)) {
-				do_move(descr, player, tp_autolook_cmd, 1);
+			if (can_move(descr, player, AUTOLOOK_CMD, 1)) {
+				do_move(descr, player, AUTOLOOK_CMD, 1);
 			} else {
 				do_look_around(descr, player);
 			}
@@ -373,12 +373,12 @@ enter_room(int descr, dbref player, dbref loc, dbref exit, int drmap)
 			do_map(descr, player);
 	}
 
-	if (tp_penny_rate != 0) {
+	if (PENNY_RATE != 0) {
 		/* check for pennies */
 		if (!controls(player, loc)
-			&& GETVALUE(OWNER(player)) <= tp_max_pennies 
-                        && RANDOM() % tp_penny_rate == 0) {
-			notify_fmt(player, "You found one %s!", tp_penny);
+			&& GETVALUE(OWNER(player)) <= MAX_PENNIES 
+                        && RANDOM() % PENNY_RATE == 0) {
+			notify_fmt(player, "You found one %s!", PENNY);
 			SETVALUE(OWNER(player), GETVALUE(OWNER(player)) + 1);
 			DBDIRTY(OWNER(player));
 		}
@@ -403,7 +403,7 @@ send_home(int descr, dbref thing, int puppethome)
 	case TYPE_THING:
 		if (puppethome)
 			send_contents(descr, thing, HOME);
-		if (tp_thing_movement || (FLAGS(thing) & (ZOMBIE | LISTENER))) {
+		if (SECURE_THING_MOVEMENT || (FLAGS(thing) & (ZOMBIE | LISTENER))) {
 			enter_room(descr, thing, PLAYER_HOME(thing), DBFETCH(thing)->location, 1);
 			break;
 		}
@@ -424,7 +424,7 @@ can_move(int descr, dbref player, const char *direction, int lev)
 {
 	struct match_data md;
 
-	if (tp_allow_home && !string_compare(direction, "home"))
+	if (ALLOW_HOME && !string_compare(direction, "home"))
 		return 1;
 
 	/* otherwise match on exits */
@@ -533,7 +533,7 @@ trigger(int descr, dbref player, dbref exit, int pflag)
 						notify(player, "That would cause a paradox.");
 						break;
 					}
-					if (tp_thing_movement) {
+					if (SECURE_THING_MOVEMENT) {
 						enter_room(descr, dest, DBFETCH(DBFETCH(exit)->location)->location,
 								   exit, 1);
 					} else {
@@ -548,7 +548,7 @@ trigger(int descr, dbref player, dbref exit, int pflag)
 						notify(player, "That would cause a paradox.");
 						break;
 					}
-					if (tp_thing_movement) {
+					if (SECURE_THING_MOVEMENT) {
 						enter_room(descr, dest, DBFETCH(exit)->location, exit, 1);
 					} else {
 						moveto(dest, DBFETCH(exit)->location);
@@ -608,7 +608,7 @@ do_move(int descr, dbref player, const char *direction, int lev)
 	char buf[BUFFER_LEN];
 	struct match_data md;
 
-	if (tp_allow_home && !string_compare(direction, "home")) {
+	if (ALLOW_HOME && !string_compare(direction, "home")) {
 		/* send him home */
 		/* but steal all his possessions */
 		if ((loc = DBFETCH(player)->location) != NOTHING) {
@@ -750,7 +750,7 @@ do_get(int descr, dbref player, const char *what, const char *obj)
 				cando = can_doit(descr, player, thing, "You can't pick that up.");
 			}
 			if (cando) {
-				if (tp_thing_movement && (Typeof(thing) == TYPE_THING)) {
+				if (SECURE_THING_MOVEMENT && (Typeof(thing) == TYPE_THING)) {
 					enter_room(descr, thing, player, DBFETCH(thing)->location, 1);
 				} else {
 					moveto(thing, player);
@@ -824,7 +824,7 @@ do_drop(int descr, dbref player, const char *name, const char *obj)
 
 									&& !(FLAGS(cont) & STICKY));
 
-			if (tp_thing_movement && (Typeof(thing) == TYPE_THING)) {
+			if (SECURE_THING_MOVEMENT && (Typeof(thing) == TYPE_THING)) {
 				enter_room(descr, thing,
 						   immediate_dropto ? DBFETCH(cont)->sp.room.dropto : cont, player, 1);
 			} else {
@@ -901,7 +901,7 @@ do_recycle(int descr, dbref player, const char *name)
 					notify(player, "Permission denied. (You don't control the room you want to recycle)");
 					return;
 				}
-				if (thing == tp_player_start) {
+				if (thing == PLAYER_START) {
 					notify(player, "That is the player start room, and may not be recycled.");
 					return;
 				}
@@ -997,7 +997,7 @@ recycle(int descr, dbref player, dbref thing)
 	switch (Typeof(thing)) {
 	case TYPE_ROOM:
 		if (!Wizard(OWNER(thing)))
-			SETVALUE(OWNER(thing), GETVALUE(OWNER(thing)) + tp_room_cost);
+			SETVALUE(OWNER(thing), GETVALUE(OWNER(thing)) + ROOM_COST);
 		DBDIRTY(OWNER(thing));
 		for (first = DBFETCH(thing)->exits; first != NOTHING; first = rest) {
 			rest = DBFETCH(first)->next;
@@ -1019,10 +1019,10 @@ recycle(int descr, dbref player, dbref thing)
 		break;
 	case TYPE_EXIT:
 		if (!Wizard(OWNER(thing)))
-			SETVALUE(OWNER(thing), GETVALUE(OWNER(thing)) + tp_exit_cost);
+			SETVALUE(OWNER(thing), GETVALUE(OWNER(thing)) + EXIT_COST);
 		if (!Wizard(OWNER(thing)))
 			if (DBFETCH(thing)->sp.exit.ndest != 0)
-				SETVALUE(OWNER(thing), GETVALUE(OWNER(thing)) + tp_link_cost);
+				SETVALUE(OWNER(thing), GETVALUE(OWNER(thing)) + LINK_COST);
 		DBDIRTY(OWNER(thing));
 		break;
 	case TYPE_PROGRAM:
@@ -1052,7 +1052,7 @@ recycle(int descr, dbref player, dbref thing)
 			  dbref loc;
 
 			  if (PLAYER_HOME(OWNER(rest)) == thing)
-			    PLAYER_SET_HOME(OWNER(rest), tp_player_start);
+			    PLAYER_SET_HOME(OWNER(rest), PLAYER_START);
 			  loc = PLAYER_HOME(OWNER(rest));
 			  if (parent_loop_check(rest, loc)) {
 			    loc = OWNER(rest);
@@ -1081,7 +1081,7 @@ recycle(int descr, dbref player, dbref thing)
 						(DBFETCH(rest)->sp.exit.dest)[j++] = (DBFETCH(rest)->sp.exit.dest)[i];
 				}
 				if (j < DBFETCH(rest)->sp.exit.ndest) {
-					SETVALUE(OWNER(rest), GETVALUE(OWNER(rest)) + tp_link_cost);
+					SETVALUE(OWNER(rest), GETVALUE(OWNER(rest)) + LINK_COST);
 					DBDIRTY(OWNER(rest));
 					DBFETCH(rest)->sp.exit.ndest = j;
 					DBDIRTY(rest);
@@ -1110,7 +1110,7 @@ recycle(int descr, dbref player, dbref thing)
 				}
 			}
 			if (PLAYER_HOME(rest) == thing) {
-				PLAYER_SET_HOME(rest, tp_player_start);
+				PLAYER_SET_HOME(rest, PLAYER_START);
 				DBDIRTY(rest);
 			}
 			if (DBFETCH(rest)->exits == thing) {
@@ -1140,7 +1140,7 @@ recycle(int descr, dbref player, dbref thing)
 	while ((looplimit-- > 0) && ((first = DBFETCH(thing)->contents) != NOTHING)) {
 		if (Typeof(first) == TYPE_PLAYER ||
 			(Typeof(first) == TYPE_THING &&
-			 (FLAGS(first) & (ZOMBIE | VEHICLE) || tp_thing_movement))
+			 (FLAGS(first) & (ZOMBIE | VEHICLE) || SECURE_THING_MOVEMENT))
 		) {
 			enter_room(descr, first, HOME, DBFETCH(thing)->location, 1);
 			/* If the room is set to drag players back, there'll be no

@@ -23,7 +23,7 @@
 #include <ctype.h>
 #include "params.h"
 #include "db.h"
-#include "tune.h"
+#include "defaults.h"
 
 #include "mpi.h"
 #include "externs.h"
@@ -937,7 +937,7 @@ mesg_parse(int descr, dbref player, dbref what, dbref perms,
 					}
 					if (s) {
 						s--;
-						if (++mesg_instr_cnt > tp_mpi_max_commands) {
+						if (++mesg_instr_cnt > MPI_MAX_COMMANDS) {
 							char *zptr = get_mvar("how");
 
 							snprintf(dbuf, sizeof(dbuf), "%s %c%s%c: Instruction limit exceeded.",
@@ -1311,7 +1311,7 @@ do_parse_mesg_2(int descr, dbref player, dbref what, dbref perms,
 char *
 do_parse_mesg(int descr, dbref player, dbref what, const char *inbuf, const char *abuf, char *outbuf, int outbuflen, int mesgtyp)
 {
-	if (tp_do_mpi_parsing) {
+	if (DO_MPI_PARSING) {
 		char *tmp = NULL;
 		struct timeval st, et;
 

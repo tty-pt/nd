@@ -170,7 +170,6 @@ do_showextver(dbref player) {
 	notify_nolisten(player, get_stringutil_c_version(), 1);
 	notify_nolisten(player, get_timequeue_c_version(), 1);
 	notify_nolisten(player, get_timestamp_c_version(), 1);
-	notify_nolisten(player, get_tune_c_version(), 1);
 	notify_nolisten(player, get_unparse_c_version(), 1);
 	notify_nolisten(player, get_utils_c_version(), 1);
 	notify_nolisten(player, get_wiz_c_version(), 1);
@@ -218,7 +217,6 @@ do_showextver(dbref player) {
 	notify_nolisten(player, props_h_version, 1);
 	notify_nolisten(player, smatch_h_version, 1);
 	notify_nolisten(player, speech_h_version, 1);
-	notify_nolisten(player, tune_h_version, 1);
 	return;
 }
 

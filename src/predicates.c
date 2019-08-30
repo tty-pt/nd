@@ -170,7 +170,7 @@
 #include "props.h"
 #include "interface.h"
 #include "params.h"
-#include "tune.h"
+#include "defaults.h"
 #include "externs.h"
 
 int
@@ -301,7 +301,7 @@ could_doit(int descr, dbref player, dbref thing)
 				(FLAGS(source) & BUILDER)) return 0;
 
 			/* If secure_teleport is true, and if the destination is a room */
-			if (tp_secure_teleport && Typeof(dest) == TYPE_ROOM) {
+			if (SECURE_TELEPORT && Typeof(dest) == TYPE_ROOM) {
 				/* if player doesn't control the source and the source isn't
 				 * set Jump_OK, then if the destination isn't HOME,
 				 * can't do it.  (Should this include getlink(owner)?  Not
@@ -400,7 +400,7 @@ can_see(dbref player, dbref thing, int can_see_loc)
 		case TYPE_PROGRAM:
 			return ((FLAGS(thing) & LINK_OK) || controls(player, thing));
 		case TYPE_PLAYER:
-			if (tp_dark_sleepers) {
+			if (DARK_SLEEPERS) {
 				return (!Dark(thing) && online(thing));
 			}
 		default:
@@ -441,7 +441,7 @@ controls(dbref who, dbref what)
 		return 1;
 	}
 
-	if (tp_realms_control) {
+	if (REALMS_CONTROL) {
 		/* Realm Owner controls everything under his environment. */
 		/* To set up a Realm, a Wizard sets the W flag on a room.  The
 		 * owner of that room controls every Room object contained within
@@ -513,7 +513,7 @@ restricted(dbref player, dbref thing, object_flag_type flag)
 		if (Typeof(thing) == TYPE_PLAYER)
 			return (!(Wizard(OWNER(player))));
 			/* If only wizards can create vehicles... */
-		if (tp_wiz_vehicles) {
+		if (WIZ_VEHICLES) {
 			/* then only a wizard can create a vehicle. :) */
 			if (Typeof(thing) == TYPE_THING)
 				return (!(Wizard(OWNER(player))));
@@ -531,10 +531,10 @@ restricted(dbref player, dbref thing, object_flag_type flag)
 			if (Typeof(thing) == TYPE_PLAYER)
 				return (1);
 				/* If exit darking is restricted, it requires a wizard. */
-			if (!tp_exit_darking && Typeof(thing) == TYPE_EXIT)
+			if (!EXIT_DARKING && Typeof(thing) == TYPE_EXIT)
 				return (1);
 				/* If thing darking is restricted, it requires a wizard. */
-			if (!tp_thing_darking && Typeof(thing) == TYPE_THING)
+			if (!THING_DARKING && Typeof(thing) == TYPE_THING)
 				return (1);
 		}
 		return (0);
@@ -636,13 +636,13 @@ ok_ascii_any(const char *name)
 int 
 ok_ascii_thing(const char *name)
 {
-	return !tp_7bit_thing_names || ok_ascii_any(name);
+	return ASCII_THING_NAMES || ok_ascii_any(name);
 }
 
 int
 ok_ascii_other(const char *name)
 {
-	return !tp_7bit_other_names || ok_ascii_any(name);
+	return !ASCII_THING_NAMES || ok_ascii_any(name);
 }
 	
 int
@@ -663,8 +663,8 @@ ok_name(const char *name)
 			&& string_compare(name, "home")
 			&& string_compare(name, "here")
 			&& (
-				!*tp_reserved_names ||
-				!equalstr((char*)tp_reserved_names, (char*)name)
+				!*RESERVED_NAMES ||
+				!equalstr((char*)RESERVED_NAMES, (char*)name)
 			));
 }
 
@@ -690,7 +690,7 @@ ok_player_name(const char *name)
 	}
 
 	/* Check the name isn't reserved */
-	if (*tp_reserved_player_names && equalstr((char*)tp_reserved_player_names, (char*)name))
+	if (*RESERVED_PLAYER_NAMES && equalstr((char*)RESERVED_PLAYER_NAMES, (char*)name))
 		return 0;
 
 	/* lookup name to avoid conflicts */

@@ -1,7 +1,6 @@
 #include "copyright.h"
 #include "config.h"
 #include "params.h"
-#include "tune.h"
 
 #include "db.h"
 
@@ -133,7 +132,7 @@ check_common(dbref obj)
 
 	/* check location */
 	if (db[obj].location >= db_top)
-		db[obj].location = tp_player_start;
+		db[obj].location = PLAYER_START;
 
 	if (db[obj].contents < db_top)
 		nexted[db[obj].contents] = obj;
@@ -169,7 +168,7 @@ check_thing(dbref obj)
 	if (db[obj].sp.thing.home >= db_top ||
 		(((db[db[obj].sp.thing.home].flags & TYPE_MASK) != TYPE_ROOM) &&
 		 ((db[db[obj].sp.thing.home].flags & TYPE_MASK) != TYPE_PLAYER)))
-		db[obj].sp.thing.home = tp_player_start;
+		db[obj].sp.thing.home = PLAYER_START;
 
 	if (db[obj].exits < db_top)
 		nexted[db[obj].exits] = obj;
@@ -198,7 +197,7 @@ check_player(dbref obj)
 {
 	if (db[obj].sp.player.home >= db_top ||
 		((db[db[obj].sp.player.home].flags & TYPE_MASK) != TYPE_ROOM)) db[obj].sp.player.home =
-				tp_player_start;
+				PLAYER_START;
 
 	if (db[obj].exits < db_top)
 		nexted[db[obj].exits] = obj;

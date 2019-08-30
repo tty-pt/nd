@@ -4,7 +4,7 @@
 #include "params.h"
 
 #include "db.h"
-#include "tune.h"
+#include "defaults.h"
 #include "mpi.h"
 #include "externs.h"
 #include "props.h"
@@ -1277,7 +1277,7 @@ const char *
 mfn_istype(MFUNARGS)
 {
 	dbref obj;
-	if (tp_lazy_mpi_istype_perm) {
+	if (LAZY_MPI_ISTYPE_PERM) {
 		obj = mesg_dbref_raw(descr, player, what, perms, argv[0]);
 	} else {
 		obj = mesg_dbref_local(descr, player, what, perms, argv[0], mesgtyp);
@@ -1527,7 +1527,7 @@ mfn_force(MFUNARGS)
 		ABORT_MPI("FORCE", "Bad object reference. (arg1)");
 	if (!*argv[1])
 		ABORT_MPI("FORCE", "Null command string. (arg2)");
-	if (!tp_zombies && !(mesgtyp & MPI_ISBLESSED))
+	if (!ZOMBIES && !(mesgtyp & MPI_ISBLESSED))
 		ABORT_MPI("FORCE", "Permission Denied.");
 	if (!(mesgtyp & MPI_ISBLESSED)) {
 		const char *ptr = NAME(obj);

@@ -8,7 +8,6 @@
 #include <time.h>
 #include <ctype.h>
 #include "db.h"
-#include "tune.h"
 #include "inst.h"
 #include "externs.h"
 #include "match.h"

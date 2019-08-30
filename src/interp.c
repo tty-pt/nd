@@ -12,7 +12,7 @@
 #include "match.h"
 #include "interface.h"
 #include "params.h"
-#include "tune.h"
+#include "defaults.h"
 #include "fbstrings.h"
 #include "interp.h"
 
@@ -374,7 +374,7 @@ void
 purge_free_frames(void)
 {
 	struct frame *ptr, *ptr2;
-	int count = tp_free_frames_pool;
+	int count = FREE_FRAMES_POOL;
 
 	for (ptr = free_frames_list; ptr && --count > 0; ptr = ptr->next) ;
 	while (ptr && ptr->next) {
@@ -1066,21 +1066,21 @@ interp_loop(dbref player, dbref program, struct frame *fr, int rettyp)
 
 		if ((fr->multitask == PREEMPT) || (FLAGS(program) & BUILDER)) {
 			if (mlev == 4) {
-				if (tp_max_ml4_preempt_count)
+				if (MAX_ML4_PREEMPT_COUNT)
 				{
-					if (instr_count >= tp_max_ml4_preempt_count)
+					if (instr_count >= MAX_ML4_PREEMPT_COUNT)
 						abort_loop_hard("Maximum preempt instruction count exceeded", NULL, NULL);
 				}
 				else
 					instr_count = 0;
 			} else {
 				/* else make sure that the program doesn't run too long */
-				if (instr_count >= tp_max_instr_count)
+				if (instr_count >= MAX_INSTR_COUNT)
 					abort_loop_hard("Maximum preempt instruction count exceeded", NULL, NULL);
 			}
 		} else {
 			/* if in FOREGROUND or BACKGROUND mode, '0 sleep' every so often. */
-			if ((fr->instcnt > tp_instr_slice * 4) && (instr_count >= tp_instr_slice)) {
+			if ((fr->instcnt > INSTR_SLICE * 4) && (instr_count >= INSTR_SLICE)) {
 				fr->pc = pc;
 				reload(fr, atop, stop);
 				PLAYER_SET_BLOCK(player, (!fr->been_background));
@@ -1193,7 +1193,7 @@ interp_loop(dbref player, dbref program, struct frame *fr, int rettyp)
 			fr->brkpt.bypass = 0;
 		}
 		if (mlev < 3) {
-			if (fr->instcnt > (tp_max_instr_count * ((mlev == 2) ? 4 : 1)))
+			if (fr->instcnt > (MAX_INSTR_COUNT * ((mlev == 2) ? 4 : 1)))
 				abort_loop_hard("Maximum total instruction count exceeded.", NULL, NULL);
 		}
 		switch (pc->type) {

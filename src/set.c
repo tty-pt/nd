@@ -12,7 +12,7 @@
 
 #include "db.h"
 #include "params.h"
-#include "tune.h"
+#include "defaults.h"
 #include "props.h"
 #include "match.h"
 #include "interface.h"
@@ -630,7 +630,7 @@ _do_unlink(int descr, dbref player, const char *name, int quiet)
 			switch (Typeof(exit)) {
 			case TYPE_EXIT:
 				if (DBFETCH(exit)->sp.exit.ndest != 0) {
-					SETVALUE(OWNER(exit), GETVALUE(OWNER(exit)) + tp_link_cost);
+					SETVALUE(OWNER(exit), GETVALUE(OWNER(exit)) + LINK_COST);
 					DBDIRTY(OWNER(exit));
 				}
 				ts_modifyobject(exit);
@@ -663,7 +663,7 @@ _do_unlink(int descr, dbref player, const char *name, int quiet)
 				break;
 			case TYPE_PLAYER:
 				ts_modifyobject(exit);
-				PLAYER_SET_HOME(exit, tp_player_start);
+				PLAYER_SET_HOME(exit, PLAYER_START);
 				DBDIRTY(exit);
 				if(!quiet)
 					notify(player, "Player's home reset to default player start room.");
@@ -735,10 +735,10 @@ do_relink(int descr, dbref player, const char *thing_name, const char *dest_name
 					return;
 				}
 			} else {
-				if(!Wizard(OWNER(player)) && (GETVALUE(player) < (tp_link_cost + tp_exit_cost))) {
+				if(!Wizard(OWNER(player)) && (GETVALUE(player) < (LINK_COST + EXIT_COST))) {
 					notify_fmt(player, "It costs %d %s to link this exit.",
-							   (tp_link_cost + tp_exit_cost),
-							   (tp_link_cost + tp_exit_cost == 1) ? tp_penny : tp_pennies);
+							   (LINK_COST + EXIT_COST),
+							   (LINK_COST + EXIT_COST == 1) ? PENNY : PENNIES);
 					return;
 				} else if (!Builder(player)) {
 					notify(player, "Only authorized builders may seize exits.");
@@ -855,7 +855,7 @@ do_chown(int descr, dbref player, const char *name, const char *newowner)
 		}
 	}
 
-	if (tp_realms_control && !Wizard(OWNER(player)) && TrueWizard(thing) &&
+	if (REALMS_CONTROL && !Wizard(OWNER(player)) && TrueWizard(thing) &&
 		Typeof(thing) == TYPE_ROOM) {
 		notify(player, "You can't take possession of that.");
 		return;
@@ -1124,10 +1124,10 @@ do_set(int descr, dbref player, const char *name, const char *flag)
 	} else if ((string_prefix("ABODE", p)) ||
 			   (string_prefix("AUTOSTART", p)) || (string_prefix("ABATE", p))) {
 		f = ABODE;
-        } else if (string_prefix("YIELD", p) && tp_enable_match_yield &&
+        } else if (string_prefix("YIELD", p) && ENABLE_MATCH_YIELD &&
                    (Typeof(thing) == TYPE_ROOM || Typeof(thing) == TYPE_THING)) {
                 f = YIELD;
-        } else if (string_prefix("OVERT", p) && tp_enable_match_yield &&
+        } else if (string_prefix("OVERT", p) && ENABLE_MATCH_YIELD &&
                    (Typeof(thing) == TYPE_ROOM || Typeof(thing) == TYPE_THING)) {
                 f = OVERT;
 	} else {

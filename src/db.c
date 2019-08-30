@@ -9,7 +9,7 @@
 #include "db_header.h"
 #include "props.h"
 #include "params.h"
-#include "tune.h"
+#include "defaults.h"
 #include "interface.h"
 
 #include "externs.h"
@@ -71,7 +71,7 @@ getparent(dbref obj)
 {
         dbref ptr, oldptr;
 
-	if (tp_thing_movement) {
+	if (SECURE_THING_MOVEMENT) {
 		obj = getloc(obj);
 	} else {
 	        ptr = getparent_logic(obj);
@@ -611,9 +611,6 @@ db_write(FILE * f)
 	putstring(f, DB_VERSION_STRING );
 
 	putref(f, db_top);
-	putref(f, DB_PARMSINFO );
-	putref(f, tune_count_parms());
-	tune_save_parms_to_file(f);
 
 	db_write_list(f, 1);
 
@@ -1417,11 +1414,6 @@ db_read(FILE * f)
 		return -1;
 	}
 
-	/* load the @tune values */
-	if( dbflags & DB_ID_PARMSINFO ) {
-		tune_load_parms_from_file(f, NOTHING, parmcnt);
-	}
-
 	/* grow the db up front */
 	if ( dbflags & DB_ID_GROW ) {
 		db_grow( grow );
@@ -1523,14 +1515,6 @@ db_read(FILE * f)
 				} else {
 					if (special)
 						free((void *) special);
-					if (main_db_format >= 7 && (dbflags & DB_PARMSINFO)) {
-						rewind(f);
-						free((void *) getstring(f));
-						getref(f);
-						getref(f);
-						parmcnt = getref(f);
-						tune_load_parms_from_file(f, NOTHING, parmcnt);
-					}
 					for (i = 0; i < db_top; i++) {
 						if (Typeof(i) == TYPE_GARBAGE) {
 							DBFETCH(i)->next = recyclable;

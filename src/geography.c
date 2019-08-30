@@ -3,13 +3,13 @@
 #include "props.h"
 #include "match.h"
 #include "params.h"
+#include "defaults.h"
 #include "interface.h"
 #include "externs.h"
 #include <stdlib.h>
 #include <db4/db.h>
 #include "noise.h"
 #include "kill.h"
-#include "tune.h"
 
 #define BIOME_BG(i)	(NIGHT_IS ? ANSI_RESET : biomes[i].bg)
 
@@ -1766,7 +1766,7 @@ geo_location_x(int descr, dbref player, char const *cmd) {
 	if (*s == '/') {
 		s++;
 		who = NOTHING;
-		if (!payfor(player, tp_lookup_cost))
+		if (!payfor(player, LOOKUP_COST))
 			return s - cmd;
 
 		for (i = 0; i < db_top; i++)

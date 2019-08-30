@@ -5,7 +5,7 @@
 #include "params.h"
 
 #include "db.h"
-#include "tune.h"
+#include "defaults.h"
 #include "mpi.h"
 #include "props.h"
 #include "externs.h"
@@ -358,7 +358,7 @@ has_property(int descr, dbref player, dbref what, const char *pname, const char 
 		if (has_property(descr, player, things, pname, strval, value))
 			return 1;
 	}
-	if (tp_lock_envcheck) {
+	if (LOCK_ENVCHECK) {
 		things = getparent(what);
 		while (things != NOTHING) {
 			if (has_property_strict(descr, player, things, pname, strval, value))
@@ -876,7 +876,7 @@ db_get_single_prop(FILE * f, dbref obj, long pos, PropPtr pnode, const char *pdi
 	PData mydat;
 
 #ifdef DISKBASE
-	do_diskbase_propvals = tp_diskbase_propvals;
+	do_diskbase_propvals = DISKBASE_PROPVALS;
 #else
 	do_diskbase_propvals = 0;
 #endif
@@ -1119,7 +1119,7 @@ db_dump_props_rec(dbref obj, FILE * f, const char *dir, PropPtr p)
 
 #ifdef DISKBASE
 	wastouched = (PropFlags(p) & PROP_TOUCHED);
-	if (tp_diskbase_propvals) {
+	if (DISKBASE_PROPVALS) {
 		tpos = ftell(f);
 	}
 	if (wastouched) {
@@ -1133,7 +1133,7 @@ db_dump_props_rec(dbref obj, FILE * f, const char *dir, PropPtr p)
 	db_putprop(f, dir, p);
 
 #ifdef DISKBASE
-	if (tp_diskbase_propvals && !wastouched) {
+	if (DISKBASE_PROPVALS && !wastouched) {
 		if (PropType(p) == PROP_STRTYP || PropType(p) == PROP_LOKTYP) {
 			flg = PropFlagsRaw(p) | PROP_ISUNLOADED;
 			clear_propnode(p);

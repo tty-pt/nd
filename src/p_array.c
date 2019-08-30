@@ -8,7 +8,7 @@
 #include <time.h>
 #include <ctype.h>
 #include "db.h"
-#include "tune.h"
+#include "defaults.h"
 #include "inst.h"
 #include "externs.h"
 #include "match.h"
@@ -802,7 +802,7 @@ prim_array_notify(PRIM_PROTOTYPE)
 	if (array_first(strarr, &temp2)) {
 		do {
 			oper4 = array_getitem(strarr, &temp2);
-			if (tp_force_mlev1_name_notify && mlev < 2) {
+			if (FORCE_MLEV1_NAME_NOTIFY && mlev < 2) {
 				prefix_message(buf, DoNullInd(oper4->data.string), NAME(player), BUFFER_LEN, 1);
 			}
 			else
@@ -1438,7 +1438,7 @@ prim_array_put_proplist(PRIM_PROTOTYPE)
 
 	dirlen = strlen(dir);
 	fmtout = propname;
-	fmtin = tp_proplist_counter_fmt;
+	fmtin = PROPLIST_COUNTER_FORMAT;
 	while (*fmtin) {
 		if (*fmtin == 'P') {
 			if ((fmtout + dirlen) - propname > sizeof(propname))
@@ -1455,7 +1455,7 @@ prim_array_put_proplist(PRIM_PROTOTYPE)
 	if (!prop_write_perms(ProgUID, ref, propname, mlev))
 		abort_interp("Permission denied while trying to set protected property.");
 
-	if (tp_proplist_int_counter) {
+	if (PROPLIST_INT_COUNTER) {
 		propdat.flags = PROP_INTTYP;
 		propdat.data.val = array_count(arr);
 	} else {
@@ -1470,7 +1470,7 @@ prim_array_put_proplist(PRIM_PROTOTYPE)
 			oper4 = array_getitem(arr, &temp1);
 
 			fmtout = propname;
-			fmtin = tp_proplist_entry_fmt;
+			fmtin = PROPLIST_ENTRY_FORMAT;
 			while (*fmtin) {
 				if (*fmtin == 'N') {
 					if ((fmtout + 18) - propname > sizeof(propname))
@@ -1525,7 +1525,7 @@ prim_array_put_proplist(PRIM_PROTOTYPE)
 	for (;;) {
 		count++;
 		fmtout = propname;
-		fmtin = tp_proplist_entry_fmt;
+		fmtin = PROPLIST_ENTRY_FORMAT;
 		while (*fmtin) {
 			if (*fmtin == 'N') {
 				if ((fmtout + 18) - propname > sizeof(propname))
@@ -2149,7 +2149,7 @@ prim_array_get_ignorelist(PRIM_PROTOTYPE)
 
 	nu = new_array_packed(0);
 
-	if (tp_ignore_support)
+	if (IGNORE_SUPPORT)
 	{
 		rawstr = get_property_class(ref, IGNORE_PROP);
 

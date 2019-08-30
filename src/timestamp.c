@@ -1,7 +1,6 @@
 #include <time.h>
 #include "config.h"
 #include "db.h"
-#include "tune.h"
 
 
 void

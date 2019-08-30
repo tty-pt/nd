@@ -10,7 +10,7 @@
 #include "db.h"
 #include "props.h"
 #include "params.h"
-#include "tune.h"
+#include "defaults.h"
 #include "match.h"
 #include "interface.h"
 #include "externs.h"
@@ -61,7 +61,7 @@ match_player(struct match_data *md)
 	dbref match;
 	const char *p;
 
-	if (*(md->match_name) == LOOKUP_TOKEN && payfor(OWNER(md->match_from), tp_lookup_cost)) {
+	if (*(md->match_name) == LOOKUP_TOKEN && payfor(OWNER(md->match_from), LOOKUP_COST)) {
 		for (p = (md->match_name) + 1; isspace(*p); p++) ;
 		if ((match = lookup_player(p)) != NOTHING) {
 			md->exact_match = match;
@@ -283,7 +283,7 @@ match_exits(dbref first, struct match_data *md)
 				while (isspace(*exitname))
 					exitname++;
 				lev = PLevel(exit);
-				if (tp_compatible_priorities && (lev == 1) &&
+				if (COMPATIBLE_PRIORITIES && (lev == 1) &&
 					(DBFETCH(exit)->location == NOTHING ||
 					 Typeof(DBFETCH(exit)->location) != TYPE_THING ||
 					 controls(OWNER(exit), getloc(md->match_from))))
@@ -493,7 +493,7 @@ match_all_exits(struct match_data *md)
                 if (!limit--)
                         break;
                 /* Does this room have env-chain exit blocking enabled? */
-                if (!blocking && tp_enable_match_yield && FLAGS(loc) & YIELD) {
+                if (!blocking && ENABLE_MATCH_YIELD && FLAGS(loc) & YIELD) {
                   blocking = 1;
                 }
         }

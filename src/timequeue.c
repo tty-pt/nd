@@ -8,7 +8,7 @@
 #include "match.h"
 
 #include "db.h"
-#include "tune.h"
+#include "defaults.h"
 #include "mpi.h"
 #include "props.h"
 #include "interface.h"
@@ -149,7 +149,7 @@ free_timenode(timequeue ptr)
 			notify_nolisten(ptr->uid, "Data input aborted.  The command you were using was killed.", 1);
 		}
 	}
-	if (free_timenode_count < tp_free_frames_pool) {
+	if (free_timenode_count < FREE_FRAMES_POOL) {
 		ptr->next = free_timenode_list;
 		free_timenode_list = ptr;
 		free_timenode_count++;
@@ -236,8 +236,8 @@ add_event(int event_typ, int subtyp, int dtime, int descr, dbref player, dbref l
 		}
 	}
 	if (!(event_typ == TQ_MUF_TYP && subtyp == TQ_MUF_TREAD)) {
-		if (process_count > tp_max_process_limit ||
-			(mypids > tp_max_plyr_processes && !Wizard(OWNER(player)))) {
+		if (process_count > MAX_PROCESS_LIMIT ||
+			(mypids > MAX_PLYR_PROCESSES && !Wizard(OWNER(player)))) {
 			if (fr) {
 				if (fr->multitask != BACKGROUND)
 					PLAYER_SET_BLOCK(player, 0);

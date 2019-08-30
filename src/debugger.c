@@ -11,7 +11,6 @@
 #include "inst.h"
 #include "externs.h"
 #include "params.h"
-#include "tune.h"
 #include "match.h"
 #include "interp.h"
 #include <ctype.h>

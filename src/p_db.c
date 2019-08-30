@@ -8,7 +8,8 @@
 #include <stdio.h>
 #include <time.h>
 #include "db.h"
-#include "tune.h"
+
+#include "defaults.h"
 #include "props.h"
 #include "inst.h"
 #include "externs.h"
@@ -63,8 +64,8 @@ prim_addpennies(PRIM_PROTOTYPE)
 	CHECKOP(2);
 	oper1 = POP();
 	oper2 = POP();
-	if (mlev < tp_addpennies_muf_mlev)
-		abort_interp("Permission Denied (mlev < tp_addpennies_muf_mlev)");
+	if (mlev < ADDPENNIES_MUF_MLEV)
+		abort_interp("Permission Denied (mlev < ADDPENNIES_MUF_MLEV)");
 	if (!valid_object(oper2))
 		abort_interp("Invalid object.");
 	if (oper1->type != PROG_INTEGER)
@@ -76,7 +77,7 @@ prim_addpennies(PRIM_PROTOTYPE)
 			if (oper1->data.number > 0) {
 				if (result > (result + oper1->data.number))
 					abort_interp("Would roll over player's score.");
-				if ((result + oper1->data.number) > tp_max_pennies)
+				if ((result + oper1->data.number) > MAX_PENNIES)
 					abort_interp("Would exceed MAX_PENNIES.");
 			} else {
 				if (result < (result + oper1->data.number))
@@ -179,7 +180,7 @@ prim_moveto(PRIM_PROTOTYPE)
 				}
 			}
 			if (Typeof(victim) == TYPE_THING &&
-				(tp_thing_movement || (FLAGS(victim) & ZOMBIE))) {
+				(SECURE_THING_MOVEMENT || (FLAGS(victim) & ZOMBIE))) {
 				enter_room(fr->descr, victim, dest, program, 1);
 			} else {
 				moveto(victim, dest);
@@ -198,7 +199,7 @@ prim_moveto(PRIM_PROTOTYPE)
 			SetMLevel(victim, 0);
 			break;
 		case TYPE_ROOM:
-			if (!tp_thing_movement && Typeof(dest) != TYPE_ROOM)
+			if (!SECURE_THING_MOVEMENT && Typeof(dest) != TYPE_ROOM)
 				abort_interp("Bad destination.");
 			if (victim == GLOBAL_ENVIRONMENT)
 				abort_interp("Permission denied.");
@@ -236,8 +237,8 @@ prim_pennies(PRIM_PROTOTYPE)
 	oper1 = POP();
 	if (!valid_object(oper1))
 		abort_interp("Invalid argument.");
-	if (mlev < tp_pennies_muf_mlev)
-		abort_interp("Permission Denied (mlev < tp_pennies_muf_mlev)");
+	if (mlev < PENNIES_MUF_MLEV)
+		abort_interp("Permission Denied (mlev < PENNIES_MUF_MLEV)");
 	CHECKREMOTE(oper1->data.objref);
 	switch (Typeof(oper1->data.objref)) {
 	case TYPE_PLAYER:
@@ -676,9 +677,9 @@ prim_set(PRIM_PROTOTYPE)
 			tmp = VEHICLE;
 		else if (string_prefix("quell", flag))
 			tmp = QUELL;
-                else if (tp_enable_match_yield && string_prefix("yield", flag))
+                else if (ENABLE_MATCH_YIELD && string_prefix("yield", flag))
                         tmp = YIELD;
-                else if (tp_enable_match_yield && string_prefix("overt", flag))
+                else if (ENABLE_MATCH_YIELD && string_prefix("overt", flag))
                         tmp = OVERT;
 	}
 	if (!tmp)
@@ -687,8 +688,8 @@ prim_set(PRIM_PROTOTYPE)
 		abort_interp("Permission denied.");
 
 	if (((mlev < 4) && ((tmp == DARK && ((Typeof(ref) == TYPE_PLAYER)
-										 || (!tp_exit_darking && Typeof(ref) == TYPE_EXIT)
-										 || (!tp_thing_darking && Typeof(ref) == TYPE_THING)
+										 || (!EXIT_DARKING && Typeof(ref) == TYPE_EXIT)
+										 || (!THING_DARKING && Typeof(ref) == TYPE_THING)
 						 )
 						)
 						|| ((tmp == ZOMBIE) && (Typeof(ref) == TYPE_THING)
@@ -816,9 +817,9 @@ prim_flagp(PRIM_PROTOTYPE)
 			tmp = VEHICLE;
 		else if (string_prefix("quell", flag))
 			tmp = QUELL;
-                else if (tp_enable_match_yield && string_prefix("yield", flag))
+                else if (ENABLE_MATCH_YIELD && string_prefix("yield", flag))
                         tmp = YIELD;
-                else if (tp_enable_match_yield && string_prefix("overt", flag))
+                else if (ENABLE_MATCH_YIELD && string_prefix("overt", flag))
                         tmp = OVERT;
 	}
 	if (result) {
@@ -1408,7 +1409,7 @@ prim_recycle(PRIM_PROTOTYPE)
 	result = oper1->data.objref;
 	if ((mlev < 3) || ((mlev < 4) && !permissions(ProgUID, result)))
 		abort_interp("Permission denied.");
-	if ((result == tp_player_start) || (result == GLOBAL_ENVIRONMENT))
+	if ((result == PLAYER_START) || (result == GLOBAL_ENVIRONMENT))
 		abort_interp("Cannot recycle that room.");
 	if (Typeof(result) == TYPE_PLAYER)
 		abort_interp("Cannot recycle a player.");
@@ -1529,8 +1530,8 @@ prim_movepennies(PRIM_PROTOTYPE)
 	oper1 = POP();
 	oper2 = POP();
 	oper3 = POP();
-	if (mlev < tp_movepennies_muf_mlev)
-		abort_interp("Permission Denied (mlev < tp_movepennies_muf_mlev)");
+	if (mlev < MOVEPENNIES_MUF_MLEV)
+		abort_interp("Permission Denied (mlev < MOVEPENNIES_MUF_MLEV)");
 	if (!valid_object(oper3))
 		abort_interp("Invalid object. (1)");
 	if (!valid_object(oper2))
@@ -1553,7 +1554,7 @@ prim_movepennies(PRIM_PROTOTYPE)
 		if (Typeof(ref2) == TYPE_PLAYER) {
 			if (GETVALUE(ref2) > (GETVALUE(ref2) + oper1->data.number))
 				abort_interp("Would roll over player's score. (2)");
-			if ((GETVALUE(ref2) + oper1->data.number) > tp_max_pennies)
+			if ((GETVALUE(ref2) + oper1->data.number) > MAX_PENNIES)
 				abort_interp("Would exceed MAX_PENNIES. (2)");
 		} else {
 			abort_interp("Permission denied. (2)");
@@ -1879,7 +1880,7 @@ prim_toadplayer(PRIM_PROTOTYPE)
 			}
 	    }
 	    if (Typeof(stuff) == TYPE_THING && THING_HOME(stuff) == victim) {
-			THING_SET_HOME(stuff, tp_player_start);
+			THING_SET_HOME(stuff, PLAYER_START);
 	    }
 	}
 	if (PLAYER_PASSWORD(victim)) {
@@ -2467,7 +2468,7 @@ prim_program_setlines(PRIM_PROTOTYPE)
 
 	log_status("PROGRAM SAVED: %s by %s(%d)", unparse_object(player, oper1->data.objref), NAME(player), player);
 
-	if (tp_log_programs)
+	if (LOG_PROGRAMS)
 		log_program_text(lines, player, oper1->data.objref);
 
 	free_prog_text(lines);

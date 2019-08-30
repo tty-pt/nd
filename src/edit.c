@@ -9,7 +9,7 @@
 #include "interface.h"
 #include "externs.h"
 #include "params.h"
-#include "tune.h"
+#include "defaults.h"
 #include "match.h"
 #include "fbstrings.h"
 #include <ctype.h>
@@ -462,7 +462,7 @@ do_quit(dbref player, dbref program)
 			   NAME(player), player);
 	write_program(PROGRAM_FIRST(program), program);
 
-	if (tp_log_programs)
+	if (LOG_PROGRAMS)
 		log_program_text(PROGRAM_FIRST(program), player, program);
 
 	free_prog_text(PROGRAM_FIRST(program));

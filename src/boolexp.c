@@ -12,7 +12,6 @@
 #include "match.h"
 #include "externs.h"
 #include "params.h"
-#include "tune.h"
 #include "interface.h"
 
 /* Lachesis note on the routines in this package:

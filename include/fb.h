@@ -43,7 +43,6 @@
 #include "smatch.h"
 #include "fbstrings.h"
 #include "speech.h"
-#include "tune.h"
 #include "version.h"
 
 #endif /* _FB_H */

@@ -174,10 +174,6 @@ db_read_header( FILE *f, const char **version, int *load_format, dbref *grow, in
 		result |= DB_ID_GROW;
 
 		dbflags = getref(f);
-		if (dbflags & DB_PARMSINFO) {
-			*parmcnt = getref(f);
-			result |= DB_ID_PARMSINFO;
-		}
 
 		if (dbflags & DB_COMPRESSED) {
 			result |= DB_ID_CATCOMPRESS;

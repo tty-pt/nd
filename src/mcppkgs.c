@@ -5,7 +5,7 @@
 #include "params.h"
 
 #include "db.h"
-#include "tune.h"
+#include "defaults.h"
 #include "mpi.h"
 #include "mcp.h"
 #include "externs.h"
@@ -43,7 +43,6 @@ show_mcp_error(McpFrame * mfr, char *topic, char *text)
  *    prop     to set a property named by misc.
  *    proplist to store a string proplist named by misc.
  *    prog     to set the program text of the given object.  Ignores misc.
- *    sysparm  to set an @tune value.  Ignores objnum.
  *    user     to return data to a muf program.
  *
  * If the category is prop, then it accepts the following types:
@@ -251,7 +250,7 @@ mcppkg_simpleedit(McpFrame * mfr, McpMesg * msg, McpVer ver, void *context)
 
 			write_program(PROGRAM_FIRST(obj), obj);
 
-			if (tp_log_programs)
+			if (LOG_PROGRAMS)
 				log_program_text(PROGRAM_FIRST(obj), player, obj);
 
 			do_compile(descr, player, obj, 1);
@@ -262,18 +261,6 @@ mcppkg_simpleedit(McpFrame * mfr, McpMesg * msg, McpVer ver, void *context)
 
 			DBDIRTY(player);
 			DBDIRTY(obj);
-
-		} else if (!string_compare(category, "sysparm")) {
-			if (!Wizard(player)) {
-				show_mcp_error(mfr, "simpleedit-set", "Permission denied.");
-				return;
-			}
-			if (lines != 1) {
-				show_mcp_error(mfr, "simpleedit-set", "Bad @tune value.");
-				return;
-			}
-			content = mcp_mesg_arg_getline(msg, "content", 0);
-			tune_setparm(reference, content);
 
 		} else if (!string_compare(category, "user")) {
 		} else {

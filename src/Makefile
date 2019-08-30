@@ -22,7 +22,7 @@ obj-y := crt_malloc.o geometry.o noise.o geography.o item.o kill.o shop.o \
 	p_misc.o p_props.o p_regex.o predicates.o propdirs.o property.o \
 	props.o p_stack.o p_strings.o random.o rob.o sanity.o set.o \
 	signal.o smatch.o snprintf.o speech.o strftime.o stringutil.o \
-	timequeue.o timestamp.o tune.o unparse.o utils.o wiz.o \
+	timequeue.o timestamp.o unparse.o utils.o wiz.o \
 	version.o interface.o copyright.o
 
 TARGETS := fbmuck
