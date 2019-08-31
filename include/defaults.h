@@ -9,7 +9,7 @@
 
 
 /* Change this to the name of your muck.  ie: FurryMUCK, or Tapestries */
-#define MUCKNAME "TygryssMUCK"
+#define MUCKNAME "NeverDark"
 
 /* name of the monetary unit being used */
 #define PENNY "penny"
@@ -295,7 +295,7 @@
 
 /* To have a private MUCK, this restricts player
  * creation to Wizards using the @pcreate command */
-#define REGISTRATION 1
+#define REGISTRATION 0
 
 /* Define to 1 to allow _look/ propqueue hooks. */
 #define LOOK_PROPQUEUES 0
@@ -319,7 +319,7 @@
 #define MAX_OUTPUT 131071
 
 /* Flags that new players will be created with. */
-#define PCREATE_FLAGS "B"
+#define PCREATE_FLAGS "C"
 
 /* Smatch pattern of names that cannot be used. */
 #define RESERVED_NAMES ""

@@ -3,12 +3,14 @@
 
 #include "geometry.h"
 #include "xxhash.h"
-#include "item.h"
 
 // TODO make these vars?
 #define VIEW_AROUND 3
 #define VIEW_SIZE ((VIEW_AROUND<<1) + 1)
 #define VIEW_M VIEW_SIZE * VIEW_SIZE
+#define EXTRA_TREE 4
+#define TREE_N_MASK 0x3
+#define TREE_HALF (TREE_N_MASK >> 1)
 
 typedef XXH32_hash_t noise_t;
 typedef long snoise_t;
@@ -19,18 +21,27 @@ struct bio {
 	noise_t he;
 	noise_t cl;
 	noise_t tm;
-	unsigned tree_n;
+	unsigned char plid[3], mplid;
+	unsigned char pln[3];
 	enum biome_type bio_idx;
 };
 
-struct biome {
-	struct obj tree;
-	char const *tree_wide, *tree_side, *bg;
+struct plant {
+	struct obj o;
+	char const *pre, small, big, *post;
+	coord_t tmp_min, tmp_max;
+	ucoord_t rn_min, rn_max;
+	unsigned char yield;
+	struct obj fruit;
+	unsigned y;
 };
 
-extern struct biome const biomes[];
+extern struct plant plants[];
 
-struct bio noise_point(morton_t p);
-void noise_view(struct bio to[VIEW_M], point_t s, ucoord_t obits);
+struct bio * noise_point(morton_t p);
+void noise_view(struct bio to[VIEW_M], point_t pos, ucoord_t obits);
+unsigned char noise_rplants(unsigned char plid[EXTRA_TREE],
+			    unsigned char pln[EXTRA_TREE],
+			    struct bio *b);
 
 #endif

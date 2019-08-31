@@ -58,6 +58,7 @@ rarity_get() {
 dbref
 obj_add(struct obj o, dbref where)
 {
+	assert(where >= 0);
 	dbref nu = new_object();
 	NAME(nu) = alloc_string(o.name);
 	SETART(nu, alloc_string(o.art));
@@ -341,7 +342,7 @@ static struct mob const mobs[] = {{
 }, {
 	MOB(bandit, ""),
 	{ &dagger_drop, ARMORSET_LIST(padded), ARMORSET_LIST(hide), ARMORSET_LIST(chainmail), NULL },
-	2, FIGHTER, 20, 0x7, .flags = MOB_AGGRO
+	4, FIGHTER, 20, 0x7, .flags = MOB_AGGRO
 }, {
 	BIRD(swallow, ""), .y = 4,
 }, {
@@ -419,10 +420,10 @@ bird_is(struct mob const *mob)
 extern int night_is(void);
 
 static inline dbref
-mob_add(unsigned mid, dbref where, dbref t) {
+mob_add(unsigned mid, dbref where, struct bio *b) {
 	struct mob const *mob = &mobs[mid];
 
-	if ((bird_is(mob) && t < 0)
+	if ((bird_is(mob) && !(b->pln[0] || b->pln[1] || b->pln[2]))
 	    || (!night_is() && (mob->type == ELM_DARK || mob->type == ELM_VAMP))
 	    || random() >= (RAND_MAX >> mob->y))
 		return NOTHING;
@@ -457,7 +458,7 @@ mob_add(unsigned mid, dbref where, dbref t) {
 }
 
 void
-mobs_add(enum biome_type b, dbref w, dbref t) {
+mobs_add(struct bio *b, dbref w) {
 	unsigned mid,
 		 n = 0;
 	int o = 0;
@@ -465,7 +466,7 @@ mobs_add(enum biome_type b, dbref w, dbref t) {
 	// TODO more consistent logic that doesn't need
 	// me to mess around with this index stuff
 
-	switch (b) {
+	switch (b->bio_idx) {
 	case BIOME_WATER:
 		o = ofs_water;
 		n = ofs_ice;
@@ -505,7 +506,7 @@ mobs_add(enum biome_type b, dbref w, dbref t) {
 	}
 
 	for (mid = o; mid < o + n; mid++)
-		mob_add(mid, w, t);
+		mob_add(mid, w, b);
 }
 
 struct mob const *

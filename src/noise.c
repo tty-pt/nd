@@ -27,14 +27,17 @@
  * TODO think before changing stuff
  * */
 
-#include "noise.h"
+#include "item.h"
 /* #include "morton.h" */
 #include <string.h>
 #include "xxhash.h"
 #include "params.h"
+#include "debug.h"
 
 #define XXH XXH32
 
+/* FIXME horizontal visual artifacts when CHUNK_Y == 5
+ * use 2 render areas instead of 1, remove STORE */
 #define CHUNK_Y 5
 #define CHUNK_SIZE (1 << CHUNK_Y)
 #define CHUNK_M (CHUNK_SIZE * CHUNK_SIZE)
@@ -42,6 +45,11 @@
 /* gets a mask for use with get_s */
 #define COORDMASK_LSHIFT(x) (ucoord_t) ((((ucoord_t) -1) << x))
 #define NOISE_MAX ((noise_t) -1)
+
+#define PLANTS_SEED 5
+
+#define NOISE_OCT(to, x, seed) \
+	noise_oct(to, s, sizeof(x) / sizeof(octave_t), x, seed)
 
 typedef struct { unsigned x, w; } octave_t;
 
@@ -51,11 +59,60 @@ struct tilemap {
 };
 
 static size_t v_total = (1<<(DIM+1)) - 1;
-static ucoord_t chunk_mask = COORDMASK_LSHIFT(CHUNK_Y);
+static struct bio chunks_bio_raw[CHUNK_M * 4],
+		  chunks_bio[CHUNK_M * 4],
+		  *bio;
+static struct rect chunks_r;
+static const noise_t noise_fourth = (NOISE_MAX >> 2);
+static noise_t n_he[CHUNK_M],
+	       n_cl[CHUNK_M],
+	       n_tm[CHUNK_M];
+
+/* REGARDING DRAWABLE THINGS THAT DEPEND ON NOISE {{{ */
+
+/* TODO calculate water needs */
+struct plant plants[] = {{
+	// taiga
+	{ "pinus silvestris", "", "" }, ANSI_BOLD ANSI_FG_GREEN, 'x', 'X', ANSI_RESET_BOLD,
+	-65, 70, 100, 200, 1,
+	{ "fruit", "", "" }, 1,
+}, {	// temperate rainforest
+	{ "pseudotsuga menziesii", "", "" }, ANSI_BOLD ANSI_FG_GREEN, 't', 'T', ANSI_RESET_BOLD,
+	32, 100, 180, 350, 1,
+	{ "fruit", "", "" }, 1,
+}, {	// woodland / grassland / shrubland
+	{ "betula pendula", "", "" }, ANSI_FG_YELLOW, 'x', 'X', "",
+	-4, 86, 400, 700, 1,
+	{ "fruit", "", "" }, 1,
+}, {	// woodland / grassland?
+	{ "betula pubescens", "", "" }, ANSI_FG_WHITE, 'x', 'X', "",
+	0, 96, 500, 900, 1,
+	{ "fruit", "", "" }, 1,
+}, {	// temperate forest
+	{ "abies alba", "", "" }, ANSI_BOLD ANSI_FG_GREEN, 'x', 'X', ANSI_RESET_BOLD,
+	-40, 86, 100, 200, 1,
+	{ "fruit", "", "" }, 1,
+}, {	// desert
+	{ "arthrocereus rondonianus", "", "" }, ANSI_BOLD ANSI_FG_GREEN, 'i', 'I', "",
+	70, 130, 10, 200, 1,
+	{ "fruit", "", "" }, 1,
+}, {	// savannah
+	{ "acacia senegal", "", "" }, ANSI_BOLD ANSI_FG_GREEN, 't', 'T', "",
+	40, 90, 20, 120, 1,
+	{ "fruit", "", "" }, 1,
+}, {
+	{ "daucus carota", "", "" }, ANSI_FG_WHITE, 'x', 'X', "",
+	38, 96, 100, 200, 1,
+	{ "carrot", "", "" }, 1,
+}, {
+	{ "solanum lycopersicum", "", "" }, ANSI_FG_RED, 'x', 'X', "", 
+	50, 98, 100, 200, 5,
+	{ "tomato", "", "" }, 1,
+}};
+
+static const unsigned char plid_max = sizeof(plants) / sizeof(struct plant);
 
 /* WORLD GEN STATIC VARS {{{ */
-static const noise_t noise_fourth = (NOISE_MAX >> 2);
-static const noise_t noise_eighth = (NOISE_MAX >> 3);
 
 static coord_t tmp_max = 170,
 	       tmp_min = -41;
@@ -63,126 +120,7 @@ static coord_t tmp_max = 170,
 static ucoord_t rn_max = 1000,
 	       rn_min = 50;
 
-/* BIOMES {{{ */
-struct biome const biomes[] = {
-	{	// Water
-		{ "", "", "" },
-		ANSI_BOLD ANSI_FG_WHITE "~~~" ANSI_RESET_BOLD,
-		ANSI_BOLD ANSI_FG_WHITE "~",
-		ANSI_BG_BLUE,
-	},
-
-	// ----
-
-	{	// Cold dry desert
-		{ "Pile of frozen rocks", "", "" },
-		ANSI_BOLD ANSI_FG_WHITE "oOo" ANSI_RESET_BOLD,
-		ANSI_BOLD ANSI_FG_WHITE "o",
-		ANSI_BG_BLUE,
-	},
-
-	{	// Cold stone
-		{ "Block of Ice", "", "" },
-		ANSI_BOLD ANSI_FG_GREEN "oOo" ANSI_RESET_BOLD,
-		ANSI_BOLD ANSI_FG_GREEN "o",
-		ANSI_BG_CYAN,
-	},
-
-	{	// Cold snowy rock
-		{ "Bear", "", "" },
-		ANSI_BOLD ANSI_FG_YELLOW " 8 " ANSI_RESET_BOLD,
-		" ",
-		ANSI_BG_WHITE,
-	},
-
-	// ----
-
-	{	// Tundra
-		{ "Frozen Pine Tree", "", "" },
-		ANSI_BOLD ANSI_FG_WHITE "xXx" ANSI_RESET_BOLD,
-		ANSI_BOLD ANSI_FG_WHITE "x",
-		ANSI_BG_CYAN,
-	},
-
-	{	// Taiga
-		{ "Pine Tree", "", "" },
-		ANSI_BOLD ANSI_FG_GREEN "xXx" ANSI_RESET_BOLD,
-		ANSI_BOLD ANSI_FG_GREEN "x",
-		ANSI_BG_GREEN,
-	},
-
-	{	// Temperate rain forest
-		{ "Tall Tree", "", "" },
-		ANSI_BOLD ANSI_FG_GREEN "tTt" ANSI_RESET_BOLD,
-		ANSI_BOLD ANSI_FG_GREEN "t",
-		ANSI_BG_GREEN,
-	},
-
-	// ----
-
-	{	// Woodland / Grassland / Shrubland
-		{ "Shrub", "", "" },
-		ANSI_FG_YELLOW "xXx",
-		ANSI_FG_YELLOW "x",
-		ANSI_BG_GREEN,
-	},
-
-	{
-		{ "Tree", "", "" },
-		ANSI_FG_YELLOW "xXx",
-		ANSI_FG_YELLOW "x",
-		ANSI_BG_GREEN,
-	},
-
-	{	// Temperate forest
-		{ "Tree", "", "" },
-		ANSI_BOLD ANSI_FG_GREEN "xXx" ANSI_RESET_BOLD,
-		ANSI_BOLD ANSI_FG_GREEN "x",
-		ANSI_BG_GREEN,
-	},
-
-	// ----
-
-	{	// Desert
-		{ "Cactus", "", "" },
-		ANSI_FG_GREEN "ili",
-		ANSI_FG_GREEN "i",
-		ANSI_BG_YELLOW,
-	},
-
-	{	// Savannah
-		{ "Acacia Tree", "", "" },
-		ANSI_FG_GREEN "tTt",
-		ANSI_FG_GREEN "t",
-		ANSI_BG_YELLOW,
-	},
-
-	{	// Temperate Seasonal forest
-		{ "Red Tree", "", "" },
-		ANSI_FG_RED "xXx",
-		ANSI_FG_RED "x",
-		ANSI_RESET,
-	},
-
-	// ---
-
-	{	// Volcanic
-		{ "Puddle of lava", "", "" },
-		ANSI_BOLD ANSI_FG_RED "oOo" ANSI_RESET_BOLD,
-		ANSI_BOLD ANSI_FG_RED "o",
-		ANSI_RESET,
-	},
-
-	/* {	// Hot springs */
-	/* 	"Hot spring", */
-	/* 	ANSI_BOLD ANSI_FG_WHITE " ~ ", */
-		/* ANSI_BG_CYAN, */
-	/* 	" ", */
-	/* }, */
-};
-/* }}} */
-
-static const size_t tmp_vary = (sizeof(biomes) / sizeof(struct biome) - 1) / 3;
+static const size_t tmp_vary = BIOME_VOLCANIC / 3;
 
 /* }}} */
 
@@ -215,7 +153,7 @@ sun_dist(ucoord_t obits)
 }
 
 static inline coord_t
-temp(ucoord_t obits, noise_t he, noise_t tm, coord_t y) // fahrenheit * 10
+temp(ucoord_t obits, noise_t he, noise_t tm, coord_t pos_y) // fahrenheit * 10
 {
 	smorton_t x = 0;
 	x = he - water_level(obits) + (tm - NOISE_MAX) / 3;
@@ -224,27 +162,16 @@ temp(ucoord_t obits, noise_t he, noise_t tm, coord_t y) // fahrenheit * 10
 	x /= 4 * UCOORD_MAX * 260;
 	x += (tmp_max<<1) - tmp_min // min temp of hot planet
 		- (tmp_max - tmp_min) * sun_dist(obits);
-	x += ((y > 0 ? y : -y) * tmp_min) / 6300;
+	x += (pos_y * tmp_min) / 6300;
 	return tmp_min + x;
 }
 
-static inline unsigned
-_tree_count(ucoord_t rn, coord_t tmp, noise_t tr)
-{
-	if (tr > noise_fourth
-	    + (2 * tmp / 3 - 2 * rn) * noise_eighth
-	    && tr & 1)
-
-		return (rn^tmp) & 7;
-	else
-		return 0;
-}
-
+/* }}} */
 /* }}} */
 
 /* gets a (deterministic) random value for point p */
 
-static noise_t
+static inline noise_t
 r(point_t p, unsigned seed, unsigned w)
 {
 	/* morton_t m = morton2D_point(p); */
@@ -258,7 +185,23 @@ r(point_t p, unsigned seed, unsigned w)
  * that starts in point s,
  * and store in v in a particular order
  * (active bits of the current index)
- * */
+
+ * The following call:
+ * get_v(v, s, x), DIM = 2
+
+ * results in
+
+ * v[0] = r(s)
+ * v[1] = r(s + {d, 0})
+ * v[2] = r(s + {0, d})
+ * v[3] = r(s + {d, d})
+ *
+ * DIM = 3:
+ * v[0] = r(s)
+ * v[1] = r(s + {d, 0, 0})
+ * ...
+ * v[7] = r(s + {d, d, d})
+ */
 
 static void
 get_v(noise_t v[1 << DIM], point_t s, ucoord_t x, unsigned w, unsigned seed)
@@ -279,21 +222,6 @@ get_v(noise_t v[1 << DIM], point_t s, ucoord_t x, unsigned w, unsigned seed)
 		v[i] = r(vp, seed, w);
 	}
 }
-
-/* The following call:
- * get_v(v, s, x), DIM = 2
- * outputs
- * v[0] = r(s)
- * v[1] = r(s + {d, 0})
- * v[2] = r(s + {0, d})
- * v[3] = r(s + {d, d})
- *
- * DIM = 3:
- * v[0] = r(s)
- * v[1] = r(s + {d, 0, 0})
- * ...
- * v[7] = r(s + {d, d, d})
- */
 
 static inline snoise_t
 calc_step(noise_t v1, noise_t v0, ucoord_t z, unsigned y)
@@ -327,20 +255,20 @@ step(noise_t *v, snoise_t *st, ucoord_t vl, ucoord_t mul)
  */
 
 static inline void
-noise_quad(noise_t *c, noise_t *vc, unsigned z, unsigned y, unsigned w)
+noise_quad(noise_t *c, noise_t *vc, unsigned z, unsigned w)
 {
 	ucoord_t ndim = DIM - 1;
 	ucoord_t tvl = 1<<ndim; // length of input values
 	snoise_t st[(tvl<<1) - 1], *stc = st;
 	noise_t *ce_p[DIM], *vt;
-	size_t cd = 1 << y * ndim;	/* (2^y)^ndim */
+	size_t cd = 1 << CHUNK_Y * ndim; /* (2^y)^ndim */
 
 	goto start;
 
 	do {
 		do {
 			// PUSH
-			cd >>= y; ndim--; vc = vt; stc += tvl; tvl >>= 1;
+			cd >>= CHUNK_Y; ndim--; vc = vt; stc += tvl; tvl >>= 1;
 
 start:			ce_p[ndim] = c + (cd<<z);
 			vt = vc + (tvl<<1);
@@ -357,7 +285,7 @@ start:			ce_p[ndim] = c + (cd<<z);
 			++ndim;
 			if (ndim >= DIM)
 				return;
-			c -= cd<<z; cd <<= y; vt = vc;
+			c -= cd << z; cd <<= CHUNK_Y; vt = vc;
 			tvl <<= 1; stc -= tvl; vc -= (tvl<<1);
 
 			step(vt, stc, tvl, 1);
@@ -366,64 +294,64 @@ start:			ce_p[ndim] = c + (cd<<z);
 	} while (1);
 }
 
-#if 1
+#if 0
 
 static inline void
-_noise_mr(noise_t *c, noise_t *v, unsigned x, unsigned y, point_t qs, ucoord_t ndim, unsigned w, unsigned seed) {
+_noise_mr(noise_t *c, noise_t *v, unsigned x, point_t qs, ucoord_t ndim, unsigned w, unsigned seed) {
 	int i = DIM - 1 - ndim;
-	ucoord_t ced = (1<<(y*(ndim+1))), cd;
+	ucoord_t cd, ced = 1 << ( CHUNK_Y * (ndim + 1) );
 	noise_t *ce = c + ced;
 
-	ced>>=y;
+	ced >>= CHUNK_Y;
 	cd = ced<<x;
 
 	for (; c < ce; qs[i] += (1<<x), c += cd)
 		if (ndim == 0) {
 			get_v(v, qs, x, w, seed);
-			noise_quad(c, v, x, y, w);
+			noise_quad(c, v, x, w);
 		} else
-			_noise_mr(c, v, x, y, qs, ndim - 1, w, seed);
+			_noise_mr(c, v, x, qs, ndim - 1, w, seed);
 
-	qs[i] -= 1<<y; // reset
+	qs[i] -= CHUNK_SIZE; // reset
 }
 
 static inline void
-_noise_m(noise_t *c, noise_t *v, unsigned x, unsigned y, point_t qs, unsigned w, unsigned seed)
+_noise_m(noise_t *c, noise_t *v, unsigned x, point_t qs, unsigned w, unsigned seed)
 {
-	_noise_mr(c, v, x, y, qs, DIM - 1, w, seed);
+	_noise_mr(c, v, x, qs, DIM - 1, w, seed);
 }
 
 #else
 
 static inline void
-_noise_m(noise_t *c, noise_t *v, unsigned x, unsigned y, point_t qs, unsigned w, unsigned seed) {
+_noise_m(noise_t *c, noise_t *v, unsigned x, point_t qs, unsigned w, unsigned seed) {
 	noise_t *ce_p[DIM];
-	noise_t ced = 1<<(y*DIM);
-	coord_t *qsc = qs;		// quad coordinate
+	noise_t ced = 1<<(CHUNK_Y * DIM);
+	coord_t *qsc = qs; // quad coordinate
 	ucoord_t ndim = DIM - 1;
 
 	goto start;
 
 	do {
-		do {
-			qsc++; ndim--; // PUSH
+		do { // PUSH
+			qsc++; ndim--;
 start:			ce_p[ndim] = c + ced;
-			ced >>= y; // PUSH
+			ced >>= CHUNK_Y;
 		} while (ndim);
 
 		do {
 			get_v(v, qs, x, w, seed);
-			noise_quad(c, v, x, y, w);
+			noise_quad(c, v, x, w);
 			*qsc += 1<<x;
 			c += ced<<x;
 		} while (c < ce_p[ndim]);
 
-		do {
-			*qsc -= 1<<y;
-			ced <<= y; // POP
-			c += (ced<<x) - ced; // reset and inc c
-			qsc--; ndim++; // POP
-			*qsc += 1<<x; // inc quad coord
+		do { // POP
+			*qsc -= 1 << CHUNK_Y;
+			ced <<= CHUNK_Y;
+			c += (ced<<x) - ced; // reset and inc
+			qsc--; ndim++;
+			*qsc += 1<<x;
 		} while (c >= ce_p[ndim]);
 	} while (ndim < DIM);
 }
@@ -437,12 +365,12 @@ start:			ce_p[ndim] = c + ced;
  */
 
 static inline void
-__fix_v(noise_t *v, snoise_t *st, coord_t *ms, coord_t *qs, unsigned x, unsigned y, ucoord_t vl) {
+__fix_v(noise_t *v, snoise_t *st, coord_t *ms, coord_t *qs, unsigned x, ucoord_t vl) {
 	register noise_t *vn = v + vl;
-	register ucoord_t dd = (*ms - *qs)>>y;
+	register ucoord_t dd = (*ms - *qs) >> CHUNK_Y;
 
 	// TODO make this more efficient
-	calc_steps(st, v, x, vl, y);
+	calc_steps(st, v, x, vl, CHUNK_Y);
 
 	if (dd) /* ms > qs */
 		step(v, st, vl, dd);
@@ -456,8 +384,7 @@ static inline void
 fix_v(noise_t *v,
        coord_t *qs,
        coord_t *ms,
-       unsigned x,
-       unsigned y)
+       unsigned x)
 {
 	ucoord_t vl = 1 << DIM;
 	snoise_t st[vl - 1], *stc = st;
@@ -466,7 +393,7 @@ fix_v(noise_t *v,
 	vl >>= 1;
 
 	for (;;) {
-		__fix_v(v, stc, ms, qs, x, y, vl);
+		__fix_v(v, stc, ms, qs, x, vl);
 
 		if (ndim) {
 			ndim--; qs++; ms++; vl>>=1; stc+=vl; // PUSH
@@ -490,37 +417,35 @@ get_s(point_t s, point_t p, ucoord_t mask) {
 
 static inline void
 noise_m(noise_t *mat, point_t ms, unsigned x,
-	unsigned y, unsigned w, unsigned seed)
+	unsigned w, unsigned seed)
 {
 	noise_t v[v_total];
 
-	/* DEBUG("M x=%u y=%u ms={%d,%d} c={%p:%p}\n", x, y, ms[0], ms[1], mat, mat+(1<<y*DIM)); */
-	if (y > x)
-		_noise_m(mat, v, x, y, ms, w, seed);
+	if (CHUNK_Y > x)
+		_noise_m(mat, v, x, ms, w, seed);
 	else {
 		point_t qs;
 
 		get_s(qs, ms, COORDMASK_LSHIFT(x));
 		get_v(v, qs, x, w, seed);
-		if (x > y)
-			fix_v(v, qs, ms, x, y);
+		if (x > CHUNK_Y)
+			fix_v(v, qs, ms, x);
 
-		noise_quad(mat, v, y, y, w);
-	}
+		noise_quad(mat, v, CHUNK_Y, w); }
 }
 
 static inline void
-noise_oct(noise_t *m, point_t s, size_t oct_n, octave_t *oct, unsigned y, unsigned seed)
+noise_oct(noise_t *m, point_t s, size_t oct_n, octave_t *oct, unsigned seed)
 {
 	octave_t *oe;
 
-	memset(m, 0, sizeof(noise_t) << DIM * y);
+	memset(m, 0, sizeof(noise_t) * CHUNK_M);
 
 	for (oe = oct + oct_n; oct < oe; oct++)
-		noise_m(m, s, oct->x, y, oct->w, seed);
+		noise_m(m, s, oct->x, oct->w, seed);
 }
 
-static unsigned
+static inline unsigned
 bio_idx(ucoord_t rn, coord_t tmp)
 {
 	if (tmp > tmp_max)
@@ -538,202 +463,241 @@ bio_idx(ucoord_t rn, coord_t tmp)
 	return 1 + rn_bit + tmp_bit;
 }
 
-static inline struct bio
-bio_init(ucoord_t obits, noise_t he, noise_t cl, noise_t tr, noise_t tm, coord_t y)
+static inline int
+noise_plant(unsigned char *plid, unsigned char *pln, struct bio *b, noise_t v, unsigned char n)
 {
-	struct bio r;
-	noise_t w = water_level(obits);
-	r.he = he;
-	r.cl = cl;
-	r.cl = cl;
-	r.tm = tm;
-	r.rn = rain(obits, w, he, cl);
-	r.tmp = temp(obits, he, tm, y);
-	if (he < w)
-		r.tree_n = r.bio_idx = 0;
-	else {
-		r.tree_n = _tree_count(r.rn, r.tmp, tr);
-		r.bio_idx = bio_idx(r.rn, r.tmp);
-	}
-	return r;
-}
+	struct plant *pl = &plants[n];
 
-#define NOISE_OCT(to, x, y, seed) \
-	noise_oct(to, s, sizeof(x) / sizeof(octave_t), x, y, seed)
+	assert(n < plid_max);
 
-static void noise_full(struct bio *bio, size_t y, point_t s, ucoord_t obits)
-{
-	static octave_t
-		x1[] = {{ 7, 2 }, { 6, 2 }, { 5, 2 }, { 4, 3 }, { 3, 3 }, { 2, 3 }},
-		x2[] = {{ 5, 1 }, { 3, 3 }, { 1, 2 }, { 2, 3 }},
-		x3[] = {{ 1, 1 }, { 2, 2 }},
-		x4[] = {{ 5, 1 }, { 8, 1 }};
+	if (v & 1)
+		return 0;
 
-	unsigned const m = (1 << y) * (1 << y);
-
-	noise_t he[m];
-	noise_t cl[m];
-	noise_t tr[m];
-	noise_t tm[m];
-
-	int i;
-
-	NOISE_OCT(he, x1, y, 55 + obits);
-	NOISE_OCT(cl, x2, y, 51 + obits);
-	NOISE_OCT(tr, x3, y, 52 + obits);
-	NOISE_OCT(tm, x4, y, 53 + obits);
-
-	for (i = 0; i < m; i++)
-		bio[i] = bio_init(obits, he[i], cl[i], tr[i], tm[i], s[0] + i / CHUNK_SIZE);
-}
-
-static morton_t
-tilemap_idx(struct rect s, struct rect b)
-{
-	morton_t r = s.s[1] - b.s[1];
-	if (b.s[0] > s.s[0])
-		return (b.s[0] - s.s[0]) * s.l[1] + r;
-	else
-		return (s.s[0] - b.s[0]) * b.l[1] + r;
-}
-
-static void
-tilemap_print(struct tilemap d, struct tilemap o)
-{
-	register ucoord_t dl = d.r.l[WDIM];
-	register ucoord_t ol = o.r.l[WDIM];
-	register ucoord_t wd1, wd2;
-	int y, x;
-	struct bio *bo = o.bio,
-		   *bd = d.bio;
-	int ny, nx;
-
-	// FIXME relying on unsigned arithmetic
-	// only supports squares?
-	if (dl > ol) {
-		wd2 = 0;
-		wd1 = dl - ol;
-		bd += tilemap_idx(o.r, d.r);
-		ny = ol;
-		nx = ol;
-	} else {
-		wd1 = 0;
-		wd2 = ol - dl;
-		if (o.r.l[0] > d.r.l[0])
-			bo += tilemap_idx(d.r, o.r);
-		else
-			bd += tilemap_idx(d.r, o.r);
-		ny = dl;
-		nx = dl;
+	if (v & 0x18
+	    && b->tmp < pl->tmp_max && b->tmp > pl->tmp_min
+	    && b->rn < pl->rn_max && b->rn > pl->rn_min) {
+		*plid = n;
+		v = (v >> 1) & TREE_N_MASK;
+		if (v == 3)
+			v = 0;
+		*pln = v;
+		return 1;
 	}
 
-	for (y = 0; y < ny; y++, bd += wd1, bo += wd2)
-		for (x = 0; x < nx; x++, bd++, bo++)
-			*bd = *bo;
+	return 0;
 }
 
-static struct rect
-tilemap_rect_contain_n(struct tilemap *tm, size_t n)
+static inline unsigned char
+noise_plants(unsigned char *plid, unsigned char *pln, struct bio *b, unsigned n, unsigned o)
 {
-	int i = 0;
-	struct rect r, aux;
-	memcpy(&r, &tm[i].r, sizeof(struct rect));
-	do {
-		i++;
-		if (i >= n)
-			break;
-		memcpy(&aux, &tm[i].r, sizeof(aux));
-		r = rect_contain2(r, aux);
-	} while (1);
-	return r;
-}
+	noise_t v = XXH(&b->tm, sizeof(noise_t), PLANTS_SEED);
+	register int i;
+	unsigned char *plidc = plid;
 
-static inline struct tilemap
-tilemap_cat(struct bio *to, struct tilemap *tm, size_t n)
-{
-	struct tilemap c;
-	int i;
+	memset(plid, 0, n);
+	memset(pln, 0, n);
 
-	c.r = tilemap_rect_contain_n(tm, n);
-	c.bio = to;
+	for (i = o;
+	     i < plid_max && plidc < plid + n;
+	     i++, v >>= 8) {
+		if (!v)
+			v = XXH(&b->tm, sizeof(noise_t), PLANTS_SEED + i);
 
-	for (i = 0; i < n; i++)
-		tilemap_print(c, tm[i]);
+		if (noise_plant(plidc, pln, b, v, i)) {
+			plidc++;
+			pln++;
+		}
+	}
 
-	return c;
-}
-
-struct bio
-noise_point(morton_t p)
-{
-	struct bio res;
-	point3D_t s;
-	ucoord_t obits = OBITS(p);
-	morton3D_decode(s, p);
-	noise_full(&res, 0, s, obits);
-	return res;
+	return i;
 }
 
 static inline void
-noise_chunk(struct tilemap *res, point_t s, ucoord_t obits)
+shuffle(unsigned char plid[3], unsigned char pln[3], noise_t v)
 {
-	POOP {
-		res->r.s[I] = s[I];
-		res->r.l[I] = CHUNK_SIZE;
+	register unsigned char aux;
+
+	if (v & 1) {
+		aux = plid[0];
+		plid[0] = plid[1];
+		plid[1] = aux;
+
+		aux = pln[0];
+		pln[0] = pln[1];
+		pln[1] = aux;
 	}
 
-	noise_full(res->bio, CHUNK_Y, s, obits);
+	if (v & 2) {
+		aux = plid[1];
+		plid[1] = plid[2];
+		plid[2] = aux;
+
+		aux = pln[1];
+		pln[1] = pln[2];
+		pln[2] = aux;
+	}
 }
 
-static inline struct tilemap
-_noise_chunks(struct bio *to, struct rect cr, size_t n, ucoord_t obits)
+/* static void bio_debug(const char *title, coord_t y_pos, coord_t x_pos, struct bio *b) */
+/* { */
+/* 	debug("%s y_pos %d x_pos %d tmp %u he %u rn %u\n", title, y_pos, x_pos, b->tmp, b->he, b->rn); */
+/* } */
+
+unsigned char
+noise_rplants(unsigned char plid[EXTRA_TREE], unsigned char pln[EXTRA_TREE],
+		  struct bio *b)
 {
-	struct bio bio[CHUNK_M * n];
-	struct tilemap chunks[n];
-	point_t s;
-	int i;
+	return noise_plants(plid, pln, b, EXTRA_TREE, b->mplid);
+}
 
-	for (s[0] = cr.s[0], i = 0;
-	     s[0] < cr.s[0] + cr.l[0];
-	     s[0] += CHUNK_SIZE)
+static inline void
+noise_full(size_t i, point_t s, ucoord_t obits)
+{
+	struct bio *bio = &chunks_bio_raw[i];
+	static octave_t
+		x1[] = {{ 7, 2 }, { 6, 2 }, { 5, 2 }, { 4, 3 }, { 3, 3 }, { 2, 3 }},
+		x2[] = {{ 5, 1 }, { 3, 3 }, { 1, 2 }, { 2, 3 }},
+		x3[] = {{ 5, 1 }, { 8, 1 }};
 
-		for (s[1] = cr.s[1];
-		     s[1] < cr.s[1] + cr.l[1];
-		     s[1] += CHUNK_SIZE, i++)
+	int j;
+
+	NOISE_OCT(n_he, x1, 55 + obits);
+	NOISE_OCT(n_cl, x2, 1 + obits);
+	NOISE_OCT(n_tm, x3, 53 + obits);
+
+	for (j = 0; j < CHUNK_M; j++) {
+		/* x_pos s[1] + (j % (1 << CHUNK_Y)); */
+		struct bio *r = &bio[j];
+		register noise_t _he = n_he[j], _cl = n_cl[j], _tm = n_tm[j];
+		register noise_t w = water_level(obits);
+		r->he = _he;
+		r->cl = _cl;
+		r->tm = _tm;
+		r->rn = rain(obits, w, _he, _cl);
+		r->tmp = temp(obits, _he, _tm, s[Y_COORD] + (j >> CHUNK_Y));
+		if (_he < w)
+			r->bio_idx = 0;
+		else
+			r->bio_idx = bio_idx(r->rn, r->tmp);
+		r->mplid = noise_plants(r->plid, r->pln, r, 3, 0);
+		shuffle(r->plid, r->pln, XXH(&r->cl, sizeof(noise_t), PLANTS_SEED));
+	}
+}
+
+static inline morton_t
+view_idx(point_t pos)
+{
+	assert(chunks_r.s[Y_COORD] <= pos[Y_COORD]);
+	return (pos[Y_COORD] - chunks_r.s[Y_COORD]) * chunks_r.l[X_COORD]
+		+ pos[X_COORD] - chunks_r.s[X_COORD];
+}
+
+/* im pretty sures squares must be involved */
+
+static inline void
+view_print(struct bio *to, point_t pos)
+{
+	point_t vprs = {
+		pos[0] - VIEW_AROUND,
+		pos[1] - VIEW_AROUND,
+	};
+	register struct bio
+		*bo = bio + view_idx(vprs),
+		*bd = to;
+	register int y, x;
+	ucoord_t ol;
+
+	ol = chunks_r.l[WDIM];
+	assert(ol >= CHUNK_SIZE);
+
+	for (y = 0; y < VIEW_SIZE; y++, bo += ol - VIEW_SIZE)
+		for (x = 0; x < VIEW_SIZE; x++, bd++, bo++)
+			*bd = *bo;
+}
+
+static inline void __attribute__((hot))
+spread(unsigned ny)
+{
+	static const size_t bio_line_size = sizeof(struct bio) << CHUNK_Y;
+	static const unsigned nx = 2;
+	unsigned w;
+	int p;
+
+	for (w = 0; w < ny * nx * CHUNK_M; w += nx * CHUNK_M)
+		for (p = 0; p <= nx * CHUNK_M; p += nx << CHUNK_Y) {
+			memcpy(&chunks_bio[w + p],
+			       &chunks_bio_raw[w + (p >> 1)],
+			       bio_line_size);
+
+			memcpy(&chunks_bio[w + p + CHUNK_SIZE],
+			       &chunks_bio_raw[w + (p >> 1) + CHUNK_M],
+			       bio_line_size);
+		}
+}
+
+static inline void
+noise_chunks(point_t pos, ucoord_t obits)
+{
+	struct rect r;
+	size_t n[DIM], i;
+	point_t s, vprs = {
+		pos[0] - VIEW_AROUND,
+		pos[1] - VIEW_AROUND
+	};
+
+	get_s(r.s, vprs, COORDMASK_LSHIFT(CHUNK_Y));
+
+	POOP {
+		n[I] = ((VIEW_SIZE + vprs[I] - r.s[I]) >> CHUNK_Y) + 1;
+		r.l[I] = n[I] << CHUNK_Y;
+	}
+
+	if (r.s[0] >= chunks_r.s[0]
+	    && r.s[1] >= chunks_r.s[1]
+	    && r.s[0] + r.l[0] <= chunks_r.s[0] + chunks_r.l[0]
+	    && r.s[1] + r.l[1] <= chunks_r.s[1] + chunks_r.l[1])
+		return;
+
+	i = 0;
+
+	for (s[Y_COORD] = r.s[Y_COORD];
+	     s[Y_COORD] < r.s[Y_COORD] + r.l[Y_COORD];
+	     s[Y_COORD] += CHUNK_SIZE)
+
+		for (s[X_COORD] = r.s[X_COORD];
+		     s[X_COORD] < r.s[X_COORD] + r.l[X_COORD];
+		     s[X_COORD] += CHUNK_SIZE)
+
 		{
-			chunks[i] = (struct tilemap) {
-				{ { s[0], s[1], }, { CHUNK_SIZE, CHUNK_SIZE }, },
-					&bio[i * CHUNK_M],
-			};
-
-			noise_chunk(&chunks[i], s, obits);
+			noise_full(i, s, obits);
+			i += CHUNK_M;
 		}
 
-	return tilemap_cat(to, chunks, n);
-}
+	bio = chunks_bio_raw;
 
-static inline struct tilemap
-noise_chunks(struct bio *to, point_t vprs, ucoord_t obits)
-{
-	struct rect cr;
-	size_t nn = 1;
-	get_s(cr.s, vprs, chunk_mask);
-	POOP {
-		size_t n = ((VIEW_SIZE + vprs[I] - cr.s[I]) >> CHUNK_Y) + 1;
-		nn *= n;
-		cr.l[I] = n * CHUNK_SIZE;
-	}
-	return _noise_chunks(to, cr, nn, obits);
+	if (n[X_COORD] > 1) {
+		assert(n[X_COORD] == 2);
+		spread(n[Y_COORD]);
+		bio = chunks_bio;
+	} else
+		bio = chunks_bio_raw;
+
+	memcpy(&chunks_r, &r, sizeof(r));
+	/* debug("CHUNKS! {%d,%d}+{%u,%u} (%lu,%lu)\n", r.s[0], r.s[1], r.l[0], r.l[1], n[0], n[1]); */
 }
 
 void
-noise_view(struct bio to[VIEW_M], point_t vprs, ucoord_t obits)
+noise_view(struct bio to[VIEW_M], point_t pos, ucoord_t obits)
 {
-	struct bio chunks[CHUNK_M * 4];
-	struct tilemap inters = {
-		{ { vprs[0], vprs[1], }, { VIEW_SIZE, VIEW_SIZE } },
-		to,
-	};
-	struct tilemap chunks_tm = noise_chunks(chunks, vprs, obits);
-	tilemap_print(inters, chunks_tm);
+	noise_chunks(pos, obits);
+	view_print(to, pos);
+}
+
+struct bio *
+noise_point(morton_t p)
+{
+	point_t pos;
+	morton3D_decode(pos, p);
+	noise_chunks(pos, OBITS(p));
+	return &bio[view_idx(pos)];
 }

@@ -170,12 +170,13 @@ xsqrtx(unsigned x)
 	return x * sqrt(x);
 }
 
+#include "noise.h"
+
 dbref obj_add(struct obj o, dbref where);
 dbref contents_find(int descr, dbref player, dbref what, const char *name);
-
 int equip_calc(struct living *p, dbref eq);
 dbref unequip(dbref player, unsigned eql);
-void mobs_add(enum biome_type b, dbref where, dbref tree);
+void mobs_add(struct bio *b, dbref where);
 struct mob const *mob_random();
 void mobs_aggro(int descr, dbref player);
 struct mob const *mob_get(dbref who);

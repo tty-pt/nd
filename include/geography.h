@@ -5,7 +5,7 @@
 
 // adds 2^DAYTICK_Y to day tick until it reaches DAYSIZE
 #define DAY_Y		16
-#define DAYTICK_Y	10
+#define DAYTICK_Y	6
 #define DAYTICK		(1<<DAYTICK_Y)
 #define DAYSIZE		((unsigned short) -1)
 #define NIGHT_IS	(day_tick > (1 << (DAY_Y - 1)))

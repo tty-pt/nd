@@ -8,10 +8,9 @@
 #include "externs.h"
 #include <stdlib.h>
 #include <db4/db.h>
-#include "noise.h"
 #include "kill.h"
 
-#define BIOME_BG(i)	(NIGHT_IS ? ANSI_RESET : biomes[i].bg)
+#define BIOME_BG(i)	(NIGHT_IS ? ANSI_RESET : biome_bgs[i])
 
 #undef NDEBUG
 #include "assert.h"
@@ -27,15 +26,6 @@ typedef struct {
 	dbref what;
 	morton_t where;
 } pointdb_range_t;
-
-struct plant {
-	struct obj o;
-	coord_t tmp_min, tmp_max;
-	ucoord_t rn_min, rn_max;
-	unsigned char yield;
-	struct obj fruit;
-	unsigned y;
-};
 
 struct cmd_dir {
 	char dir;
@@ -58,6 +48,45 @@ static const char * v = "|";
 static const char * l = ANSI_FG_WHITE "+";
 static const char *h_open	= "   ";
 static const char *h_closed	= "---";
+/* BIOME_BGS {{{ */
+char const *biome_bgs[] = {
+	// Water BOLD WHITE "~~~"
+	ANSI_BG_BLUE,
+
+	// ----
+
+	// Cold dry desert, Pile of frozen rocks, BOLD WHITE "o" "O"
+	ANSI_BG_BLUE,
+	// Cold stone, Block of ice, BOLD GREEN "o" "O"
+	ANSI_BG_CYAN,
+	// Cold snowy rock, Bear, BOLD YELLOW " 8 "
+	ANSI_BG_WHITE,
+
+	// Tundra, frozen pine BOLD WHITE "x" "X"
+	ANSI_BG_CYAN,
+	// Taiga
+	ANSI_BG_GREEN,
+	// Temperate rain forest
+	ANSI_BG_GREEN,
+
+	// Woodland / Grassland / Shrubland
+	ANSI_BG_GREEN,
+	// ?
+	ANSI_BG_GREEN,
+	// Temperate forest
+	ANSI_BG_GREEN,
+
+	// desert
+	ANSI_BG_YELLOW,
+	// Savannah
+	ANSI_BG_YELLOW,
+	// Temperate Seasonal forest, "Red Tree" RED "x" "X"
+	ANSI_RESET,
+
+	// Volcanic, Puddle of lava, BOLD RED "o" "O"
+	ANSI_RESET,
+};
+/* }}} */
 
 const char *map[] = {
 	[0 ... 254] = "",
@@ -420,42 +449,21 @@ pointdb_range_safe(pointdb_range_t *res,
 /* BIO ENTER {{{ */
 
 dbref
-obj_stack_add(struct obj o, dbref where, unsigned n)
+obj_stack_add(struct obj o, dbref where, unsigned char n)
 {
-	if (n) {
-		dbref nu = obj_add(o, where);
-		DBFETCH(nu)->exits = NOTHING;
-		if (n > 1)
-			SETSTACK(nu, n);
-		return nu;
-	} else
-		return NOTHING;
+	assert(n > 0);
+	dbref nu = obj_add(o, where);
+	DBFETCH(nu)->exits = NOTHING;
+	if (n > 1)
+		SETSTACK(nu, n);
+	return nu;
 }
-
-static inline dbref
-trees_add(struct bio b, dbref where)
-{
-	if (b.bio_idx >= 0)
-		return obj_stack_add(biomes[b.bio_idx].tree,
-				     where, b.tree_n);
-	else
-		return NOTHING;
-}
-
-/* TODO calculate water needs */
-static struct plant plants[] = {{
-	{ "daucus carota", "", "" }, 38, 96, 100, 200, 1,
-	{ "carrot", "", "" }, 1,
-}, {
-	{ "solanum lycopersicum", "", "" }, 50, 98, 100, 200, 5,
-	{ "tomato", "", "" }, 1,
-}};
 
 static inline unsigned
 plant_yield(struct plant *pl, struct bio *b, unsigned char n)
 {
 	register unsigned ptmin = pl->tmp_min;
-	return random() % n * (b->tmp - ptmin) * pl->yield / (pl->tmp_max - ptmin);
+	return random() % (1 + n * (b->tmp - ptmin) * pl->yield / (pl->tmp_max - ptmin));
 }
 
 // FIXME Y ???
@@ -466,50 +474,58 @@ fruit_size(struct plant *pl, struct bio *b)
 }
 
 static inline void
-plant_add(int descr, dbref player, struct bio *b, dbref where, struct plant *pl, noise_t v)
+plant_add(int descr, dbref player, struct bio *b, dbref where, unsigned char plid, unsigned char n)
 {
-	if (v & 0x18
-	    && b->tmp < pl->tmp_max && b->tmp > pl->tmp_min
-	    && b->rn < pl->rn_max && b->rn > pl->rn_min) {
-		unsigned char n = v & 0x7;
-		dbref plant = obj_stack_add(pl->o, where, n);
-		dbref fruit = obj_add(pl->fruit, plant);
-		struct boolexp *key = parse_boolexp(descr, player, NAME(player), 0);
-		unsigned yield = plant_yield(pl, b, n);
-		SETCONLOCK(plant, key);
-		SETFOOD(fruit, fruit_size(pl, b));
-		if (yield > 1)
-			SETSTACK(fruit, yield);
-	}
+	if (n == 0)
+		return;
+	struct plant *pl = &plants[plid];
+	dbref plant = obj_stack_add(pl->o, where, n);
+	dbref fruit = obj_add(pl->fruit, plant);
+	struct boolexp *key = parse_boolexp(descr, player, NAME(player), 0);
+	unsigned yield = plant_yield(pl, b, n);
+	SETCONLOCK(plant, key);
+	SETFOOD(fruit, fruit_size(pl, b));
+	if (yield > 1)
+		SETSTACK(fruit, yield);
 }
 
 static inline void
-plants_add(int descr, dbref player, struct bio *b, dbref where, noise_t v)
+plants_add(int descr, dbref player, struct bio *b, dbref where)
 {
+	unsigned char plid[EXTRA_TREE], pln[EXTRA_TREE];
 	int i;
-	for (i = 0; i < sizeof(plants) / sizeof(struct plant); i++, v >>= 8)
-		plant_add(descr, player, b, where, &plants[i], v);
+
+	for (i = 0; i < 3; i++)
+		if (b->pln[i])
+			plant_add(descr, player, b, where, b->plid[i], b->pln[i]);
+
+	noise_rplants(plid, pln, b);
+
+	for (i = 0; i < EXTRA_TREE; i++)
+		if (pln[i])
+			plant_add(descr, player, b, where, plid[i], pln[i]);
 }
 
 static inline void
 others_add(int descr, dbref player, struct bio *b, dbref where, morton_t p)
 {
 	noise_t v = XXH32(&p, sizeof(morton_t), 0);
+	unsigned char n = v & 0x7;
 	static struct obj stone = { "stone", "", "" };
-	if ((v & 0x18) && b->bio_idx != BIOME_WATER)
-		obj_stack_add(stone, where, v & 0x7);
-	v >>= 8;
-	plants_add(descr, player, b, where, v);
+	if (b->bio_idx == BIOME_WATER)
+		return;
+	if (n && (v & 0x18))
+		obj_stack_add(stone, where, n);
+	plants_add(descr, player, b, where);
 }
 
 static inline void
 bio_enter(int descr, dbref player, morton_t p, dbref where)
 {
-	struct bio b = noise_point(p);
-	dbref t = trees_add(b, where);
-	mobs_add(b.bio_idx, where, t);
-	others_add(descr, player, &b, where, p);
-	SETFLOOR(where, b.bio_idx);
+	struct bio *b = noise_point(p);
+	mobs_add(b, where);
+	others_add(descr, player, b, where, p);
+	SETFLOOR(where, b->bio_idx);
 }
 
 /* }}} */
@@ -589,10 +605,10 @@ geo_move(morton_t code, char g)
 {
 	point3D_t p = { 0, 0, 0 };
 	switch (g) {
-	case 'n': p[0]--; break;
-	case 's': p[0]++; break;
-	case 'e': p[1]++; break;
-	case 'w': p[1]--; break;
+	case 'n': p[Y_COORD]--; break;
+	case 's': p[Y_COORD]++; break;
+	case 'e': p[X_COORD]++; break;
+	case 'w': p[X_COORD]--; break;
 	case 'u': p[2]++; break;
 	case 'd': p[2]--; break;
 	}
@@ -1274,67 +1290,86 @@ static inline char *
 dr_room(int descr, dbref player, struct bio *n, dbref here, char *buf, const char *bg)
 {
 	register char *b = buf;
-	register const char *emp = n->tree_n || n->bio_idx == BIOME_WATER
-		? biomes[n->bio_idx].tree_side : " ";
-;
+
 	dbref tmp;
 
 	tmp = geo_exit_where(descr, player, here, 'd');
 	if (tmp > 0 && DBFETCH(tmp)->sp.exit.ndest
 	    && DBFETCH(tmp)->sp.exit.dest[0] >= 0)
 		b = stpcpy(b, ANSI_FG_WHITE "<");
-	else
-		b = stpcpy(b, emp);
-
+	else if (n->pln[0]) {
+		struct plant *pl = &plants[n->plid[0]];
+		b = stpcpy(b, pl->pre);
+		*b++ = n->pln[0] > TREE_HALF ? pl->big : pl->small;
+	} else
+		*b++ = ' ';
 
 	{
 		int max_prio = 0;
-		const char *s = emp;
+		const char *pre = "";
+		char emp = ' ';
 		dbref tmp = DBFETCH(here)->contents;
 
 		DOLIST(tmp, tmp) switch (Typeof(tmp)) {
 		case TYPE_PLAYER:
 			if (tmp == player) {
 				max_prio = 3;
-				s = ANSI_BOLD ANSI_FG_RED "#";
+				pre = ANSI_BOLD ANSI_FG_RED;
+				emp = '#';
 				break;
 			}
 
-			if (!max_prio)
-				s = ANSI_BOLD ANSI_FG_BLUE "#";
+			if (!max_prio) {
+				pre = ANSI_BOLD ANSI_FG_BLUE;
+				emp = '#';
+			}
 
 			break;
 
 		case TYPE_THING:
 			if (max_prio >= 2)
-				continue;
+				break;
 
 			if (GETSHOP(tmp)) {
-				s = ANSI_BOLD ANSI_FG_GREEN "$";
+				pre = ANSI_BOLD ANSI_FG_GREEN;
+				emp = '$';
 				max_prio = 2;
 			} else if (max_prio < 1) {
 				max_prio = 1;
-				if (living_get(tmp))
-					s = ANSI_BOLD ANSI_FG_YELLOW "!";
-				else if (GETDRINK(tmp) >= 0)
-					s = ANSI_BOLD ANSI_FG_BLUE "~";
-				else
+				if (living_get(tmp)) {
+					pre = ANSI_BOLD ANSI_FG_YELLOW;
+					emp = '!';
+				} else if (GETDRINK(tmp) >= 0) {
+					pre = ANSI_BOLD ANSI_FG_BLUE;
+					emp = '~';
+				} else
 					max_prio = 0;
 			}
 			break;
 		}
 
-		b = stpcpy(b, s);
+		if (emp == ' ' && n->pln[1]) {
+			struct plant *pl = &plants[n->plid[1]];
+			pre = pl->pre;
+			emp = n->pln[1] > TREE_HALF ? pl->big : pl->small;
+		}
+
 		b = stpcpy(b, ANSI_RESET);
 		b = stpcpy(b, bg);
+		b = stpcpy(b, pre);
+		*b++ = emp;
 	}
 
 	tmp = geo_exit_where(descr, player, here, 'u');
 	if (tmp > 0 && DBFETCH(tmp)->sp.exit.ndest
 	    && DBFETCH(tmp)->sp.exit.dest[0] >= 0)
 		b = stpcpy(b, ANSI_FG_WHITE ">");
-	else
-		b = stpcpy(b, emp);
+	else if (n->pln[2]) {
+		struct plant *pl = &plants[n->plid[2]];
+		b = stpcpy(b, pl->pre);
+		*b++ = n->pln[2] > TREE_HALF ? pl->big : pl->small;
+	} else
+		*b++ = ' ';
 
 	b = stpcpy(b, ANSI_RESET);
 	b = stpcpy(b, bg);
@@ -1397,10 +1432,28 @@ dr_vs(int descr, dbref player, struct bio *n, dbref *g)
 
 		if (*g >= 0)
 			b = dr_room(descr, player, n, *g, b, bg);
-		else if (n->tree_n || n->bio_idx == BIOME_WATER)
-			b = stpcpy(b, biomes[n->bio_idx].tree_wide);
-		else 
-			b = stpcpy(b, "   ");
+		else {
+			if (n->pln[0]) {
+				struct plant *pl = &plants[n->plid[0]];
+				b = stpcpy(b, pl->pre);
+				*b++ = n->pln[0] > TREE_HALF ? pl->big : pl->small;
+			} else
+				*b++ = ' ';
+
+			if (n->pln[1]) {
+				struct plant *pl = &plants[n->plid[1]];
+				b = stpcpy(b, pl->pre);
+				*b++ = n->pln[1] > TREE_HALF ? pl->big : pl->small;
+			} else
+				*b++ = ' ';
+
+			if (n->pln[2]) {
+				struct plant *pl = &plants[n->plid[2]];
+				b = stpcpy(b, pl->pre);
+				*b++ = n->pln[2] > TREE_HALF ? pl->big : pl->small;
+			} else
+				*b++ = ' ';
+		}
 
 		prev = *g;
 		g++;
@@ -1510,10 +1563,10 @@ dr_hs_n(int descr, dbref player, struct bio *n, dbref *g)
 }
 
 static inline void
-map_search(dbref *mat, point_t vprs, coord_t z, ucoord_t flags)
+map_search(dbref *mat, point3D_t pos, ucoord_t flags)
 {
 	struct rect3D vpr3D = {
-		{ vprs[0], vprs[1], z },
+		{ pos[0] - VIEW_AROUND, pos[1] - VIEW_AROUND, pos[2] },
 		{ VIEW_SIZE, VIEW_SIZE, 1 },
 	};
 
@@ -1528,7 +1581,7 @@ map_search(dbref *mat, point_t vprs, coord_t z, ucoord_t flags)
 	for (i = 0; i < n; i++) {
 		point3D_t p;
 		morton3D_decode(p, buf[i].where);
-		mat[point_rel_idx(p, vprs, VIEW_SIZE)] = buf[i].what;
+		mat[point_rel_idx(p, vpr3D.s, VIEW_SIZE)] = buf[i].what;
 	}
 }
 
@@ -1544,15 +1597,11 @@ do_map(int descr, dbref player)
 			   *n_p = bd;
 		dbref o[VIEW_M], *o_p;
 		point3D_t pos;
-		morton3D_decode(pos, code);
-		point_t vprs = {
-			pos[0] - VIEW_AROUND,
-			pos[1] - VIEW_AROUND,
-		};
 		ucoord_t obits = OBITS(code);
 
-		noise_view(bd, vprs, obits);
-		map_search(o, vprs, pos[2], obits);
+		morton3D_decode(pos, code);
+		noise_view(bd, pos, obits);
+		map_search(o, pos, obits);
 
 		o_p = o;
 
@@ -1598,6 +1647,7 @@ room_put_here(int descr, dbref player, char const *s)
 	dbref there = strtol(s + 1, &end, 0);
 	int present = pdb_where(&x, getloc(player));
 	assert(present);
+	assert(Typeof(present) == TYPE_ROOM);
 	enter_room(descr, player, there, NOTHING, 0);
 	pdb_move(there, x);
 	return end - s;
@@ -1691,7 +1741,7 @@ geo_v(int *drmap, int descr, dbref player, char const *opcs)
 		if (pdb_where(&x, getloc(player))) {
 			point3D_t p;
 			morton3D_decode(p, x);
-			notify_fmt(player, "y: %d, x: %d, z: %d, extra: 0x%x", p[0], p[1], p[2], OBITS(x));
+			notify_fmt(player, "y: %d, x: %d, z: %d, extra: 0x%x", p[Y_COORD], p[X_COORD], p[2], OBITS(x));
 		}
 		break;
 	case 'T':

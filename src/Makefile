@@ -47,8 +47,8 @@ fbmuck: ${obj-y}
 tags: ${src}
 	${CTAGS} --c-types=-m ${src} ../include/*.h
 
-.depend: ${src}
-	mkdep ${CFLAGS} -I../include ${src}
+.depend: ${obj-y:%.o=%.c}
+	mkdep ${CFLAGS} -I../include ${obj-y:%.o=%.c}
 
 clean:
 	-rm *.o core ${TARGETS} || true

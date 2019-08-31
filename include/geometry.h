@@ -10,12 +10,15 @@
 /* it is possible to add other coord_t (like char) but a corresponding
  * hash function must be used */
 
+#define Y_COORD 0
+#define X_COORD 1
+
 #define COORD_MIN SHRT_MIN
 #define COORD_MAX SHRT_MAX
 #define UCOORD_MAX USHRT_MAX
 
 #define DIM 2
-#define WDIM 1
+#define WDIM X_COORD
 #define POOP register int I; for (I = 0; I < DIM; I++)
 #define POOP3D register int I; for (I = 0; I < 3; I++)
 #define POINT3D_ADD(r, a, b) { POOP3D r[I] = a[I] + b[I]; }
@@ -58,55 +61,16 @@ rects_intersect(struct rect *a, struct rect *b)
 	return rects_intersection(&r, a, b);
 }
 
-#if 0
-#include "debug.h"
-static inline void
-rect_debug(char *msg, struct rect *r)
-{
-	debug("%s %d %d %u %u\n", msg,
-		r->s[0], r->s[1], r->l[0], r->l[1]);
-}
-#endif
-
 static inline morton_t
 point_rel_idx(point_t p, point_t s, smorton_t w)
 {
-	smorton_t s0 = s[0],
-		s1 = s[1];
-	if (s0 > p[0])
+	smorton_t s0 = s[Y_COORD],
+		s1 = s[X_COORD];
+	if (s0 > p[Y_COORD])
 		s0 -= UCOORD_MAX;
-	if (s1 > p[1])
+	if (s1 > p[X_COORD])
 		s1 -= UCOORD_MAX;
-	return (p[0] - s0) * w + (p[1] - s1);
-}
-
-static inline struct rect
-rect_contain2(struct rect a, struct rect b)
-{
-	struct rect r;
-
-	/* supposed to be equivalent to
-         *
-	 * POINT_MIN(r.s, a.s, b.s);
-	 * POINT_ADD(amax, a.s, a.l);
-	 * POINT_ADD(bmax, b.s, b.l);
-	 * POINT_MAX(amax, amax, bmax);
-	 * POINT_SUB(r.l, amax, r.s);
-	 */
-
-	POOP
-	{
-		coord_t at, bt;
-		at = a.s[I];
-		bt = b.s[I];
-		r.s[I] = at < bt ? at : bt;
-		at += a.l[I];
-		bt += b.l[I];
-		at = at < bt ? bt : at;
-		r.l[I] = at - r.s[I];
-	}
-
-	return r;
+	return (p[Y_COORD] - s0) * w + (p[X_COORD] - s1);
 }
 
 #endif
