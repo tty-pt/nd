@@ -160,7 +160,7 @@
 
 
 
-#define PLAYER_START ((dbref) 0)	/* room number of player start location */
+#define PLAYER_START ((dbref) 354)	/* room number of player start location */
 
 
 
