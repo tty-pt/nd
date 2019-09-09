@@ -18,9 +18,7 @@ typedef long snoise_t;
 struct bio {
 	coord_t tmp;
 	ucoord_t rn;
-	noise_t he;
-	noise_t cl;
-	noise_t tm;
+	noise_t ty;
 	unsigned char plid[3], mplid;
 	unsigned char pln[3];
 	enum biome_type bio_idx;

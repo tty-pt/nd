@@ -32,7 +32,6 @@
 #include <string.h>
 #include "xxhash.h"
 #include "params.h"
-#include "debug.h"
 
 #define XXH XXH32
 
@@ -470,7 +469,7 @@ noise_plant(unsigned char *plid, unsigned char *pln, struct bio *b, noise_t v, u
 
 	assert(n < plid_max);
 
-	if (v & 1)
+	if (((v >> 6) ^ (v >> 3) ^ v) & 1)
 		return 0;
 
 	if (v & 0x18
@@ -490,7 +489,7 @@ noise_plant(unsigned char *plid, unsigned char *pln, struct bio *b, noise_t v, u
 static inline unsigned char
 noise_plants(unsigned char *plid, unsigned char *pln, struct bio *b, unsigned n, unsigned o)
 {
-	noise_t v = XXH(&b->tm, sizeof(noise_t), PLANTS_SEED);
+	noise_t v = b->ty;
 	register int i;
 	unsigned char *plidc = plid;
 
@@ -501,7 +500,7 @@ noise_plants(unsigned char *plid, unsigned char *pln, struct bio *b, unsigned n,
 	     i < plid_max && plidc < plid + n;
 	     i++, v >>= 8) {
 		if (!v)
-			v = XXH(&b->tm, sizeof(noise_t), PLANTS_SEED + i);
+			v = ~b->ty >> 4;
 
 		if (noise_plant(plidc, pln, b, v, i)) {
 			plidc++;
@@ -538,11 +537,6 @@ shuffle(unsigned char plid[3], unsigned char pln[3], noise_t v)
 	}
 }
 
-/* static void bio_debug(const char *title, coord_t y_pos, coord_t x_pos, struct bio *b) */
-/* { */
-/* 	debug("%s y_pos %d x_pos %d tmp %u he %u rn %u\n", title, y_pos, x_pos, b->tmp, b->he, b->rn); */
-/* } */
-
 unsigned char
 noise_rplants(unsigned char plid[EXTRA_TREE], unsigned char pln[EXTRA_TREE],
 		  struct bio *b)
@@ -568,19 +562,14 @@ noise_full(size_t i, point_t s, ucoord_t obits)
 	for (j = 0; j < CHUNK_M; j++) {
 		/* x_pos s[1] + (j % (1 << CHUNK_Y)); */
 		struct bio *r = &bio[j];
-		register noise_t _he = n_he[j], _cl = n_cl[j], _tm = n_tm[j];
-		register noise_t w = water_level(obits);
-		r->he = _he;
-		r->cl = _cl;
-		r->tm = _tm;
+		noise_t _cl = n_cl[j], _tm = n_tm[j];
+		register noise_t _he = n_he[j], w = water_level(obits);
 		r->rn = rain(obits, w, _he, _cl);
 		r->tmp = temp(obits, _he, _tm, s[Y_COORD] + (j >> CHUNK_Y));
-		if (_he < w)
-			r->bio_idx = 0;
-		else
-			r->bio_idx = bio_idx(r->rn, r->tmp);
+		r->ty = XXH(&_tm, sizeof(noise_t), PLANTS_SEED);
+		r->bio_idx = _he < w ? 0 : bio_idx(r->rn, r->tmp);
 		r->mplid = noise_plants(r->plid, r->pln, r, 3, 0);
-		shuffle(r->plid, r->pln, XXH(&r->cl, sizeof(noise_t), PLANTS_SEED));
+		shuffle(r->plid, r->pln, ~(r->ty >> 8));
 	}
 }
 
@@ -683,7 +672,6 @@ noise_chunks(point_t pos, ucoord_t obits)
 		bio = chunks_bio_raw;
 
 	memcpy(&chunks_r, &r, sizeof(r));
-	/* debug("CHUNKS! {%d,%d}+{%u,%u} (%lu,%lu)\n", r.s[0], r.s[1], r.l[0], r.l[1], n[0], n[1]); */
 }
 
 void
