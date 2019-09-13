@@ -346,14 +346,34 @@ test_lock_false_default(int descr, dbref player, dbref thing, const char *lockpr
 int
 can_doit(int descr, dbref player, dbref thing, const char *default_fail_msg)
 {
+	char const *dwts = "door";
+	char dir = '\0';
+	int door = 0;
+
 	if (thing == NOTHING) {
 		notify(player, default_fail_msg);
 		return 0;
 	}
 
-	if (Typeof(thing) == TYPE_EXIT
-	    && DBFETCH(thing)->sp.exit.ndest == 0) {
-		return 1;
+	if (GETKLOCK(player)) {
+		notify(player, "You can not do that right now.");
+		return 0;
+	}
+
+	if (Typeof(thing) == TYPE_EXIT) {
+		if (DBFETCH(thing)->sp.exit.ndest == 0)
+			return 1;
+
+		dir = NAME(thing)[0];
+
+		if (GETDOOR(thing)) {
+			if (dir == 'u' || dir == 'd') {
+				dwts = "hatch";
+				door = 2;
+			} else
+				door = 1;
+		}
+
 	}
 
 	if (!Wizard(OWNER(player)) && Typeof(player) == TYPE_THING &&
@@ -366,6 +386,8 @@ can_doit(int descr, dbref player, dbref thing, const char *default_fail_msg)
 		/* can't do it */
 		if (GETFAIL(thing)) {
 			exec_or_notify_prop(descr, player, thing, MESGPROP_FAIL, "(@Fail)");
+		} else if (door) {
+			notify_fmt(player, "That %s is locked.", dwts);
 		} else if (default_fail_msg) {
 			notify(player, default_fail_msg);
 		}
@@ -375,14 +397,22 @@ can_doit(int descr, dbref player, dbref thing, const char *default_fail_msg)
 		}
 		return 0;
 	} else {
+		do_stand_silent(player);
+
+		if (door)
+			notify_fmt(player, "You open the %s.", dwts);
+
 		/* can do it */
 		if (GETSUCC(thing)) {
 			exec_or_notify_prop(descr, player, thing, MESGPROP_SUCC, "(@Succ)");
-		}
+		} else if (geo_is(thing))
+			notify_fmt(player, "You go %s.", geo_expand(NAME(thing)[0]));
 		if (GETOSUCC(thing) && !Dark(player)) {
 			parse_oprop(descr, player, getloc(player), thing, MESGPROP_OSUCC,
 						   NAME(player), "(@Osucc)");
 		}
+		if (door)
+			notify_fmt(player, "You close the %s.", dwts);
 		return 1;
 	}
 }

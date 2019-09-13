@@ -171,6 +171,18 @@ typedef int dbref;				/* offset into db */
 #define SETVALUE(x,y)	add_property(x, MESGPROP_VALUE, NULL, y)
 #define LOADVALUE(x,y)	add_prop_nofetch(x, MESGPROP_VALUE, NULL, y)
 
+#define MESGPROP_KLOCK	"_/klock"
+#define SETKLOCK(x,y)	set_property_value(x, MESGPROP_KLOCK, y)
+#define GETKLOCK(x)	get_property_value(x, MESGPROP_KLOCK)
+
+#define MESGPROP_AGGRO	"_/aggro"
+#define SETAGGRO(x, y)	set_property_value(x, MESGPROP_AGGRO, y)
+#define GETAGGRO(x)	get_property_value(x, MESGPROP_AGGRO)
+
+#define MESGPROP_WTS	"_/wts"
+#define SETWTS(x,y)	set_property_value(x, MESGPROP_WTS, y)
+#define GETWTS(x)	get_property_value(x, MESGPROP_WTS)
+
 #define MESGPROP_STACK	"_/stack"
 #define SETSTACK(x,y)	set_property_value(x, MESGPROP_STACK, y)
 #define GETSTACK(x)	get_property_value(x, MESGPROP_STACK)
@@ -206,7 +218,7 @@ typedef int dbref;				/* offset into db */
 
 #define MESGPROP_LVL	"_/lvl"
 #define GETLVL(x)	1 + get_property_value(x, MESGPROP_LVL)
-#define SETLVL(x, y)	set_property_value(x, MESGPROP_LVL, y)
+#define SETLVL(x, y)	set_property_value(x, MESGPROP_LVL, y - 1)
 
 #define SETHASH(w, x, y, z)	set_property_hash(w, x, y, z)
 #define GETHASH(w, x, y)	get_property_hash(w, x, y)

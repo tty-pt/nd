@@ -17,6 +17,7 @@
 #include "match.h"
 #include "externs.h"
 #include "fbstrings.h"
+#include "debug.h"
 
 /* declarations */
 static const char *dumpfile = 0;
@@ -471,37 +472,27 @@ dbref force_prog = NOTHING; /* Set when a program is the source of FORCE */
 static inline int
 do_v(int descr, dbref player, char const *cmd)
 {
-	int n = strlen(cmd);
 	int drmap = 0, ignore;
-	int ofs;
+	int ofs = 1;
 	char const *s = cmd;
 
-	for (ofs = 1; s < cmd + n; s += ofs, ofs = 1) {
-		int ofs2 = 0;
-
+	for (; *s && ofs > 0; s += ofs) {
 		switch (*s) {
 		case COMMAND_TOKEN:
 			return s - cmd;
 		case SAY_TOKEN:
 			do_say(player, s + 1);
-			return n;
+			return s + strlen(s) - cmd;
 		case POSE_TOKEN:
 			do_pose(player, s + 1);
-			return n;
+			return s + strlen(s) - cmd;
 		}
 
 		ofs = geo_v(&drmap, descr, player, s);
 		if (ofs < 0)
-			ofs = 1;
-		else
-			ofs2 = ofs;
-		ofs2 = kill_v(&ignore, descr, player, s + ofs2);
-		if (ofs <= 0 && ofs2 <= 0) {
-			if (drmap)
-				do_map(descr, player);
-			return cmd - s;
-		}
-		ofs += ofs2;
+			ofs = - ofs;
+		s += ofs;
+		ofs = kill_v(&ignore, descr, player, s);
 	}
 
 	if (drmap)
@@ -589,21 +580,13 @@ process_command(int descr, dbref player, char *command)
 
 	{
 		int matched;
-		int v_ret;
-		v_ret = do_v(descr, player, command);
-
-		matched = 0;
-		if (v_ret < 0)
-			v_ret = -v_ret;
-
-		command += v_ret;
+		command += do_v(descr, player, command);
 		if (*command == COMMAND_TOKEN) {
 			command++;
 			matched = 1;
-		} else if (*command == '\0') {
-			command -= v_ret;
+		} else if (*command == '\0')
 			goto end_of_command;
-		} else
+		else
 			goto bad;
 
 		if (TrueWizard(OWNER(player)) && (*command == OVERIDE_TOKEN))

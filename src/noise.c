@@ -73,7 +73,7 @@ static noise_t n_he[CHUNK_M],
 struct plant plants[] = {{
 	// taiga
 	{ "pinus silvestris", "", "" }, ANSI_BOLD ANSI_FG_GREEN, 'x', 'X', ANSI_RESET_BOLD,
-	-65, 70, 100, 200, 1,
+	-65, 70, 50, 200, 1,
 	{ "fruit", "", "" }, 1,
 }, {	// temperate rainforest
 	{ "pseudotsuga menziesii", "", "" }, ANSI_BOLD ANSI_FG_GREEN, 't', 'T', ANSI_RESET_BOLD,
@@ -93,11 +93,11 @@ struct plant plants[] = {{
 	{ "fruit", "", "" }, 1,
 }, {	// desert
 	{ "arthrocereus rondonianus", "", "" }, ANSI_BOLD ANSI_FG_GREEN, 'i', 'I', "",
-	70, 130, 10, 200, 1,
+	110, 130, 10, 150, 1,
 	{ "fruit", "", "" }, 1,
 }, {	// savannah
 	{ "acacia senegal", "", "" }, ANSI_BOLD ANSI_FG_GREEN, 't', 'T', "",
-	40, 90, 20, 120, 1,
+	40, 120, 20, 120, 1,
 	{ "fruit", "", "" }, 1,
 }, {
 	{ "daucus carota", "", "" }, ANSI_FG_WHITE, 'x', 'X', "",
@@ -179,54 +179,22 @@ r(point_t p, unsigned seed, unsigned w)
 	return ((long long unsigned) v) >> w;
 }
 
-/* generate deterministic random value
- * for each vertex of the quad of side length 2^x
- * that starts in point s,
- * and store in v in a particular order
- * (active bits of the current index)
+/* generate values at quad vertices. */
 
- * The following call:
- * get_v(v, s, x), DIM = 2
-
- * results in
-
- * v[0] = r(s)
- * v[1] = r(s + {d, 0})
- * v[2] = r(s + {0, d})
- * v[3] = r(s + {d, d})
- *
- * DIM = 3:
- * v[0] = r(s)
- * v[1] = r(s + {d, 0, 0})
- * ...
- * v[7] = r(s + {d, d, d})
- */
-
-static void
+static inline void
 get_v(noise_t v[1 << DIM], point_t s, ucoord_t x, unsigned w, unsigned seed)
 {
-	int i, j, k;
-	point_t vp;
+	const coord_t d = 1 << x;
+	const point_t va[] = {
+		{ s[0], s[1] },
+		{ s[0], s[1] + d },
+		{ s[0] + d, s[1] },
+		{ s[0] + d, s[1] + d }
+	};
+	int i;
 
-	// (0 <= i < 2^DIM)
-	for (i = 0; i < (1 << DIM); i++) {
-
-		// for each coordinate
-		for (j = 0, k = 1 << (DIM - 1);
-		     j < DIM;
-		     j++, k >>= 1)
-
-			vp[j] = s[j] + (!!(i & k) << x);
-
-		v[i] = r(vp, seed, w);
-	}
-}
-
-static inline snoise_t
-calc_step(noise_t v1, noise_t v0, ucoord_t z, unsigned y)
-{
-	// FIXME FIND PARENS
-	return ((long) v1 - v0) >> z << y;
+	for (i = 0; i < (1 << DIM); i++)
+		v[i] = r((coord_t *) va[i], seed, w);
 }
 
 static inline void
@@ -238,7 +206,8 @@ calc_steps(snoise_t *st,
 {
 	int n;
 	for (n = 0; n < vl; n ++)
-		st[n] = calc_step(v[n + vl], v[n], z, y);
+		// FIXME FIND PARENS
+		st[n] = ((long) v[n + vl] - v[n]) >> z << y;
 }
 
 static inline void
@@ -293,35 +262,6 @@ start:			ce_p[ndim] = c + (cd<<z);
 	} while (1);
 }
 
-#if 0
-
-static inline void
-_noise_mr(noise_t *c, noise_t *v, unsigned x, point_t qs, ucoord_t ndim, unsigned w, unsigned seed) {
-	int i = DIM - 1 - ndim;
-	ucoord_t cd, ced = 1 << ( CHUNK_Y * (ndim + 1) );
-	noise_t *ce = c + ced;
-
-	ced >>= CHUNK_Y;
-	cd = ced<<x;
-
-	for (; c < ce; qs[i] += (1<<x), c += cd)
-		if (ndim == 0) {
-			get_v(v, qs, x, w, seed);
-			noise_quad(c, v, x, w);
-		} else
-			_noise_mr(c, v, x, qs, ndim - 1, w, seed);
-
-	qs[i] -= CHUNK_SIZE; // reset
-}
-
-static inline void
-_noise_m(noise_t *c, noise_t *v, unsigned x, point_t qs, unsigned w, unsigned seed)
-{
-	_noise_mr(c, v, x, qs, DIM - 1, w, seed);
-}
-
-#else
-
 static inline void
 _noise_m(noise_t *c, noise_t *v, unsigned x, point_t qs, unsigned w, unsigned seed) {
 	noise_t *ce_p[DIM];
@@ -354,8 +294,6 @@ start:			ce_p[ndim] = c + ced;
 		} while (c >= ce_p[ndim]);
 	} while (ndim < DIM);
 }
-
-#endif
 
 /* fixes v (vertex values)
  * when noise quad starts before matrix quad aka x > y aka d > l.
@@ -668,17 +606,24 @@ noise_chunks(point_t pos, ucoord_t obits)
 		assert(n[X_COORD] == 2);
 		spread(n[Y_COORD]);
 		bio = chunks_bio;
-	} else
-		bio = chunks_bio_raw;
+	}
 
 	memcpy(&chunks_r, &r, sizeof(r));
 }
 
+struct bio empty[VIEW_M] = {
+	[0 ... VIEW_M - 1] = { .bio_idx = BIOME_VOLCANIC },
+};
+
 void
 noise_view(struct bio to[VIEW_M], point_t pos, ucoord_t obits)
 {
-	noise_chunks(pos, obits);
-	view_print(to, pos);
+	if (pos[2] == 0) {
+		noise_chunks(pos, obits);
+		view_print(to, pos);
+	} else {
+		memcpy(to, &empty, sizeof(empty));
+	}
 }
 
 struct bio *

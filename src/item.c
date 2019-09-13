@@ -7,9 +7,16 @@
 #include "db.h"
 #include "interface.h"
 
+#define DMG_WEAPON(x) IE(x, DMG_G)
+#define WTS_WEAPON(eq) phys_wts[GETEQT(eq)]
+
+#define DEF_G(v) G(v)
+#define DEF_ARMOR(x, aux) (IE(x, DEF_G) >> aux)
+#define DODGE_ARMOR(def) def / 4
+
 #define MESGPROP_MID	"_/mid"
-#define SETMID(x, y)	set_property_value(x, MESGPROP_MID, y)
-#define GETMID(x)	get_property_value(x, MESGPROP_MID)
+#define SETMID(x, y)	set_property_value(x, MESGPROP_MID, y + 1)
+#define GETMID(x)	(get_property_value(x, MESGPROP_MID) - 1)
 
 enum mob_flags {
 	MOB_DEFAULT,
@@ -127,10 +134,8 @@ cannot_equip(dbref player, dbref eq)
 	struct living *liv = living_get(player);
 	unsigned eql = GETEQL(eq);
 
-	if (GETEQ(player, eql))
-		return 1;
-
-	if (equip_calc(liv, eq))
+	if (GETEQ(player, eql)
+	    || equip_calc(liv, eq))
 		return 1;
 
 	SETEQ(player, eql, eq);
@@ -208,7 +213,7 @@ unequip(dbref who, unsigned eql)
 	switch (eql) {
 	case RHAND:
 		EV(liv, DMG) -= DMG_WEAPON(eq);
-		liv->wts = phys_wts[liv->mob->wt];
+		liv->wts = phys_wts[liv->mob ? liv->mob->wt : GETWTS(who)];
 		break;
 	case PANTS:
 	case HEAD:
@@ -311,7 +316,6 @@ const unsigned ofs_fire = 21;
 const unsigned ofs_end = 22;
 
 static struct mob const mobs[] = {{
-	MOB(human, ""),
 /* 0 {{{ */
 }, {
 	FISH(goldfish, ""), .y = 4,
@@ -433,6 +437,7 @@ mob_add(unsigned mid, dbref where, struct bio *b) {
 	memset(drop, 0, sizeof(drop));
 
 	SETMID(nu, mid);
+	SETAGGRO(nu, mob->flags & MOB_AGGRO);
 	mob_add_stats(mob, nu);
 	living_put(nu);
 	mob_loot_gen((struct drop **) mob->drop, nu);
@@ -509,33 +514,40 @@ mobs_add(struct bio *b, dbref w) {
 		mob_add(mid, w, b);
 }
 
-struct mob const *
-mob_random()
+struct obj const *
+mob_obj_random()
 {
-	return &mobs[random() % ofs_end];
+	int idx = random() % ofs_end;
+	if (idx == 0 || idx == 5 || idx == 8 || idx == 9)
+		return NULL;
+	return &mobs[idx].o;
 }
 
 void
 mobs_aggro(int descr, dbref player)
 {
-	unsigned i;
 	dbref tmp;
+	int klock = 0;
 
 	DOLIST(tmp, DBFETCH(getloc(player))->contents) {
-		i = GETMID(tmp);
-		if (i) {
-			struct mob const *mob = &mobs[i];
-			if ((mob->flags & MOB_AGGRO))
-				living_get(tmp)->target = living_get(player);
-
+		struct living *liv = living_get(tmp);
+		if (liv && GETAGGRO(tmp)) {
+			liv->target = living_get(player);
+			klock++;
 		}
 	}
+
+	SETKLOCK(player, GETKLOCK(player) + klock);
 }
 
 struct mob const *
 mob_get(dbref who)
 {
-	return &mobs[GETMID(who)];
+	int mid = GETMID(who);
+	if (mid < 0)
+		return NULL;
+	else
+		return &mobs[mid];
 }
 
 static struct drink *

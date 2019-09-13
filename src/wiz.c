@@ -26,6 +26,7 @@
 #include "externs.h"
 #include "fbstrings.h"
 #include "geography.h"
+#include "kill.h"
 
 void
 do_teleport(int descr, dbref player, const char *arg1, const char *arg2)
@@ -815,7 +816,7 @@ do_pcreate(dbref player, const char *user, const char *password)
 		notify(player, "Create failed.");
 	} else {
 		log_status("PCREATED %s(%d) by %s(%d)", NAME(newguy), newguy, NAME(player), player);
-		_do_advitam(newguy, getloc(player));
+		living_put(newguy);
 		snprintf(buf, sizeof(buf), "Player %s created as object #%d.", user, newguy);
 		notify(player, buf);
 	}

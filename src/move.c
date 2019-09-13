@@ -297,17 +297,8 @@ enter_room(int descr, dbref player, dbref loc, dbref exit, int drmap)
 	/* self-loops don't do move or other player notification */
 	/* but you still get autolook and penny check */
 	if (loc != old) {
-		do_stand_silent(player);
-		const char dir = GETDOOR(exit) ? NAME(exit)[0] : '\0';
-
-		if (dir)
-			notify(player, "You open the door");
-
 		/* go there */
 		moveto(player, loc);
-
-		if (exit >= 0 && Typeof(exit) == TYPE_EXIT && geo_is(exit))
-			notify_fmt(player, "You go %s.", geo_expand(NAME(exit)[0]));
 
 		if (old != NOTHING) {
 			propqueue(descr, player, old, exit, player, NOTHING, "_depart", "Depart", 1, 1);
@@ -348,8 +339,6 @@ enter_room(int descr, dbref player, dbref loc, dbref exit, int drmap)
 		}
 
 		mobs_aggro(descr, player);
-		if (dir)
-			notify(player, "You close the door.");
 	}
 
 
@@ -506,8 +495,7 @@ trigger(int descr, dbref player, dbref exit, int pflag)
 					parse_oprop(descr, player, dest, exit, MESGPROP_ODROP,
 								   NAME(player), "(@Odrop)");
 				}
-				if (geo_is(exit))
-					enter_room(descr, player, dest, exit, 1);
+				enter_room(descr, player, dest, exit, 1);
 				succ = 1;
 			}
 			break;

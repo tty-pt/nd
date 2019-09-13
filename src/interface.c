@@ -98,10 +98,10 @@ typedef enum {
 int shutdown_flag = 0;
 
 static const char *connect_fail =
-		"Either that player does not exist, or has a different password.\r\n";
+		"\aEither that player does not exist, or has a different password.\r\n";
 
 static const char *create_fail =
-		"Either there is already a player with that name, or that name is illegal.\r\n";
+		"\aEither there is already a player with that name, or that name is illegal.\r\n";
 
 static const char *flushed_message = "<Output Flushed>\r\n";
 static const char *shutdown_message = "\r\nGoing down - Bye\r\n";
@@ -2461,87 +2461,66 @@ check_connect(struct descriptor_data *d, const char *msg)
 
 	parse_connect(msg, command, user, password);
 
-	if (!strncmp(command, "co", 2)) {
+	if (*command == 'c') {
+		int created = 0;
 		player = connect_player(user, password);
-		if (player == NOTHING) {
-			queue_ansi(d, connect_fail);
-			log_status("FAILED CONNECT %s on descriptor %d", user, d->descriptor);
-		} else {
-			if ((wizonly_mode ||
-				 (PLAYERMAX && con_players_curr >= PLAYERMAX_LIMIT)) &&
-				!TrueWizard(player)) {
-				if (wizonly_mode) {
-					queue_ansi(d, "Sorry, but the game is in maintenance mode currently, and only wizards are allowed to connect.  Try again later.");
-				} else {
-					queue_ansi(d, PLAYERMAX_BOOTMESG);
-				}
-				queue_string(d, "\r\n");
-				d->booted = 1;
-			} else {
-				log_status("CONNECTED: %s(%d) on descriptor %d",
-						   NAME(player), player, d->descriptor);
-				d->connected = 1;
-				d->connected_at = time(NULL);
-				d->player = player;
-				update_desc_count_table();
-				remember_player_descr(player, d->descriptor);
-				/* cks: someone has to initialize this somewhere. */
-				PLAYER_SET_BLOCK(d->player, 0);
-				spit_file(player, MOTD_FILE);
-				announce_connect(d->descriptor, player);
-				interact_warn(player);
-				if (sanity_violated && Wizard(player)) {
-					notify(player,
-						   "#########################################################################");
-					notify(player,
-						   "## WARNING!  The DB appears to be corrupt!  Please repair immediately! ##");
-					notify(player,
-						   "#########################################################################");
-				}
-				do_map(d->descriptor, player);
-				con_players_curr++;
-			}
-		}
-	} else if (!strncmp(command, "cr", 2)) {
-		if (!REGISTRATION) {
-			if (wizonly_mode || (PLAYERMAX && con_players_curr >= PLAYERMAX_LIMIT)) {
-				if (wizonly_mode) {
-					queue_ansi(d, "Sorry, but the game is in maintenance mode currently, and only wizards are allowed to connect.  Try again later.");
-				} else {
-					queue_ansi(d, PLAYERMAX_BOOTMESG);
-				}
-				queue_string(d, "\r\n");
-				d->booted = 1;
-			} else {
-				player = create_player(user, password);
-				if (player == NOTHING) {
-					queue_ansi(d, create_fail);
-					log_status("FAILED CREATE %s on descriptor %d", user, d->descriptor);
-				} else {
-					log_status("CREATED %s(%d) on descriptor %d",
-							   NAME(player), player, d->descriptor);
-					d->connected = 1;
-					d->connected_at = time(NULL);
-					d->player = player;
-					update_desc_count_table();
-					remember_player_descr(player, d->descriptor);
-					/* cks: someone has to initialize this somewhere. */
-					PLAYER_SET_BLOCK(d->player, 0);
-					spit_file(player, MOTD_FILE);
-					announce_connect(d->descriptor, player);
-					con_players_curr++;
-				}
-			}
-		} else {
-			queue_ansi(d, REG_MSG);
+
+		if ((wizonly_mode || (PLAYERMAX && con_players_curr >= PLAYERMAX_LIMIT)) && !TrueWizard(player)) {
+			queue_ansi(d, wizonly_mode
+				   ? "Sorry, but the game is in maintenance mode currently, and "
+				   "only wizards are allowed to connect.  Try again later."
+				   : PLAYERMAX_BOOTMESG);
 			queue_string(d, "\r\n");
-			log_status("FAILED CREATE %s on descriptor %d", user, d->descriptor);
+			d->booted = 1;
+			return;
 		}
-	} else if (!*command) {
-		/* do nothing */
-	} else {
+
+		if (player == NOTHING) {
+			if (REGISTRATION) {
+				queue_ansi(d, connect_fail);
+				log_status("FAILED CONNECT %s on descriptor %d", user, d->descriptor);
+				return;
+			}
+
+			player = create_player(user, password);
+
+			if (player == NOTHING) {
+				queue_ansi(d, create_fail);
+				log_status("FAILED CREATE %s on descriptor %d", user, d->descriptor);
+				return;
+			}
+
+			log_status("CREATED %s(%d) on descriptor %d",
+				   NAME(player), player, d->descriptor);
+			created = 1;
+			living_put(player);
+		} else
+			log_status("CONNECTED: %s(%d) on descriptor %d",
+				   NAME(player), player, d->descriptor);
+		d->connected = 1;
+		d->connected_at = time(NULL);
+		d->player = player;
+		update_desc_count_table();
+		remember_player_descr(player, d->descriptor);
+		/* cks: someone has to initialize this somewhere. */
+		PLAYER_SET_BLOCK(d->player, 0);
+		spit_file(player, MOTD_FILE);
+		if (created) {
+			do_help(player, "begin", "");
+			announce_connect(d->descriptor, player);
+		} else {
+			announce_connect(d->descriptor, player);
+			interact_warn(player);
+			if (sanity_violated && Wizard(player))
+				notify(player,
+				       "#########################################################################\n"
+				       "## WARNING!  The DB appears to be corrupt!  Please repair immediately! ##\n"
+				       "#########################################################################");
+		}
+		do_map(d->descriptor, player);
+		con_players_curr++;
+	} else if (*command)
 		welcome_user(d);
-	}
 }
 
 void
@@ -3708,15 +3687,17 @@ cat(int descr, const char *fname)
 void
 mob_welcome(struct descriptor_data *d)
 {
-	struct obj const *o = &mob_random()->o;
-	assert(*o->name != '\0');
-	queue_string(d, o->name);
-	queue_string(d, "\r\n\r\n");
-	cat(d->descriptor, o->art);
-	queue_string(d, "\r\n");
-	if (*o->description != '\0')
-		queue_string(d, o->description);
-	queue_string(d, "\r\n");
+	struct obj const *o = mob_obj_random();
+	if (o) {
+		assert(*o->name != '\0');
+		queue_string(d, o->name);
+		queue_string(d, "\r\n\r\n");
+		cat(d->descriptor, o->art);
+		queue_string(d, "\r\n");
+		if (*o->description != '\0')
+			queue_string(d, o->description);
+		queue_string(d, "\r\n\r\n");
+	}
 }
 
 void

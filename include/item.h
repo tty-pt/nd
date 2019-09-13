@@ -5,47 +5,6 @@
 
 #include "db.h"
 
-#define RARE_MAX 6
-
-#define G(x) xsqrtx(x)
-#define MSRA(ms, ra, G) G(ms) * (ra + 1) / RARE_MAX
-
-#define IE(x, G) MSRA(GETMSV(x), GETRARE(x), G)
-#define HS(sp) MSRA(sp->ms, sp->ra, SPELL_G)
-
-#define DMG_G(v) G(v)
-#define DMG_BASE(p) DMG_G(GETSTAT(p, STR))
-#define DMG_WEAPON(x) IE(x, DMG_G)
-#define WTS_WEAPON(eq) phys_wts[GETEQT(eq)]
-
-#define HP_G(v) 10 * G(v)
-#define HP_MAX(p) HP_G(GETSTAT(p, CON))
-
-#define DEF_G(v) G(v)
-#define DEF_ARMOR(x, aux) (IE(x, DEF_G) >> aux)
-
-/* TODO some of this kind of macros are in kill.c */
-
-#define DODGE_G(v) G(v)
-#define DODGE_BASE(p) DODGE_G(GETSTAT(p, DEX))
-#define DODGE_ARMOR(def) def / 4
-
-#define MP_G(v) HP_G(v)
-#define MP_MAX(p) MP_G(GETSTAT(p, WIZ))
-
-#define SPELL_G(v) G(v)
-#define SPELL_DMG(p, sp) SPELL_G(GETSTAT(p, INT)) + HS(sp)
-#define SPELL_COST(dmg, y, no_bdmg) (no_bdmg ? 0 : dmg) + dmg / (1 << y)
-
-#define BUF_DURATION(ra) 20 * (RARE_MAX - ra) / RARE_MAX
-#define BUF_DMG(sp_dmg, duration) ((long) 2 * sp_dmg) / duration
-
-#define EV(liv, w) liv->e[AF_ ## w].value
-#define EM(liv, w) liv->e[AF_ ## w].mask
-
-#define BUF_TYPE_MASK 0xf
-#define BUF_TYPE(sp) (sp->flags & BUF_TYPE_MASK)
-
 enum elm_type {
 	ELM_PHYSICAL,
 	ELM_FIRE,
@@ -177,7 +136,7 @@ dbref contents_find(int descr, dbref player, dbref what, const char *name);
 int equip_calc(struct living *p, dbref eq);
 dbref unequip(dbref player, unsigned eql);
 void mobs_add(struct bio *b, dbref where);
-struct mob const *mob_random();
+struct obj const *mob_obj_random();
 void mobs_aggro(int descr, dbref player);
 struct mob const *mob_get(dbref who);
 

@@ -164,7 +164,6 @@ extern void do_advitam(int descr, dbref player, const char *what);
 extern void do_heal(int descr, dbref player, const char *what);
 extern void do_status(dbref player);
 extern void do_train(dbref player, const char *what, const char *amount);
-extern void _do_advitam(dbref target, dbref here);
 extern int kill_v(int *drmap, int descr, dbref player, const char *cmd);
 
 int do_stand_silent(dbref player);

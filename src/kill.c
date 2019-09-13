@@ -7,6 +7,24 @@
 #include "params.h"
 #include "geography.h"
 
+#define DMG_BASE(p) DMG_G(GETSTAT(p, STR))
+#define DODGE_BASE(p) DODGE_G(GETSTAT(p, DEX))
+
+#define HP_G(v) 10 * G(v)
+#define HP_MAX(p) HP_G(GETSTAT(p, CON))
+
+#define MP_G(v) HP_G(v)
+#define MP_MAX(p) MP_G(GETSTAT(p, WIZ))
+
+#define SPELL_G(v) G(v)
+#define SPELL_DMG(p, sp) SPELL_G(GETSTAT(p, INT)) + HS(sp)
+#define SPELL_COST(dmg, y, no_bdmg) (no_bdmg ? 0 : dmg) + dmg / (1 << y)
+
+#define BUF_DURATION(ra) 20 * (RARE_MAX - ra) / RARE_MAX
+#define BUF_DMG(sp_dmg, duration) ((long) 2 * sp_dmg) / duration
+#define BUF_TYPE_MASK 0xf
+#define BUF_TYPE(sp) (sp->flags & BUF_TYPE_MASK)
+
 #define MESGPROP_LID	"_/lid"
 #define SETLID(x,y)	set_property_value(x, MESGPROP_LID, y + 1)
 #define GETLID(x)	(get_property_value(x, MESGPROP_LID) - 1)
@@ -179,7 +197,7 @@ static inline unsigned
 xp_get(unsigned x, unsigned y)
 {
 	// alternatively (2000/x)*y/x
-	unsigned r = 2000 * y / (x * x);
+	unsigned r = 254 * y / (x * x);
 	if (r < 0)
 		return 0;
 	else
@@ -457,8 +475,13 @@ kill(dbref attacker, dbref target)
 		dbref loc = getloc(target);
 		moveto(target, PLAYER_HOME(target));
 		untmp_clean(tar->descr, target, loc);
+		SETKLOCK(target, 0);
 		do_map(tar->descr, target);
 	} else {
+		if (tar->target) {
+			dbref tartar = tar->target->who;
+			SETKLOCK(tartar, GETKLOCK(tartar) - GETAGGRO(target));
+		}
 		if (GETTMP(getloc(target))) {
 			int descr = 0;
 			if (att) {
@@ -473,6 +496,8 @@ kill(dbref attacker, dbref target)
 
 		moveto(target, (dbref) 0);
 		tar->respawn_in = 30;
+		tar->hp = HP_MAX(target);
+		tar->mp = MP_MAX(target);
 	}
 
 	living_dead(tar);
@@ -733,7 +758,7 @@ living_init(struct living *liv, dbref who)
 	memset(liv, 0, sizeof(struct living));
 	liv->who = who;
 	liv->mob = mob_get(who);
-	liv->wts = phys_wts[liv->mob->wt];
+	liv->wts = phys_wts[liv->mob ? liv->mob->wt : GETWTS(who)];
 	liv->hunger = liv->thirst = 0;
 	liv->flags = GETSAT(who) ? LF_SITTING : 0;
 	liv->combo = GETCOMBO(who);
@@ -893,11 +918,11 @@ living_update(struct living *n)
 		int y = 9 - 2 * (n->flags | LF_SITTING);
 
 		int max = HP_MAX(who);
-		int cur = 1 + n->hp + (max >> y);
+		int cur = n->hp + (max >> y);
 		n->hp = cur > max ? max : cur;
 
 		max = MP_MAX(who);
-		cur = 1 + n->mp + (max >> y);
+		cur = n->mp + (max >> y);
 		n->mp = cur > max ? max : cur;
 
 		huth_notify(n->who, n->thirst += THIRST_INC,
@@ -927,13 +952,6 @@ livings_update()
 }
 
 void
-_do_advitam(dbref target, dbref here)
-{
-	THING_SET_HOME(target, here);
-	living_put(target);
-}
-
-void
 do_advitam(int descr, dbref player, const char *name)
 {
 	dbref here = getloc(player);
@@ -944,7 +962,7 @@ do_advitam(int descr, dbref player, const char *name)
 		return;
 	}
 
-	_do_advitam(target, here);
+	living_put(target);
 	notify_fmt(player, "You infuse %s with life.", NAME(target));
 }
 

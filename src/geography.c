@@ -10,6 +10,10 @@
 #include <db4/db.h>
 #include "kill.h"
 
+#define MESGPROP_TREE	"_/tree"
+#define GETTREE(x)	get_property_value(x, MESGPROP_TREE)
+#define SETTREE(x, y)	set_property_value(x, MESGPROP_TREE, y)
+
 #define BIOME_BG(i)	(NIGHT_IS ? ANSI_RESET : biome_bgs[i])
 
 #undef NDEBUG
@@ -87,7 +91,6 @@ char const *biome_bgs[] = {
 	ANSI_RESET,
 };
 /* }}} */
-
 const char *map[] = {
 	[0 ... 254] = "",
 	['h'] = "w",
@@ -559,7 +562,7 @@ geo_update()
 
 /* Basic {{{ */
 
-static inline char
+static inline int
 dir_valid(const char c)
 {
 	char sc = map[(int) c][0];
@@ -570,9 +573,9 @@ dir_valid(const char c)
 	case 's':
 	case 'u':
 	case 'd':
-		return sc;
+		return 1;
 	default:
-		return -c;
+		return 0;
 	}
 }
 
@@ -618,7 +621,7 @@ geo_move(morton_t code, char g)
 int
 geo_is(dbref exit)
 { 
-	return !strcmp(NAME(exit), geo_name(NAME(exit)[0]));
+	return !strncmp(NAME(exit), geo_name(NAME(exit)[0]), 4);
 }
 
 static inline morton_t
@@ -792,7 +795,13 @@ _new_room_where(int descr, dbref player, dbref *ptr, dbref loc,
 	DBDIRTY(ref);
 	DBDIRTY(loc);
 	*ptr = ref;
-	return pdb_put(pos, ref, DB_NOOVERWRITE);
+	if (pdb_put(pos, ref, DB_NOOVERWRITE))
+		return 1;
+	struct bio *bio = noise_point(pos);
+	SETTREE(ref, (!!(bio->pln[0]))
+		| ((!!(bio->pln[1])) << 1)
+		| ((!!(bio->pln[2])) << 2));
+	return 0;
 }
 
 static void
@@ -1050,7 +1059,8 @@ room_exit_owned_there(dbref *there, int descr, dbref player, dbref exit, int cla
 
 	if (therev >= 0) {
 		exit_there = room_exit_owned("at", descr, player, therev, geo_simm(dir), claim, 1);
-		assert(exit_there >= 0);
+		if (exit_there < 0)
+			return NOTHING;
 		*there = therev;
 	} else if (create)
 		therev = new_room(&exit_there, descr, player, exit, claim);
@@ -1078,7 +1088,7 @@ room_exits_owned(dbref *exit, dbref *exit_there, dbref *there,
 		return 1;
 
 	*exit_there = room_exit_owned_there(there, descr, player, *exit, !claim_here, 1);
-	return 0;
+	return *exit_there < 0;
 }
 
 /* }}} */
@@ -1290,6 +1300,7 @@ static inline char *
 dr_room(int descr, dbref player, struct bio *n, dbref here, char *buf, const char *bg)
 {
 	register char *b = buf;
+	int tree = GETTREE(here);
 
 	dbref tmp;
 
@@ -1297,7 +1308,7 @@ dr_room(int descr, dbref player, struct bio *n, dbref here, char *buf, const cha
 	if (tmp > 0 && DBFETCH(tmp)->sp.exit.ndest
 	    && DBFETCH(tmp)->sp.exit.dest[0] >= 0)
 		b = stpcpy(b, ANSI_FG_WHITE "<");
-	else if (n->pln[0]) {
+	else if (tree & 1) {
 		struct plant *pl = &plants[n->plid[0]];
 		b = stpcpy(b, pl->pre);
 		*b++ = n->pln[0] > TREE_HALF ? pl->big : pl->small;
@@ -1348,7 +1359,7 @@ dr_room(int descr, dbref player, struct bio *n, dbref here, char *buf, const cha
 			break;
 		}
 
-		if (emp == ' ' && n->pln[1]) {
+		if (emp == ' ' && tree & 2) {
 			struct plant *pl = &plants[n->plid[1]];
 			pre = pl->pre;
 			emp = n->pln[1] > TREE_HALF ? pl->big : pl->small;
@@ -1364,7 +1375,7 @@ dr_room(int descr, dbref player, struct bio *n, dbref here, char *buf, const cha
 	if (tmp > 0 && DBFETCH(tmp)->sp.exit.ndest
 	    && DBFETCH(tmp)->sp.exit.dest[0] >= 0)
 		b = stpcpy(b, ANSI_FG_WHITE ">");
-	else if (n->pln[2]) {
+	else if (tree & 4) {
 		struct plant *pl = &plants[n->plid[2]];
 		b = stpcpy(b, pl->pre);
 		*b++ = n->pln[2] > TREE_HALF ? pl->big : pl->small;
@@ -1527,9 +1538,13 @@ dr_hs_n(int descr, dbref player, struct bio *n, dbref *g)
 
 		if (next >= 0) {
 			if (GETTMP(next)) {
-				floor = curr < 0 || GETTMP(curr)
-					? n->bio_idx : floor_get(curr);
-				toggle = 1;
+				if (curr < 0 || GETTMP(curr)) {
+					floor = n->bio_idx;
+					toggle = 1;
+				} else {
+					floor = floor_get(curr);
+					toggle = 0;
+				}
 			} else {
 				floor = floor_get(next);
 				toggle = 0;
@@ -1635,8 +1650,12 @@ geo_cmd_dir(struct cmd_dir *res, const char *cmd)
 
 	res->dir = cmd[ofs];
 	res->rep = rep;
-
-	return ofs;
+	if (dir_valid(res->dir))
+		return ofs + 1;
+	else {
+		res->dir = '\0';
+		return 0;
+	}
 }
 
 static inline int
@@ -1644,10 +1663,16 @@ room_put_here(int descr, dbref player, char const *s)
 {
 	morton_t x;
 	char *end;
-	dbref there = strtol(s + 1, &end, 0);
-	int present = pdb_where(&x, getloc(player));
+	dbref here = getloc(player),
+	      there = strtol(s + 1, &end, 0);
+	int present = pdb_where(&x, here);
 	assert(present);
-	assert(Typeof(present) == TYPE_ROOM);
+	if (OWNER(here) != player) {
+		notify_fmt(player, "You don't own this room.");
+		return s - end;
+	}
+	if (!GETTMP(here))
+		SETTMP(here, 1);
 	enter_room(descr, player, there, NOTHING, 0);
 	pdb_move(there, x);
 	return end - s;
@@ -1725,8 +1750,12 @@ geo_v(int *drmap, int descr, dbref player, char const *opcs)
 	struct cmd_dir cd;
 	morton_t x;
 	char const *s = opcs;
+	int cont = 1;
 
-	switch (*s++) {
+	for (; cont;) switch(*s++) {
+	case '\0':
+		cont = 0;
+		break;
 	case 'x':
 		s += geo_location_x(descr, player, s);
 		break;
@@ -1752,12 +1781,14 @@ geo_v(int *drmap, int descr, dbref player, char const *opcs)
 		if (!pdb_where(&x, getloc(player)))
 			break;
 		mark_set(player, *s, x);
+		s++;
 		break;
 	case '"':
 		x = mark_get(player, *s);
 		if (x == -1ULL)
 			break;
 		teleport(descr, player, x);
+		s++;
 		*drmap = 1;
 		break;
 	case '#':
@@ -1765,16 +1796,14 @@ geo_v(int *drmap, int descr, dbref player, char const *opcs)
 		*drmap = 1;
 		break;
 	default: {
-		op_t *op = op_map[(int) *(--s)];
-		s += !!op;
-		s += geo_cmd_dir(&cd, s);
+		int ofs = 0;
+		s --;
+		op_t *op = op_map[(int) *s];
+		ofs += !!op;
+		ofs += geo_cmd_dir(&cd, s + ofs);
 
-		cd.dir = dir_valid(cd.dir);
-
-		if (cd.dir <= 0)
-			return opcs - (s + 1 - !!op);
-
-		s++;
+		if (cd.dir == '\0')
+			return opcs - s;
 
 		if (!op)
 			op = &walk;
@@ -1783,6 +1812,7 @@ geo_v(int *drmap, int descr, dbref player, char const *opcs)
 		for (j = 0; j < cd.rep; j++)
 			if (op(descr, player, map[(int) cd.dir][0]))
 				*drmap = 1;
+		s += ofs;
 	}}
 
 	return s - opcs;

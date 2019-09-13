@@ -49,7 +49,7 @@ A's
   abode  
 
 B's
-  bogus    builder  
+  begin    bogus    builder  
 
 C's
   c            cheatsheet   chown_ok     control      costs        
@@ -132,15 +132,15 @@ Use 'help <topicname>' to get more information on a topic.
 Basics|Basics
 Basics
 
-"            #            0            @password    c            d
-d            dir          drop         equip        examine      geo
-get          give         go           goal         gripe        help
-home         inventory    kill         look         m            money
-news         page         pose         put          quit         r
-r            rob          robbery      say          score        select
-startingout  status       t            t            train        unequip
-w            w            walk         whisper      who          x
-x            
+"            #            0            @password    begin        c
+d            d            dir          drop         equip        examine
+geo          get          give         go           goal         gripe
+help         home         inventory    kill         look         m
+money        news         page         pose         put          quit
+r            r            rob          robbery      say          score
+select       startingout  status       t            t            train
+unequip      w            w            walk         whisper      who
+x            x            
 
 ~----------------------------------------------------------------------------
 ~
@@ -148,7 +148,33 @@ x
 ~
 ~
 ~
+begin
+Welcome to NeverDark.
+
+This is a fork of fbmuck and you can consult the code by issuing
+":cat src/noise.c". What it adds is noise-based geology, and a simple
+combat system. This game is currently in development so literally that
+it is currently running inside GDB, inside VIM. If you are using the web
+version, it will re-connect you and log you in automatically when I build.
+
+To walk in a given direction you type "up", "down", "south", "west", etc.
+Alternatively you can use "J" to go down, "10k" to move north ten times.
+For more information, please consult ":help walk".
+
+All vanilla fbmuck commands are preceded with ":". Typing ":say hello"
+would result in your character saying hello, "'hello" has the same result.
+
+Type ":map" to see where you are!
+
+Thanks and have fun.
+Q
+
+Also see: startingout, walking, look and kill
+
+~
+~
 startingout|starting_out|starting out
+
 The word 'me' refers to yourself. Some things to do when starting out:
 1) give yourself a description with "@describe me=<description>", then
     look at yourself with "look me".
