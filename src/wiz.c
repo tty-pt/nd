@@ -351,7 +351,8 @@ do_force(int descr, dbref player, const char *what, char *command)
 		return;
 	}
 
-	if (!ZOMBIES && (!Wizard(player) || Typeof(player) != TYPE_PLAYER)) {
+#if !ZOMBIES
+	if (!Wizard(player) || Typeof(player) != TYPE_PLAYER){
 		notify(player, "Zombies are not enabled here.");
 		return;
 #ifdef DEBUG	
@@ -359,6 +360,7 @@ do_force(int descr, dbref player, const char *what, char *command)
 		notify(player, "[debug] Zombies are not enabled for nonwizards -- force succeeded.");
 #endif
 	}
+#endif
 
 	/* get victim */
 	init_match(descr, player, what, NOTYPE, &md);

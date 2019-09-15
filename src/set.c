@@ -8,6 +8,7 @@
 /* commands which set parameters */
 #include <stdio.h>
 #include <ctype.h>
+#include <string.h>
 #include "fbstrings.h"
 
 #include "db.h"
@@ -88,8 +89,8 @@ do_name(int descr, dbref player, const char *name, char *newname)
 			notify(player, "Name set.");
 			return;
 		} else {
-			if (((Typeof(thing) == TYPE_THING) && !ok_ascii_thing(newname)) ||
-			    ((Typeof(thing) != TYPE_THING) && !ok_ascii_other(newname)) ) {
+			if ((Typeof(thing) == TYPE_THING && !OK_ASCII_THING(newname)) ||
+			    (Typeof(thing) != TYPE_THING && !OK_ASCII_OTHER(newname)) ) {
 				notify(player, "Invalid 8-bit name.");
 				return;
 			}
@@ -855,11 +856,12 @@ do_chown(int descr, dbref player, const char *name, const char *newowner)
 		}
 	}
 
-	if (REALMS_CONTROL && !Wizard(OWNER(player)) && TrueWizard(thing) &&
-		Typeof(thing) == TYPE_ROOM) {
+#if REALMS_CONTROL
+	if (!Wizard(OWNER(player)) && TrueWizard(thing) && Typeof(thing) == TYPE_ROOM) {
 		notify(player, "You can't take possession of that.");
 		return;
 	}
+#endif
 
 	switch (Typeof(thing)) {
 	case TYPE_ROOM:
@@ -941,10 +943,10 @@ do_set(int descr, dbref player, const char *name, const char *flag)
 
 	/* Now we check to see if it's a property reference */
 	/* if this gets changed, please also modify boolexp.c */
-	if (index(flag, PROP_DELIMITER)) {
+	if (strchr(flag, PROP_DELIMITER)) {
 		/* copy the string so we can muck with it */
 		char *type = alloc_string(flag);	/* type */
-		char *pname = (char *) index(type, PROP_DELIMITER);	/* propname */
+		char *pname = (char *) strchr(type, PROP_DELIMITER);	/* propname */
 		char *x;				/* to preserve string location so we can free it */
 		char *temp;
 		int ival = 0;
@@ -1124,12 +1126,14 @@ do_set(int descr, dbref player, const char *name, const char *flag)
 	} else if ((string_prefix("ABODE", p)) ||
 			   (string_prefix("AUTOSTART", p)) || (string_prefix("ABATE", p))) {
 		f = ABODE;
-        } else if (string_prefix("YIELD", p) && ENABLE_MATCH_YIELD &&
+#if ENABLE_MATCH_YIELD
+        } else if (string_prefix("YIELD", p) &&
                    (Typeof(thing) == TYPE_ROOM || Typeof(thing) == TYPE_THING)) {
                 f = YIELD;
-        } else if (string_prefix("OVERT", p) && ENABLE_MATCH_YIELD &&
+        } else if (string_prefix("OVERT", p) &&
                    (Typeof(thing) == TYPE_ROOM || Typeof(thing) == TYPE_THING)) {
                 f = OVERT;
+#endif
 	} else {
 		notify(player, "I don't recognize that flag.");
 		return;

@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <ctype.h>
 #include <signal.h>
+#include <string.h>
 
 #include <sys/wait.h>
 
@@ -161,11 +162,7 @@ dump_database_internal(void)
 
 #ifdef DISKBASE
 	/* Only show dumpdone mesg if not doing background saves. */
-	if (DBDUMP_WARNING && DUMPDONE_WARNING)
-		wall_and_flush(DUMPDONE_MESG);
-#endif
-
-#ifdef DISKBASE
+	DUMPDONE_WARN();
 	propcache_hits = 0L;
 	propcache_misses = 1L;
 #endif
@@ -267,8 +264,7 @@ fork_and_dump(void)
 	last_monolithic_time = time(NULL);
 	log_status("CHECKPOINTING: %s.#%d#", dumpfile, epoch);
 
-	if (DBDUMP_WARNING)
-		wall_and_flush(DUMPING_MESG);
+	DBDUMP_WARN();
 
 #ifdef DISKBASE
 	dump_database_internal();
@@ -331,19 +327,16 @@ time_for_monolithic(void)
 void
 dump_warning(void)
 {
-	if (DBDUMP_WARNING) {
+#if DBDUMP_WARNING
 #ifdef DELTADUMPS
-		if (time_for_monolithic()) {
-			wall_and_flush(DUMPWARN_MESG);
-		} else {
-			if (DELTADUMP_WARNING) {
-				wall_and_flush(DELTAWARN_MESG);
-			}
-		}
-#else
+	if (time_for_monolithic())
 		wall_and_flush(DUMPWARN_MESG);
+	else
+		DELTADUMP_WARN();
+#else
+	wall_and_flush(DUMPWARN_MESG);
 #endif
-	}
+#endif
 }
 
 #ifdef DELTADUMPS
@@ -359,13 +352,15 @@ dump_deltas(void)
 	epoch++;
 	log_status("DELTADUMP: %s.#%d#", dumpfile, epoch);
 
-	if (DELTADUMP_WARNING)
-		wall_and_flush(DUMPDELTAS_MESG);
+#if DBDUMP_WARNING
+	DELTADUMP_WARN();
+#endif
 
 	db_write_deltas(delta_outfile);
 
-	if (DELTADUMP_WARNING && DUMPDONE_WARNING)
-		wall_and_flush(DUMPDONE_MESG);
+#if DELTADUMP_WARNING
+	DUMPDONE_WARN();
+#endif
 
 #ifdef DISKBASE
 	propcache_hits = 0L;
@@ -429,7 +424,6 @@ init_game(const char *infile, const char *outfile)
 	return 0;
 }
 
-
 void
 cleanup_game()
 {
@@ -437,7 +431,6 @@ cleanup_game()
 		free((void *) dumpfile);
 	free((void *) in_filename);
 }
-
 
 extern short wizonly_mode;
 void
@@ -460,7 +453,6 @@ do_restrict(dbref player, const char *arg)
 		);
 	}
 }
-
 
 /* use this only in process_command */
 #define Matched(string) if (!string_prefix(string, command)) \
@@ -524,7 +516,8 @@ process_command(int descr, dbref player, char *command)
 		return;
 	}
 
-	if ((LOG_COMMANDS || Wizard(OWNER(player)))) {
+#if LOG_COMMANDS
+	if (Wizard(OWNER(player))) {
 		if (!(FLAGS(player) & (INTERACTIVE | READMODE))) {
 			dbref here;
 			if (!*command)
@@ -538,19 +531,20 @@ process_command(int descr, dbref player, char *command)
 						
 						here == NOTHING ? "NOWHERE" : NAME(here),
 						(int) DBFETCH(player)->location, " ", command);
+#if LOG_INTERACTIVE
 		} else {
-			if (LOG_INTERACTIVE) {
-				log_command("%s%s%s%s(%d) in %s(%d):%s %s",
-							Wizard(OWNER(player)) ? "WIZ: " : "",
-							(Typeof(player) != TYPE_PLAYER) ? NAME(player) : "",
-							(Typeof(player) != TYPE_PLAYER) ? " owned by " : "",
-							NAME(OWNER(player)), (int) player,
-							NAME(DBFETCH(player)->location),
-							(int) DBFETCH(player)->location,
-							(FLAGS(player) & (READMODE)) ? " [READ] " : " [INTERP] ", command);
-			}
+			log_command("%s%s%s%s(%d) in %s(%d):%s %s",
+				    Wizard(OWNER(player)) ? "WIZ: " : "",
+				    (Typeof(player) != TYPE_PLAYER) ? NAME(player) : "",
+				    (Typeof(player) != TYPE_PLAYER) ? " owned by " : "",
+				    NAME(OWNER(player)), (int) player,
+				    NAME(DBFETCH(player)->location),
+				    (int) DBFETCH(player)->location,
+				    (FLAGS(player) & (READMODE)) ? " [READ] " : " [INTERP] ", command);
+#endif
 		}
 	}
+#endif /* LOG_COMMANDS */
 
 	if (FLAGS(player) & INTERACTIVE) {
 		interactive(descr, player, command);
@@ -766,13 +760,13 @@ process_command(int descr, dbref player, char *command)
 					Matched("@dlt");
 					do_delta(player);
 					break;
+#if WHO_DOING
 				case 'o':
 				case 'O':
 					Matched("@doing");
-					if (!WHO_DOING)
-						goto bad;
 					do_doing(descr, player, arg1, arg2);
 					break;
+#endif
 				case 'r':
 				case 'R':
 					Matched("@drop");
@@ -1465,7 +1459,7 @@ process_command(int descr, dbref player, char *command)
 			break;
 		default:
 		  bad:
-			if (M3_HUH != 0)
+#if M3_HUH
 			{
 				char hbuf[BUFFER_LEN];
 				snprintf(hbuf,BUFFER_LEN,"HUH? %s", command);
@@ -1476,13 +1470,16 @@ process_command(int descr, dbref player, char *command)
 					break;
 				}
 			}	
+#endif
 			notify(player, HUH_MESSAGE);
-			if (LOG_FAILED_COMMANDS && !controls(player, DBFETCH(player)->location)) {
+#if LOG_FAILED_COMMANDS
+			if (!controls(player, DBFETCH(player)->location)) {
 				log_status("HUH from %s(%d) in %s(%d)[%s]: %s %s",
 						   NAME(player), player, NAME(DBFETCH(player)->location),
 						   DBFETCH(player)->location,
 						   NAME(OWNER(DBFETCH(player)->location)), command, full_command);
 			}
+#endif
 			matched = 1;
 			break;
 		}

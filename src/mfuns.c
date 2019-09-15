@@ -2,6 +2,7 @@
 #include "config.h"
 #include <math.h>
 #include <ctype.h>
+#include <string.h>
 #include "params.h"
 
 #include "db.h"
@@ -1795,8 +1796,10 @@ mfn_money(MFUNARGS)
 		ABORT_MPI("MONEY", "Match failed.");
 	if (obj == PERMDENIED)
 		ABORT_MPI("MONEY", "Permission denied.");
-	if (PENNIES_MUF_MLEV > 1 && !(mesgtyp & MPI_ISBLESSED))
+#if PENNIES_MUF_MLEF > 1
+	if (!(mesgtyp & MPI_ISBLESSED))
 		ABORT_MPI("MONEY", "Permission denied.");
+#endif
 	switch (Typeof(obj)) {
 	case TYPE_THING:
 		snprintf(buf, BUFFER_LEN, "%d", GETVALUE(obj));

@@ -362,16 +362,16 @@ enter_room(int descr, dbref player, dbref loc, dbref exit, int drmap)
 			do_map(descr, player);
 	}
 
-	if (PENNY_RATE != 0) {
-		/* check for pennies */
-		if (!controls(player, loc)
-			&& GETVALUE(OWNER(player)) <= MAX_PENNIES 
-                        && RANDOM() % PENNY_RATE == 0) {
-			notify_fmt(player, "You found one %s!", PENNY);
-			SETVALUE(OWNER(player), GETVALUE(OWNER(player)) + 1);
-			DBDIRTY(OWNER(player));
-		}
+#if PENNY_RATE != 0
+	/* check for pennies */
+	if (!controls(player, loc)
+	    && GETVALUE(OWNER(player)) <= MAX_PENNIES 
+	    && RANDOM() % PENNY_RATE == 0) {
+		notify_fmt(player, "You found one %s!", PENNY);
+		SETVALUE(OWNER(player), GETVALUE(OWNER(player)) + 1);
+		DBDIRTY(OWNER(player));
 	}
+#endif
 
 	if (loc != old) {
 		envpropqueue(descr, player, loc, exit, player, NOTHING, "_arrive", "Arrive", 1, 1);
@@ -413,8 +413,10 @@ can_move(int descr, dbref player, const char *direction, int lev)
 {
 	struct match_data md;
 
-	if (ALLOW_HOME && !string_compare(direction, "home"))
+#if ALLOW_HOME
+	if (!string_compare(direction, "home"))
 		return 1;
+#endif
 
 	/* otherwise match on exits */
 	init_match(descr, player, direction, TYPE_EXIT, &md);
@@ -521,12 +523,13 @@ trigger(int descr, dbref player, dbref exit, int pflag)
 						notify(player, "That would cause a paradox.");
 						break;
 					}
-					if (SECURE_THING_MOVEMENT) {
-						enter_room(descr, dest, DBFETCH(DBFETCH(exit)->location)->location,
-								   exit, 1);
-					} else {
-						moveto(dest, DBFETCH(DBFETCH(exit)->location)->location);
-					}
+#if SECURE_THING_MOVEMENT
+					enter_room(descr, dest,
+						   DBFETCH(DBFETCH(exit)->location)->location,
+						   exit, 1);
+#else
+					moveto(dest, DBFETCH(DBFETCH(exit)->location)->location);
+#endif
 					if (!(FLAGS(exit) & STICKY)) {
 						/* send home source object */
 						sobjact = 1;
@@ -536,11 +539,11 @@ trigger(int descr, dbref player, dbref exit, int pflag)
 						notify(player, "That would cause a paradox.");
 						break;
 					}
-					if (SECURE_THING_MOVEMENT) {
-						enter_room(descr, dest, DBFETCH(exit)->location, exit, 1);
-					} else {
-						moveto(dest, DBFETCH(exit)->location);
-					}
+#if SECURE_THING_MOVEMENT
+					enter_room(descr, dest, DBFETCH(exit)->location, exit, 1);
+#else
+					moveto(dest, DBFETCH(exit)->location);
+#endif
 				}
 				if (GETSUCC(exit))
 					succ = 1;
@@ -591,12 +594,12 @@ trigger(int descr, dbref player, dbref exit, int pflag)
 void
 do_move(int descr, dbref player, const char *direction, int lev)
 {
-	dbref exit;
 	dbref loc;
-	char buf[BUFFER_LEN];
-	struct match_data md;
 
-	if (ALLOW_HOME && !string_compare(direction, "home")) {
+#if ALLOW_HOME
+	if (!string_compare(direction, "home")) {
+		char buf[BUFFER_LEN];
+
 		/* send him home */
 		/* but steal all his possessions */
 		if ((loc = DBFETCH(player)->location) != NOTHING) {
@@ -606,7 +609,12 @@ do_move(int descr, dbref player, const char *direction, int lev)
 		}
 		/* give the player the messages */
 		send_home(descr, player, 1);
-	} else {
+	} else
+#endif
+	{
+		struct match_data md;
+		dbref exit;
+
 		/* find the exit */
 		init_match_check_keys(descr, player, direction, TYPE_EXIT, &md);
 		md.match_level = lev;
@@ -1128,7 +1136,7 @@ recycle(int descr, dbref player, dbref thing)
 	while ((looplimit-- > 0) && ((first = DBFETCH(thing)->contents) != NOTHING)) {
 		if (Typeof(first) == TYPE_PLAYER ||
 			(Typeof(first) == TYPE_THING &&
-			 (FLAGS(first) & (ZOMBIE | VEHICLE) || SECURE_THING_MOVEMENT))
+			 (SECURE_THING_MOVEMENT || FLAGS(first) & (ZOMBIE | VEHICLE)))
 		) {
 			enter_room(descr, first, HOME, DBFETCH(thing)->location, 1);
 			/* If the room is set to drag players back, there'll be no

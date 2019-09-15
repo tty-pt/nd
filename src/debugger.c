@@ -15,7 +15,7 @@
 #include "interp.h"
 #include <ctype.h>
 #include <time.h>
-
+#include <string.h>
 
 void
 list_proglines(dbref player, dbref program, struct frame *fr, int start, int end)
@@ -799,7 +799,7 @@ muf_debugger(int descr, dbref player, dbref program, const char *text, struct fr
 
 		startline = endline = 0;
 		add_muf_read_event(descr, player, program, fr);
-		if ((ptr2 = (char *) index(arg, ','))) {
+		if ((ptr2 = (char *) strchr(arg, ','))) {
 			*ptr2++ = '\0';
 		} else {
 			ptr2 = "";

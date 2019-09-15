@@ -18,6 +18,7 @@
 #include <stdio.h>
 #include <sys/types.h>
 #include <time.h>
+#include <string.h>
 
 
 #define TQ_MUF_TYP 0

@@ -2,6 +2,7 @@
 #include "config.h"
 #include <math.h>
 #include <ctype.h>
+#include <string.h>
 #include "params.h"
 
 #include "db.h"
@@ -14,7 +15,6 @@
 #include "interp.h"
 #include "interface.h"
 #include "msgparse.h"
-
 
 struct line *get_new_line(void);
 
@@ -34,8 +34,6 @@ show_mcp_error(McpFrame * mfr, char *topic, char *text)
 		notify(mcpframe_to_user(mfr), text);
 	}
 }
-
-
 
 /*
  * reference is in the format objnum.category.misc where objnum is the
@@ -250,8 +248,7 @@ mcppkg_simpleedit(McpFrame * mfr, McpMesg * msg, McpVer ver, void *context)
 
 			write_program(PROGRAM_FIRST(obj), obj);
 
-			if (LOG_PROGRAMS)
-				log_program_text(PROGRAM_FIRST(obj), player, obj);
+			LOG_PROGRAM_TEXT(PROGRAM_FIRST(obj), player, obj);
 
 			do_compile(descr, player, obj, 1);
 

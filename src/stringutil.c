@@ -13,6 +13,7 @@
 
 #include <stdio.h>
 #include <ctype.h>
+#include <string.h>
 #include "externs.h"
 
 #define DOWNCASE(x) (tolower(x))

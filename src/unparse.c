@@ -4,6 +4,7 @@
 #include "copyright.h"
 #include "config.h"
 
+#include <string.h>
 #include "db.h"
 #include "externs.h"
 #include "params.h"
@@ -53,10 +54,12 @@ unparse_flags(dbref thing)
 			*p++ = 'X';
 		if (FLAGS(thing) & ZOMBIE)
 			*p++ = 'Z';
-                if (FLAGS(thing) & YIELD && ENABLE_MATCH_YIELD)
+#if ENABLE_MATCH_YIELD
+                if (FLAGS(thing) & YIELD)
                         *p++ = 'Y';
-                if (FLAGS(thing) & OVERT && ENABLE_MATCH_YIELD)
+                if (FLAGS(thing) & OVERT)
                         *p++ = 'O';
+#endif
 		if (MLevRaw(thing)) {
 			*p++ = 'M';
 			switch (MLevRaw(thing)) {

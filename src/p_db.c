@@ -455,8 +455,8 @@ prim_setname(PRIM_PROTOTYPE)
 			add_player(ref);
 			ts_modifyobject(ref);
 		} else {
-			if (((Typeof(ref) == TYPE_THING) && !ok_ascii_thing(b)) ||
-			    ((Typeof(ref) != TYPE_THING) && !ok_ascii_other(b)) ) {
+			if (((Typeof(ref) == TYPE_THING) && !OK_ASCII_THING(b)) ||
+			    ((Typeof(ref) != TYPE_THING) && !OK_ASCII_OTHER(b)) ) {
 					abort_interp("Invalid 8-bit name.");
 			}
 			if (!ok_name(b)) {
@@ -613,6 +613,7 @@ void
 prim_set(PRIM_PROTOTYPE)
 /* SET */
 {
+	char *flag;
 	CHECKOP(2);
 	oper1 = POP();
 	oper2 = POP();
@@ -626,34 +627,41 @@ prim_set(PRIM_PROTOTYPE)
 	CHECKREMOTE(ref);
 	tmp = 0;
 	result = (*oper1->data.string->data == '!');
+	flag = oper1->data.string->data;
+
+	if (result)
+		flag++;
+
+	if (string_prefix("chown_ok", flag)
+	    || string_prefix("color", flag))
+		tmp = CHOWN_OK;
+	else if (string_prefix("haven", flag)
+		 || string_prefix("harduid", flag))
+		tmp = HAVEN;
+	else if (string_prefix("jump_ok", flag))
+		tmp = JUMP_OK;
+	else if (string_prefix("link_ok", flag))
+		tmp = LINK_OK;
+	else if (string_prefix("kill_ok", flag))
+		tmp = KILL_OK;
+	else if (string_prefix("sticky", flag)
+		 || string_prefix("silent", flag))
+		tmp = STICKY;
+	else if (string_prefix("vehicle", flag)
+		 || string_prefix("viewable", flag))
 	{
-		char *flag = oper1->data.string->data;
+		tmp = VEHICLE;
+		if (result && Typeof(ref) == TYPE_THING) {
+			dbref obj = DBFETCH(ref)->contents;
 
-		if (result)
-			flag++;
-
-		if (string_prefix("dark", flag)
-			|| string_prefix("debug", flag))
-			tmp = DARK;
-		else if (string_prefix("abode", flag)
-				 || string_prefix("autostart", flag)
-				 || string_prefix("abate", flag))
-			tmp = ABODE;
-		else if (string_prefix("chown_ok", flag)
-				 || string_prefix("color", flag))
-			tmp = CHOWN_OK;
-		else if (string_prefix("haven", flag)
-				 || string_prefix("harduid", flag))
-			tmp = HAVEN;
-		else if (string_prefix("jump_ok", flag))
-			tmp = JUMP_OK;
-		else if (string_prefix("link_ok", flag))
-			tmp = LINK_OK;
-
-		else if (string_prefix("kill_ok", flag))
-			tmp = KILL_OK;
-
-		else if (string_prefix("builder", flag))
+			for (; obj != NOTHING; obj = DBFETCH(obj)->next) {
+				if (Typeof(obj) == TYPE_PLAYER) {
+					abort_interp("That vehicle still has players in it!");
+				}
+			}
+		}
+	} else if (mlev >= 4) {
+		if (string_prefix("builder", flag))
 			tmp = BUILDER;
 		else if (string_prefix("mucker", flag))
 			tmp = MUCKER;
@@ -661,62 +669,74 @@ prim_set(PRIM_PROTOTYPE)
 			tmp = SMUCKER;
 		else if (string_prefix("interactive", flag))
 			tmp = INTERACTIVE;
-		else if (string_prefix("sticky", flag)
-				 || string_prefix("silent", flag))
-			tmp = STICKY;
-		else if (string_prefix("wizard", flag))
-			tmp = WIZARD;
-		else if (string_prefix("truewizard", flag))
+		else if (string_prefix("wizard", flag)
+			 || string_prefix("truewizard", flag))
 			tmp = WIZARD;
 		else if (string_prefix("xforcible", flag))
 			tmp = XFORCIBLE;
-		else if (string_prefix("zombie", flag))
-			tmp = ZOMBIE;
-		else if (string_prefix("vehicle", flag)
-			 || string_prefix("viewable", flag))
-			tmp = VEHICLE;
 		else if (string_prefix("quell", flag))
 			tmp = QUELL;
-                else if (ENABLE_MATCH_YIELD && string_prefix("yield", flag))
-                        tmp = YIELD;
-                else if (ENABLE_MATCH_YIELD && string_prefix("overt", flag))
-                        tmp = OVERT;
+		else if (string_prefix("dark", flag)
+			 || string_prefix("debug", flag))
+			tmp = DARK;
+		else if (string_prefix("abode", flag)
+			 || string_prefix("autostart", flag)
+			 || string_prefix("abate", flag))
+			tmp = ABODE;
+		else if (string_prefix("zombie", flag))
+			tmp = ZOMBIE;
+#if ENABLE_MATCH_YIELD
+		else if (string_prefix("yield", flag))
+			tmp = YIELD;
+		else if (string_prefix("overt", flag))
+			tmp = OVERT;
+#endif
+		else
+			goto abort;
+	} else if (!permissions(ProgUID, ref))
+			goto abort;
+	else if (string_prefix("dark", flag)
+		 || string_prefix("debug", flag))
+	{
+		tmp = DARK;
+		if (!(Typeof(ref) != TYPE_PLAYER
+#if !EXIT_DARKING
+		      && Typeof(ref) != TYPE_EXIT
+#endif
+#if !THING_DARKING
+		      && Typeof(ref) != TYPE_THING
+#endif
+		     ))
+			goto abort;
+	} else if (string_prefix("abode", flag)
+		   || string_prefix("autostart", flag)
+		   || string_prefix("abate", flag)) {
+		tmp = ABODE;
+		if (Typeof(ref) == TYPE_PROGRAM)
+			goto abort;
+	} else if (string_prefix("zombie", flag)) {
+		tmp = ZOMBIE;
+		if (Typeof(ref) == TYPE_PLAYER
+		    || Typeof(ref) != TYPE_THING
+		    || !(FLAGS(ProgUID) & ZOMBIE))
+			goto abort;
 	}
-	if (!tmp)
-		abort_interp("Unrecognized flag.");
-	if ((mlev < 4) && !permissions(ProgUID, ref))
-		abort_interp("Permission denied.");
-
-	if (((mlev < 4) && ((tmp == DARK && ((Typeof(ref) == TYPE_PLAYER)
-										 || (!EXIT_DARKING && Typeof(ref) == TYPE_EXIT)
-										 || (!THING_DARKING && Typeof(ref) == TYPE_THING)
-						 )
-						)
-						|| ((tmp == ZOMBIE) && (Typeof(ref) == TYPE_THING)
-							&& (FLAGS(ProgUID) & ZOMBIE))
-						|| ((tmp == ZOMBIE) && (Typeof(ref) == TYPE_PLAYER))
-						|| (tmp == BUILDER) || (tmp == YIELD) || (tmp == OVERT)
-		 )
-		)
-		|| (tmp == WIZARD) || (tmp == QUELL) || (tmp == INTERACTIVE)
-		|| ((tmp == ABODE) && (Typeof(ref) == TYPE_PROGRAM))
-		|| (tmp == MUCKER) || (tmp == SMUCKER) || (tmp == XFORCIBLE)
-			)
-		abort_interp("Permission denied.");
-        if (((tmp == YIELD) || (tmp == OVERT)) &&
-            (Typeof(ref) != TYPE_THING && Typeof(ref) != TYPE_ROOM)) {
-                abort_interp("Permission denied.");
-        }
-	if (result && Typeof(ref) == TYPE_THING && tmp == VEHICLE) {
-		dbref obj = DBFETCH(ref)->contents;
-
-		for (; obj != NOTHING; obj = DBFETCH(obj)->next) {
-			if (Typeof(obj) == TYPE_PLAYER) {
-				abort_interp("That vehicle still has players in it!");
-			}
-		}
+#if ENABLE_MATCH_YIELD
+	else if (string_prefix("yield", flag)) {
+		tmp = YIELD;
+		if (Typeof(ref) != TYPE_THING && Typeof(ref) != TYPE_ROOM)
+			goto abort;
+	} else if (string_prefix("overt", flag)) {
+		tmp = OVERT;
+		if (Typeof(ref) != TYPE_THING && Typeof(ref) != TYPE_ROOM)
+			goto abort;
 	}
-	if (!result) {
+#endif
+	goto out;
+
+abort:	abort_interp("Permission denied.");
+
+out:	if (!result) {
 		FLAGS(ref) |= tmp;
 		DBDIRTY(ref);
 	} else {
@@ -775,14 +795,14 @@ prim_flagp(PRIM_PROTOTYPE)
 			|| string_prefix("debug", flag))
 			tmp = DARK;
 		else if (string_prefix("abode", flag)
-				 || string_prefix("autostart", flag)
-				 || string_prefix("abate", flag))
+			 || string_prefix("autostart", flag)
+			 || string_prefix("abate", flag))
 			tmp = ABODE;
 		else if (string_prefix("chown_ok", flag)
-				 || string_prefix("color", flag))
+			 || string_prefix("color", flag))
 			tmp = CHOWN_OK;
 		else if (string_prefix("haven", flag)
-				 || string_prefix("harduid", flag))
+			 || string_prefix("harduid", flag))
 			tmp = HAVEN;
 		else if (string_prefix("jump_ok", flag))
 			tmp = JUMP_OK;
@@ -817,10 +837,12 @@ prim_flagp(PRIM_PROTOTYPE)
 			tmp = VEHICLE;
 		else if (string_prefix("quell", flag))
 			tmp = QUELL;
-                else if (ENABLE_MATCH_YIELD && string_prefix("yield", flag))
+#if ENABLE_MATCH_YIELD
+                else if (string_prefix("yield", flag))
                         tmp = YIELD;
-                else if (ENABLE_MATCH_YIELD && string_prefix("overt", flag))
+                else if (string_prefix("overt", flag))
                         tmp = OVERT;
+#endif
 	}
 	if (result) {
 		if ((!truwiz) && (tmp == WIZARD)) {
@@ -1251,7 +1273,7 @@ prim_newobject(PRIM_PROTOTYPE)
 		const char *b = DoNullInd(oper1->data.string);
 		dbref loc;
 
-		if(!ok_ascii_thing(b) || !ok_name(b))
+		if(!OK_ASCII_THING(b) || !ok_name(b))
 			abort_interp("Invalid name. (2)");
 
 		ref = new_object();
@@ -1302,7 +1324,7 @@ prim_newroom(PRIM_PROTOTYPE)
 	{
 		const char *b = DoNullInd(oper1->data.string);
 
-		if (!ok_ascii_other(b) || !ok_name(b))
+		if (!OK_ASCII_OTHER(b) || !ok_name(b))
 			abort_interp("Invalid name. (2)");
 
 		ref = new_object();
@@ -1345,7 +1367,7 @@ prim_newexit(PRIM_PROTOTYPE)
 	{
 		const char *b = DoNullInd(oper1->data.string);
 
-		if (!ok_ascii_other(b) || !ok_name(b))
+		if (!OK_ASCII_OTHER(b) || !ok_name(b))
 			abort_interp("Invalid name. (2)");
 
 		ref = new_object();
@@ -2027,7 +2049,7 @@ prim_newprogram(PRIM_PROTOTYPE)
 		abort_interp("Permission denied.  Requires Wizbit.");
 	if (oper1->type != PROG_STRING)
 		abort_interp("Expected string argument.");
-	if (!ok_ascii_other(oper1->data.string->data) || !ok_name(oper1->data.string->data))
+	if (!OK_ASCII_OTHER(oper1->data.string->data) || !ok_name(oper1->data.string->data))
 		abort_interp("Invalid name (2)");
 
 	newprog = new_object();
@@ -2468,8 +2490,7 @@ prim_program_setlines(PRIM_PROTOTYPE)
 
 	log_status("PROGRAM SAVED: %s by %s(%d)", unparse_object(player, oper1->data.objref), NAME(player), player);
 
-	if (LOG_PROGRAMS)
-		log_program_text(lines, player, oper1->data.objref);
+	LOG_PROGRAM_TEXT(lines, player, oper1->data.objref);
 
 	free_prog_text(lines);
 

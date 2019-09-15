@@ -21,7 +21,8 @@ next_dump_time(void)
 	if (!last_dump_time)
 		last_dump_time = (long) time((time_t *) NULL);
 
-	if (DBDUMP_WARNING && !dump_warned) {
+#if DBDUMP_WARNING
+	if (!dump_warned) {
 		if (((last_dump_time + DUMP_INTERVAL) - DUMP_WARNTIME)
 			< currtime) {
 			return (0L);
@@ -29,6 +30,7 @@ next_dump_time(void)
 			return (last_dump_time + DUMP_INTERVAL - DUMP_WARNTIME - currtime);
 		}
 	}
+#endif
 
 	if ((last_dump_time + DUMP_INTERVAL) < currtime)
 		return (0L);
@@ -57,8 +59,7 @@ check_dump_time(void)
 		last_dump_time = currtime;
 		add_property((dbref) 0, "_sys/lastdumptime", NULL, (int) currtime);
 
-		if (PERIODIC_PROGRAM_PURGE)
-			free_unused_programs();
+		PERIODIC_PROGRAM_PURGE();
 		purge_for_pool();
 		purge_try_pool();
 
@@ -132,8 +133,7 @@ check_clean_time(void)
 	if ((last_clean_time + CLEAN_INTERVAL) < currtime) {
 		last_clean_time = currtime;
 		purge_for_pool();
-		if (PERIODIC_PROGRAM_PURGE)
-			free_unused_programs();
+		PERIODIC_PROGRAM_PURGE();
 #ifdef DISKBASE
 		dispose_all_oldprops();
 #endif

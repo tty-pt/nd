@@ -358,14 +358,14 @@ has_property(int descr, dbref player, dbref what, const char *pname, const char 
 		if (has_property(descr, player, things, pname, strval, value))
 			return 1;
 	}
-	if (LOCK_ENVCHECK) {
-		things = getparent(what);
-		while (things != NOTHING) {
-			if (has_property_strict(descr, player, things, pname, strval, value))
-				return 1;
-			things = getparent(things);
-		}
+#if LOCK_ENVCHECK
+	things = getparent(what);
+	while (things != NOTHING) {
+		if (has_property_strict(descr, player, things, pname, strval, value))
+			return 1;
+		things = getparent(things);
 	}
+#endif
 	return 0;
 }
 
@@ -1119,9 +1119,9 @@ db_dump_props_rec(dbref obj, FILE * f, const char *dir, PropPtr p)
 
 #ifdef DISKBASE
 	wastouched = (PropFlags(p) & PROP_TOUCHED);
-	if (DISKBASE_PROPVALS) {
-		tpos = ftell(f);
-	}
+#if DISKBASE_PROPVALS
+	tpos = ftell(f);
+#endif
 	if (wastouched) {
 		count++;
 	}
@@ -1132,14 +1132,15 @@ db_dump_props_rec(dbref obj, FILE * f, const char *dir, PropPtr p)
 
 	db_putprop(f, dir, p);
 
-#ifdef DISKBASE
-	if (DISKBASE_PROPVALS && !wastouched) {
-		if (PropType(p) == PROP_STRTYP || PropType(p) == PROP_LOKTYP) {
-			flg = PropFlagsRaw(p) | PROP_ISUNLOADED;
-			clear_propnode(p);
-			SetPFlagsRaw(p, flg);
-			SetPDataVal(p, tpos);
-		}
+#if defined(DISKBASE) && DISKBASE_PROPVALS
+	if (!wastouched
+	    && (PropType(p) == PROP_STRTYP
+		|| PropType(p) == PROP_LOKTYP))
+	{
+		flg = PropFlagsRaw(p) | PROP_ISUNLOADED;
+		clear_propnode(p);
+		SetPFlagsRaw(p, flg);
+		SetPDataVal(p, tpos);
 	}
 #endif
 

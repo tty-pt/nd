@@ -2,6 +2,8 @@
 #include "copyright.h"
 #include "config.h"
 
+#include <string.h>
+
 #include "db.h"
 #include "defaults.h"
 #include "props.h"
@@ -98,7 +100,8 @@ insttotext(struct frame *fr, int lev, struct inst *theinst, char *buffer, int bu
 				*buffer = '\0';
 			break;
 		}
-		if (EXPANDED_DEBUG_TRACE && expandarrs) {
+#if EXPANDED_DEBUG_TRACE
+		if (expandarrs) {
 #ifdef DEBUGARRAYS
 			length = snprintf(buffer, buflen, "R%dC%d{", theinst->data.array->links, theinst->data.array->items);
 #else
@@ -172,9 +175,9 @@ insttotext(struct frame *fr, int lev, struct inst *theinst, char *buffer, int bu
 				} while (array_next(theinst->data.array, &temp1));
 			}
 			strcatn(buffer, buflen, "}");
-		} else {
+		} else
+#endif
 			length = snprintf(buffer, buflen, "%d{...}", theinst->data.array->items);
-		}
 		break;
 	case PROG_INTEGER:
 		length = snprintf(buffer, buflen, "%d", theinst->data.number);

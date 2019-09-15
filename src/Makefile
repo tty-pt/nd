@@ -10,8 +10,11 @@ libs-y := -lpcre -lm -lxxhash -ldb
 libs-$(CONFIG_SSL) += -lssl -lcrypto
 LDFLAGS = -L/usr/local/lib -L/usr/lib ${libs-y}
 
-CFLAGS := -g -Wall -Wno-initializer-overrides -I${INCLUDE} \
-	-I/usr/include -I/usr/local/include
+CFLAGS := -g -Wall -Wno-initializer-overrides \
+	-I${INCLUDE} -I/usr/include -I/usr/local/include
+
+# CC = gcc
+# CFLAGS += -O1 -fdump-tree-optimized
 
 obj-y := crt_malloc.o geometry.o noise.o geography.o item.o kill.o shop.o \
         array.o boolexp.o compile.o create.o db.o db_header.o debugger.o \

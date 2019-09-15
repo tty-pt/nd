@@ -660,7 +660,7 @@ do_kill(int descr, dbref player, const char *what)
 	    || target == NOTHING
 	    || player == target
 	    || !(
-#ifdef RESTRICT_KILL
+#if RESTRICT_KILL
 		 (Typeof(target) != TYPE_PLAYER
 		  || (FLAGS(target) & KILL_OK
 		      && FLAGS(player) & KILL_OK))

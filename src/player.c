@@ -4,6 +4,8 @@
 #include "copyright.h"
 #include "config.h"
 
+#include <string.h>
+
 #include "db.h"
 #include "params.h"
 #include "defaults.h"

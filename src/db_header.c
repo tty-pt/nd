@@ -15,6 +15,8 @@
 #include "copyright.h"
 #include "config.h"
 
+#include <string.h>
+
 #include "db_header.h"
 #include "params.h"
 

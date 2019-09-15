@@ -15,6 +15,7 @@
 #include <sys/types.h>
 #include <stdarg.h>
 #include <time.h>
+#include <string.h>
 
 #include "fbstrings.h"
 #include "externs.h"

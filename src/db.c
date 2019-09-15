@@ -4,6 +4,7 @@
 #include "config.h"
 
 #include <ctype.h>
+#include <string.h>
 
 #include "db.h"
 #include "db_header.h"
@@ -69,22 +70,22 @@ getparent_logic(dbref obj)
 dbref
 getparent(dbref obj)
 {
+#if SECURE_THING_MOVEMENT
+	return getloc(obj);
+#else
         dbref ptr, oldptr;
 
-	if (SECURE_THING_MOVEMENT) {
-		obj = getloc(obj);
-	} else {
-	        ptr = getparent_logic(obj);
-		do {
-		        obj = getparent_logic(obj);
-		} while (obj != (oldptr = ptr = getparent_logic(ptr)) &&
-			 obj != (ptr = getparent_logic(ptr)) &&
-			 obj != NOTHING && Typeof(obj) == TYPE_THING);
-		if (obj != NOTHING && (obj == oldptr || obj == ptr)) {
-		        obj = GLOBAL_ENVIRONMENT;
-		}
+	ptr = getparent_logic(obj);
+	do {
+		obj = getparent_logic(obj);
+	} while (obj != (oldptr = ptr = getparent_logic(ptr)) &&
+		 obj != (ptr = getparent_logic(ptr)) &&
+		 obj != NOTHING && Typeof(obj) == TYPE_THING);
+	if (obj != NOTHING && (obj == oldptr || obj == ptr)) {
+		obj = GLOBAL_ENVIRONMENT;
 	}
 	return obj;
+#endif
 }
 
 
@@ -174,7 +175,7 @@ db_clear_object(dbref i)
 {
 	struct object *o = DBFETCH(i);
 
-	bzero(o, sizeof(struct object));
+	memset(o, 0, sizeof(struct object));
 
 	NAME(i) = 0;
 	ts_newobject(o);

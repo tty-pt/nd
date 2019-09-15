@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <time.h>
 #include <ctype.h>
+#include <string.h>
 
 #ifdef HAVE_PCREINCDIR
 #include <pcre/pcre.h>

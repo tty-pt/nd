@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <time.h>
 #include <float.h>
+#include <string.h>
 #include "db.h"
 #include "inst.h"
 #include "externs.h"

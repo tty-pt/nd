@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <time.h>
 #include <ctype.h>
+#include <string.h>
 #include "db.h"
 #include "defaults.h"
 #include "inst.h"
@@ -1472,19 +1473,20 @@ prim_notify_exclude(PRIM_PROTOTYPE)
 			}
 		}
 
-		if (LISTENERS) {
-			for (tmp = 0, i = count; i-- > 0;) {
-				if (excluded[i] == where)
-					tmp = 1;
-			}
-			if (!tmp)
-				notify_listeners(player, program, where, where, buf, 0);
-			if (LISTENERS_ENV && !tmp) {
-				what = DBFETCH(where)->location;
-				for (; what != NOTHING; what = DBFETCH(what)->location)
-					notify_listeners(player, program, what, where, buf, 0);
-			}
+#if LISTENERS
+		for (tmp = 0, i = count; i-- > 0;) {
+			if (excluded[i] == where)
+				tmp = 1;
 		}
+		if (!tmp) {
+			notify_listeners(player, program, where, where, buf, 0);
+#if LISTENERS_ENV
+			what = DBFETCH(where)->location;
+			for (; what != NOTHING; what = DBFETCH(what)->location)
+				notify_listeners(player, program, what, where, buf, 0);
+#endif
+		}
+#endif
 	}
 }
 

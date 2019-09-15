@@ -7,6 +7,7 @@
  ***********************************/
 
 #include "config.h"
+#include <string.h>
 /* #include <pwd.h> */
 
 static int cmatch(char *s1, char c1);

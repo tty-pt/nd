@@ -8,6 +8,8 @@
 /* commands which look at things */
 
 #include <ctype.h>
+#include <string.h>
+
 #include "db.h"
 #include "defaults.h"
 #include "mpi.h"
@@ -17,11 +19,8 @@
 #include "dbsearch.h"
 #include "externs.h"
 
-
-
-
 #define EXEC_SIGNAL '@'			/* Symbol which tells us what we're looking at
-								   * is an execution order and not a message.    */
+					 * is an execution order and not a message.    */
 
 /* prints owner of something */
 static void
@@ -169,8 +168,6 @@ look_simple(int descr, dbref player, dbref thing)
 void
 look_room(int descr, dbref player, dbref loc, int verbose)
 {
-	char obj_num[20];
-
 	/* tell him the name, and the number if he can link to it */
 	if (!GETTMP(loc))
 		notify(player, unparse_object(player, loc));
@@ -195,10 +192,13 @@ look_room(int descr, dbref player, dbref loc, int verbose)
 
 	/* tell him the contents */
 	look_contents(player, loc, "You see:");
-	if (LOOK_PROPQUEUES) {
+#if LOOK_PROPQUEUES
+	{
+		char obj_num[20];
 		snprintf(obj_num, sizeof(obj_num), "#%d", loc);
 		envpropqueue(descr, player, loc, player, loc, NOTHING, "_lookq", obj_num, 1, 1);
 	}
+#endif
 }
 
 void
@@ -218,7 +218,9 @@ do_look_at(int descr, dbref player, const char *name, const char *detail)
 	struct match_data md;
 	/* int res; */
 	char buf[BUFFER_LEN];
+#if LOOK_PROPQUEUES
 	char obj_num[20];
+#endif
 
 	if (*name == '\0' || !string_compare(name, "here")) {
 		if ((thing = getloc(player)) != NOTHING) {
@@ -255,11 +257,11 @@ do_look_at(int descr, dbref player, const char *name, const char *detail)
 				} else {
 					look_simple(descr, player, thing);
 					look_contents(player, thing, "Carrying:");
-					if (LOOK_PROPQUEUES) {
-						snprintf(obj_num, sizeof(obj_num), "#%d", thing);
-						envpropqueue(descr, player, thing, player, thing,
+#if LOOK_PROPQUEUES
+					snprintf(obj_num, sizeof(obj_num), "#%d", thing);
+					envpropqueue(descr, player, thing, player, thing,
 									 NOTHING, "_lookq", obj_num, 1, 1);
-					}
+#endif
 				}
 				break;
 			case TYPE_THING:
@@ -272,22 +274,22 @@ do_look_at(int descr, dbref player, const char *name, const char *detail)
 						look_contents(player, thing, "Contains:");
 						ts_useobject(thing);
 					}
-					if (LOOK_PROPQUEUES) {
-						snprintf(obj_num, sizeof(obj_num), "#%d", thing);
-						envpropqueue(descr, player, thing, player, thing,
-									 NOTHING, "_lookq", obj_num, 1, 1);
-					}
+#if LOOK_PROPQUEUES
+					snprintf(obj_num, sizeof(obj_num), "#%d", thing);
+					envpropqueue(descr, player, thing, player, thing,
+						     NOTHING, "_lookq", obj_num, 1, 1);
+#endif
 				}
 				break;
 			default:
 				look_simple(descr, player, thing);
 				if (Typeof(thing) != TYPE_PROGRAM)
 					ts_useobject(thing);
-				if (LOOK_PROPQUEUES) {
-					snprintf(obj_num, sizeof(obj_num), "#%d", thing);
-					envpropqueue(descr, player, thing, player, thing,
-								 NOTHING, "_lookq", obj_num, 1, 1);
-				}
+#if LOOK_PROPQUEUES
+				snprintf(obj_num, sizeof(obj_num), "#%d", thing);
+				envpropqueue(descr, player, thing, player, thing,
+					     NOTHING, "_lookq", obj_num, 1, 1);
+#endif
 				break;
 			}
 		} else if (thing == NOTHING || (*detail && thing != AMBIGUOUS)) {
@@ -410,10 +412,12 @@ flag_description(dbref thing)
 			strcatn(buf, sizeof(buf), " JUMP_OK");
 		if (FLAGS(thing) & VEHICLE)
 			strcatn(buf, sizeof(buf), (Typeof(thing) == TYPE_PROGRAM) ? " VIEWABLE" : " VEHICLE");
-                if (ENABLE_MATCH_YIELD && FLAGS(thing) & YIELD)
+#if ENABLE_MATCH_YIELD
+                if (FLAGS(thing) & YIELD)
                         strcatn(buf, sizeof(buf), " YIELD");
-                if (ENABLE_MATCH_YIELD && FLAGS(thing) & OVERT)
+                if (FLAGS(thing) & OVERT)
                         strcatn(buf, sizeof(buf), " OVERT");
+#endif
 		if (FLAGS(thing) & XFORCIBLE) {
 			if (Typeof(thing) == TYPE_EXIT) {
 				strcatn(buf, sizeof(buf), " XPRESS");
@@ -633,10 +637,12 @@ do_examine(int descr, dbref player, const char *name, const char *dir)
 		notify(player, buf);
 	}
 
-	if (WHO_DOING && GETDOING(thing)) {
+#if WHO_DOING
+	if (GETDOING(thing)) {
 		snprintf(buf, sizeof(buf), "Doing: %s", GETDOING(thing));
 		notify(player, buf);
 	}
+#endif
 	if (GETOECHO(thing)) {
 		snprintf(buf, sizeof(buf), "Oecho: %s", GETOECHO(thing));
 		notify(player, buf);
@@ -1044,15 +1050,14 @@ init_checkflags(dbref player, const char *flags, struct flgchkdat *check)
 			else
 				check->setflags |= LINK_OK;
 			break;
+#if ENABLE_MATCH_YIELD
                 case 'O':
-                        if (ENABLE_MATCH_YIELD) {
                           if (mode)
                             check->clearflags |= OVERT;
                           else
                             check->setflags |= OVERT;
-                        }
                         break;
-
+#endif
 		case 'Q':
 			if (mode)
 				check->clearflags |= QUELL;
@@ -1071,14 +1076,14 @@ init_checkflags(dbref player, const char *flags, struct flgchkdat *check)
 			else
 				check->setflags |= VEHICLE;
 			break;
+#if ENABLE_MATCH_YIELD
                 case 'Y':
-                        if (ENABLE_MATCH_YIELD) {
-                          if (mode)
-                            check->clearflags |= YIELD;
-                          else
-                            check->setflags |= YIELD;
-                        }
+			if (mode)
+				check->clearflags |= YIELD;
+			else
+				check->setflags |= YIELD;
                         break;
+#endif
 		case 'Z':
 			if (mode)
 				check->clearflags |= ZOMBIE;

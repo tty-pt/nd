@@ -17,6 +17,7 @@
 #include <ctype.h>
 #include <time.h>
 #include <stdarg.h>
+#include <string.h>
 
 /* This file contains code for doing "byte-compilation" of
    mud-forth programs.  As such, it contains many internal
@@ -1296,7 +1297,7 @@ do_compile(int descr, dbref player_in, dbref program_in, int force_err_display)
 	cstat.curr_line = PROGRAM_FIRST(program_in);
 	cstat.lineno = 1;
 	cstat.start_comment = 0;
-	cstat.force_comment = MUF_COMMENTS_STRICT? 1 : 0;
+	cstat.force_comment = MUF_COMMENTS_STRICT;
 	cstat.next_char = NULL;
 	if (cstat.curr_line)
 		cstat.next_char = cstat.curr_line->this_line;
@@ -1369,7 +1370,8 @@ do_compile(int descr, dbref player_in, dbref program_in, int force_err_display)
 	if (!cstat.procs)
 		v_abort_compile(&cstat, "Missing procedure definition.");
 
-	if (OPTIMIZE_MUF) {
+#if OPTIMIZE_MUF
+	{
 		int maxpasses = 5;
 		int passcount = 0;
 		int optimcount = 0;
@@ -1387,6 +1389,7 @@ do_compile(int descr, dbref player_in, dbref program_in, int force_err_display)
 			notify_nolisten(cstat.player, buf, 1);
 		}
 	}
+#endif
 
 	/* do copying over */
 	fix_addresses(&cstat);

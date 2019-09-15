@@ -13,6 +13,7 @@
 #include "match.h"
 #include "fbstrings.h"
 #include <ctype.h>
+#include <string.h>
 
 #define DOWNCASE(x) (tolower(x))
 
@@ -462,8 +463,7 @@ do_quit(dbref player, dbref program)
 			   NAME(player), player);
 	write_program(PROGRAM_FIRST(program), program);
 
-	if (LOG_PROGRAMS)
-		log_program_text(PROGRAM_FIRST(program), player, program);
+	LOG_PROGRAM_TEXT(PROGRAM_FIRST(program), player, program);
 
 	free_prog_text(PROGRAM_FIRST(program));
 	PROGRAM_SET_FIRST(program, NULL);

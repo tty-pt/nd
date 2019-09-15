@@ -134,4 +134,8 @@ fu! Ictof()
 	echo "\n" . l:r
 endfu
 
-let @u = 'ggyG"0'
+set path=$PWD/src,$PWD/include
+" set grepprg=egrep
+" nnoremap gr :vimgrep <cword> src/*.c include/*.h<cr>
+set grepprg=ag\ --nogroup\ --nocolor
+nnoremap gr :grep <cword> src/*.c include/*.h<cr>

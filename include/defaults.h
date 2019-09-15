@@ -33,7 +33,6 @@
 #define IDLEBOOT 1
 
 /* ping anti-idle time in seconds - just under 1 minute NAT timeout */
-#define IDLE_PING_ENABLE 1
 #define IDLE_PING_TIME 55
 
 /* Limit max number of players to allow connected?  (wizards are immune) */
@@ -59,8 +58,8 @@
 
 /* Format of standardized property lists. */
 #define PROPLIST_INT_COUNTER 1	/* Specifies that the proplist counter
-								   property should be stored as an integer
-								   property instead of as a string. */
+				   property should be stored as an integer
+				   property instead of as a string. */
 
 #define PROPLIST_COUNTER_FORMAT "P#"	/* The prop that has the count of lines. */
 									 /* Define as empty string for no counter. */
@@ -101,14 +100,8 @@
 #define ROOM_COST 10			/* Amount it costs to dig a room        */
 #define LOOKUP_COST 0			/* cost to do a scan                    */
 #define MAX_PENNIES 10000		/* amount at which temple gets cheap    */
-#define PENNY_RATE 8			/* 1/chance of getting a penny per room */
+#define PENNY_RATE 0			/* 1/chance of getting a penny per room */
 #define START_PENNIES 50		/* # of pennies a player's created with */
-
-/* costs of kill command */
-#define KILL_BASE_COST 100		/* prob = expenditure/KILL_BASE_COST    */
-#define KILL_MIN_COST 10		/* minimum amount needed to kill        */
-#define KILL_BONUS 50			/* amount of "insurance" paid to victim */
-
 
 #define MAX_DELTA_OBJS 20		/* max %age of objs changed before a full dump */
 
@@ -157,16 +150,7 @@
  */
 #define FREE_FRAMES_POOL 8
 
-
-
-
 #define PLAYER_START ((dbref) 354)	/* room number of player start location */
-
-
-
-
-/* Use gethostbyaddr() for hostnames in logs and the wizard WHO list. */
-#define HOSTNAMES 0
 
 /* Server support of @doing (reads the _/do prop on WHOs) */
 #define WHO_DOING 1
@@ -185,20 +169,44 @@
 
 /* Log the text of changed programs when they are saved.  This is helpful
  * for catching people who upload scanners, use them, then recycle them. */
-#define LOG_PROGRAMS 1
+#if 1
+#define LOG_PROGRAM_TEXT(...) log_program_text(__VA_ARGS__)
+#else
+#define LOG_PROGRAM_TEXT(...) do {} while (0);
+#endif
 
 /* give a bit of warning before a database dump. */
 #define DBDUMP_WARNING 1
+#define DELTADUMP_WARNING 1
+
+#if DBDUMP_WARNING
+#define DBDUMP_WARN() wall_and_flush(DUMPING_MESG)
+#else
+#define DBDUMP_WARN() do {} while (0)
+#endif
 
 /* give a bit of warning before a delta dump. */
 /* only warns if DBDUMP_WARNING is also 1 */
-#define DELTADUMP_WARNING 1
+#if DELTADUMP_WARNING
+#define DELTADUMP_WARN() wall_and_flush(DELTAWARN_MESG)
+#else
+#define DELTADUMP_WARN(...) do {} while (0);
+#endif
 
 /* When a database dump completes, announce it. */
-#define DUMPDONE_WARNING 1
+#if 1
+#define DUMPDONE_WARN() wall_and_flush(DUMPDONE_MESG)
+#else
+#define DUMPWARN_WARN() do {} while (0)
+#endif
 
 /* clear out unused programs every so often */
-#define PERIODIC_PROGRAM_PURGE 1
+
+#if 1 /* PERIODIC_PROGRAM_PURGE */
+#define PERIODIC_PROGRAM_PURGE() free_unused_programs()
+#else
+#define PERIODIC_PROGRAM_PURGE() do {} while (0)
+#endif
 
 /* Makes WHO unavailable before connecting to a player, or when Interactive.
  * This lets you prevent bypassing of a global @who program. */
@@ -212,7 +220,7 @@
 #define MCP_MUF_MLEV 3
 
 /* Allows 'listeners' (see CHANGES file) */
-#define LISTENERS 1
+#define LISTENERS 0
 
 /* Forbid listener programs of less than given mucker level. 4 = wiz */
 #define LISTEN_MLEV 3
@@ -337,8 +345,13 @@
 #define VERBOSE_CLONE 0
 
 /* Force 7-bit names */
-#define ASCII_THING_NAMES 1
-#define ASCII_OTHER_NAMES 0
+#if 1 /* ASCII_THING_NAMES */
+#define OK_ASCII_THING(name) 1
+#define OK_ASCII_OTHER(name) ok_ascii_any(name)
+#else
+#define OK_ASCII_THING(name) ok_ascii_any(name)
+#define OK_ASCII_OTHER(name) 1
+#endif
 
 #endif /* _DEFAULTS_H */
 

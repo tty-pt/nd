@@ -5,6 +5,7 @@
 
 #include <ctype.h>
 #include <stdio.h>
+#include <string.h>
 
 #include "fbstrings.h"
 #include "db.h"
@@ -31,20 +32,17 @@
  *   routine.
  */
 
-
 struct boolexp *
 alloc_boolnode(void)
 {
 	return ((struct boolexp *) malloc(sizeof(struct boolexp)));
 }
 
-
 void
 free_boolnode(struct boolexp *ptr)
 {
 	free(ptr);
 }
-
 
 struct boolexp *
 copy_bool(struct boolexp *old)
@@ -95,7 +93,6 @@ copy_bool(struct boolexp *old)
 	}
 	return o;
 }
-
 
 int
 eval_boolexp_rec(int descr, dbref player, struct boolexp *b, dbref thing)
@@ -155,7 +152,6 @@ eval_boolexp_rec(int descr, dbref player, struct boolexp *b, dbref thing)
 	return 0;
 }
 
-
 int
 eval_boolexp(int descr, dbref player, struct boolexp *b, dbref thing)
 {
@@ -166,7 +162,6 @@ eval_boolexp(int descr, dbref player, struct boolexp *b, dbref thing)
 	free_boolexp(b);
 	return (result);
 }
-
 
 /* If the parser returns TRUE_BOOLEXP, you lose */
 /* TRUE_BOOLEXP cannot be typed in by the user; use @unlock instead */
@@ -230,7 +225,7 @@ parse_boolexp_F(int descr, const char **parsebuf, dbref player, int dbloadp)
 			*p-- = '\0';
 
 		/* check to see if this is a property expression */
-		if (index(buf, PROP_DELIMITER)) {
+		if (strchr(buf, PROP_DELIMITER)) {
 			return parse_boolprop(buf);
 		}
 		b = alloc_boolnode();
@@ -391,7 +386,6 @@ parse_boolprop(char *buf)
 	return b;
 }
 
-
 long
 size_boolexp(struct boolexp *b)
 {
@@ -422,7 +416,6 @@ size_boolexp(struct boolexp *b)
 	}
 }
 
-
 struct boolexp *
 negate_boolexp(struct boolexp *b)
 {
@@ -438,7 +431,6 @@ negate_boolexp(struct boolexp *b)
 
 	return n;
 }
-
 
 static struct boolexp *
 getboolexp1(FILE * f)

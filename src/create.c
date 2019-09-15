@@ -1,11 +1,12 @@
 /* $Header$ */
 
-
 #include "copyright.h"
 #include "config.h"
 
 /* Commands that create new objects */
 
+#include <string.h>
+#include <ctype.h>
 #include "db.h"
 #include "props.h"
 #include "params.h"
@@ -14,7 +15,6 @@
 #include "externs.h"
 #include "match.h"
 #include "fbstrings.h"
-#include <ctype.h>
 
 struct line *read_program(dbref i);
 
@@ -44,12 +44,14 @@ parse_linkable_dest(int descr, dbref player, dbref exit, const char *dest_name)
 
 	}
 
-	if (!TELEPORT_TO_PLAYER && Typeof(dobj) == TYPE_PLAYER) {
+#if !TELEPORT_TO_PLAYER
+	if (Typeof(dobj) == TYPE_PLAYER) {
 		snprintf(buf, sizeof(buf), "You can't link to players.  Destination %s ignored.",
 				unparse_object(player, dobj));
 		notify(player, buf);
 		return NOTHING;
 	}
+#endif
 
 	if (!can_link(player, exit)) {
 		notify(player, "You can't link that.");
@@ -490,7 +492,7 @@ do_dig(int descr, dbref player, const char *name, const char *pname)
 		notify(player, "You must specify a name for the room.");
 		return;
 	}
-	if(!ok_ascii_other(name)) {
+	if(!OK_ASCII_OTHER(name)) {
 		notify(player, "Room names are limited to 7-bit ASCII.");
 		return;
 	}
@@ -763,7 +765,6 @@ do_mcpedit(int descr, dbref player, const char *name)
 	mcpedit_program(descr, player, prog, name);
 }
 
-
 void
 do_mcpprogram(int descr, dbref player, const char* name)
 {
@@ -839,7 +840,6 @@ do_mcpprogram(int descr, dbref player, const char* name)
 
 	mcpedit_program(descr, player, prog, name);
 }
-
 
 void
 mcpedit_program(int descr, dbref player, dbref prog, const char* name)
@@ -961,7 +961,6 @@ copy_props(dbref player, dbref source, dbref destination, const char *dir)
 {
 	char propname[BUFFER_LEN];
 	char buf[BUFFER_LEN];
-	char buf2[BUFFER_LEN];
 	PropPtr propadr, pptr;
 
 	/* loop through all properties in the current propdir */
@@ -972,10 +971,13 @@ copy_props(dbref player, dbref source, dbref destination, const char *dir)
 		snprintf(buf, sizeof(buf), "%s%c%s", dir, PROPDIR_DELIMITER, propname);
 
 		/* notify player */
-		if(VERBOSE_CLONE && Wizard(OWNER(player))) {
+#if VERBOSE_CLONE
+		if(Wizard(OWNER(player))) {
+			char buf2[BUFFER_LEN];
 			snprintf(buf2, sizeof(buf2), "copying property %s", buf);
 			notify(player, buf2);
 		}
+#endif
 
 		/* copy this property */
 		copy_one_prop(player, source, destination, buf);
@@ -1067,11 +1069,10 @@ do_clone(int descr, dbref player, char *name)
 		notify_fmt(player, "Sorry, you don't have enough %s.", PENNIES);
 		return;
 	} else {
-		if(VERBOSE_CLONE) {
-			snprintf(buf, sizeof(buf), "Now cloning %s...", unparse_object(player, thing));
-			notify(player, buf);
-		}
-		
+#if VERBOSE_CLONE
+		snprintf(buf, sizeof(buf), "Now cloning %s...", unparse_object(player, thing));
+		notify(player, buf);
+#endif
 		/* create the object */
 		clonedthing = new_object();
 
@@ -1144,7 +1145,7 @@ do_create(dbref player, char *name, char *acost)
 	if (*name == '\0') {
 		notify(player, "Create what?");
 		return;
-	} else if(!ok_ascii_thing(name)) {
+	} else if(!OK_ASCII_THING(name)) {
 		notify(player, "Thing names are limited to 7-bit ASCII.");
 		return;
 	} else if (!ok_name(name)) {
@@ -1343,7 +1344,7 @@ do_action(int descr, dbref player, const char *action_name, const char *source_n
 	if (!*action_name || !*qname) {
 		notify(player, "You must specify an action name and a source object.");
 		return;
-	} else if(!ok_ascii_other(action_name)) {
+	} else if(!OK_ASCII_OTHER(action_name)) {
 		notify(player, "Action names are limited to 7-bit ASCII.");
 		return;
 	} else if (!ok_name(action_name)) {

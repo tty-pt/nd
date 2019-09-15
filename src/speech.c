@@ -15,6 +15,7 @@
 #include "speech.h"
 #include <ctype.h>
 #include <stdarg.h>
+#include <string.h>
 
 /* Commands which involve speaking */
 
@@ -168,33 +169,38 @@ notify_listeners(dbref who, dbref xprog, dbref obj, dbref room, const char *msg,
 	if (obj == NOTHING)
 		return;
 
-	if (LISTENERS && (LISTENERS_OBJ || Typeof(obj) == TYPE_ROOM)) {
+#if LISTENERS
+#if !LISTENERS_OBJ
+	if (Typeof(obj) == TYPE_ROOM)
+#endif
+	{
 		listenqueue(-1, who, room, obj, obj, xprog, "_listen", msg, LISTEN_MLEV, 1, 0);
 		listenqueue(-1, who, room, obj, obj, xprog, "~listen", msg, LISTEN_MLEV, 1, 1);
 		listenqueue(-1, who, room, obj, obj, xprog, "~olisten", msg, LISTEN_MLEV, 0, 1);
 	}
+#endif
 
-	if (ZOMBIES && Typeof(obj) == TYPE_THING && !isprivate) {
-		if (FLAGS(obj) & VEHICLE) {
-			if (getloc(who) == getloc(obj)) {
-				char pbuf[BUFFER_LEN];
-				const char *prefix;
+#if ZOMBIES
+	if (Typeof(obj) == TYPE_THING
+	    && !isprivate
+	    && (FLAGS(obj) & VEHICLE)
+	    && getloc(who) == getloc(obj)) {
+		char pbuf[BUFFER_LEN];
+		const char *prefix;
 
-				memset(buf,0,BUFFER_LEN); /* Make sure the buffer is zeroed */
+		memset(buf,0,BUFFER_LEN); /* Make sure the buffer is zeroed */
 
-				prefix = do_parse_prop(-1, who, obj, MESGPROP_OECHO, "(@Oecho)", pbuf, sizeof(pbuf), MPI_ISPRIVATE);
-				if (!prefix || !*prefix)
-					prefix = "Outside>";
-				snprintf(buf, sizeof(buf), "%s %.*s", prefix, (int)(BUFFER_LEN - 2 - strlen(prefix)), msg);
-				ref = DBFETCH(obj)->contents;
-				while (ref != NOTHING) {
-					notify_filtered(who, ref, buf, isprivate);
-					ref = DBFETCH(ref)->next;
-				}
-			}
+		prefix = do_parse_prop(-1, who, obj, MESGPROP_OECHO, "(@Oecho)", pbuf, sizeof(pbuf), MPI_ISPRIVATE);
+		if (!prefix || !*prefix)
+			prefix = "Outside>";
+		snprintf(buf, sizeof(buf), "%s %.*s", prefix, (int)(BUFFER_LEN - 2 - strlen(prefix)), msg);
+		ref = DBFETCH(obj)->contents;
+		while (ref != NOTHING) {
+			notify_filtered(who, ref, buf, isprivate);
+			ref = DBFETCH(ref)->next;
 		}
 	}
-
+#endif
 	if (Typeof(obj) == TYPE_PLAYER || Typeof(obj) == TYPE_THING)
 		notify_filtered(who, obj, msg, isprivate);
 }
@@ -208,17 +214,17 @@ notify_except(dbref first, dbref exception, const char *msg, dbref who)
 
 		srch = room = DBFETCH(first)->location;
 
-		if (LISTENERS) {
-			notify_from_echo(who, srch, msg, 0);
+#if LISTENERS
+		notify_from_echo(who, srch, msg, 0);
 
-			if (LISTENERS_ENV) {
-				srch = DBFETCH(srch)->location;
-				while (srch != NOTHING) {
-					notify_from_echo(who, srch, msg, 0);
-					srch = getparent(srch);
-				}
-			}
+#if LISTENERS_ENV
+		srch = DBFETCH(srch)->location;
+		while (srch != NOTHING) {
+			notify_from_echo(who, srch, msg, 0);
+			srch = getparent(srch);
 		}
+#endif
+#endif
 
 		DOLIST(first, first) {
 			if ((Typeof(first) != TYPE_ROOM) && (first != exception)) {

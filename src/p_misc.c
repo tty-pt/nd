@@ -7,6 +7,7 @@
 #include <sys/types.h>
 #include <stdio.h>
 #include <time.h>
+#include <string.h>
 #include "db.h"
 #include "inst.h"
 #include "externs.h"
@@ -802,7 +803,7 @@ prim_name_okp(PRIM_PROTOTYPE)
 		abort_interp("Object name string expected.");
 	if (!oper1->data.string)
 		abort_interp("Cannot be an empty string.");
-	result = ok_ascii_other(oper1->data.string->data) && ok_name(oper1->data.string->data);
+	result = OK_ASCII_OTHER(oper1->data.string->data) && ok_name(oper1->data.string->data);
 	CLEAR(oper1);
 	PushInt(result);
 }
@@ -811,13 +812,12 @@ void
 prim_ext_name_okp(PRIM_PROTOTYPE)
 {
 	/* These are function pointers */
-	int(*ok1) (const char*);
-	int(*ok2) (const char*);
+	const char *data;
 	
 	CHECKOP(2);
 	oper1 = POP();
 	oper2 = POP();
-
+	data = oper1->data.string->data;
 	if (oper1->type != PROG_STRING)
 		abort_interp("Object name string expected (1).");
 	if (!oper1->data.string)
@@ -830,21 +830,16 @@ prim_ext_name_okp(PRIM_PROTOTYPE)
 		for (ref = 0; buf[ref]; ref++)
 			buf[ref] = DOWNCASE(buf[ref]);
 		if ( !strcmp(buf,"e") || !strcmp(buf,"exit") ) {
-			ok1 = ok_ascii_other;
-			ok2 = ok_name;
+			result = OK_ASCII_OTHER(data) && ok_name(data);
 		} else if ( !strcmp(buf,"r") || !strcmp(buf,"room") ) {
-			ok1 = ok_ascii_other;
-			ok2 = ok_name;
+			result = OK_ASCII_OTHER(data) && ok_name(data);
 		} else if ( !strcmp(buf,"t") || !strcmp(buf,"thing") ) {
-			ok1 = ok_ascii_thing;
-			ok2 = ok_name;
+			result = OK_ASCII_THING(data) && ok_name(data);
 		} else if ( !strcmp(buf,"p") || !strcmp(buf,"player") ) {
-			ok1 = ok_player_name;
-			ok2 = NULL;
+			result = ok_player_name(data);
 		} else if ( !strcmp(buf,"f") || !strcmp(buf,"muf") \
 				|| !strcmp(buf,"program") ) {
-			ok1 = ok_ascii_other;
-			ok2 = ok_name;
+			result = OK_ASCII_OTHER(data) && ok_name(data);
 		} else {
 			abort_interp("String must be a valid object type (2)." );
 		}
@@ -855,16 +850,13 @@ prim_ext_name_okp(PRIM_PROTOTYPE)
 		case TYPE_EXIT:
 		case TYPE_ROOM:
 		case TYPE_PROGRAM:
-			ok1 = ok_ascii_other;
-			ok2 = ok_name;
+			result = OK_ASCII_OTHER(data) && ok_name(data);
 			break;
 		case TYPE_THING:
-			ok1 = ok_ascii_thing;
-			ok2 = ok_name;
+			result = OK_ASCII_THING(data) && ok_name(data);
 			break;
 		case TYPE_PLAYER:
-			ok1 = ok_player_name;
-			ok2 = NULL;
+			result = ok_player_name(data);
 			break;
 		}
 
@@ -872,9 +864,6 @@ prim_ext_name_okp(PRIM_PROTOTYPE)
 		abort_interp("Dbref or object type name expected (2).");
 	}
 
-	result = ok1 && ok1(oper1->data.string->data);
-	if( ok2 && result )
-		result = ok2(oper1->data.string->data);
 	CLEAR(oper1);
 	CLEAR(oper2);
 	PushInt(result);

@@ -14,6 +14,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <ctype.h>
+#include <string.h>
 
 /*
  * Ok, directory stuff IS a bit ugly.
@@ -367,7 +368,7 @@ show_subfile(dbref player, const char *dir, const char *topic, const char *seg, 
 	if (!topic || !*topic)
 		return 0;
 
-	if ((*topic == '.') || (*topic == '~') || (index(topic, '/'))) {
+	if ((*topic == '.') || (*topic == '~') || (strchr(topic, '/'))) {
 		return 0;
 	}
 	if (strlen(topic) > 63)
@@ -574,7 +575,7 @@ main(int argc, char**argv)
 			exit(-2);
 		}
 
-		helpfile = rindex(helpfile, '/');
+		helpfile = strrstr(helpfile, '/');
 		helpfile++;
 #ifdef HELPFILE_DIR
 		snprintf(buf, sizeof(buf), "%s/%s", HELPFILE_DIR, helpfile);

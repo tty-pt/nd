@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <time.h>
 #include <ctype.h>
+#include <string.h>
 #include "db.h"
 #include "defaults.h"
 #include "inst.h"
@@ -1455,14 +1456,14 @@ prim_array_put_proplist(PRIM_PROTOTYPE)
 	if (!prop_write_perms(ProgUID, ref, propname, mlev))
 		abort_interp("Permission denied while trying to set protected property.");
 
-	if (PROPLIST_INT_COUNTER) {
-		propdat.flags = PROP_INTTYP;
-		propdat.data.val = array_count(arr);
-	} else {
-		snprintf(buf, sizeof(buf), "%d", array_count(arr));
-		propdat.flags = PROP_STRTYP;
-		propdat.data.str = buf;
-	}
+#if PROPLIST_INT_COUNTER
+	propdat.flags = PROP_INTTYP;
+	propdat.data.val = array_count(arr);
+#else
+	snprintf(buf, sizeof(buf), "%d", array_count(arr));
+	propdat.flags = PROP_STRTYP;
+	propdat.data.str = buf;
+#endif
 	set_property(ref, propname, &propdat);
 
 	if (array_first(arr, &temp1)) {
@@ -2149,39 +2150,37 @@ prim_array_get_ignorelist(PRIM_PROTOTYPE)
 
 	nu = new_array_packed(0);
 
-	if (IGNORE_SUPPORT)
-	{
-		rawstr = get_property_class(ref, IGNORE_PROP);
+#if IGNORE_SUPPORT
+	rawstr = get_property_class(ref, IGNORE_PROP);
 
-		if (rawstr) {
+	if (rawstr) {
+		while (isspace(*rawstr))
+			rawstr++;
+		while (*rawstr) {
+			if (*rawstr == '#')
+				rawstr++;
+			if (!isdigit(*rawstr))
+				break;
+			result = atoi(rawstr);
+			while (*rawstr && !isspace(*rawstr))
+				rawstr++;
 			while (isspace(*rawstr))
 				rawstr++;
-			while (*rawstr) {
-				if (*rawstr == '#')
-					rawstr++;
-				if (!isdigit(*rawstr))
-					break;
-				result = atoi(rawstr);
-				while (*rawstr && !isspace(*rawstr))
-					rawstr++;
-				while (isspace(*rawstr))
-					rawstr++;
 
-				temp1.type = PROG_INTEGER;
-				temp1.data.number = count;
+			temp1.type = PROG_INTEGER;
+			temp1.data.number = count;
 
-				temp2.type = PROG_OBJECT;
-				temp2.data.number = result;
+			temp2.type = PROG_OBJECT;
+			temp2.data.number = result;
 
-				array_setitem(&nu, &temp1, &temp2);
-				count++;
+			array_setitem(&nu, &temp1, &temp2);
+			count++;
 
-				CLEAR(&temp1);
-				CLEAR(&temp2);
-			}
+			CLEAR(&temp1);
+			CLEAR(&temp2);
 		}
 	}
-
+#endif
 	PushArrayRaw(nu);
 }
 

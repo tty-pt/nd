@@ -165,6 +165,7 @@
 /* Predicates for testing various conditions */
 
 #include <ctype.h>
+#include <string.h>
 
 #include "db.h"
 #include "props.h"
@@ -300,19 +301,21 @@ could_doit(int descr, dbref player, dbref thing)
 				(FLAGS(source) & BUILDER)) return 0;
 
 			/* If secure_teleport is true, and if the destination is a room */
-			if (SECURE_TELEPORT && Typeof(dest) == TYPE_ROOM) {
-				/* if player doesn't control the source and the source isn't
-				 * set Jump_OK, then if the destination isn't HOME,
-				 * can't do it.  (Should this include getlink(owner)?  Not
-				 * everyone knows that 'home' or '#-3' can be linked to and
-				 * be treated specially. -winged) */
-				if ((dest != HOME) && (!controls(owner, source))
-					&& ((FLAGS(source) & JUMP_OK) == 0)) {
-					return 0;
-				}
+#if SECURE_TELEPORT
+			/* if player doesn't control the source and the source isn't
+			 * set Jump_OK, then if the destination isn't HOME,
+			 * can't do it.  (Should this include getlink(owner)?  Not
+			 * everyone knows that 'home' or '#-3' can be linked to and
+			 * be treated specially. -winged) */
+			if (Typeof(dest) == TYPE_ROOM
+			    && dest != HOME
+			    && !controls(owner, source)
+			    && (FLAGS(source) & JUMP_OK) == 0)
+				return 0;
+
 			/* FIXME: Add support for in-server banishment from rooms
 			 * and environments here. */
-			}
+#endif
 		}
 	}
 out:
@@ -428,10 +431,10 @@ can_see(dbref player, dbref thing, int can_see_loc)
 		switch (Typeof(thing)) {
 		case TYPE_PROGRAM:
 			return ((FLAGS(thing) & LINK_OK) || controls(player, thing));
+#if DARK_SLEEPERS
 		case TYPE_PLAYER:
-			if (DARK_SLEEPERS) {
-				return (!Dark(thing) && online(thing));
-			}
+			return (!Dark(thing) && online(thing));
+#endif
 		default:
 			return (!Dark(thing) || (controls(player, thing) && 
 						!(FLAGS(player) & STICKY)));
@@ -445,8 +448,6 @@ can_see(dbref player, dbref thing, int can_see_loc)
 int
 controls(dbref who, dbref what)
 {
-	dbref index;
-
 	/* No one controls invalid objects */
 	if (what < 0 || what >= db_top)
 		return 0;
@@ -470,7 +471,10 @@ controls(dbref who, dbref what)
 		return 1;
 	}
 
-	if (REALMS_CONTROL) {
+#if REALMS_CONTROL
+	{
+		dbref index;
+
 		/* Realm Owner controls everything under his environment. */
 		/* To set up a Realm, a Wizard sets the W flag on a room.  The
 		 * owner of that room controls every Room object contained within
@@ -478,7 +482,7 @@ controls(dbref who, dbref what)
 		 * -winged */
 		for (index = what; index != NOTHING; index = getloc(index)) {
 			if ((OWNER(index) == who) && (Typeof(index) == TYPE_ROOM)
-					&& Wizard(index)) {
+			    && Wizard(index)) {
 				/* Realm Owner doesn't control other Player objects */
 				if(Typeof(what) == TYPE_PLAYER) {
 					return 0;
@@ -488,6 +492,7 @@ controls(dbref who, dbref what)
 			}
 		}
 	}
+#endif
 
 	/* exits are also controlled by the owners of the source and destination */
 	/* ACTUALLY, THEY AREN'T.  IT OPENS A BAD MPI SECURITY HOLE. */
@@ -538,38 +543,32 @@ restricted(dbref player, dbref thing, object_flag_type flag)
 			return (!(Wizard(OWNER(player))));
 		return (0);
 	case VEHICLE:
-			/* Restricting a player from using vehicles requires a wizard. */
+		/* Restricting a player from using vehicles requires a wizard. */
 		if (Typeof(thing) == TYPE_PLAYER)
 			return (!(Wizard(OWNER(player))));
-			/* If only wizards can create vehicles... */
-		if (WIZ_VEHICLES) {
-			/* then only a wizard can create a vehicle. :) */
-			if (Typeof(thing) == TYPE_THING)
-				return (!(Wizard(OWNER(player))));
-		} else {
-			/* But, if vehicles aren't restricted to wizards, then
-			 * players who have not been restricted can do so */
-			if ((Typeof(thing) == TYPE_THING) && (FLAGS(player) & VEHICLE))
-				return (!(Wizard(OWNER(player))));
-		}
+#if WIZ_VEHICLES
+		/* If only wizards can create vehicles... */
+		/* then only a wizard can create a vehicle. :) */
+		if (Typeof(thing) == TYPE_THING)
+			return (!(Wizard(OWNER(player))));
+#else
+		/* But, if vehicles aren't restricted to wizards, then
+		 * players who have not been restricted can do so */
+		if ((Typeof(thing) == TYPE_THING) && (FLAGS(player) & VEHICLE))
+			return (!(Wizard(OWNER(player))));
+#endif
 		return (0);
 	case DARK:
 		/* Dark can be set on a Program or Room by anyone. */
-		if (!Wizard(OWNER(player))) {
-				/* Setting a player dark requires a wizard. */
-			if (Typeof(thing) == TYPE_PLAYER)
-				return (1);
-				/* If exit darking is restricted, it requires a wizard. */
-			if (!EXIT_DARKING && Typeof(thing) == TYPE_EXIT)
-				return (1);
-				/* If thing darking is restricted, it requires a wizard. */
-			if (!THING_DARKING && Typeof(thing) == TYPE_THING)
-				return (1);
-		}
-		return (0);
+		return !Wizard(OWNER(player))
+			&& (/* Setting a player dark requires a wizard. */
+			    Typeof(thing) == TYPE_PLAYER
 
-		/* NOTREACHED */
-		break;
+			    /* If exit darking is restricted, it requires a wizard. */
+			    || (!EXIT_DARKING && Typeof(thing) == TYPE_EXIT)
+
+			    /* If thing darking is restricted, it requires a wizard. */
+			    || (!THING_DARKING && Typeof(thing) == TYPE_THING));
 	case QUELL:
 #ifdef GOD_PRIV
 		/* Only God (or God's stuff) can quell or unquell another wizard. */
@@ -651,7 +650,7 @@ word_start(const char *str, const char let)
 	return 0;
 }
 
-static inline int
+int
 ok_ascii_any(const char *name)
 {
 	const unsigned char *scan;
@@ -662,18 +661,6 @@ ok_ascii_any(const char *name)
 	return 1;
 }
 
-int 
-ok_ascii_thing(const char *name)
-{
-	return ASCII_THING_NAMES || ok_ascii_any(name);
-}
-
-int
-ok_ascii_other(const char *name)
-{
-	return !ASCII_THING_NAMES || ok_ascii_any(name);
-}
-	
 int
 ok_name(const char *name)
 {
@@ -682,11 +669,11 @@ ok_name(const char *name)
 			&& *name != LOOKUP_TOKEN
 			&& *name != REGISTERED_TOKEN
 			&& *name != NUMBER_TOKEN
-			&& !index(name, ARG_DELIMITER)
-			&& !index(name, AND_TOKEN)
-			&& !index(name, OR_TOKEN)
-			&& !index(name, '\r')
-			&& !index(name, ESCAPE_CHAR)
+			&& !strchr(name, ARG_DELIMITER)
+			&& !strchr(name, AND_TOKEN)
+			&& !strchr(name, OR_TOKEN)
+			&& !strchr(name, '\r')
+			&& !strchr(name, ESCAPE_CHAR)
 			&& !word_start(name, NOT_TOKEN)
 			&& string_compare(name, "me")
 			&& string_compare(name, "home")
