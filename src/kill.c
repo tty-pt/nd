@@ -6,6 +6,7 @@
 #include "item.h"
 #include "params.h"
 #include "geography.h"
+#include "debug.h"
 
 #define DMG_BASE(p) DMG_G(GETSTAT(p, STR))
 #define DODGE_BASE(p) DODGE_G(GETSTAT(p, DEX))
@@ -294,7 +295,7 @@ debuf_start(dbref who, struct spell *sp, short val)
 	int i;
 
 	liv = living_get(who);
-	assert(liv);
+	bassert(liv);
 	if (liv->debuf_mask) {
 		i = __builtin_ffs(~liv->debuf_mask);
 		if (!i)
@@ -400,7 +401,7 @@ debufs_end(struct living *liv)
 static inline void
 living_dead(struct living *liv)
 {
-	assert(liv);
+	bassert(liv);
 	liv->target = NULL;
 	liv->hp = HP_MAX(liv->who);
 	liv->mp = MP_MAX(liv->who);
@@ -439,24 +440,26 @@ body(int descr, dbref player, dbref mob)
 }
 
 static inline void
+_xp_award(dbref who, unsigned const xp)
+{
+	unsigned cxp = GETCXP(who);
+	notify_fmt(who, "You gain %u xp!", xp);
+	cxp += xp;
+	while (cxp >= 1000) {
+		notify(who, "You level up!");
+		cxp -= 1000;
+		SETLVL(who, GETLVL(who) + 1);
+		SETSPEND(who, GETSPEND(who) + 2);
+	}
+	SETCXP(who, cxp);
+}
+
+static inline void
 xp_award(dbref attacker, dbref target)
 {
 	unsigned x = GETLVL(attacker);
 	unsigned y = GETLVL(target);
-	unsigned cxp = GETCXP(attacker);
-	unsigned xp = xp_get(x, y);
-
-	notify_fmt(attacker, "You gain %u xp!", xp);
-
-	cxp += xp;
-	while (cxp >= 1000) {
-		notify(attacker, "You level up!");
-		cxp -= 1000;
-		SETLVL(attacker, x + 1);
-		SETSPEND(attacker, GETSPEND(attacker) + 2);
-	}
-
-	SETCXP(attacker, cxp);
+	_xp_award(attacker, xp_get(x, y));
 }
 
 static void
@@ -464,7 +467,7 @@ kill(dbref attacker, dbref target)
 {
 	struct living *att = attacker > 0 ? living_get(attacker) : NULL;
 	struct living *tar = living_get(target);
-	assert(tar);
+	bassert(tar);
 
 	notify_wts(target, "die", "dies", "");
 
@@ -510,7 +513,7 @@ static int
 hp_add(dbref attacker, dbref target, short amt)
 {
 	struct living *tar = living_get(target);
-	assert(tar);
+	bassert(tar);
 	short hp = tar->hp;
 	int ret = 0;
 	hp += amt;
@@ -636,7 +639,7 @@ target_try(struct living *me, dbref target)
 		return;
 
 	tar = living_get(target);
-	assert(tar);
+	bassert(tar);
 
 	if (tar == me->target)
 		return;
@@ -654,23 +657,25 @@ do_kill(int descr, dbref player, const char *what)
 	struct living *att = living_get(player),
 		      *tar;
 
-	assert(att);
+	bassert(att);
 
 	if (FLAGS(here) & HAVEN
 	    || target == NOTHING
 	    || player == target
-	    || !(
 #if RESTRICT_KILL
-		 (Typeof(target) != TYPE_PLAYER
-		  || (FLAGS(target) & KILL_OK
-		      && FLAGS(player) & KILL_OK))
-		 &&
+	    || ( Typeof(target) == TYPE_PLAYER
+		 && !((FLAGS(target) & KILL_OK)
+		      && (FLAGS(player) & KILL_OK)))
 #endif
-		 (tar = living_get(target))))
+	    || !(tar = living_get(target)))
 	{
 		notify(player, "You can't target that.");
 		return;
 	}
+
+	// this happens when we clone living ones
+	if (tar->who != target)
+		tar = living_put(target);
 
 	do_stand_silent(player);
 	att->target = tar;
@@ -734,15 +739,15 @@ do_heal(int descr, dbref player, const char *name)
 	if (strcmp(name, "me")) {
 		target = contents_find(descr, player, here, name);
 
-		if (target < 0) {
-			notify(player, "You can't target that.");
-			return;
-		}
 	} else
 		target = player;
 
-	tar = living_get(target);
-	assert(tar);
+	if (!(FLAGS(player) & WIZARD)
+	    || target < 0
+	    || !(tar = living_get(target)))
+		notify(player, "You can't do that.");
+	return;
+
 	tar->hp = HP_MAX(target);
 	tar->mp = MP_MAX(target);
 	tar->hunger = tar->thirst = 0;
@@ -779,7 +784,7 @@ living_init(struct living *liv, dbref who)
 	}
 }
 
-int
+struct living *
 living_put(dbref who)
 {
 	register const unsigned m = LIVING_SIZE;
@@ -787,7 +792,7 @@ living_put(dbref who)
 	register unsigned i;
 
 	if (who < 0 || Typeof(who) == TYPE_GARBAGE)
-		return -1;
+		return NULL;
 
 	for (liv = living_cur, i = 0;
 	     i < m;
@@ -798,11 +803,11 @@ living_put(dbref who)
 
 		if (liv->who <= 0) {
 			living_init(liv, who);
-			return 0;
+			return liv;
 		}
 	}
 
-	return -1;
+	return NULL;
 }
 
 static inline void
@@ -957,13 +962,29 @@ do_advitam(int descr, dbref player, const char *name)
 	dbref here = getloc(player);
 	dbref target = contents_find(descr, player, here, name);
 
-	if (target == NOTHING || living_get(target) || OWNER(target) != player) {
-		notify(player, "Invalid target.");
+	if (!(FLAGS(player) & WIZARD)
+	    || target == NOTHING
+	    || living_get(target)
+	    || OWNER(target) != player) {
+		notify(player, "You can't do that.");
 		return;
 	}
 
 	living_put(target);
 	notify_fmt(player, "You infuse %s with life.", NAME(target));
+}
+
+void
+do_givexp(int descr, dbref player, const char *name, const char *amount)
+{
+	dbref target = contents_find(descr, player, getloc(player), name);
+	int amt = strtol(amount, NULL, 0);
+
+	if (!(FLAGS(player) & WIZARD)
+	    || target == NOTHING)
+		notify(player, "You can't do that.");
+	else
+		_xp_award(target, amt);
 }
 
 void
@@ -1048,7 +1069,7 @@ kill_v(int *drmap, int descr, dbref player, char const *opcs)
 	} else if (*opcs == 'c' && isdigit(opcs[1])) {
 		struct living *p = living_get(player);
 		unsigned slot = strtol(opcs + 1, &end, 0);
-		assert(p);
+		bassert(p);
 
 		if (!p->target)
 			p->target = p;

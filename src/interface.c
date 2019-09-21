@@ -458,15 +458,12 @@ main(int argc, char **argv)
 				if (val < 1 || val > 65535) {
 					show_program_usage(*argv);
 				}
+				if (MAX_LISTEN_SOCKS >= numports
 #ifdef USE_SSL
-				if ( (ssl_numports + numports) < MAX_LISTEN_SOCKS) {
-					listener_port[numports++] = val;
-				}
-#else
-				if (numports < MAX_LISTEN_SOCKS) {
-					listener_port[numports++] = val;
-				}
+				    + ssl_numports
 #endif
+				   )
+					listener_port[numports++] = val;
 			}
 		}
 	}
@@ -776,8 +773,8 @@ notify_from_echo(dbref from, dbref player, const char *msg, int isprivate)
 #endif
 
 	if (Typeof(player) == TYPE_THING && (FLAGS(player) & VEHICLE) &&
-		(!(FLAGS(player) & DARK) || Wizard(OWNER(player)))
-			) {
+		(!(FLAGS(player) & DARK) || Wizard(OWNER(player))))
+	{
 		dbref ref;
 
 		ref = getloc(player);
@@ -2397,7 +2394,6 @@ check_connect(struct descriptor_data *d, const char *msg)
 			log_status("CREATED %s(%d) on descriptor %d",
 				   NAME(player), player, d->descriptor);
 			created = 1;
-			living_put(player);
 #endif
 		} else
 			log_status("CONNECTED: %s(%d) on descriptor %d",
@@ -2410,11 +2406,11 @@ check_connect(struct descriptor_data *d, const char *msg)
 		/* cks: someone has to initialize this somewhere. */
 		PLAYER_SET_BLOCK(d->player, 0);
 		spit_file(player, MOTD_FILE);
+		announce_connect(d->descriptor, player);
 		if (created) {
 			do_help(player, "begin", "");
-			announce_connect(d->descriptor, player);
+			living_put(player);
 		} else {
-			announce_connect(d->descriptor, player);
 			interact_warn(player);
 			if (sanity_violated && Wizard(player))
 				notify(player,

@@ -1,11 +1,9 @@
-#ifndef DEBUG_H
-#define DEBUG_H
-
+#ifdef NDEBUG
+#define debug(...) do {} while (0)
+#define bassert(c) do {} while (0)
+#else
 #include <stdio.h>
-/* #define DEBUG(...) fprintf(stderr, __VA_ARGS__) */
-/* #define debug(...) debug # __FILE__(__VA_ARGS__) */
+#include <signal.h>
 #define debug(...) fprintf(stderr, __VA_ARGS__)
-/* #define debug(...) do {} while (0) */
-
-#endif /* DEBUG_H */
-
+#define bassert(c) if (!(c)) raise(SIGINT)
+#endif

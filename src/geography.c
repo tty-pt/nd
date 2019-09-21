@@ -9,15 +9,14 @@
 #include <stdlib.h>
 #include <db4/db.h>
 #include "kill.h"
+#undef NDEBUG
+#include "debug.h"
 
 #define MESGPROP_TREE	"_/tree"
 #define GETTREE(x)	get_property_value(x, MESGPROP_TREE)
 #define SETTREE(x, y)	set_property_value(x, MESGPROP_TREE, y)
 
 #define BIOME_BG(i)	(NIGHT_IS ? ANSI_RESET : biome_bgs[i])
-
-#undef NDEBUG
-#include "assert.h"
 
 #define PRECOVERY
 
@@ -178,6 +177,12 @@ pdb_put(morton_t code, dbref thing, int flags)
 	DBT key;
 	DBT data;
 
+	if (Typeof(thing) != TYPE_ROOM) {
+		debug("POINTDB INSERTION IGNORED %d TYPE %ld :(\n", thing, Typeof(thing));
+		raise(SIGINT);
+		return 1;
+	}
+
 	memset(&key, 0, sizeof(DBT));
 	memset(&data, 0, sizeof(DBT));
 
@@ -247,11 +252,12 @@ pdb_get(morton_t at)
 			ref = * (dbref *) pkey.data;
 #ifdef PRECOVERY
 			if (Typeof(ref) == TYPE_GARBAGE) {
+				debug("POINTDB GARBAGE %d REMOVED ;)\n", ref);
 				cur->c_del(cur, 0);
 				continue;
 			}
 #endif
-			assert(Typeof(ref) == TYPE_ROOM);
+			bassert(Typeof(ref) == TYPE_ROOM);
 			return ref;
 		case DB_NOTFOUND:
 			cur->close(cur);
@@ -454,7 +460,7 @@ pointdb_range_safe(pointdb_range_t *res,
 dbref
 obj_stack_add(struct obj o, dbref where, unsigned char n)
 {
-	assert(n > 0);
+	bassert(n > 0);
 	dbref nu = obj_add(o, where);
 	DBFETCH(nu)->exits = NOTHING;
 	if (n > 1)
@@ -621,7 +627,8 @@ geo_move(morton_t code, char g)
 int
 geo_is(dbref exit)
 { 
-	return !strncmp(NAME(exit), geo_name(NAME(exit)[0]), 4);
+	char const *gname = geo_name(NAME(exit)[0]);
+	return *gname && !strncmp(NAME(exit), gname, 4);
 }
 
 static inline morton_t
@@ -629,7 +636,7 @@ geo_x(dbref loc, const char dir)
 {
 	morton_t x;
 	register int ret = pdb_where(&x, loc);
-	assert(ret);
+	bassert(ret);
 	x = geo_move(x, dir);
 	return x;
 }
@@ -669,7 +676,7 @@ exit_dest(dbref exit)
 	else
 		return DBFETCH(exit)->sp.exit.dest[0];
 #else
-	assert(DBFETCH(exit)->sp.exit.ndest);
+	bassert(DBFETCH(exit)->sp.exit.ndest);
 	return DBFETCH(exit)->sp.exit.dest[0];
 #endif
 }
@@ -683,7 +690,7 @@ exit_dest_set(dbref exit, dbref dest) {
 		sp->exit.ndest = 1;
 	}
 #else
-	assert(sp->exit.ndest);
+	bassert(sp->exit.ndest);
 #endif
 	sp->exit.dest[0] = dest;
 }
@@ -795,8 +802,10 @@ _new_room_where(int descr, dbref player, dbref *ptr, dbref loc,
 	DBDIRTY(ref);
 	DBDIRTY(loc);
 	*ptr = ref;
-	if (pdb_put(pos, ref, DB_NOOVERWRITE))
+	if (pdb_put(pos, ref, DB_NOOVERWRITE)) {
+		recycle(descr, player, ref);
 		return 1;
+	}
 	struct bio *bio = noise_point(pos);
 	SETTREE(ref, (!!(bio->pln[0]))
 		| ((!!(bio->pln[1])) << 1)
@@ -854,7 +863,7 @@ static dbref
 new_room(dbref *exit_here, int descr, dbref player, dbref exit, int claim)
 {
 	morton_t x;
-	assert(exit >= 0);
+	bassert(exit >= 0);
 	dbref loc = getloc(exit);
 	dbref here;
 	const char dir = NAME(exit)[0];
@@ -894,7 +903,7 @@ new_room(dbref *exit_here, int descr, dbref player, dbref exit, int claim)
 dbref
 geo_enter_room(dbref *exit_there, int descr, dbref player, dbref exit, int v, int claim)
 {
-	assert(exit >= 0);
+	bassert(exit >= 0);
 	const char dir = NAME(exit)[0];
 	dbref there;
 	if (dir == 'u' || dir == 'd') {
@@ -903,7 +912,7 @@ geo_enter_room(dbref *exit_there, int descr, dbref player, dbref exit, int v, in
 		return NOTHING;
 	}
 	there = new_room(exit_there, descr, player, exit, claim);
-	assert(there >= 0);
+	bassert(there >= 0);
 	enter_room(descr, player, there, exit, 0);
 	return there;
 }
@@ -925,7 +934,7 @@ untmp(dbref player, dbref where)
 	tmp = DBFETCH(where)->contents;
 	DOLIST(tmp, tmp) {
 		if (Typeof(tmp) == TYPE_PLAYER) {
-			assert(tmp != player);
+			bassert(tmp != player);
 			return 0;
 		}
 	}
@@ -1666,7 +1675,7 @@ room_put_here(int descr, dbref player, char const *s)
 	dbref here = getloc(player),
 	      there = strtol(s + 1, &end, 0);
 	int present = pdb_where(&x, here);
-	assert(present);
+	bassert(present);
 	if (OWNER(here) != player) {
 		notify_fmt(player, "You don't own this room.");
 		return s - end;
@@ -1710,7 +1719,7 @@ teleport_human(int descr, dbref player, const char *cmd)
 
 skip:	x = morton3D_encode(p, obits);
 	x = teleport(descr, player, x);
-	assert(!x);
+	bassert(!x);
 	return end - cmd;
 }
 

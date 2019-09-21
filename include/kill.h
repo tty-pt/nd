@@ -20,7 +20,7 @@
 #define EM(liv, w) liv->e[AF_ ## w].mask
 
 struct living *living_get(dbref who);
-int living_put(dbref who);
+struct living *living_put(dbref who);
 
 void do_living_init(void);
 void livings_update(void);

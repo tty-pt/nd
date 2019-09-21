@@ -32,6 +32,8 @@
 #include <string.h>
 #include "xxhash.h"
 #include "params.h"
+#undef NDEBUG
+#include "debug.h"
 
 #define XXH XXH32
 
@@ -405,7 +407,7 @@ noise_plant(unsigned char *plid, unsigned char *pln, struct bio *b, noise_t v, u
 {
 	struct plant *pl = &plants[n];
 
-	assert(n < plid_max);
+	bassert(n < plid_max);
 
 	if (((v >> 6) ^ (v >> 3) ^ v) & 1)
 		return 0;
@@ -514,7 +516,7 @@ noise_full(size_t i, point_t s, ucoord_t obits)
 static inline morton_t
 view_idx(point_t pos)
 {
-	assert(chunks_r.s[Y_COORD] <= pos[Y_COORD]);
+	bassert(chunks_r.s[Y_COORD] <= pos[Y_COORD]);
 	return (pos[Y_COORD] - chunks_r.s[Y_COORD]) * chunks_r.l[X_COORD]
 		+ pos[X_COORD] - chunks_r.s[X_COORD];
 }
@@ -535,7 +537,7 @@ view_print(struct bio *to, point_t pos)
 	ucoord_t ol;
 
 	ol = chunks_r.l[WDIM];
-	assert(ol >= CHUNK_SIZE);
+	bassert(ol >= CHUNK_SIZE);
 
 	for (y = 0; y < VIEW_SIZE; y++, bo += ol - VIEW_SIZE)
 		for (x = 0; x < VIEW_SIZE; x++, bd++, bo++)
@@ -603,7 +605,7 @@ noise_chunks(point_t pos, ucoord_t obits)
 	bio = chunks_bio_raw;
 
 	if (n[X_COORD] > 1) {
-		assert(n[X_COORD] == 2);
+		bassert(n[X_COORD] == 2);
 		spread(n[Y_COORD]);
 		bio = chunks_bio;
 	}
