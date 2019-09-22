@@ -98,10 +98,10 @@ typedef enum {
 int shutdown_flag = 0;
 
 static const char *connect_fail =
-		"\aEither that player does not exist, or has a different password.\r\n";
+		"Either that player does not exist, or has a different password.\r\n";
 
 static const char *create_fail =
-		"\aEither there is already a player with that name, or that name is illegal.\r\n";
+		"Either there is already a player with that name, or that name is illegal.\r\n";
 
 static const char *flushed_message = "<Output Flushed>\r\n";
 static const char *shutdown_message = "\r\nGoing down - Bye\r\n";
@@ -149,6 +149,10 @@ struct descriptor_data {
 	const char *hostname;
 	const char *username;
 	int quota;
+        struct {
+		unsigned ip;
+		unsigned old;
+	} web;
 	struct descriptor_data *next;
 	struct descriptor_data **prev;
 	McpFrame mcpframe;
@@ -216,7 +220,7 @@ int queue_string(struct descriptor_data *, const char *);
 int queue_write(struct descriptor_data *, const char *, int);
 int process_output(struct descriptor_data *d);
 int process_input(struct descriptor_data *d);
-void announce_connect(int, dbref);
+void announce_connect(struct descriptor_data *, dbref);
 void announce_disconnect(struct descriptor_data *);
 char *time_format_1(long);
 char *time_format_2(long);
@@ -1627,6 +1631,15 @@ initializesock(int s, const char *hostname, int is_ssl)
 		descriptor_list->prev = &d->next;
 	d->next = descriptor_list;
 	d->prev = &descriptor_list;
+	{
+		char w = '\0';
+		read(s, &w, sizeof(w));
+		if (w == 'w') {
+			read(s, &d->web.ip, sizeof(d->web.ip));
+			read(s, &d->web.old, sizeof(d->web.old));
+		} else
+			memset(&d->web, 0, sizeof(d->web));
+	}
 	descriptor_list = d;
 	remember_descriptor(d);
 
@@ -1641,7 +1654,8 @@ initializesock(int s, const char *hostname, int is_ssl)
 #endif
 
 	mcp_negotiation_start(&d->mcpframe);
-	welcome_user(d);
+	if (!d->web.old)
+		welcome_user(d);
 	return d;
 }
 
@@ -2380,6 +2394,8 @@ check_connect(struct descriptor_data *d, const char *msg)
 		if (player == NOTHING) {
 #if REGISTRATION
 			queue_ansi(d, connect_fail);
+                        if (d->web.ip)
+                                queue_ansi(d, "\a0");
 			log_status("FAILED CONNECT %s on descriptor %d", user, d->descriptor);
 			return;
 #else
@@ -2387,6 +2403,9 @@ check_connect(struct descriptor_data *d, const char *msg)
 
 			if (player == NOTHING) {
 				queue_ansi(d, create_fail);
+                                if (d->web.ip)
+                                        queue_ansi(d, "\a0");
+
 				log_status("FAILED CREATE %s on descriptor %d", user, d->descriptor);
 				return;
 			}
@@ -2406,7 +2425,7 @@ check_connect(struct descriptor_data *d, const char *msg)
 		/* cks: someone has to initialize this somewhere. */
 		PLAYER_SET_BLOCK(d->player, 0);
 		spit_file(player, MOTD_FILE);
-		announce_connect(d->descriptor, player);
+		announce_connect(d, player);
 		if (created) {
 			do_help(player, "begin", "");
 			living_put(player);
@@ -2418,9 +2437,10 @@ check_connect(struct descriptor_data *d, const char *msg)
 				       "## WARNING!  The DB appears to be corrupt!  Please repair immediately! ##\n"
 				       "#########################################################################");
 		}
-		do_map(d->descriptor, player);
+		if (!d->web.old)
+                        do_map(d->descriptor, player);
 		con_players_curr++;
-	} else if (*command)
+        } else if (*command && !d->web.old)
 		welcome_user(d);
 }
 
@@ -2488,8 +2508,7 @@ boot_player_off(dbref player)
 }
 
 void
-close_sockets(const char *msg)
-{
+close_sockets(const char *msg) {
 	struct descriptor_data *d, *dnext;
 	int i;
 
@@ -2498,8 +2517,12 @@ close_sockets(const char *msg)
 		if (d->connected) {
 			forget_player_descr(d->player, d->descriptor);
 		}
-		socket_write(d, msg, strlen(msg));
-		socket_write(d, shutdown_message, strlen(shutdown_message));
+		if (d->web.ip)
+			socket_write(d, "\a1", 1);
+		else {
+			socket_write(d, msg, strlen(msg));
+			socket_write(d, shutdown_message, strlen(shutdown_message));
+		}
 		clearstrings(d);
 		if (shutdown(d->descriptor, 2) < 0)
 			perror("shutdown");
@@ -2749,12 +2772,13 @@ announce_puppets(dbref player, const char *msg, const char *prop)
 }
 
 void
-announce_connect(int descr, dbref player)
+announce_connect(struct descriptor_data *d, dbref player)
 {
 	dbref loc;
 	char buf[BUFFER_LEN];
 	struct match_data md;
 	dbref exit;
+	int descr = d->descriptor;
 
 	if ((loc = getloc(player)) == NOTHING)
 		return;
@@ -2774,7 +2798,7 @@ announce_connect(int descr, dbref player)
 			exit = NOTHING;
 	}
 
-	if (exit == NOTHING || !(FLAGS(exit) & STICKY)) {
+	if (!d->web.ip && (exit == NOTHING || !(FLAGS(exit) & STICKY))) {
 		if (can_move(descr, player, AUTOLOOK_CMD, 1)) {
 			do_move(descr, player, AUTOLOOK_CMD, 1);
 		} else {
@@ -3420,7 +3444,7 @@ pset_user(int c, dbref who)
 			d->connected = 1;
 			update_desc_count_table();
             remember_player_descr(who, d->descriptor);
-			announce_connect(d->descriptor, who);
+			announce_connect(d, who);
 		}
 		setuser_depth--;
 		return 1;
@@ -3532,32 +3556,49 @@ partial_pmatch(const char *name)
 }
 
 void
-cat(int descr, const char *fname)
+art(int descr, const char *art)
 {
 	FILE *f;
 	char *ptr;
 	char buf[BUFFER_LEN];
 	struct descriptor_data *d;
 
-	ptr = strstr(fname, "..");
-	if (strstr(fname, "..") || strstr(fname, ".pem"))
-		return;
+	if (*art == '/' || strstr(art, "..")
+	    || !(string_prefix(art, "bird/")
+		|| string_prefix(art, "fish/")))
 
-	snprintf(buf, 32, "../%s", fname);
+		return;
+	
         d = descrdata_by_descr(descr);
 
-	if ((f = fopen(buf, "rb")) != NULL) {
-		while (fgets(buf, sizeof(buf) - 3, f)) {
-			ptr = index(buf, '\n');
-			if (ptr && ptr > buf && *(ptr - 1) != '\r') {
-				*ptr++ = '\r';
-				*ptr++ = '\n';
-				*ptr++ = '\0';
-			}
-			queue_ansi(d, buf);
+	if (d->web.ip) {
+		snprintf(buf, sizeof(buf), "../art/%s.png", art);
+		if ( access(buf, F_OK) != -1 ) {
+			ssize_t n;
+			n = snprintf(buf, sizeof(buf), "<img class=\"ah\" src=\"./art/%s.png\">\r\n", art);
+			/* queue_ansi(d, buf); */
+			queue_write(d, buf, n);
+			return;
 		}
-		fclose(f);
 	}
+
+	snprintf(buf, sizeof(buf), "../art/%s.txt", art);
+
+	if ((f = fopen(buf, "rb")) == NULL) 
+		return;
+
+	while (fgets(buf, sizeof(buf) - 3, f)) {
+		ptr = index(buf, '\n');
+		if (ptr && ptr > buf && *(ptr - 1) != '\r') {
+			*ptr++ = '\r';
+			*ptr++ = '\n';
+			*ptr++ = '\0';
+		}
+		queue_ansi(d, buf);
+	}
+
+	fclose(f);
+	queue_string(d, "\r\n");
 }
 
 void
@@ -3568,11 +3609,12 @@ mob_welcome(struct descriptor_data *d)
 		assert(*o->name != '\0');
 		queue_string(d, o->name);
 		queue_string(d, "\r\n\r\n");
-		cat(d->descriptor, o->art);
-		queue_string(d, "\r\n");
-		if (*o->description != '\0')
-			queue_string(d, o->description);
-		queue_string(d, "\r\n\r\n");
+		art(d->descriptor, o->art);
+                if (*o->description) {
+                        if (*o->description != '\0')
+                                queue_string(d, o->description);
+                        queue_string(d, "\r\n\r\n");
+                }
 	}
 }
 
@@ -3583,23 +3625,26 @@ welcome_user(struct descriptor_data *d)
 	char *ptr;
 	char buf[BUFFER_LEN];
 
-	if ((f = fopen(WELC_FILE, "rb")) == NULL) {
-		queue_ansi(d, DEFAULT_WELCOME_MESSAGE);
-		perror("spit_file: welcome.txt");
-	} else {
-		while (fgets(buf, sizeof(buf) - 3, f)) {
-			ptr = index(buf, '\n');
-			if (ptr && ptr > buf && *(ptr - 1) != '\r') {
-				*ptr++ = '\r';
-				*ptr++ = '\n';
-				*ptr++ = '\0';
+        if (!d->web.ip) {
+		if ((f = fopen(WELC_FILE, "rb")) == NULL) {
+			queue_ansi(d, DEFAULT_WELCOME_MESSAGE);
+			perror("spit_file: welcome.txt");
+		} else {
+			while (fgets(buf, sizeof(buf) - 3, f)) {
+				ptr = index(buf, '\n');
+				if (ptr && ptr > buf && *(ptr - 1) != '\r') {
+					*ptr++ = '\r';
+					*ptr++ = '\n';
+					*ptr++ = '\0';
+				}
+				queue_ansi(d, buf);
 			}
-			queue_ansi(d, buf);
+			fclose(f);
 		}
-		fclose(f);
 	}
 
-	mob_welcome(d);
+        if (!d->web.old)
+		mob_welcome(d);
 
 	if (wizonly_mode) {
 		queue_ansi(d, "## The game is currently in maintenance mode, and only wizards will be able to connect.\r\n");
@@ -3681,19 +3726,17 @@ ssize_t socket_read(struct descriptor_data *d, void *buf, size_t count) {
 			if (i == SSL_ERROR_WANT_READ || i == SSL_ERROR_WANT_WRITE) {
 				/* log_ssl_error("read 0", d->descriptor, i); */
  				errno = EWOULDBLOCK;
-				return -1;
 			} else if (d->is_starttls && (i == SSL_ERROR_ZERO_RETURN || i == SSL_ERROR_SSL)) {
 				/* log_ssl_error("read 1", d->descriptor, i); */
 				d->is_starttls = 0;
 				SSL_free(d->ssl_session);
 				d->ssl_session = NULL;
 				errno = EWOULDBLOCK;
-				return -1;
 			} else {
 				/* log_ssl_error("read 1", d->descriptor, i); */
 				errno = EBADF;
-				return -1;
 			}
+			return -1;
 		}
 		return i;
 	}

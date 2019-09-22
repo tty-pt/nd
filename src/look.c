@@ -146,21 +146,20 @@ look_contents(dbref player, dbref loc, const char *contents_name)
 	}
 }
 
-extern void cat(dbref descr, const char *fname);
+extern void art(dbref descr, const char *arts);
 
 static void
 look_simple(int descr, dbref player, dbref thing)
 {
-	char const *art = GETMESG(thing, MESGPROP_ART);
-	if (art) {
-		cat(descr, art);
-		notify(player," ");
-	}
+	char const *art_str = GETMESG(thing, MESGPROP_ART);
+
+	if (art_str)
+		art(descr, art_str);
 
 	if (GETDESC(thing)) {
 		exec_or_notify(descr, player, thing, GETDESC(thing), "(@Desc)",
 				Prop_Blessed(thing, MESGPROP_DESC)? MPI_ISBLESSED : 0);
-	} else if (!art) {
+	} else if (!art_str) {
 		notify(player, "You see nothing special.");
 	}
 }

@@ -1,0 +1,31 @@
+srcdir	:= ../${srcdir}
+
+-include Makefile
+
+cflags-y	+= -I/usr/local/include -I${srcdir}/include
+ldflags-y	+= -L/usr/local/lib
+#ldlibs-y ommited
+
+CFLAGS		+= ${cflags-y}
+LDFLAGS		+= ${ldflags-y}
+LDLIBS		+= ${ldlibs-y}
+
+subdirs		:= ${obj-y:M*/}$(filter %/,${obj-y})
+real-obj-y	:= ${obj-y:N*/}$(filter %.o,${obj-y})
+
+all: ${exe}
+
+$(exe): ${real-obj-y} ${exe-obj-y}
+	${LINK.c} -o $@ ${real-obj-y} ${$@-obj-y} ${ldlibs-y}
+
+RELDIR=${PWD:${srcdir}/%=%}
+
+clean:
+	@echo rm ${RELDIR}/{ ${exe} ${exe-obj-y} ${real-obj-y} ${deps}}
+	@rm ${exe} ${exe-obj-y} ${real-obj-y} ${deps} >/dev/null 2>&1 || true
+
+deps: # ${deps}
+	@[[ -z "${real-obj-y}" ]] || \
+		mkdep ${CFLAGS} ${real-obj-y:%.o=%.c}
+
+include Makefile.common

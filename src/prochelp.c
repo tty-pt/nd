@@ -291,13 +291,11 @@ print_all_section_topics(FILE * f, FILE * hf)
 void
 print_sections(FILE * f, FILE * hf, int cols)
 {
-	struct topiclist *ptr;
 	struct topiclist *sptr;
 	char sectname[256];
 	char *osectptr;
 	char *sectptr;
 	char buf[256];
-	char buf2[256];
 	char buf3[256];
 	char buf4[256];
 	int cnt;

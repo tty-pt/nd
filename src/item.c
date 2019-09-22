@@ -300,10 +300,10 @@ ARMORSET_HEAVY(chainmail, 15, 5);
 #undef ARMORSET
 
 #define FIGHTER F(STR) | F(CON) | F(DEX)
-#define MOB(s, de) { #s, "art/"#s".txt", de }
-#define BIRD(s, d) .o = { #s, "art/bird/" #s ".txt", d }, \
+#define MOB(s, de) { #s, #s, de }
+#define BIRD(s, d) .o = { #s, "bird/" #s, d }, \
 	.wt = PECK, .type = ELM_AIR
-#define FISH(s, d) .o = { #s, "art/fish/" #s ".txt", d }, \
+#define FISH(s, d) .o = { #s, "fish/" #s, d }, \
 	.wt = BITE, .type = ELM_ICE
 
 const unsigned ofs_water = 1;

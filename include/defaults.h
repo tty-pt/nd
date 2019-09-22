@@ -1,6 +1,8 @@
 #ifndef _DEFAULTS_H
 #define _DEFAULTS_H
 
+/* #define MUD_ID "www" */
+
 #define DUMPWARN_MESG   "## Game will pause to save the database in a few minutes. ##"
 #define DELTAWARN_MESG  "## Game will pause to save changed objects in a few minutes. ##"
 #define DUMPDELTAS_MESG "## Saving changed objects ##"

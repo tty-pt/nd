@@ -86,4 +86,4 @@ extern const char *interface_h_version;
 #endif
 
 /* extern void art_print(dbref player, dbref what); */
-void cat(int descr, const char *fname);
+void art(int descr, const char *art_str);

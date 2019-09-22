@@ -57,7 +57,7 @@ func s:Connect()
 				\ "term_kill": "int",
 				\ "curwin": 1,
 				\ })
-	call term_sendkeys(muckt, "connect One qovmjbl\<cr>")
+	call term_sendkeys(muckt, " c One qovmjbl\<cr>")
 	let s:muckw = win_getid()
 	let s:muckb = bufnr('%')
 	call win_gotoid(id)
@@ -120,6 +120,9 @@ tno <esc>q <c-w>:call Quit()<cr>
 
 set efm +=%Dmake\ -C\ %f\ %.%#
 set efm +=%Xcd\ ..
+" jsc
+set efm +=%E%f:%l:\ ERROR\ \-\ %m,%-Z%p^
+set efm +=%W%f:%l:\ WARNING\ \-\ %m,%-Z%p^
 
 fu! Ctof(c)
 	let l:r = a:c * 9 / 6 + 32

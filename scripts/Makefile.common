@@ -1,0 +1,37 @@
+Q := @
+QD := 
+#GNU := 1
+
+all: ${subdirs}
+
+.PHONY: all
+.MAIN: all
+
+MFLAGS := srcdir=${srcdir} -I${srcdir}/scripts \
+	-f ${srcdir}/scripts/Makefile.build
+
+$(subdirs): FORCE
+	${MAKE} -C $@ ${MFLAGS}
+	cd ..
+
+subdirs-clean != [[ -z "${subdirs}" ]] || echo ${subdirs:%=%-clean}
+
+$(subdirs-clean): FORCE
+	${Q}${MAKE} -C ${@:%-clean=%} ${MFLAGS} clean
+
+clean: ${subdirs-clean}
+
+.PHONY: clean
+
+subdirs-deps != [[ -z "${subdirs}" ]] || echo ${subdirs:%=%-deps}
+
+$(subdirs-deps): FORCE
+	${MAKE} -C ${@:-deps=} ${MFLAGS} deps
+
+deps: ${subdirs-deps}
+
+.PHONY: deps
+
+FORCE:
+
+-include .depend

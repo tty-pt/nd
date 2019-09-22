@@ -1175,11 +1175,6 @@ process_command(int descr, dbref player, char *command)
 			Matched("buy");
 			do_buy(descr, player, arg1, arg2);
 			break;
-		case 'c':
-			/* cat */
-			Matched("cat");
-			cat(descr, arg1);
-			break;
 		case 'd':
 		case 'D':
 			/* disembark, drink, drop */

@@ -1,4 +1,4 @@
-srcdir= ..
+# srcdir= ..
 
 prefix?=/usr/local
 INCLUDE= ${srcdir}/include
@@ -6,17 +6,14 @@ INSTALL_BINDIR=${prefix}/bin
 INSTALL_HELPDIR=${prefix}/share/fbmuck
 CONFIG_SSL=y
 
-libs-y := -lpcre -lm -lxxhash -ldb
-libs-$(CONFIG_SSL) += -lssl -lcrypto
-LDFLAGS = -L/usr/local/lib -L/usr/lib ${libs-y}
+ldlibs-y := -lpcre -lm -lxxhash -ldb
+ldlibs-$(CONFIG_SSL) += -lssl -lcrypto
+cflags-y := -g -Wall -Wno-initializer-overrides
 
-CFLAGS := -g -Wall -Wno-initializer-overrides \
-	-I${INCLUDE} -I/usr/include -I/usr/local/include
+exe := fbmuck prochelp
+src = ChangeLog COPYING ${real-obj-y:%.o=%.c} compress.c
 
-# CC = gcc
-# CFLAGS += -O1 -fdump-tree-optimized
-
-obj-y := crt_malloc.o geometry.o noise.o geography.o item.o kill.o shop.o \
+fbmuck-obj-y := crt_malloc.o geometry.o noise.o geography.o item.o kill.o shop.o \
         array.o boolexp.o compile.o create.o db.o db_header.o debugger.o \
 	disassem.o diskprop.o edit.o events.o game.o hashtab.o help.o inst.o \
 	interp.o log.o look.o match.o mcp.o mcpgui.o mcppkgs.o mfuns2.o \
@@ -26,14 +23,13 @@ obj-y := crt_malloc.o geometry.o noise.o geography.o item.o kill.o shop.o \
 	props.o p_stack.o p_strings.o random.o rob.o sanity.o set.o \
 	signal.o smatch.o snprintf.o speech.o strftime.o stringutil.o \
 	timequeue.o timestamp.o unparse.o utils.o wiz.o \
-	version.o interface.o copyright.o
+	version.o copyright.o interface.o
 
-TARGETS := fbmuck
-src := ChangeLog COPYING ${obj-y:%.o=%.c} compress.c ${TARGETS:%=%.c}
+prochelp-obj-y := prochelp.o
+
+exe-obj-y := ${fbmuck-obj-y} ${prochelp-obj-y}
 
 HELPFILES := man.txt help.txt mpihelp.txt
-
-all: ${TARGETS}
 
 version.o: version.h version.c
 
@@ -44,28 +40,22 @@ version.h:
 		printf "#define HASH \"$$HASH\"\n#define DATE \"$$DATE\"\n" ; \
 	} > $@
 
-fbmuck: ${obj-y}
-	${LINK.c} -o $@ ${obj-y}
-
 tags: ${src}
 	${CTAGS} --c-types=-m ${src} ../include/*.h
 
 .depend: ${obj-y:%.o=%.c}
 	mkdep ${CFLAGS} -I../include ${obj-y:%.o=%.c}
 
-clean:
-	-rm *.o core ${TARGETS} || true
-
 cleaner: clean
-	-rm config.status config.cache config.log ${INCLUDE}/autoconf.h ${TARGETS} prochelp
+	-rm config.status config.cache config.log ${INCLUDE}/autoconf.h ${exe} prochelp
 
 install: all
 	${INSTALL} -d ${INSTALL_BINDIR}
-	${INSTALL} ${TARGETS} ${INSTALL_BINDIR}
+	${INSTALL} ${exe} ${INSTALL_BINDIR}
 	${INSTALL} -d ${INSTALL_HELPDIR}
 	cd ../game/data && ${INSTALL} -m 644 ${HELPFILES} ${INSTALL_HELPDIR}
 	${INSTALL} ../game/restart ${INSTALL_HELPDIR}/restart-script
 
-.PHONY: version.h clean cleaner install
+.PHONY: version.h cleaner install
 
 # FIXME: Check base and minimal dbs into CVS as unpacked file trees under dbs/

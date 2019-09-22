@@ -1,9 +1,8 @@
-srcdir := ../..
+.SUFFIXES : .txt .raw
 
-prochelp: ${srcdir}/src/prochelp.c
-	cc ${srcdir}/src/prochelp.c -o ${@}
+obj-y := mpihelp.txt mufman.txt muckhelp.txt
 
-help: prochelp muckhelp.raw
-	./prochelp muckhelp.raw help.txt ${srcdir}/docs/muckhelp.html
+all: ${obj-y}
 
-.PHONY: help
+.raw.txt:
+	${srcdir}/src/prochelp $< $@ ${@:%.txt=${srcdir}/docs/%.html}
