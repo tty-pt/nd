@@ -6,6 +6,7 @@
 #include "kill.h"
 #include "db.h"
 #include "interface.h"
+#include "debug.h"
 
 #define DMG_WEAPON(x) IE(x, DMG_G)
 #define WTS_WEAPON(eq) phys_wts[GETEQT(eq)]
@@ -65,7 +66,7 @@ rarity_get() {
 dbref
 obj_add(struct obj o, dbref where)
 {
-	assert(where >= 0);
+	CBUG(where < 0);
 	dbref nu = new_object();
 	NAME(nu) = alloc_string(o.name);
 	SETART(nu, alloc_string(o.art));
@@ -129,35 +130,35 @@ equip_calc(struct living *p, dbref eq)
 }
 
 static int
-cannot_equip(dbref player, dbref eq)
+cannot_equip(struct living *liv, dbref eq)
 {
-	struct living *liv = living_get(player);
 	unsigned eql = GETEQL(eq);
+	dbref who = liv->who;
 
-	if (GETEQ(player, eql)
+	if (GETEQ(who, eql)
 	    || equip_calc(liv, eq))
 		return 1;
 
-	SETEQ(player, eql, eq);
+	SETEQ(who, eql, eq);
 	DBFETCH(eq)->flags |= DARK;
 	DBDIRTY(eq);
 
-	notify_fmt(player, "You equip %s.", NAME(eq));
+	notify_fmt(who, "You equip %s.", NAME(eq));
 	return 0;
 }
 
 static inline dbref
-item_add(struct item i, dbref who)
+item_add(struct living *liv, struct item i)
 {
 	dbref nu;
 
-	nu = obj_add(i.o, who);
+	nu = obj_add(i.o, liv->who);
 	SETEQW(nu, i.eqw);
 	SETMSV(nu, i.msv);
 	SETRARE(nu, rarity_get());
 
-	if (!cannot_equip(who, nu))
-		SETEQ(who, i.eqw, nu);
+	if (!cannot_equip(liv, nu))
+		SETEQ(liv->who, i.eqw, nu);
 
 	return nu;
 }
@@ -190,7 +191,7 @@ do_equip(int descr, dbref player, char const *name)
 		return;
 	}
 
-	if (cannot_equip(player, eq)) { 
+	if (cannot_equip(living_get(player), eq)) { 
 		notify(player, "You can't equip that.");
 		return;
 	}
@@ -408,11 +409,11 @@ mob_add_stats(struct mob const *mob, dbref nu)
 }
 
 static inline void
-mob_loot_gen(struct drop **drop, dbref ref)
+mob_inventory(struct living *liv, struct drop **drop)
 {
 	for (; *drop; drop++)
 		if (random() < (RAND_MAX >> (*drop)->y))
-			item_add((*drop)->i, ref);
+			item_add(liv, (*drop)->i);
 }
 
 static inline int
@@ -426,21 +427,26 @@ extern int night_is(void);
 static inline dbref
 mob_add(unsigned mid, dbref where, struct bio *b) {
 	struct mob const *mob = &mobs[mid];
+	struct drop *drop[8];
+	struct living *liv;
+	dbref nu;
 
 	if ((bird_is(mob) && !(b->pln[0] || b->pln[1] || b->pln[2]))
 	    || (!night_is() && (mob->type == ELM_DARK || mob->type == ELM_VAMP))
 	    || random() >= (RAND_MAX >> mob->y))
 		return NOTHING;
 
-	dbref nu = obj_add(mob->o, where);
-	struct drop *drop[8];
+	nu = obj_add(mob->o, where);
 	memset(drop, 0, sizeof(drop));
 
 	SETMID(nu, mid);
 	SETAGGRO(nu, mob->flags & MOB_AGGRO);
 	mob_add_stats(mob, nu);
-	living_put(nu);
-	mob_loot_gen((struct drop **) mob->drop, nu);
+	liv = living_put(nu);
+
+	debug("%d %s loc %d %s MID %d", nu, NAME(nu), where, NAME(where), mid);
+
+	mob_inventory(liv, (struct drop **) mob->drop);
 
 	if (bird_is(mob)) {
 		struct drop feather = { {{ "%s's feather", "", "" }}, 1 };
@@ -457,7 +463,7 @@ mob_add(unsigned mid, dbref where, struct bio *b) {
 		/* drop[0] = &feather; */
 	/* } */
 
-	mob_loot_gen(drop, nu);
+	mob_inventory(liv, drop);
 
 	return nu;
 }
@@ -467,6 +473,7 @@ mobs_add(struct bio *b, dbref w) {
 	unsigned mid,
 		 n = 0;
 	int o = 0;
+	CBUG(w <= 0);
 
 	// TODO more consistent logic that doesn't need
 	// me to mess around with this index stuff
@@ -530,8 +537,9 @@ mobs_aggro(int descr, dbref player)
 	int klock = 0;
 
 	DOLIST(tmp, DBFETCH(getloc(player))->contents) {
-		struct living *liv = living_get(tmp);
-		if (liv && GETAGGRO(tmp)) {
+		int lid = GETLID(tmp);
+		if (lid >= 0 && GETAGGRO(tmp)) {
+			struct living *liv = living_get(tmp);
 			liv->target = living_get(player);
 			klock++;
 		}

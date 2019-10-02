@@ -99,7 +99,7 @@
 #define OBJECT_COST 10			/* Amount it costs to make an object    */
 #define EXIT_COST 1				/* Amount it costs to make an exit      */
 #define LINK_COST 1				/* Amount it costs to make a link       */
-#define ROOM_COST 10			/* Amount it costs to dig a room        */
+#define ROOM_COST 80			/* Amount it costs to dig a room        */
 #define LOOKUP_COST 0			/* cost to do a scan                    */
 #define MAX_PENNIES 10000		/* amount at which temple gets cheap    */
 #define PENNY_RATE 0			/* 1/chance of getting a penny per room */

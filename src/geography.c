@@ -9,6 +9,7 @@
 #include <stdlib.h>
 #include <db4/db.h>
 #include "kill.h"
+#include "externs.h"
 #undef NDEBUG
 #include "debug.h"
 
@@ -35,7 +36,7 @@ struct cmd_dir {
 	morton_t rep;
 };
 
-typedef int op_t(int descr, dbref player, const char dir);
+typedef void op_t(int descr, dbref player, const char dir);
 
 // see http://www.vision-tools.com/h-tropf/multidimensionalrangequery.pdf
 
@@ -171,17 +172,14 @@ err:	ipdb->close(ipdb, 0);
 	return ret;
 }
 
-static int
+static void
 pdb_put(morton_t code, dbref thing, int flags)
 {
 	DBT key;
 	DBT data;
+	int ret;
 
-	if (Typeof(thing) != TYPE_ROOM) {
-		debug("POINTDB INSERTION IGNORED %d TYPE %ld :(\n", thing, Typeof(thing));
-		raise(SIGINT);
-		return 1;
-	}
+	CBUG(Typeof(thing) != TYPE_ROOM);
 
 	memset(&key, 0, sizeof(DBT));
 	memset(&data, 0, sizeof(DBT));
@@ -190,39 +188,41 @@ pdb_put(morton_t code, dbref thing, int flags)
 	key.size = sizeof(thing);
 	data.data = &code;
 	data.size = sizeof(code);
-	return ipdb->put(ipdb, NULL, &key, &data, flags);
+
+	ret = ipdb->put(ipdb, NULL, &key, &data, flags);
+	CBUG(ret);
 }
 
-static inline int
+static inline void
 pdb_move(dbref thing, morton_t code)
 {
-	return pdb_put(code, thing, 0);
+	pdb_put(code, thing, 0);
 }
 
-static int
-pdb_where(morton_t *code, dbref thing)
+morton_t
+pdb_where(dbref room)
 {
+	int bad;
 	DBT key;
 	DBT data;
-	int err;
 
 	memset(&key, 0, sizeof(DBT));
 	memset(&data, 0, sizeof(DBT));
-	key.data = &thing;
-	key.size = sizeof(thing);
+	key.data = &room;
+	key.size = sizeof(room);
 
-	err = ipdb->get(ipdb, NULL, &key, &data, 0);
-	switch (err) {
-	case 0:
-		*code = * (morton_t *) data.data;
-		return 1;
-
-	case DB_NOTFOUND:
-		return 0;
-
-	default:
-		abort();
+	if ((bad = ipdb->get(ipdb, NULL, &key, &data, 0))) {
+		BUG("room %d db get: %s", room, db_strerror(bad));
+#ifdef PRECOVERY
+		static morton_t code = 130056652770671ULL;
+		if (bad == DB_NOTFOUND) {
+			pdb_put(code, room, DB_NOOVERWRITE);
+			return code;
+		}
+#endif
 	}
+
+	return * (morton_t *) data.data;
 }
 
 static dbref
@@ -252,12 +252,12 @@ pdb_get(morton_t at)
 			ref = * (dbref *) pkey.data;
 #ifdef PRECOVERY
 			if (Typeof(ref) == TYPE_GARBAGE) {
-				debug("POINTDB GARBAGE %d REMOVED ;)\n", ref);
+				debug("GARBAGE %d REMOVED ;)", ref);
 				cur->c_del(cur, 0);
 				continue;
 			}
 #endif
-			bassert(Typeof(ref) == TYPE_ROOM);
+			CBUG(Typeof(ref) != TYPE_ROOM);
 			return ref;
 		case DB_NOTFOUND:
 			cur->close(cur);
@@ -270,9 +270,7 @@ int
 geo_delete(dbref what)
 {
 	DBT key;
-	morton_t code;
-
-	pdb_where(&code, what);
+	morton_t code = pdb_where(what);
 	memset(&key, 0, sizeof(key));
 	key.data = &code;
 	key.size = sizeof(code);
@@ -460,9 +458,9 @@ pointdb_range_safe(pointdb_range_t *res,
 dbref
 obj_stack_add(struct obj o, dbref where, unsigned char n)
 {
-	bassert(n > 0);
+	CBUG(n <= 0);
 	dbref nu = obj_add(o, where);
-	DBFETCH(nu)->exits = NOTHING;
+	/* DBFETCH(nu)->exits = NOTHING; */
 	if (n > 1)
 		SETSTACK(nu, n);
 	return nu;
@@ -526,15 +524,6 @@ others_add(int descr, dbref player, struct bio *b, dbref where, morton_t p)
 	if (n && (v & 0x18))
 		obj_stack_add(stone, where, n);
 	plants_add(descr, player, b, where);
-}
-
-static inline void
-bio_enter(int descr, dbref player, morton_t p, dbref where)
-{
-	struct bio *b = noise_point(p);
-	mobs_add(b, where);
-	others_add(descr, player, b, where, p);
-	SETFLOOR(where, b->bio_idx);
 }
 
 /* }}} */
@@ -612,7 +601,8 @@ geo_simm(const char c)
 static inline morton_t
 geo_move(morton_t code, char g)
 {
-	point3D_t p = { 0, 0, 0 };
+	point3D_t p;
+	morton3D_decode(p, code);
 	switch (g) {
 	case 'n': p[Y_COORD]--; break;
 	case 's': p[Y_COORD]++; break;
@@ -621,7 +611,7 @@ geo_move(morton_t code, char g)
 	case 'u': p[2]++; break;
 	case 'd': p[2]--; break;
 	}
-	return morton3D_add(code, p, OBITS(code));
+	return morton3D_encode(p, OBITS(code));
 }
 
 int
@@ -634,17 +624,7 @@ geo_is(dbref exit)
 static inline morton_t
 geo_x(dbref loc, const char dir)
 {
-	morton_t x;
-	register int ret = pdb_where(&x, loc);
-	bassert(ret);
-	x = geo_move(x, dir);
-	return x;
-}
-
-int
-geo_has(dbref what) {
-	morton_t p;
-	return pdb_where(&p, what);
+	return geo_move(pdb_where(loc), dir);
 }
 
 static inline dbref
@@ -676,13 +656,14 @@ exit_dest(dbref exit)
 	else
 		return DBFETCH(exit)->sp.exit.dest[0];
 #else
-	bassert(DBFETCH(exit)->sp.exit.ndest);
+	CBUG(!DBFETCH(exit)->sp.exit.ndest);
 	return DBFETCH(exit)->sp.exit.dest[0];
 #endif
 }
 
-static inline void
-exit_dest_set(dbref exit, dbref dest) {
+void
+exit_dest_set(dbref exit, dbref dest)
+{
 	union specific *sp = &DBFETCH(exit)->sp;
 #ifdef PRECOVERY
 	if (!sp->exit.ndest) {
@@ -690,7 +671,7 @@ exit_dest_set(dbref exit, dbref dest) {
 		sp->exit.ndest = 1;
 	}
 #else
-	bassert(sp->exit.ndest);
+	CBUG(!sp->exit.ndest);
 #endif
 	sp->exit.dest[0] = dest;
 }
@@ -717,16 +698,6 @@ geo_exit(int descr, dbref player, dbref loc, dbref loc2, const char dir)
 	exit_dest_set(ref, loc2);
 	DBDIRTY(ref);
 
-	return ref;
-}
-
-static inline dbref
-geo_exit_simm(int descr, dbref player, dbref exit)
-{
-	dbref ref = geo_exit(descr, player, exit_dest(exit),
-			     getloc(exit), geo_simm(NAME(exit)[0]));
-	if (!GETTMP(getloc(exit)))
-		SETDOOR(ref, GETDOOR(exit));
 	return ref;
 }
 
@@ -766,13 +737,33 @@ fee_fail(dbref player, char *desc, char *info, int cost)
 
 static inline int
 fee_noname(dbref player) {
-	return fee_fail(player, "claim a room", "", 80);
+	return fee_fail(player, "claim a room", "", ROOM_COST);
+}
+
+static inline void
+wall_around(int descr, dbref player, dbref exit)
+{
+	dbref here = getloc(exit);
+	const char *s;
+	for (s = geo_other(NAME(exit)[0]); *s; s++) {
+		dbref oexit = geo_exit_where(descr, player, here, *s);
+		dbref there = geo_there(here, *s);
+
+		if (oexit >= 0 && there < 0)
+			recycle(descr, player, oexit);
+	}
 }
 
 int
-room_claim(dbref player, dbref room) {
-	if (!GETTMP(room))
+room_claim(int descr, dbref player, dbref room) {
+	if (!GETTMP(room)) {
+		if (OWNER(room) != player) {
+			notify(player, "You don't own this room");
+			return 1;
+		}
+
 		return 0;
+	}
 
 	if (fee_noname(player))
 		return 1;
@@ -780,52 +771,18 @@ room_claim(dbref player, dbref room) {
 	SETTMP(room, 0);
 	OWNER(room) = player;
 	room = DBFETCH(room)->contents;
+
 	DOLIST(room, room)
 		if (Typeof(room) == TYPE_EXIT && geo_is(room))
 			OWNER(room) = player;
-	return 0;
-}
 
-static int
-_new_room_where(int descr, dbref player, dbref *ptr, dbref loc,
-		const char *b, morton_t pos)
-{
-	dbref ref = new_object();
-	/* TODO reusable */
-	NAME(ref) = alloc_string(b);
-	DBFETCH(ref)->location = loc;
-	OWNER(ref) = player;
-	DBFETCH(ref)->exits = NOTHING;
-	DBFETCH(ref)->sp.room.dropto = NOTHING;
-	FLAGS(ref) = TYPE_ROOM | (FLAGS(player) & JUMP_OK);
-	PUSH(ref, DBFETCH(loc)->contents);
-	DBDIRTY(ref);
-	DBDIRTY(loc);
-	*ptr = ref;
-	if (pdb_put(pos, ref, DB_NOOVERWRITE)) {
-		recycle(descr, player, ref);
-		return 1;
-	}
-	struct bio *bio = noise_point(pos);
-	SETTREE(ref, (!!(bio->pln[0]))
-		| ((!!(bio->pln[1])) << 1)
-		| ((!!(bio->pln[2])) << 2));
 	return 0;
 }
 
 static void
-exits_infer(dbref *exit_here, int descr, dbref player, dbref here, dbref exit)
+exits_infer(int descr, dbref player, dbref here)
 {
 	const char *s = "wedsun";
-
-	if (exit >= 0) {
-		const char dir = NAME(exit)[0];
-		here = exit_dest(exit);
-		s = geo_other(geo_simm(dir));
-		exit_dest_set(exit, here);
-		if (exit_here)
-			*exit_here = geo_exit_simm(descr, player, exit);
-	}
 
 	for (; *s; s++) {
 		dbref oexit, exit_there, there = geo_there(here, *s);
@@ -840,80 +797,59 @@ exits_infer(dbref *exit_here, int descr, dbref player, dbref here, dbref exit)
 			continue;
 
 		oexit = geo_exit(descr, player, here, there, *s);
+		/* if (there > 0 && !GETTMP(there)) */
 		SETDOOR(oexit, GETDOOR(exit_there));
 		exit_dest_set(exit_there, here);
 	}
 }
 
-static inline void
-wall_around(int descr, dbref player, dbref exit)
+static dbref
+geo_room_at(int descr, dbref player, morton_t x)
 {
-	dbref here = exit_dest(exit);
-	const char *s;
-	for (s = geo_other(geo_simm(NAME(exit)[0])); *s; s++) {
-		dbref oexit = geo_exit_where(descr, player, here, *s);
-		dbref there = geo_there(here, *s);
-
-		if (oexit >= 0 && there < 0)
-			recycle(descr, player, oexit);
+	struct bio *bio;
+	static const dbref loc = 0;
+	dbref there = new_object();
+	CBUG(there <= 0);
+	pdb_put(x, there, DB_NOOVERWRITE);
+	NAME(there) = alloc_string("No name");
+	DBFETCH(there)->location = loc;
+	OWNER(there) = player;
+	DBFETCH(there)->exits = NOTHING;
+	DBFETCH(there)->sp.room.dropto = NOTHING;
+	FLAGS(there) = TYPE_ROOM | (FLAGS(player) & JUMP_OK);
+	PUSH(there, DBFETCH(loc)->contents);
+	DBDIRTY(there);
+	DBDIRTY(loc);
+	bio = noise_point(x);
+	CBUG(there <= 0);
+	exits_infer(descr, player, there);
+	SETTMP(there, 1);
+	{
+		point3D_t pos;
+		morton3D_decode(pos, x);
+		if (pos[2] != 0)
+			return there;
+		SETTREE(there, (!!(bio->pln[0]))
+			| ((!!(bio->pln[1])) << 1)
+			| ((!!(bio->pln[2])) << 2));
+		SETFLOOR(there, bio->bio_idx);
+		mobs_add(bio, there);
+		others_add(descr, player, bio, there, x);
 	}
+	return there;
 }
 
-static dbref
-new_room(dbref *exit_here, int descr, dbref player, dbref exit, int claim)
+// exclusively called by trigger() and carve, in vertical situations
+dbref
+geo_room(int descr, dbref player, dbref exit)
 {
 	morton_t x;
-	bassert(exit >= 0);
-	dbref loc = getloc(exit);
-	dbref here;
 	const char dir = NAME(exit)[0];
+	dbref here = getloc(exit), there;
 
-	if (loc < 0 || GETTMP(loc))
-		loc = 0;
-	else
-		loc = getloc(loc);
+	x = geo_x(here, dir);
+	there = geo_room_at(descr, player, x);
 
-	x = geo_x(getloc(exit), dir);
-	if (_new_room_where(descr, player, &here, loc, "No name", x))
-		return NOTHING;
-
-	SETTMP(here, 1);
-
-	if (dir == 'u' || dir == 'd') {
-		if (room_claim(player, here)
-		|| room_claim(player, getloc(exit)))
-			return NOTHING;
-	} else if (claim && room_claim(player, here))
-		return NOTHING;
-
-	exit_dest_set(exit, here);
-	exits_infer(exit_here, descr, player, NOTHING, exit);
-
-	if (dir != 'u' && dir != 'd')
-		bio_enter(descr, player, x, here);
-	else {
-		if (dir == 'u')
-			wall_around(descr, player, *exit_here);
-		wall_around(descr, player, exit);
-	}
-
-	return here;
-}
-
-dbref
-geo_enter_room(dbref *exit_there, int descr, dbref player, dbref exit, int v, int claim)
-{
-	bassert(exit >= 0);
-	const char dir = NAME(exit)[0];
-	dbref there;
-	if (dir == 'u' || dir == 'd') {
-		if (v)
-			notify(player, "You can't go that way.");
-		return NOTHING;
-	}
-	there = new_room(exit_there, descr, player, exit, claim);
-	bassert(there >= 0);
-	enter_room(descr, player, there, exit, 0);
 	return there;
 }
 
@@ -921,340 +857,295 @@ geo_enter_room(dbref *exit_there, int descr, dbref player, dbref exit, int v, in
 
 /* OPS {{{ */
 
-/* UNTMP {{{ */
-
-static inline int
-untmp(dbref player, dbref where)
-{
-	dbref tmp;
-
-	if (where < 0 || !GETTMP(where))
-		return 0;
-
-	tmp = DBFETCH(where)->contents;
-	DOLIST(tmp, tmp) {
-		if (Typeof(tmp) == TYPE_PLAYER) {
-			bassert(tmp != player);
-			return 0;
-		}
-	}
-
-	return 1;
-}
-
-static void
-_untmp_clean(int descr, dbref player, dbref what)
-{
-	dbref tmp;
-	for (; (tmp = DBFETCH(what)->contents) != NOTHING; )
-		switch (Typeof(tmp)) {
-		case TYPE_GARBAGE:
-			break;
-		case TYPE_THING: {
-			struct living *liv = living_get(tmp);
-			if (liv)
-				liv->who = 0;
-		}
-		default:
-			_untmp_clean(descr, player, tmp);
-		}
-	// TODO tail recursion?
-	recycle(descr, player, what);
-}
+/* used only on enter_room */
 
 dbref
 untmp_clean(int descr, dbref player, dbref here)
 {
-	char *s = "wedsun";
-	if (untmp(player, here)) {
-		// reset exits to nothing
-		for (; *s; s++) {
-			dbref there = geo_there(here, *s);
-			if (there < 0)
-				continue;
+	dbref tmp;
 
-			dbref oexit = geo_exit_where(descr, player, there, geo_simm(*s));
+	if (!GETTMP(here))
+		return here;
 
-			if (oexit >= 0)
-				exit_dest_set(oexit, NOTHING);
+	tmp = DBFETCH(here)->contents;
+	DOLIST(tmp, tmp)
+		if (Typeof(tmp) == TYPE_PLAYER) {
+			CBUG(tmp == player);
+			return here;
 		}
-		geo_delete(here);
-		_untmp_clean(descr, player, here);
-		return NOTHING;
-	}
 
-	return here;
+	recycle(descr, player, here);
+	return NOTHING;
 }
 
-/* }}} */
-
-/* walk, wall, unwall, door, undoor, carve, uncarve
- * return whether or not a redrawn is due.
- */
-
-/* WALK {{{ */
-
-static inline int
-walk(int descr, dbref player, const char dir) {
-	dbref exit = geo_exit_here(descr, player, dir);
-	dbref there;
-	int ret = 1;
-
-	if (!can_doit(descr, player, exit, "You can't go that way."))
-		return 0;
-
-#ifdef PRECOVERY
-	there = exit_dest(exit);
-	{
-		dbref othere = geo_there(getloc(player), dir);
-		if (there != othere) {
-			morton_t x = geo_x(getloc(player), dir);
-			pdb_move(there, x);
-			exit_dest_set(exit, there);
-		}
-	}
-#else
-	there = exit_dest(exit);
-	// FIXME actually,
-	// exit_dest SHOULD WORK ALL THE TIME!
-	/* there = geo_there(getloc(player), dir); */
-#endif
-
-	if (there >= 0)
-		enter_room(descr, player, there, exit, 0);
-	else
-		ret = geo_enter_room(&exit, descr, player, exit, 1, 0) != NOTHING;
-
-	return ret;
-}
-
-/* }}} */
-
-/* ROOM_EXIT_OWNED {{{ */
-
-static inline dbref
-room_exit_owned(const char *a, int descr, dbref player,
-		dbref where, const char dir, int claim, int create)
-{
-	dbref exit;
-
-	if (OWNER(where) != player) {
-		notify_fmt(player, "You don't own th%s room.", a);
-		return NOTHING;
-	}
-
-	if (claim && room_claim(player, where))
-		return NOTHING;
-
-	exit = geo_exit_where(descr, player, where, dir);
-	if (create) {
-		if (exit < 0)
-			exit = geo_exit(descr, player, where, geo_there(where, dir), dir);
-		else if (OWNER(exit) != player) {
-			notify_fmt(player, "you don't own th%s exit", a);
-			return AMBIGUOUS;
-		}
-	}
-
-	return exit;
-}
-
-static inline dbref
-room_exit_owned_there(dbref *there, int descr, dbref player, dbref exit, int claim, int create)
+void /* called on recycle */
+gexit_snull(int descr, dbref player, dbref exit)
 {
 	const char dir = NAME(exit)[0];
-	dbref therev = geo_there(getloc(player), dir);
-	dbref exit_there;
+	dbref oexit,
+	      room = getloc(exit),
+	      there = geo_there(room, dir);
 
-	if (therev >= 0) {
-		exit_there = room_exit_owned("at", descr, player, therev, geo_simm(dir), claim, 1);
-		if (exit_there < 0)
-			return NOTHING;
-		*there = therev;
-	} else if (create)
-		therev = new_room(&exit_there, descr, player, exit, claim);
-	else
-		return NOTHING;
-	*there = therev;
+	if (there < 0)
+		return;
 
-	return exit_there;
+	oexit = geo_exit_where(descr, player, there, geo_simm(dir));
+	if (oexit >= 0)
+		exit_dest_set(oexit, NOTHING);
 }
 
-static inline dbref
-room_exit_owned_here(int descr, dbref player, const char dir, int claim, int create)
-{
-	dbref ret = room_exit_owned("is", descr, player, getloc(player), dir, claim, create);
-	return ret;
-}
+static void
+walk(int descr, dbref player, const char dir) {
+	const char dirs[] = { dir, '\0' };
+	dbref exit = geo_exit_here(descr, player, dir),
+	      there;
 
-static int
-room_exits_owned(dbref *exit, dbref *exit_there, dbref *there,
-		 int descr, dbref player, const char dir,
-		 int claim_here)
-{
-	*exit = room_exit_owned_here(descr, player, dir, claim_here, 1);
-	if (*exit < 0)
-		return 1;
-
-	*exit_there = room_exit_owned_there(there, descr, player, *exit, !claim_here, 1);
-	return *exit_there < 0;
-}
-
-/* }}} */
-
-/* WALL / DOOR / CARVE {{{ */
-
-static int
-wall(int descr, dbref player, const char dir)
-{
-	dbref exit, exit_there, there;
-
-	if (room_exits_owned(&exit, &exit_there, &there,
-			     descr, player, dir, 1))
-		return 0;
-
-	enter_room(descr, player, there, exit, 0);
-	if (dir != 'u' && dir != 'd') {
-		recycle(descr, player, exit);
-		recycle(descr, player, exit_there);
+#ifdef PRECOVERY
+	if (exit >= 0) {
+		there = exit_dest(exit);
+		if (there > 0) {
+			morton_t x = geo_x(getloc(player), dir);
+			pdb_put(x, there, 0);
+		}
 	}
-
-	notify(player, "You build a wall.");
-	return 1;
+#endif
+	do_move(descr, player, dirs, 0);
 }
 
-static int
-door(int descr, dbref player, const char dir)
+static inline int
+morton_z_null(morton_t x)
 {
-	dbref exit, exit_there, there;
+	point3D_t p;
+	morton3D_decode(p, x);
+	return p[2] == 0;
+}
 
-	if (room_exits_owned(&exit, &exit_there, &there,
-			     descr, player, dir, 1))
+int
+geo_lock(dbref room, const char dir)
+{
+	if (dir == 'u' || dir == 'd')
 		return 0;
 
-	notify(player, "You place a door.");
-
-	SETDOOR(exit, 1);
-	SETDOOR(exit_there, 1);
-	enter_room(descr, player, there, exit, 0);
-
-	return 1;
+	return morton_z_null(pdb_where(room));
 }
 
-static int
+int /* used in can_doit */
+gexit_can(dbref player, dbref exit) {
+	const char dir = NAME(exit)[0];
+	CBUG(exit < 0);
+	CBUG(exit_dest(exit) >= 0);
+	return geo_lock(getloc(player), dir);
+}
+
+static void
 carve(int descr, dbref player, const char dir)
 {
-	dbref exit, exit_there, there;
+	const char dirs[] = { dir, '\0' };
+	dbref there = NOTHING,
+	      here = getloc(player),
+	      exit = geo_exit_here(descr, player, dir);
+	int wall = 0;
 
-	if (room_exits_owned(&exit, &exit_there, &there,
-			     descr, player, dir, 0))
-		return 0;
+	if (!geo_lock(getloc(player), dir)) {
+		if (room_claim(descr, player, here))
+			return;
+		if (GETVALUE(player) < ROOM_COST) {
+			notify(player, "You can't pay for that room");
+			return;
+		}
+		exit = geo_exit_here(descr, player, dir);
+		if (exit < 0)
+			exit = geo_exit(descr, player, here, there, dir);
+		there = geo_there(here, dir);
+		if (there < 0) {
+			there = geo_room(descr, player, exit);
+			exit_dest_set(exit, there);
+		}
+		wall_around(descr, player, exit);
+		wall = 1;
+	}
 
-	enter_room(descr, player, there, exit, 0);
-	return 1;
+	do_move(descr, player, dirs, 0);
+	there = getloc(player);
+	if (here == there)
+		return;
+	room_claim(descr, player, there);
+	if (wall) {
+		exit = geo_exit_here(descr, player, geo_simm(dir));
+		wall_around(descr, player, exit);
+	}
 }
 
-/* }}} */
+static void
+uncarve(int descr, dbref player, const char dir)
+{
+	const char dirs[] = { dir, '\0' }, *s0 = "is";
+	dbref there, here = getloc(player),
+	      exit = geo_exit_here(descr, player, dir);
+	int ht, cd = geo_lock(here, dir);
 
-/* UNWALL / UNDOOR / UNCARVE {{{ */
+	if (cd) {
+		ht = GETTMP(here);
+		do_move(descr, player, dirs, 0);
+		there = getloc(player);
 
-static int
+		if (here == there)
+			return;
+	} else {
+		there = exit_dest(exit);
+		if (there < 0) {
+			notify(player, "No room there");
+			return;
+		}
+		s0 = "at";
+	}
+
+	if (GETTMP(there) || OWNER(there) != player) {
+		notify_fmt(player, "You don't own th%s room.", s0);
+		return;
+	}
+
+	SETTMP(there, 1);
+	exits_infer(descr, player, there);
+	if (cd) {
+		exit = geo_exit_here(descr, player, geo_simm(dir));
+		if (ht && GETDOOR(exit))
+			SETDOOR(exit, 0);
+	} else
+		untmp_clean(descr, player, there);
+
+	reward(player, "collect your materials", ROOM_COST);
+}
+
+static void
 unwall(int descr, dbref player, const char dir)
 {
-	dbref exit,
-	      here = getloc(player),
-	      there = geo_there(getloc(player), dir);
+	const char dirs[] = { dir, '\0' };
+	int a, b, c, d;
+	dbref exit, there,
+	      here = getloc(player);
 
-	if (OWNER(here) != player) {
-		notify(player, "You don't own this room.");
-		return 0;
+	a = OWNER(here) == player;
+	b = GETTMP(here);
+	there = geo_there(here, dir);
+
+	if (there > 0) {
+		c = OWNER(there) == player;
+		d = GETTMP(there);
+	} else {
+		c = 0;
+		d = 1;
+	}
+
+	if (!((a && !b && (d || c))
+	    || (c && !d && b))) {
+		notify(player, "You can't do that here.");
+		return;
 	}
 
 	exit = geo_exit_here(descr, player, dir);
 
 	if (exit >= 0) {
 		notify(player, "There's an exit here already.");
-		return 0;
+		return;
 	}
 
 	exit = geo_exit(descr, player, here, there, dir);
+	do_move(descr, player, dirs, 0);
 
+	there = getloc(player);
+	if (here == there)
+		return;
+
+	geo_exit(descr, player, there, here, geo_simm(dir));
 	notify(player, "You tear down the wall.");
+}
 
-	if (there < 0)
-		geo_enter_room(&exit, descr, player, exit, 1, 0);
-	else {
-		room_exit_owned_there(&there, descr, player, exit, 0, 1);
-		enter_room(descr, player, there, exit, 0);
+static inline int
+gexit_claim(int descr, dbref player, dbref exit, dbref exit_there)
+{
+	int a, b, c, d;
+	dbref here = getloc(exit),
+	      there = getloc(exit_there);
+	const char dir = NAME(exit)[0];
+
+	a = here > 0 && OWNER(here) == player && OWNER(exit) == player;
+	c = GETTMP(there);
+	b = !c && OWNER(there) == player && OWNER(exit_there) == player;
+	d = geo_lock(getloc(player), dir);
+
+	if ( a && (b || c))
+		return 0;
+
+	if (here < 0 || GETTMP(here)) {
+		if (b)
+			return 0;
+		if (d || c)
+			return room_claim(descr, player, there);
 	}
 
+	notify(player, "You can't claim that exit");
 	return 1;
 }
 
-static int
+static inline int
+gexit_claim_walk(dbref *exit_r, dbref *exit_there_r,
+		 int descr, dbref player, const char dir)
+{
+	const char dirs[] = { dir, '\0' };
+	dbref here = getloc(player),
+	      exit = geo_exit_here(descr, player, dir), exit_there;
+
+	if (exit < 0) {
+		notify(player, "No exit here");
+		return 1;
+	}
+
+	do_move(descr, player, dirs, 0);
+
+	if (here == getloc(player))
+		return 1;
+
+	exit_there = geo_exit_here(descr, player, geo_simm(dir));
+	CBUG(exit_there < 0);
+
+	*exit_r = exit;
+	*exit_there_r = exit_there;
+	return gexit_claim(descr, player, exit, exit_there);
+}
+
+static void
+wall(int descr, dbref player, const char dir)
+{
+	dbref exit, exit_there;
+	if (gexit_claim_walk(&exit, &exit_there, descr, player, dir))
+		return;
+	recycle(descr, player, exit_there);
+	recycle(descr, player, exit);
+	notify(player, "You build a wall.");
+}
+
+static void
+door(int descr, dbref player, const char dir)
+{
+	dbref exit, exit_there;
+	if (gexit_claim_walk(&exit, &exit_there, descr, player, dir))
+		return;
+	SETDOOR(exit, 1);
+	SETDOOR(exit_there, 1);
+	notify(player, "You place a door.");
+}
+
+static void
 undoor(int descr, dbref player, const char dir)
 {
-	dbref there = geo_there(getloc(player), dir);
-	dbref exit = room_exit_owned_here(descr, player, dir, 0, 0);
-
-	if (exit < 0 || !GETDOOR(exit)) {
-		notify(player, "No door.");
-		return 0;
-	}
-
-	if (there >= 0) {
-		dbref exit_there = room_exit_owned_there(&there, descr, player, exit, 0, 0);
-		SETDOOR(exit_there, 0);
-	}
-
+	dbref exit, exit_there;
+	if (gexit_claim_walk(&exit, &exit_there, descr, player, dir))
+		return;
+	SETDOOR(exit_there, 0);
 	SETDOOR(exit, 0);
 	notify(player, "You remove a door.");
-
-	if (there < 0)
-		there = geo_enter_room(&exit, descr, player, exit, 1, 0);
-	else
-		enter_room(descr, player, there, exit, 0);
-
-	return 1;
 }
-
-static int
-uncarve(int descr, dbref player, const char dir)
-{
-	dbref exit, there = geo_there(getloc(player), dir);
-
-	if (there < 0) {
-		notify(player, "No room there.");
-		return 0;
-	}
-
-	exit = room_exit_owned_here(descr, player, dir, 0, 1);
-	if (exit < 0)
-		return exit == AMBIGUOUS;
-
-	if (there >= 0) {
-		int tmp = GETTMP(there);
-		SETTMP(there, 1);
-		there = untmp_clean(descr, player, there);
-		if (tmp) {
-			// stray tmp that didn't get deleted for some reason
-			reward(player, "You find a pile of cash.", 30);
-			return 0;
-		}
-	}
-
-	if (dir != 'u' && dir != 'd') {
-		if (there < 0)
-			geo_enter_room(&there, descr, player, exit, 1, 0);
-		else
-			enter_room(descr, player, there, exit, 0);
-	}
-
-	reward(player, "You collect your materials", 80);
-	return exit;
-}
-
-/* }}} */
 
 op_t *op_map[] = {
 	['r'] = &carve,
@@ -1271,15 +1162,10 @@ static int
 teleport(int descr, dbref player, morton_t x)
 {
 	dbref there = pdb_get(x);
-	dbref here;
-	if (there < 0) {
-		if (_new_room_where(descr, player, &there, 0, "No name", x))
-			return 1;
-		SETTMP(there, 1);
-		bio_enter(descr, player, x, there);
-		exits_infer(&here, descr, player, there, NOTHING);
-	}
-	enter_room(descr, player, there, NOTHING, 0);
+	if (there < 0)
+		there = geo_room_at(descr, player, x);
+	CBUG(there < 0);
+	enter_room(descr, player, there, NOTHING);
 	return 0;
 }
 
@@ -1356,7 +1242,7 @@ dr_room(int descr, dbref player, struct bio *n, dbref here, char *buf, const cha
 				max_prio = 2;
 			} else if (max_prio < 1) {
 				max_prio = 1;
-				if (living_get(tmp)) {
+				if (GETLID(tmp) >= 0) {
 					pre = ANSI_BOLD ANSI_FG_YELLOW;
 					emp = '!';
 				} else if (GETDRINK(tmp) >= 0) {
@@ -1609,36 +1495,31 @@ map_search(dbref *mat, point3D_t pos, ucoord_t flags)
 	}
 }
 
+/* used at the end of every command */
 void
 do_map(int descr, dbref player)
 {
-	morton_t code;
+	morton_t code = pdb_where(getloc(player));
+	static const size_t bdi = VIEW_SIZE * (VIEW_SIZE - 1);
+	struct bio bd[VIEW_M], *n_max = bd + bdi, *n_p = bd;
+	dbref o[VIEW_M], *o_p;
+	point3D_t pos;
+	ucoord_t obits = OBITS(code);
 
-	if (pdb_where(&code, getloc(player))) {
-		static const size_t bdi = VIEW_SIZE * (VIEW_SIZE - 1);
-		struct bio bd[VIEW_M],
-			   *n_max = bd + bdi,
-			   *n_p = bd;
-		dbref o[VIEW_M], *o_p;
-		point3D_t pos;
-		ucoord_t obits = OBITS(code);
+	morton3D_decode(pos, code);
+	noise_view(bd, pos, obits);
+	map_search(o, pos, obits);
 
-		morton3D_decode(pos, code);
-		noise_view(bd, pos, obits);
-		map_search(o, pos, obits);
+	o_p = o;
 
-		o_p = o;
+	dr_vs(descr, player, n_p, o_p);
 
+	for (; n_p < n_max;) {
+		dr_hs_n(descr, player, n_p, o_p);
+		n_p += VIEW_SIZE;
+		o_p += VIEW_SIZE;
 		dr_vs(descr, player, n_p, o_p);
-
-		for (; n_p < n_max;) {
-			dr_hs_n(descr, player, n_p, o_p);
-			n_p += VIEW_SIZE;
-			o_p += VIEW_SIZE;
-			dr_vs(descr, player, n_p, o_p);
-		}
-	} else
-		notify(player, "You don't seem to be anywhere.");
+	}
 }
 
 /* }}} */
@@ -1674,15 +1555,18 @@ room_put_here(int descr, dbref player, char const *s)
 	char *end;
 	dbref here = getloc(player),
 	      there = strtol(s + 1, &end, 0);
-	int present = pdb_where(&x, here);
-	bassert(present);
+
+	x = pdb_where(here);
+
 	if (OWNER(here) != player) {
 		notify_fmt(player, "You don't own this room.");
 		return s - end;
 	}
+
 	if (!GETTMP(here))
 		SETTMP(here, 1);
-	enter_room(descr, player, there, NOTHING, 0);
+
+	enter_room(descr, player, there, NOTHING);
 	pdb_move(there, x);
 	return end - s;
 }
@@ -1719,13 +1603,12 @@ teleport_human(int descr, dbref player, const char *cmd)
 
 skip:	x = morton3D_encode(p, obits);
 	x = teleport(descr, player, x);
-	bassert(!x);
+	CBUG(x);
 	return end - cmd;
 }
 
 static inline int
 geo_location_x(int descr, dbref player, char const *cmd) {
-	morton_t x;
 	dbref who = player;
 	char const *s = cmd;
 	dbref i;
@@ -1745,16 +1628,12 @@ geo_location_x(int descr, dbref player, char const *cmd) {
 		s += strlen(s);
 	}
 
-	if (pdb_where(&x, getloc(who)))
-		notify_fmt(player, "0x%llx", x);
-	else
-		notify(player, "-1");
-
+	notify_fmt(player, "0x%llx", pdb_where(getloc(who)));
 	return s - cmd;
 }
 
 int
-geo_v(int *drmap, int descr, dbref player, char const *opcs)
+geo_v(int descr, dbref player, char const *opcs)
 {
 	struct cmd_dir cd;
 	morton_t x;
@@ -1773,10 +1652,10 @@ geo_v(int *drmap, int descr, dbref player, char const *opcs)
 		x = cd.rep;
 		notify_fmt(player, "Teleporting to 0x%llx.", x);
 		teleport(descr, player, x);
-		*drmap = 1;
 		break;
 	case 't':
-		if (pdb_where(&x, getloc(player))) {
+		x = pdb_where(getloc(player));
+		{
 			point3D_t p;
 			morton3D_decode(p, x);
 			notify_fmt(player, "y: %d, x: %d, z: %d, extra: 0x%x", p[Y_COORD], p[X_COORD], p[2], OBITS(x));
@@ -1784,11 +1663,9 @@ geo_v(int *drmap, int descr, dbref player, char const *opcs)
 		break;
 	case 'T':
 		s += teleport_human(descr, player, s);
-		*drmap = 1;
 		break;
 	case 'm':
-		if (!pdb_where(&x, getloc(player)))
-			break;
+		x = pdb_where(getloc(player));
 		mark_set(player, *s, x);
 		s++;
 		break;
@@ -1798,11 +1675,9 @@ geo_v(int *drmap, int descr, dbref player, char const *opcs)
 			break;
 		teleport(descr, player, x);
 		s++;
-		*drmap = 1;
 		break;
 	case '#':
 		s += room_put_here(descr, player, s);
-		*drmap = 1;
 		break;
 	default: {
 		int ofs = 0;
@@ -1819,8 +1694,7 @@ geo_v(int *drmap, int descr, dbref player, char const *opcs)
 
 		int j;
 		for (j = 0; j < cd.rep; j++)
-			if (op(descr, player, map[(int) cd.dir][0]))
-				*drmap = 1;
+			op(descr, player, map[(int) cd.dir][0]);
 		s += ofs;
 	}}
 

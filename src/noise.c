@@ -33,12 +33,11 @@
 #include "xxhash.h"
 #include "params.h"
 #undef NDEBUG
+/* FIXME without NDEBUG there is segfault. quantum mechanics ? */
 #include "debug.h"
 
 #define XXH XXH32
 
-/* FIXME horizontal visual artifacts when CHUNK_Y == 5
- * use 2 render areas instead of 1, remove STORE */
 #define CHUNK_Y 5
 #define CHUNK_SIZE (1 << CHUNK_Y)
 #define CHUNK_M (CHUNK_SIZE * CHUNK_SIZE)
@@ -264,6 +263,35 @@ start:			ce_p[ndim] = c + (cd<<z);
 	} while (1);
 }
 
+#if 0
+
+static inline void
+_noise_mr(noise_t *c, noise_t *v, unsigned x, point_t qs, ucoord_t ndim, unsigned w, unsigned seed) {
+	int i = DIM - 1 - ndim;
+	ucoord_t ced = (1<<(CHUNK_Y*(ndim+1))), cd;
+	noise_t *ce = c + ced;
+
+	ced >>= CHUNK_Y;
+	cd = ced << x;
+
+	for (; c < ce; qs[i] += (1<<x), c += cd)
+		if (ndim == 0) {
+			get_v(v, qs, x, w, seed);
+			noise_quad(c, v, x, w);
+		} else
+			_noise_mr(c, v, x, qs, ndim - 1, w, seed);
+
+	qs[i] -= 1 << CHUNK_Y; // reset
+}
+
+static inline void
+_noise_m(noise_t *c, noise_t *v, unsigned x, point_t qs, unsigned w, unsigned seed)
+{
+	_noise_mr(c, v, x, qs, DIM - 1, w, seed);
+}
+
+#else
+
 static inline void
 _noise_m(noise_t *c, noise_t *v, unsigned x, point_t qs, unsigned w, unsigned seed) {
 	noise_t *ce_p[DIM];
@@ -296,6 +324,8 @@ start:			ce_p[ndim] = c + ced;
 		} while (c >= ce_p[ndim]);
 	} while (ndim < DIM);
 }
+
+#endif
 
 /* fixes v (vertex values)
  * when noise quad starts before matrix quad aka x > y aka d > l.
@@ -407,7 +437,7 @@ noise_plant(unsigned char *plid, unsigned char *pln, struct bio *b, noise_t v, u
 {
 	struct plant *pl = &plants[n];
 
-	bassert(n < plid_max);
+	CBUG(n >= plid_max);
 
 	if (((v >> 6) ^ (v >> 3) ^ v) & 1)
 		return 0;
@@ -516,7 +546,7 @@ noise_full(size_t i, point_t s, ucoord_t obits)
 static inline morton_t
 view_idx(point_t pos)
 {
-	bassert(chunks_r.s[Y_COORD] <= pos[Y_COORD]);
+	CBUG(chunks_r.s[Y_COORD] > pos[Y_COORD]);
 	return (pos[Y_COORD] - chunks_r.s[Y_COORD]) * chunks_r.l[X_COORD]
 		+ pos[X_COORD] - chunks_r.s[X_COORD];
 }
@@ -537,7 +567,7 @@ view_print(struct bio *to, point_t pos)
 	ucoord_t ol;
 
 	ol = chunks_r.l[WDIM];
-	bassert(ol >= CHUNK_SIZE);
+	CBUG(ol < CHUNK_SIZE);
 
 	for (y = 0; y < VIEW_SIZE; y++, bo += ol - VIEW_SIZE)
 		for (x = 0; x < VIEW_SIZE; x++, bd++, bo++)
@@ -605,7 +635,7 @@ noise_chunks(point_t pos, ucoord_t obits)
 	bio = chunks_bio_raw;
 
 	if (n[X_COORD] > 1) {
-		bassert(n[X_COORD] == 2);
+		CBUG(n[X_COORD] != 2);
 		spread(n[Y_COORD]);
 		bio = chunks_bio;
 	}
@@ -634,5 +664,6 @@ noise_point(morton_t p)
 	point_t pos;
 	morton3D_decode(pos, p);
 	noise_chunks(pos, OBITS(p));
+	debug("VIEWING POS x%llx (%d %d) IDX %llu", p, pos[0], pos[1], view_idx(pos));
 	return &bio[view_idx(pos)];
 }

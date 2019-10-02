@@ -1,4 +1,5 @@
 #include "geometry.h"
+#include "debug.h"
 
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
@@ -29,6 +30,7 @@ morton3D_encode(point3D_t p, ucoord_t obits)
 		POOP3D res |= ((morton_t) ((up[I] >> i) & 1)) << (I + (3 * i));
 	}
 
+	debug("encoded point %d %d %d -> x%llx", p[0], p[1], p[2], res);
 	return res;
 }
 
@@ -49,15 +51,7 @@ morton3D_decode(point3D_t p, morton_t code)
 	}
 
 	POOP3D p[I] = sign(up[I]);
-}
-
-morton_t
-morton3D_add(morton_t a, point3D_t b, ucoord_t obits)
-{
-	point3D_t p;
-	morton3D_decode(p, a);
-	POINT3D_ADD(p, p, b);
-	return morton3D_encode(p, obits) | (a >> 48 << 48);
+	debug("decoded point x%llx -> %d %d %d", code, p[0], p[1], p[2]);
 }
 
 static __inline__ ucoord_t

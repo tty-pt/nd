@@ -19,6 +19,7 @@
 #include "externs.h"
 #include "fbstrings.h"
 #include "debug.h"
+#include "geography.h"
 
 /* declarations */
 static const char *dumpfile = 0;
@@ -464,7 +465,6 @@ dbref force_prog = NOTHING; /* Set when a program is the source of FORCE */
 static inline int
 do_v(int descr, dbref player, char const *cmd)
 {
-	int drmap = 0, ignore;
 	int ofs = 1;
 	char const *s = cmd;
 
@@ -480,15 +480,12 @@ do_v(int descr, dbref player, char const *cmd)
 			return s + strlen(s) - cmd;
 		}
 
-		ofs = geo_v(&drmap, descr, player, s);
+		ofs = geo_v(descr, player, s);
 		if (ofs < 0)
 			ofs = - ofs;
 		s += ofs;
-		ofs = kill_v(&ignore, descr, player, s);
+		ofs = kill_v(descr, player, s);
 	}
-
-	if (drmap)
-		do_map(descr, player);
 
 	return s - cmd;
 }
@@ -505,6 +502,7 @@ process_command(int descr, dbref player, char *command)
 	struct timeval starttime;
 	struct timeval endtime;
 	double totaltime;
+	morton_t x = pdb_where(getloc(player));
 
 	if (command == 0)
 		abort();
@@ -521,7 +519,7 @@ process_command(int descr, dbref player, char *command)
 		if (!(FLAGS(player) & (INTERACTIVE | READMODE))) {
 			dbref here;
 			if (!*command)
-				return; 
+				goto out;
 			here = getloc(player);
 			log_command("%s%s%s%s(%d) in %s(%d):%s %s",
 						Wizard(OWNER(player)) ? "WIZ: " : "",
@@ -556,7 +554,7 @@ process_command(int descr, dbref player, char *command)
 
 	/* Disable null command once past READ line */
 	if (!*command)
-		return;
+		goto out;
 
 	/* profile how long command takes. */
 	gettimeofday(&starttime, NULL);
@@ -569,7 +567,7 @@ process_command(int descr, dbref player, char *command)
 		do_move(descr, player, command, 0);	/* command is exact match for exit */
 		*match_args = 0;
 		*match_cmdname = 0;
-		return;
+		goto out;
 	}
 
 	{
@@ -1502,6 +1500,10 @@ end_of_command:
 					NAME(DBFETCH(player)->location),
 					(int) DBFETCH(player)->location, " ", command);
 	}
+out:
+	if (pdb_where(getloc(player)) != x)
+		do_map(descr, player);
+
 }
 
 #undef Matched

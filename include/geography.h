@@ -2,6 +2,7 @@
 #define GEO_H
 
 #include "db.h"
+#include "geometry.h"
 
 // adds 2^DAYTICK_Y to day tick until it reaches DAYSIZE
 #define DAY_Y		16
@@ -16,13 +17,16 @@ const char * geo_expand(char c);
 int geo_is(dbref exit);
 
 dbref untmp_clean(int descr, dbref player, dbref here);
-dbref geo_enter_room(dbref *exit_there, int descr, dbref player, dbref exit, int v, int permanent);
 void do_map(int descr, dbref player);
 int geo_init(void);
 void geo_update(void);
 int geo_close(void);
-int geo_has(dbref what);
 int geo_delete(dbref what);
-int room_claim(dbref player, dbref room);
+int room_claim(int descr, dbref player, dbref room);
+dbref geo_room(int descr, dbref player, dbref exit);
+morton_t pdb_where(dbref thing);
+void exit_dest_set(dbref exit, dbref dest);
+int gexit_can(dbref player, dbref exit);
+void gexit_snull(int descr, dbref player, dbref exit);
 
 #endif

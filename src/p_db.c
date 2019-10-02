@@ -151,7 +151,7 @@ prim_moveto(PRIM_PROTOTYPE)
 				if (Typeof(dest) == TYPE_THING && getloc(victim) != getloc(dest))
 					abort_interp("Not in same location as vehicle.");
 			}
-			enter_room(fr->descr, victim, dest, program, 1);
+			enter_room(fr->descr, victim, dest, program);
 			break;
 		case TYPE_THING:
 			if (parent_loop_check(victim, dest))
@@ -181,7 +181,7 @@ prim_moveto(PRIM_PROTOTYPE)
 			}
 			if (Typeof(victim) == TYPE_THING &&
 				(SECURE_THING_MOVEMENT || (FLAGS(victim) & ZOMBIE))) {
-				enter_room(fr->descr, victim, dest, program, 1);
+				enter_room(fr->descr, victim, dest, program);
 			} else {
 				moveto(victim, dest);
 			}

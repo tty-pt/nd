@@ -132,7 +132,7 @@ do_teleport(int descr, dbref player, const char *arg1, const char *arg2)
 				break;
 			}
 			notify(victim, "You feel a wrenching sensation...");
-			enter_room(descr, victim, destination, DBFETCH(victim)->location, 1);
+			enter_room(descr, victim, destination, DBFETCH(victim)->location);
 			break;
 		case TYPE_THING:
 			if (parent_loop_check(victim, destination)) {
@@ -157,7 +157,7 @@ do_teleport(int descr, dbref player, const char *arg1, const char *arg2)
 				&& !(FLAGS(destination) & STICKY))
 						destination = DBFETCH(destination)->sp.room.dropto;
 			if (SECURE_THING_MOVEMENT && (Typeof(victim) == TYPE_THING)) {
-				enter_room(descr, victim, destination, DBFETCH(victim)->location, 1);
+				enter_room(descr, victim, destination, DBFETCH(victim)->location);
 			} else {
 				moveto(victim, destination);
 			}

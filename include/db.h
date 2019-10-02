@@ -171,6 +171,10 @@ typedef int dbref;				/* offset into db */
 #define SETVALUE(x,y)	add_property(x, MESGPROP_VALUE, NULL, y)
 #define LOADVALUE(x,y)	add_prop_nofetch(x, MESGPROP_VALUE, NULL, y)
 
+#define MESGPROP_LID	"_/lid"
+#define SETLID(x,y)	set_property_value(x, MESGPROP_LID, y + 1)
+#define GETLID(x)	(get_property_value(x, MESGPROP_LID) - 1)
+
 #define MESGPROP_KLOCK	"_/klock"
 #define SETKLOCK(x,y)	set_property_value(x, MESGPROP_KLOCK, y)
 #define GETKLOCK(x)	get_property_value(x, MESGPROP_KLOCK)

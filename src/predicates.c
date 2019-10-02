@@ -265,16 +265,21 @@ could_doit(int descr, dbref player, dbref thing)
 	dbref source, dest, owner;
 
 	if (Typeof(thing) == TYPE_EXIT) {
-		/* If exit is unlinked, can't do it. */
-		if (DBFETCH(thing)->sp.exit.ndest == 0)
-			return 0;
+		/* If exit is unlinked, can't do it.
+		 * Unless its a geo exit */
+		if (DBFETCH(thing)->sp.exit.ndest == 0) {
+			if (geo_is(thing))
+				goto geo;
+			else
+				return 0;
+		}
 
 		owner = OWNER(thing);
 		source = DBFETCH(player)->location;
 		dest = *(DBFETCH(thing)->sp.exit.dest);
 
-		if (dest == NOTHING && geo_is(thing))
-			goto out;
+		if (dest < 0 && geo_is(thing))
+			goto geo;
 
 		else if (Typeof(dest) == TYPE_PLAYER) {
 			/* Check for additional restrictions related to player dests */
@@ -318,6 +323,11 @@ could_doit(int descr, dbref player, dbref thing)
 #endif
 		}
 	}
+
+	goto out;
+geo:
+	if (!gexit_can(player, thing))
+		return 0;
 out:
 		/* Check the @lock on the thing, as a final test. */
 	return (eval_boolexp(descr, player, GETLOCK(thing), thing));
@@ -364,9 +374,6 @@ can_doit(int descr, dbref player, dbref thing, const char *default_fail_msg)
 	}
 
 	if (Typeof(thing) == TYPE_EXIT) {
-		if (DBFETCH(thing)->sp.exit.ndest == 0)
-			return 1;
-
 		dir = NAME(thing)[0];
 
 		if (GETDOOR(thing)) {

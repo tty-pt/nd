@@ -51,7 +51,6 @@ struct rect3D {
 
 morton_t morton3D_encode(point3D_t p, ucoord_t obits);
 void morton3D_decode(point3D_t p, morton_t code);
-morton_t morton3D_add(morton_t a, point3D_t b, ucoord_t obits);
 int rects_intersection(struct rect *r, struct rect *a, struct rect *b);
 
 static inline int

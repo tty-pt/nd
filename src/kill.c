@@ -6,6 +6,7 @@
 #include "item.h"
 #include "params.h"
 #include "geography.h"
+#undef NDEBUG
 #include "debug.h"
 
 #define DMG_BASE(p) DMG_G(GETSTAT(p, STR))
@@ -25,10 +26,6 @@
 #define BUF_DMG(sp_dmg, duration) ((long) 2 * sp_dmg) / duration
 #define BUF_TYPE_MASK 0xf
 #define BUF_TYPE(sp) (sp->flags & BUF_TYPE_MASK)
-
-#define MESGPROP_LID	"_/lid"
-#define SETLID(x,y)	set_property_value(x, MESGPROP_LID, y + 1)
-#define GETLID(x)	(get_property_value(x, MESGPROP_LID) - 1)
 
 #define MESGPROP_CXP	"_/cxp"
 #define GETCXP(x)	get_property_value(x, MESGPROP_CXP)
@@ -243,7 +240,8 @@ struct living *
 living_get(dbref who)
 {
 	int lid = GETLID(who);
-	return lid < 0 ? NULL : &living[lid];
+	CBUG(lid < 0);
+	return &living[lid];
 }
 
 static inline char const *
@@ -295,7 +293,6 @@ debuf_start(dbref who, struct spell *sp, short val)
 	int i;
 
 	liv = living_get(who);
-	bassert(liv);
 	if (liv->debuf_mask) {
 		i = __builtin_ffs(~liv->debuf_mask);
 		if (!i)
@@ -401,7 +398,6 @@ debufs_end(struct living *liv)
 static inline void
 living_dead(struct living *liv)
 {
-	bassert(liv);
 	liv->target = NULL;
 	liv->hp = HP_MAX(liv->who);
 	liv->mp = MP_MAX(liv->who);
@@ -463,11 +459,10 @@ xp_award(dbref attacker, dbref target)
 }
 
 static void
-kill(dbref attacker, dbref target)
+_kill(dbref attacker, dbref target)
 {
 	struct living *att = attacker > 0 ? living_get(attacker) : NULL;
 	struct living *tar = living_get(target);
-	bassert(tar);
 
 	notify_wts(target, "die", "dies", "");
 
@@ -513,14 +508,13 @@ static int
 hp_add(dbref attacker, dbref target, short amt)
 {
 	struct living *tar = living_get(target);
-	bassert(tar);
 	short hp = tar->hp;
 	int ret = 0;
 	hp += amt;
 	if (hp <= 0) {
 		hp = 1;
 		ret = 1;
-		kill(attacker, target);
+		_kill(attacker, target);
 	} else {
 		register unsigned short max = HP_MAX(target);
 		if (hp > max)
@@ -639,7 +633,6 @@ target_try(struct living *me, dbref target)
 		return;
 
 	tar = living_get(target);
-	bassert(tar);
 
 	if (tar == me->target)
 		return;
@@ -657,7 +650,6 @@ do_kill(int descr, dbref player, const char *what)
 	struct living *att = living_get(player),
 		      *tar;
 
-	bassert(att);
 
 	if (FLAGS(here) & HAVEN
 	    || target == NOTHING
@@ -692,7 +684,8 @@ do_killing_update(struct living *liv)
 		return;
 
 	// target is no longer here
-	if (getloc(livt->who) != getloc(liv->who)) {
+	if (Typeof(livt->who) == TYPE_GARBAGE
+	    || getloc(livt->who) != getloc(liv->who)) {
 		liv->target = NULL;
 		return;
 	}
@@ -791,8 +784,7 @@ living_put(dbref who)
 	register struct living *liv;
 	register unsigned i;
 
-	if (who < 0 || Typeof(who) == TYPE_GARBAGE)
-		return NULL;
+	CBUG(who < 0 || Typeof(who) == TYPE_GARBAGE);
 
 	for (liv = living_cur, i = 0;
 	     i < m;
@@ -810,20 +802,6 @@ living_put(dbref who)
 	return NULL;
 }
 
-static inline void
-do_respawn_init()
-{
-	dbref tmp = DBFETCH((dbref) 0)->contents, next;
-
-	while (tmp > 0) {
-		next = DBFETCH(tmp)->next;
-		if (living_get(tmp))
-			respawn(tmp);
-
-		tmp = next;
-	}
-}
-
 void
 do_living_init()
 {
@@ -834,8 +812,6 @@ do_living_init()
 		for (l = liv_s; l; l = strchr(l, '#'))
 			living_put((dbref) atoi(++l));
 	}
-
-	do_respawn_init();
 }
 
 static inline void
@@ -1057,7 +1033,7 @@ do_train(dbref player, const char *attrib, const char *amount_s)
 }
 
 int
-kill_v(int *drmap, int descr, dbref player, char const *opcs)
+kill_v(int descr, dbref player, char const *opcs)
 {
 	char *end;
 	if (isdigit(*opcs)) {
@@ -1069,7 +1045,7 @@ kill_v(int *drmap, int descr, dbref player, char const *opcs)
 	} else if (*opcs == 'c' && isdigit(opcs[1])) {
 		struct living *p = living_get(player);
 		unsigned slot = strtol(opcs + 1, &end, 0);
-		bassert(p);
+		CBUG(!p);
 
 		if (!p->target)
 			p->target = p;

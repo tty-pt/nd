@@ -142,7 +142,7 @@ extern void exec_or_notify(int descr, dbref player, dbref thing,
 
 /* From geography.c */
 extern void do_map(int descr, dbref player);
-extern int geo_v(int *drmap, int descr, dbref player, const char *cmd);
+extern int geo_v(int descr, dbref player, const char *cmd);
 
 /* from item.c */
 extern void do_select(dbref player, const char *n_s);
@@ -164,7 +164,7 @@ extern void do_advitam(int descr, dbref player, const char *what);
 extern void do_heal(int descr, dbref player, const char *what);
 extern void do_status(dbref player);
 extern void do_train(dbref player, const char *what, const char *amount);
-extern int kill_v(int *drmap, int descr, dbref player, const char *cmd);
+extern int kill_v(int descr, dbref player, const char *cmd);
 
 int do_stand_silent(dbref player);
 extern void do_sit(int descr, dbref player, const char *what);
@@ -172,7 +172,7 @@ extern void do_stand(dbref player);
 
 /* From move.c */
 extern void moveto(dbref what, dbref where);
-extern void enter_room(int descr, dbref player, dbref loc, dbref exit, int drmap);
+extern void enter_room(int descr, dbref player, dbref loc, dbref exit);
 extern void send_home(int descr, dbref thing, int homepuppet);
 extern int parent_loop_check(dbref source, dbref dest);
 extern int can_move(int descr, dbref player, const char *direction, int lev);
