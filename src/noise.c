@@ -32,8 +32,6 @@
 #include <string.h>
 #include "xxhash.h"
 #include "params.h"
-#undef NDEBUG
-/* FIXME without NDEBUG there is segfault. quantum mechanics ? */
 #include "debug.h"
 
 #define XXH XXH32
@@ -661,9 +659,8 @@ noise_view(struct bio to[VIEW_M], point_t pos, ucoord_t obits)
 struct bio *
 noise_point(morton_t p)
 {
-	point_t pos;
+	point3D_t pos;
 	morton3D_decode(pos, p);
 	noise_chunks(pos, OBITS(p));
-	debug("VIEWING POS x%llx (%d %d) IDX %llu", p, pos[0], pos[1], view_idx(pos));
 	return &bio[view_idx(pos)];
 }
