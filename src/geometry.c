@@ -1,9 +1,6 @@
 #include "geometry.h"
 #include "debug.h"
 
-#define MAX(a, b) ((a) > (b) ? (a) : (b))
-#define MIN(a, b) ((a) < (b) ? (a) : (b))
-
 /* https://graphics.stanford.edu/~seander/bithacks.html#InterleaveBMN */
 
 static __inline__ ucoord_t
@@ -18,7 +15,7 @@ unsign(coord_t n)
 }
 
 morton_t
-morton3D_encode(point3D_t p, ucoord_t obits)
+morton_encode(point3D_t p, ucoord_t obits)
 {
 	upoint3D_t up;
 	morton_t res = ((morton_t) obits) << 48;
@@ -41,7 +38,7 @@ sign(ucoord_t n)
 }
 
 void
-morton3D_decode(point3D_t p, morton_t code)
+morton_decode(point3D_t p, morton_t code)
 {
 	morton_t up[3] = { 0, 0, 0 };
 	int i;
@@ -52,59 +49,4 @@ morton3D_decode(point3D_t p, morton_t code)
 
 	POOP3D p[I] = sign(up[I]);
 	debug("decoded point x%llx -> %d %d %d", code, p[0], p[1], p[2]);
-}
-
-static __inline__ ucoord_t
-gtl(coord_t s, coord_t ae, coord_t be)
-{
-	int c1 = s <= ae;
-	int c2 = s <= be;
-
-	if (c1 && c2)
-		return MIN(ae, be) - s;
-
-	else {
-		coord_t e = c1 != c2 ? MAX(ae, be) : MIN(ae, be);
-		return e - s;
-	}
-}
-
-static __inline__ coord_t
-gts(coord_t as, coord_t bs, coord_t ae, coord_t be)
-{
-	int c1 = as > ae;
-	int c2 = bs > be;
-
-	if (c1 != c2) {
-		if (c1 && bs <= 0)
-			return bs;
-		else if (as <= 0)
-			return as;
-	}
-
-	return MAX(as, bs);
-}
-
-static int
-gtsl(coord_t *s, coord_t *l, coord_t as, ucoord_t al, coord_t bs, ucoord_t bl)
-{
-	coord_t ae = as + al;
-	coord_t be = bs + bl;
-
-	*s = gts(as, bs, ae, be);
-	*l = gtl(*s, ae, be);
-
-	return *l > bl || *l > al;
-}
-
-int
-rects_intersection(struct rect *r, struct rect *a, struct rect *b)
-{
-	POOP if (gtsl(&r->s[I], &r->l[I],
-		      a->s[I], a->l[I],
-		      b->s[I], b->l[I]))
-
-		return 0;
-
-	return 1;
 }

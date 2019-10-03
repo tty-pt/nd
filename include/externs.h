@@ -140,10 +140,6 @@ extern void exec_or_notify(int descr, dbref player, dbref thing,
 						   const char *message, const char *whatcalled,
 						   int mpiflags);
 
-/* From geography.c */
-extern void do_map(int descr, dbref player);
-extern int geo_v(int descr, dbref player, const char *cmd);
-
 /* from item.c */
 extern void do_select(dbref player, const char *n_s);
 extern void do_equip(int descr, dbref player, const char *name);

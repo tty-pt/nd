@@ -7,6 +7,7 @@
 #include "db.h"
 #include "interface.h"
 #include "debug.h"
+#include "geography.h"
 
 #define DMG_WEAPON(x) IE(x, DMG_G)
 #define WTS_WEAPON(eq) phys_wts[GETEQT(eq)]
@@ -422,8 +423,6 @@ bird_is(struct mob const *mob)
 	return mob->wt == PECK;
 }
 
-extern int night_is(void);
-
 static inline dbref
 mob_add(unsigned mid, dbref where, struct bio *b) {
 	struct mob const *mob = &mobs[mid];
@@ -432,7 +431,7 @@ mob_add(unsigned mid, dbref where, struct bio *b) {
 	dbref nu;
 
 	if ((bird_is(mob) && !(b->pln[0] || b->pln[1] || b->pln[2]))
-	    || (!night_is() && (mob->type == ELM_DARK || mob->type == ELM_VAMP))
+	    || (!NIGHT_IS && (mob->type == ELM_DARK || mob->type == ELM_VAMP))
 	    || random() >= (RAND_MAX >> mob->y))
 		return NOTHING;
 

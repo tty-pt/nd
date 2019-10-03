@@ -328,7 +328,7 @@ enter_room(int descr, dbref player, dbref loc, dbref exit)
 			maybe_dropto(descr, old, dropto);
 		}
 
-		untmp_clean(descr, player, old);
+		geo_clean(descr, player, old);
 
 		/* tell other folks in new location if not DARK */
 		if (loc != NOTHING && !Dark(loc) && !Dark(player) &&
@@ -456,8 +456,8 @@ trigger(int descr, dbref player, dbref exit, int pflag)
 	succ = 0;
 
 	// quickfix for gexits
-	if (geo_is(exit) && !DBFETCH(exit)->sp.exit.ndest)
-		exit_dest_set(exit, NOTHING);
+	if (gexit_is(exit) && !DBFETCH(exit)->sp.exit.ndest)
+		gexit_dest_set(exit, NOTHING);
 
 	for (i = 0; i < DBFETCH(exit)->sp.exit.ndest; i++) {
 		dest = (DBFETCH(exit)->sp.exit.dest)[i];
@@ -1002,7 +1002,7 @@ recycle(int descr, dbref player, dbref thing)
 			rest = DBFETCH(first)->next;
 			if (DBFETCH(first)->location == NOTHING
 			    || DBFETCH(first)->location == thing) {
-				if (geo_is(first))
+				if (gexit_is(first))
 					gexit_snull(descr, player, first);
 				recycle(descr, player, first);
 			}

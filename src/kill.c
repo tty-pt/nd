@@ -472,9 +472,9 @@ _kill(dbref attacker, dbref target)
 	if (Typeof(target) == TYPE_PLAYER) {
 		dbref loc = getloc(target);
 		moveto(target, PLAYER_HOME(target));
-		untmp_clean(tar->descr, target, loc);
+		geo_clean(tar->descr, target, loc);
 		SETKLOCK(target, 0);
-		do_map(tar->descr, target);
+		geo_view(tar->descr, target);
 	} else {
 		if (tar->target) {
 			dbref tartar = tar->target->who;

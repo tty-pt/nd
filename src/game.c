@@ -502,7 +502,7 @@ process_command(int descr, dbref player, char *command)
 	struct timeval starttime;
 	struct timeval endtime;
 	double totaltime;
-	morton_t x = pdb_where(getloc(player));
+	morton_t x = geo_where(getloc(player));
 
 	if (command == 0)
 		abort();
@@ -1303,7 +1303,7 @@ process_command(int descr, dbref player, char *command)
 				do_mpihelp(player, arg1, arg2);
 				break;
 			} else if (!string_compare(command, "map")) {
-				do_map(descr, player);
+				geo_view(descr, player);
 				break;
 			} else {
 				if (string_compare(command, "man"))
@@ -1501,8 +1501,8 @@ end_of_command:
 					(int) DBFETCH(player)->location, " ", command);
 	}
 out:
-	if (pdb_where(getloc(player)) != x)
-		do_map(descr, player);
+	if (geo_where(getloc(player)) != x)
+		geo_view(descr, player);
 
 }
 

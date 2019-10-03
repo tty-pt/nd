@@ -8,24 +8,25 @@
 #define DAY_Y		16
 #define DAYTICK_Y	6
 #define DAYTICK		(1<<DAYTICK_Y)
-#define DAYSIZE		((unsigned short) -1)
 #define NIGHT_IS	(day_tick > (1 << (DAY_Y - 1)))
+#define GEXPAND(c)	geo_map[(int) c]
 
 extern unsigned short day_tick;
+extern const char *geo_map[]; // map of characters for commands, not geo_view
 
-const char * geo_expand(char c);
-int geo_is(dbref exit);
-
-dbref untmp_clean(int descr, dbref player, dbref here);
-void do_map(int descr, dbref player);
 int geo_init(void);
 void geo_update(void);
 int geo_close(void);
+morton_t geo_where(dbref thing);
 int geo_delete(dbref what);
-int room_claim(int descr, dbref player, dbref room);
+dbref geo_clean(int descr, dbref player, dbref here);
+void geo_view(int descr, dbref player);
 dbref geo_room(int descr, dbref player, dbref exit);
-morton_t pdb_where(dbref thing);
-void exit_dest_set(dbref exit, dbref dest);
+int geo_claim(int descr, dbref player, dbref room);
+int geo_v(int descr, dbref player, const char *cmd);
+
+int gexit_is(dbref exit);
+void gexit_dest_set(dbref exit, dbref dest);
 int gexit_can(dbref player, dbref exit);
 void gexit_snull(int descr, dbref player, dbref exit);
 

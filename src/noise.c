@@ -651,16 +651,15 @@ noise_view(struct bio to[VIEW_M], point_t pos, ucoord_t obits)
 	if (pos[2] == 0) {
 		noise_chunks(pos, obits);
 		view_print(to, pos);
-	} else {
+	} else
 		memcpy(to, &empty, sizeof(empty));
-	}
 }
 
 struct bio *
 noise_point(morton_t p)
 {
 	point3D_t pos;
-	morton3D_decode(pos, p);
+	morton_decode(pos, p);
 	noise_chunks(pos, OBITS(p));
 	return &bio[view_idx(pos)];
 }

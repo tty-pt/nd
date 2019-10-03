@@ -2438,7 +2438,7 @@ check_connect(struct descriptor_data *d, const char *msg)
 				       "#########################################################################");
 		}
 		if (!d->web.old)
-                        do_map(d->descriptor, player);
+                        geo_view(d->descriptor, player);
 		con_players_curr++;
         } else if (*command && !d->web.old)
 		welcome_user(d);

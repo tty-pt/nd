@@ -21,22 +21,33 @@
 
 #define PRECOVERY
 
-#define MESGPROP_MARK	"@/mark/%c"
+#define MESGPROP_MARK	"@/mark"
 
 #define GNAMEO(c) (c - 'A')
 #define GOTHEO(c) (c + 'a')
+#define GNAME(c) geo_map[GNAMEO(c)]
+#define GOTHER(c) geo_map[GOTHEO(c)]
+#define GSIMM(c) (*GOTHER(c))
 
 typedef struct {
 	dbref what;
 	morton_t where;
-} pointdb_range_t;
+} geo_range_t;
 
 struct cmd_dir {
-	char dir;
+	char dir, sdir;
 	morton_t rep;
 };
 
-typedef void op_t(int descr, dbref player, const char dir);
+typedef void op_a_t(int descr, dbref player, const char dir);
+typedef int op_b_t(int descr, dbref player, struct cmd_dir cd);
+typedef struct {
+	union {
+		op_a_t *a;
+		op_b_t *b;
+	} op;
+	int type;
+} op_t;
 
 // see http://www.vision-tools.com/h-tropf/multidimensionalrangequery.pdf
 
@@ -91,7 +102,7 @@ char const *biome_bgs[] = {
 	ANSI_RESET,
 };
 /* }}} */
-const char *map[] = {
+const char *geo_map[] = {
 	[0 ... 254] = "",
 	['h'] = "w",
 	['j'] = "s",
@@ -121,9 +132,9 @@ const char *map[] = {
 
 unsigned short day_tick;
 
-/* PDB {{{ */
+/* POINT DB {{{ */
 static int
-pointdb_mki_code(DB *sec, const DBT *key, const DBT *data, DBT *result)
+geo_mki_code(DB *sec, const DBT *key, const DBT *data, DBT *result)
 {
 	result->size = sizeof(morton_t);
 	result->data = data->data;
@@ -131,7 +142,7 @@ pointdb_mki_code(DB *sec, const DBT *key, const DBT *data, DBT *result)
 }
 
 static int
-pointdb_cmp(DB *sec, const DBT *a_r, const DBT *b_r)
+geo_cmp(DB *sec, const DBT *a_r, const DBT *b_r)
 {
 	morton_t a = * (morton_t*) a_r->data,
 		 b = * (morton_t*) b_r->data;
@@ -157,13 +168,12 @@ geo_init()
 	if (db_create(&pdb, dbe, 0))
 		goto err;
 
-	if (pdb->set_bt_compare(pdb, pointdb_cmp)
+	if (pdb->set_bt_compare(pdb, geo_cmp)
 	    || pdb->open(pdb, NULL, "geo.db", "pd", DB_BTREE, DB_CREATE, 0664)
-	    || ipdb->associate(ipdb, NULL, pdb, pointdb_mki_code, DB_CREATE))
-	{
+	    || ipdb->associate(ipdb, NULL, pdb, geo_mki_code, DB_CREATE))
+	
 		pdb->close(pdb, 0);
-	} else {
-		ret = 0;
+	else {
 		day_tick = 0;
 		return 0;
 	}
@@ -173,7 +183,7 @@ err:	ipdb->close(ipdb, 0);
 }
 
 static void
-pdb_put(morton_t code, dbref thing, int flags)
+geo_put(morton_t code, dbref thing, int flags)
 {
 	DBT key;
 	DBT data;
@@ -193,14 +203,8 @@ pdb_put(morton_t code, dbref thing, int flags)
 	CBUG(ret);
 }
 
-static inline void
-pdb_move(dbref thing, morton_t code)
-{
-	pdb_put(code, thing, 0);
-}
-
 morton_t
-pdb_where(dbref room)
+geo_where(dbref room)
 {
 	int bad;
 	DBT key;
@@ -212,21 +216,26 @@ pdb_where(dbref room)
 	key.size = sizeof(room);
 
 	if ((bad = ipdb->get(ipdb, NULL, &key, &data, 0))) {
+#if 1
+		static morton_t code = 130056652770671ULL;
+		debug("room %d db get: %s", room, db_strerror(bad));
+#else
 		BUG("room %d db get: %s", room, db_strerror(bad));
 #ifdef PRECOVERY
-		static morton_t code = 130056652770671ULL;
 		if (bad == DB_NOTFOUND) {
-			pdb_put(code, room, DB_NOOVERWRITE);
+			geo_put(code, room, DB_NOOVERWRITE);
 			return code;
 		}
 #endif
+#endif
+		return code;
 	}
 
 	return * (morton_t *) data.data;
 }
 
 static dbref
-pdb_get(morton_t at)
+geo_get(morton_t at)
 {
 	DBC *cur;
 	DBT pkey;
@@ -270,7 +279,7 @@ int
 geo_delete(dbref what)
 {
 	DBT key;
-	morton_t code = pdb_where(what);
+	morton_t code = geo_where(what);
 	memset(&key, 0, sizeof(key));
 	key.data = &code;
 	key.size = sizeof(code);
@@ -295,7 +304,7 @@ inrange(morton_t dr, point3D_t min, point3D_t max)
 	point3D_t drp;
 
 	// TODO use ffs
-	morton3D_decode(drp, dr);
+	morton_decode(drp, dr);
 
 	POOP3D if (drp[I] < min[I] || drp[I] >= max[I])
 		return 0;
@@ -339,7 +348,7 @@ compute_bmlm(morton_t *bm, morton_t *lm,
 }
 
 static inline int
-pointdb_range_unsafe(pointdb_range_t *res,
+geo_range_unsafe(geo_range_t *res,
 		     size_t n,
 		     struct rect3D *rect,
 		     ucoord_t flags)
@@ -350,12 +359,12 @@ pointdb_range_unsafe(pointdb_range_t *res,
 		rect->s[2] + rect->l[2],
 	};
 
-	morton_t rmin = morton3D_encode(rect->s, flags),
-		 rmax = morton3D_encode(rect_e, flags),
+	morton_t rmin = morton_encode(rect->s, flags),
+		 rmax = morton_encode(rect_e, flags),
 		 lm = 0,
 		 code;
 
-	pointdb_range_t *r = res;
+	geo_range_t *r = res;
 	DBC *cur;
 	DBT key, pkey, data;
 	size_t nn = n;
@@ -411,13 +420,13 @@ out:	if (cur->close(cur) || ret)
  */
 
 static int
-pointdb_range_safe(pointdb_range_t *res,
+geo_range_safe(geo_range_t *res,
 		   size_t n,
 		   struct rect3D *rect,
 		   ucoord_t flags,
 		   int dim)
 {
-	pointdb_range_t *re = res;
+	geo_range_t *re = res;
 	int i, aux;
 	size_t nn = n;
 	struct rect3D r = *rect;
@@ -428,7 +437,7 @@ pointdb_range_safe(pointdb_range_t *res,
 
 		r.l[i] = COORD_MAX - rect->s[i];
 		r.s[i] = rect->s[i];
-		aux = pointdb_range_safe(re, nn, &r, flags, i + 1);
+		aux = geo_range_safe(re, nn, &r, flags, i + 1);
 
 		if (aux < 0)
 			return -1;
@@ -438,7 +447,7 @@ pointdb_range_safe(pointdb_range_t *res,
 
 		r.l[i] = rect->s[i] + rect->l[i] - COORD_MAX - 1;
 		r.s[i] = COORD_MIN + 1;
-		aux = pointdb_range_safe(re, nn, &r, flags, i + 1); 
+		aux = geo_range_safe(re, nn, &r, flags, i + 1); 
 
 		if (aux < 0)
 			return -1;
@@ -448,19 +457,18 @@ pointdb_range_safe(pointdb_range_t *res,
 		return n - nn;
 	}
 
-	return pointdb_range_unsafe(re, nn, rect, flags);
+	return geo_range_unsafe(re, nn, rect, flags);
 }
 
 /* }}} */
 
-/* BIO ENTER {{{ */
+/* STUFF THAT SHOULD BE IN item.c {{{ */
 
 dbref
 obj_stack_add(struct obj o, dbref where, unsigned char n)
 {
 	CBUG(n <= 0);
 	dbref nu = obj_add(o, where);
-	/* DBFETCH(nu)->exits = NOTHING; */
 	if (n > 1)
 		SETSTACK(nu, n);
 	return nu;
@@ -528,12 +536,6 @@ others_add(int descr, dbref player, struct bio *b, dbref where, morton_t p)
 
 /* }}} */
 
-int
-night_is()
-{
-	return day_tick >= (1 << (DAY_Y - 1));
-}
-
 void
 geo_update()
 {
@@ -557,53 +559,22 @@ geo_update()
 
 /* Basic {{{ */
 
-static inline int
-dir_valid(const char c)
-{
-	char sc = map[(int) c][0];
-	switch (sc) {
-	case 'w':
-	case 'e':
-	case 'n':
-	case 's':
-	case 'u':
-	case 'd':
-		return 1;
-	default:
-		return 0;
-	}
-}
-
-const char *
-geo_expand(char c)
-{
-	return map[(int) c];
-}
-
-static inline const char *
-geo_name(const char c)
-{
-	return map[GNAMEO(c)];
-}
-
-static inline const char *
-geo_other(const char c)
-{
-	return map[GOTHEO(c)];
-}
-
-static inline char
-geo_simm(const char c)
-{
-	return *geo_other(c);
+int
+gexit_is(dbref exit)
+{ 
+	char const *gname = GNAME(NAME(exit)[0]);
+	return *gname && !strncmp(NAME(exit), gname, 4);
 }
 
 static inline morton_t
-geo_move(morton_t code, char g)
+geo_x(dbref loc, const char dir)
 {
+	morton_t x = geo_where(loc);
 	point3D_t p;
-	morton3D_decode(p, code);
-	switch (g) {
+
+	morton_decode(p, x);
+
+	switch (dir) {
 	case 'n': p[Y_COORD]--; break;
 	case 's': p[Y_COORD]++; break;
 	case 'e': p[X_COORD]++; break;
@@ -611,26 +582,14 @@ geo_move(morton_t code, char g)
 	case 'u': p[2]++; break;
 	case 'd': p[2]--; break;
 	}
-	return morton3D_encode(p, OBITS(code));
-}
 
-int
-geo_is(dbref exit)
-{ 
-	char const *gname = geo_name(NAME(exit)[0]);
-	return *gname && !strncmp(NAME(exit), gname, 4);
-}
-
-static inline morton_t
-geo_x(dbref loc, const char dir)
-{
-	return geo_move(pdb_where(loc), dir);
+	return morton_encode(p, OBITS(x));
 }
 
 static inline dbref
 geo_there(dbref where, const char dir)
 {
-	return pdb_get(geo_x(where, dir));
+	return geo_get(geo_x(where, dir));
 }
 
 /* }}} */
@@ -638,16 +597,16 @@ geo_there(dbref where, const char dir)
 /* exit {{{ */
 
 static inline dbref
-geo_exit_where(int descr, dbref player, dbref loc, const char dir)
+gexit_where(int descr, dbref player, dbref loc, const char dir)
 {
 	struct match_data md;
-	init_match_remote(descr, player, loc, geo_expand(dir), TYPE_EXIT, &md),
+	init_match_remote(descr, player, loc, GEXPAND(dir), TYPE_EXIT, &md),
 	match_room_exits(loc, &md);
 	return match_result(&md);
 }
 
 static inline dbref
-exit_dest(dbref exit)
+gexit_dest(dbref exit)
 {
 #ifdef PRECOVERY
 	if (!DBFETCH(exit)->sp.exit.ndest)
@@ -662,7 +621,7 @@ exit_dest(dbref exit)
 }
 
 void
-exit_dest_set(dbref exit, dbref dest)
+gexit_dest_set(dbref exit, dbref dest)
 {
 	union specific *sp = &DBFETCH(exit)->sp;
 #ifdef PRECOVERY
@@ -677,14 +636,14 @@ exit_dest_set(dbref exit, dbref dest)
 }
 
 static dbref
-geo_exit(int descr, dbref player, dbref loc, dbref loc2, const char dir)
+gexit(int descr, dbref player, dbref loc, dbref loc2, const char dir)
 {
 	dbref ref;
 
 	ref = new_object();
 
 	/* Initialize everything */
-	NAME(ref) = alloc_string(geo_name(dir));
+	NAME(ref) = alloc_string(GNAME(dir));
 	DBFETCH(ref)->location = loc;
 	OWNER(ref) = player;
 	FLAGS(ref) = TYPE_EXIT;
@@ -695,16 +654,16 @@ geo_exit(int descr, dbref player, dbref loc, dbref loc2, const char dir)
 
 	DBFETCH(ref)->sp.exit.ndest = 1;
 	DBFETCH(ref)->sp.exit.dest = (dbref *) malloc(sizeof(dbref));
-	exit_dest_set(ref, loc2);
+	gexit_dest_set(ref, loc2);
 	DBDIRTY(ref);
 
 	return ref;
 }
 
 static inline dbref
-geo_exit_here(int descr, dbref player, const char dir)
+gexit_here(int descr, dbref player, const char dir)
 {
-	return geo_exit_where(descr, player, getloc(player), dir);
+	return gexit_where(descr, player, getloc(player), dir);
 }
 
 /* }}} */
@@ -745,8 +704,8 @@ wall_around(int descr, dbref player, dbref exit)
 {
 	dbref here = getloc(exit);
 	const char *s;
-	for (s = geo_other(NAME(exit)[0]); *s; s++) {
-		dbref oexit = geo_exit_where(descr, player, here, *s);
+	for (s = GOTHER(NAME(exit)[0]); *s; s++) {
+		dbref oexit = gexit_where(descr, player, here, *s);
 		dbref there = geo_there(here, *s);
 
 		if (oexit >= 0 && there < 0)
@@ -755,7 +714,7 @@ wall_around(int descr, dbref player, dbref exit)
 }
 
 int
-room_claim(int descr, dbref player, dbref room) {
+geo_claim(int descr, dbref player, dbref room) {
 	if (!GETTMP(room)) {
 		if (OWNER(room) != player) {
 			notify(player, "You don't own this room");
@@ -773,10 +732,50 @@ room_claim(int descr, dbref player, dbref room) {
 	room = DBFETCH(room)->contents;
 
 	DOLIST(room, room)
-		if (Typeof(room) == TYPE_EXIT && geo_is(room))
+		if (Typeof(room) == TYPE_EXIT && gexit_is(room))
 			OWNER(room) = player;
 
 	return 0;
+}
+
+static inline void
+exits_fix(int descr, dbref player, dbref there, dbref exit)
+{
+	const char *s, dir = NAME(exit)[0];
+
+	for (s = GOTHER(dir); *s; s++) {
+		dbref othere_exit,
+		      oexit = gexit_where(descr, player, there, *s),
+		      othere = geo_there(there, *s);
+
+		if (othere < 0 || GETTMP(othere)) {
+			if (oexit < 0)
+				continue;
+			gexit_dest_set(oexit, NOTHING);
+			continue;
+		}
+
+		othere_exit = gexit_where(descr, player, othere, GSIMM(*s));
+
+		if (oexit < 0) {
+			if (othere_exit < 0)
+				continue;
+
+			gexit(descr, player, there, othere, *s);
+			gexit_dest_set(othere_exit, there);
+			continue;
+		}
+
+		if (othere_exit < 0)
+			recycle(descr, player, oexit);
+
+		else {
+			gexit_dest_set(oexit, othere);
+			gexit_dest_set(othere_exit, there);
+		}
+	}
+
+	gexit_dest_set(exit, there);
 }
 
 static void
@@ -788,18 +787,18 @@ exits_infer(int descr, dbref player, dbref here)
 		dbref oexit, exit_there, there = geo_there(here, *s);
 
 		if (there < 0) {
-			geo_exit(descr, player, here, NOTHING, *s);
+			gexit(descr, player, here, NOTHING, *s);
 			continue;
 		}
 
-		exit_there = geo_exit_where(descr, player, there, geo_simm(*s));
+		exit_there = gexit_where(descr, player, there, GSIMM(*s));
 		if (exit_there < 0)
 			continue;
 
-		oexit = geo_exit(descr, player, here, there, *s);
+		oexit = gexit(descr, player, here, there, *s);
 		/* if (there > 0 && !GETTMP(there)) */
 		SETDOOR(oexit, GETDOOR(exit_there));
-		exit_dest_set(exit_there, here);
+		gexit_dest_set(exit_there, here);
 	}
 }
 
@@ -810,7 +809,7 @@ geo_room_at(int descr, dbref player, morton_t x)
 	static const dbref loc = 0;
 	dbref there = new_object();
 	CBUG(there <= 0);
-	pdb_put(x, there, DB_NOOVERWRITE);
+	geo_put(x, there, DB_NOOVERWRITE);
 	NAME(there) = alloc_string("No name");
 	DBFETCH(there)->location = loc;
 	OWNER(there) = player;
@@ -826,7 +825,7 @@ geo_room_at(int descr, dbref player, morton_t x)
 	SETTMP(there, 1);
 	{
 		point3D_t pos;
-		morton3D_decode(pos, x);
+		morton_decode(pos, x);
 		if (pos[2] != 0)
 			return there;
 		SETTREE(there, (!!(bio->pln[0]))
@@ -860,7 +859,7 @@ geo_room(int descr, dbref player, dbref exit)
 /* used only on enter_room */
 
 dbref
-untmp_clean(int descr, dbref player, dbref here)
+geo_clean(int descr, dbref player, dbref here)
 {
 	dbref tmp;
 
@@ -889,34 +888,37 @@ gexit_snull(int descr, dbref player, dbref exit)
 	if (there < 0)
 		return;
 
-	oexit = geo_exit_where(descr, player, there, geo_simm(dir));
+	oexit = gexit_where(descr, player, there, GSIMM(dir));
 	if (oexit >= 0)
-		exit_dest_set(oexit, NOTHING);
+		gexit_dest_set(oexit, NOTHING);
 }
 
 static void
 walk(int descr, dbref player, const char dir) {
 	const char dirs[] = { dir, '\0' };
-	dbref exit = geo_exit_here(descr, player, dir),
+	dbref exit = gexit_here(descr, player, dir),
 	      there;
 
 #ifdef PRECOVERY
 	if (exit >= 0) {
-		there = exit_dest(exit);
+		there = gexit_dest(exit);
 		if (there > 0) {
 			morton_t x = geo_x(getloc(player), dir);
-			pdb_put(x, there, 0);
+			geo_put(x, there, 0);
+			exits_fix(descr, player, there, exit);
 		}
 	}
 #endif
 	do_move(descr, player, dirs, 0);
 }
 
+/* used in predicates.c {{{ */
+
 static inline int
 morton_z_null(morton_t x)
 {
 	point3D_t p;
-	morton3D_decode(p, x);
+	morton_decode(p, x);
 	return p[2] == 0;
 }
 
@@ -926,16 +928,18 @@ geo_lock(dbref room, const char dir)
 	if (dir == 'u' || dir == 'd')
 		return 0;
 
-	return morton_z_null(pdb_where(room));
+	return morton_z_null(geo_where(room));
 }
 
-int /* used in can_doit */
+int
 gexit_can(dbref player, dbref exit) {
 	const char dir = NAME(exit)[0];
 	CBUG(exit < 0);
-	CBUG(exit_dest(exit) >= 0);
+	CBUG(gexit_dest(exit) >= 0);
 	return geo_lock(getloc(player), dir);
 }
+
+/* }}} */
 
 static void
 carve(int descr, dbref player, const char dir)
@@ -943,23 +947,23 @@ carve(int descr, dbref player, const char dir)
 	const char dirs[] = { dir, '\0' };
 	dbref there = NOTHING,
 	      here = getloc(player),
-	      exit = geo_exit_here(descr, player, dir);
+	      exit = gexit_here(descr, player, dir);
 	int wall = 0;
 
 	if (!geo_lock(getloc(player), dir)) {
-		if (room_claim(descr, player, here))
+		if (geo_claim(descr, player, here))
 			return;
 		if (GETVALUE(player) < ROOM_COST) {
 			notify(player, "You can't pay for that room");
 			return;
 		}
-		exit = geo_exit_here(descr, player, dir);
+		exit = gexit_here(descr, player, dir);
 		if (exit < 0)
-			exit = geo_exit(descr, player, here, there, dir);
+			exit = gexit(descr, player, here, there, dir);
 		there = geo_there(here, dir);
 		if (there < 0) {
 			there = geo_room(descr, player, exit);
-			exit_dest_set(exit, there);
+			gexit_dest_set(exit, there);
 		}
 		wall_around(descr, player, exit);
 		wall = 1;
@@ -969,9 +973,9 @@ carve(int descr, dbref player, const char dir)
 	there = getloc(player);
 	if (here == there)
 		return;
-	room_claim(descr, player, there);
+	geo_claim(descr, player, there);
 	if (wall) {
-		exit = geo_exit_here(descr, player, geo_simm(dir));
+		exit = gexit_here(descr, player, GSIMM(dir));
 		wall_around(descr, player, exit);
 	}
 }
@@ -981,7 +985,7 @@ uncarve(int descr, dbref player, const char dir)
 {
 	const char dirs[] = { dir, '\0' }, *s0 = "is";
 	dbref there, here = getloc(player),
-	      exit = geo_exit_here(descr, player, dir);
+	      exit = gexit_here(descr, player, dir);
 	int ht, cd = geo_lock(here, dir);
 
 	if (cd) {
@@ -992,7 +996,7 @@ uncarve(int descr, dbref player, const char dir)
 		if (here == there)
 			return;
 	} else {
-		there = exit_dest(exit);
+		there = gexit_dest(exit);
 		if (there < 0) {
 			notify(player, "No room there");
 			return;
@@ -1008,11 +1012,11 @@ uncarve(int descr, dbref player, const char dir)
 	SETTMP(there, 1);
 	exits_infer(descr, player, there);
 	if (cd) {
-		exit = geo_exit_here(descr, player, geo_simm(dir));
+		exit = gexit_here(descr, player, GSIMM(dir));
 		if (ht && GETDOOR(exit))
 			SETDOOR(exit, 0);
 	} else
-		untmp_clean(descr, player, there);
+		geo_clean(descr, player, there);
 
 	reward(player, "collect your materials", ROOM_COST);
 }
@@ -1043,21 +1047,21 @@ unwall(int descr, dbref player, const char dir)
 		return;
 	}
 
-	exit = geo_exit_here(descr, player, dir);
+	exit = gexit_here(descr, player, dir);
 
 	if (exit >= 0) {
 		notify(player, "There's an exit here already.");
 		return;
 	}
 
-	exit = geo_exit(descr, player, here, there, dir);
+	exit = gexit(descr, player, here, there, dir);
 	do_move(descr, player, dirs, 0);
 
 	there = getloc(player);
 	if (here == there)
 		return;
 
-	geo_exit(descr, player, there, here, geo_simm(dir));
+	gexit(descr, player, there, here, GSIMM(dir));
 	notify(player, "You tear down the wall.");
 }
 
@@ -1081,7 +1085,7 @@ gexit_claim(int descr, dbref player, dbref exit, dbref exit_there)
 		if (b)
 			return 0;
 		if (d || c)
-			return room_claim(descr, player, there);
+			return geo_claim(descr, player, there);
 	}
 
 	notify(player, "You can't claim that exit");
@@ -1094,7 +1098,7 @@ gexit_claim_walk(dbref *exit_r, dbref *exit_there_r,
 {
 	const char dirs[] = { dir, '\0' };
 	dbref here = getloc(player),
-	      exit = geo_exit_here(descr, player, dir), exit_there;
+	      exit = gexit_here(descr, player, dir), exit_there;
 
 	if (exit < 0) {
 		notify(player, "No exit here");
@@ -1106,7 +1110,7 @@ gexit_claim_walk(dbref *exit_r, dbref *exit_there_r,
 	if (here == getloc(player))
 		return 1;
 
-	exit_there = geo_exit_here(descr, player, geo_simm(dir));
+	exit_there = gexit_here(descr, player, GSIMM(dir));
 	CBUG(exit_there < 0);
 
 	*exit_r = exit;
@@ -1147,45 +1151,149 @@ undoor(int descr, dbref player, const char dir)
 	notify(player, "You remove a door.");
 }
 
-op_t *op_map[] = {
-	['r'] = &carve,
-	['R'] = &uncarve,
-	['d'] = &door,
-	['D'] = &undoor,
-	['w'] = &wall,
-	['W'] = &unwall,
-};
+static const morton_t obits_shift = sizeof(coord_t) * 8 * 3;
 
-/* }}} */
+static morton_t
+morton_write(morton_t x)
+{
+	coord_t p[4];
+	memcpy(p, &x, sizeof(x));
+	return morton_encode(p, p[3]);
+}
+
+static morton_t
+morton_read(morton_t x)
+{
+	coord_t p[4];
+	coord_t obits = OBITS(x);
+	morton_decode(p, x);
+	return (* (morton_t *) p) | ((morton_t) obits << obits_shift);
+}
 
 static int
-teleport(int descr, dbref player, morton_t x)
+pos(int descr, dbref player, struct cmd_dir cd) {
+	morton_t x;
+	dbref who = cd.rep == 1 ? player : (dbref) cd.rep;
+	int ret = 1;
+
+	if (Typeof(who) != TYPE_PLAYER) {
+		notify(player, "Invalid object type.");
+		return 0;
+	}
+
+	x = geo_where(getloc(who));
+
+	if (cd.dir != '!') {
+		x = morton_read(x);
+		ret = 0;
+	}
+
+	notify_fmt(player, "0x%llx", x);
+	return ret;
+}
+
+static int
+teleport(int descr, dbref player, struct cmd_dir cd)
 {
-	dbref there = pdb_get(x);
+	morton_t x;
+	dbref there;
+	int ret = 0;
+	if (cd.rep == 1)
+		cd.rep = 0;
+	if (cd.dir == '!') {
+		x = cd.rep;
+		ret = 1;
+	} else if (cd.dir == '?') {
+		dbref who = (dbref) cd.rep;
+		x = Typeof(who) == TYPE_PLAYER
+			? geo_where(getloc(who))
+			: 0;
+		ret = 1;
+	} else
+		x = morton_write(cd.rep);
+	there = geo_get(x);
 	if (there < 0)
 		there = geo_room_at(descr, player, x);
 	CBUG(there < 0);
+	notify_fmt(player, "Teleporting to 0x%llx.", cd.rep);
 	enter_room(descr, player, there, NOTHING);
-	return 0;
+	return ret;
 }
 
-static inline void
-mark_set(dbref player, const char opc, morton_t x)
+static int
+mark(int descr, dbref player, struct cmd_dir cd)
 {
+	morton_t x = cd.rep;
 	char value[32];
-	snprintf(value, 32, "0x%llx", x); // FIXME
-	set_property_mark(player, MESGPROP_MARK, opc, value);
+	if (x == 1)
+		x = geo_where(getloc(player));
+	x = morton_read(x);
+	snprintf(value, 32, "0x%llx", x);
+	set_property_mark(player, MESGPROP_MARK, cd.dir, value);
+	return 1;
 }
 
-static inline morton_t
-mark_get(dbref player, const char opc)
+static int
+recall(int descr, dbref player, struct cmd_dir cd)
 {
-	const char *x = get_property_mark(player, MESGPROP_MARK, opc);
-	if (!x)
-		return -1ULL;
-	else
-		return strtoull(x, NULL, 0);
+	const char *xs = get_property_mark(player, MESGPROP_MARK, cd.dir);
+	if (!xs)
+		return 0;
+	cd.rep = strtoull(xs, NULL, 0);
+	cd.dir = '\0';
+	teleport(descr, player, cd);
+	return 1;
 }
+
+static int
+pull(int descr, dbref player, struct cmd_dir cd)
+{
+	const char dir = cd.sdir,
+	      dirs[] = { dir, '\0' };
+	dbref there, here = getloc(player),
+	      exit = gexit_here(descr, player, dir),
+	      what = (dbref) cd.rep;
+	morton_t x;
+
+	if (dir == '\0')
+		return 0;
+
+	here = getloc(player),
+	exit = gexit_here(descr, player, dir),
+	what = (dbref) cd.rep;
+
+	if (exit < 0 || what < 0
+	    || Typeof(what) != TYPE_ROOM
+	    || OWNER(what) != player
+	    || ((there = gexit_dest(exit)) > 0
+		&& geo_clean(descr, player, there) == there))
+	{
+		notify(player, "You cannot do that.");
+		return 1;
+	}
+
+	x = geo_x(here, dir);
+	geo_put(x, what, 0);
+	exits_fix(descr, player, what, exit);
+	do_move(descr, player, dirs, 0);
+	return 1;
+}
+
+op_t op_map[] = {
+	['r'] = { .op.a = &carve },
+	['R'] = { .op.a = &uncarve },
+	['d'] = { .op.a = &door } ,
+	['D'] = { .op.a = &undoor },
+	['w'] = { .op.a = &wall },
+	['W'] = { .op.a = &unwall },
+	['x'] = { .op.b = &pos, .type = 1 },
+	['X'] = { .op.b = &teleport, .type = 1 },
+	['m'] = { .op.b = &mark, .type = 1 },
+	['"'] = { .op.b = &recall, .type = 1 },
+	['#'] = { .op.b = &pull, .type = 1 },
+};
+
+/* }}} */
 
 /* }}} */
 
@@ -1199,7 +1307,7 @@ dr_room(int descr, dbref player, struct bio *n, dbref here, char *buf, const cha
 
 	dbref tmp;
 
-	tmp = geo_exit_where(descr, player, here, 'd');
+	tmp = gexit_where(descr, player, here, 'd');
 	if (tmp > 0 && DBFETCH(tmp)->sp.exit.ndest
 	    && DBFETCH(tmp)->sp.exit.dest[0] >= 0)
 		b = stpcpy(b, ANSI_FG_WHITE "<");
@@ -1266,7 +1374,7 @@ dr_room(int descr, dbref player, struct bio *n, dbref here, char *buf, const cha
 		*b++ = emp;
 	}
 
-	tmp = geo_exit_where(descr, player, here, 'u');
+	tmp = gexit_where(descr, player, here, 'u');
 	if (tmp > 0 && DBFETCH(tmp)->sp.exit.ndest
 	    && DBFETCH(tmp)->sp.exit.dest[0] >= 0)
 		b = stpcpy(b, ANSI_FG_WHITE ">");
@@ -1379,9 +1487,9 @@ dr_vs(int descr, dbref player, struct bio *n, dbref *g)
 		}
 
 		if (prev >= 0)
-			prev = geo_exit_where(descr, player, prev, 'e');
+			prev = gexit_where(descr, player, prev, 'e');
 		else if (*g >= 0)
-			prev = geo_exit_where(descr, player, *g, 'w');
+			prev = gexit_where(descr, player, *g, 'w');
 		else {
 			*b++ = ' ';
 			continue;
@@ -1457,7 +1565,7 @@ dr_hs_n(int descr, dbref player, struct bio *n, dbref *g)
 		}
 
 		wp = wall_paint(floor);
-		curr = geo_exit_where(descr, player, curr, dir);
+		curr = gexit_where(descr, player, curr, dir);
 
 		if (curr < 0)
 			w = (char *) h_closed;
@@ -1481,32 +1589,33 @@ map_search(dbref *mat, point3D_t pos, ucoord_t flags)
 	};
 
 	static const size_t m = 49;
-	pointdb_range_t buf[m];
+	geo_range_t buf[m];
 	size_t n;
 	int i;
 
-	n =  pointdb_range_safe(buf, m, &vpr3D, flags, 0);
+	n =  geo_range_safe(buf, m, &vpr3D, flags, 0);
 	memset(mat, -1, sizeof(dbref) * m);
 
 	for (i = 0; i < n; i++) {
 		point3D_t p;
-		morton3D_decode(p, buf[i].where);
+		morton_decode(p, buf[i].where);
 		mat[point_rel_idx(p, vpr3D.s, VIEW_SIZE)] = buf[i].what;
 	}
 }
 
-/* used at the end of every command */
+/* used at the end of every command that
+ * moves the player (not every move) */
 void
-do_map(int descr, dbref player)
+geo_view(int descr, dbref player)
 {
-	morton_t code = pdb_where(getloc(player));
+	morton_t code = geo_where(getloc(player));
 	static const size_t bdi = VIEW_SIZE * (VIEW_SIZE - 1);
 	struct bio bd[VIEW_M], *n_max = bd + bdi, *n_p = bd;
 	dbref o[VIEW_M], *o_p;
 	point3D_t pos;
 	ucoord_t obits = OBITS(code);
 
-	morton3D_decode(pos, code);
+	morton_decode(pos, code);
 	noise_view(bd, pos, obits);
 	map_search(o, pos, obits);
 
@@ -1526,177 +1635,63 @@ do_map(int descr, dbref player)
 
 /* PARSE {{{ */
 
+static inline char
+geo_dir_sanity(register char c)
+{
+	c = geo_map[(int) c][0];
+	return (c == 'w' || c == 'e' || c == 'n'
+		|| c == 's' || c == 'u' || c == 'd')  
+		? c : '\0';
+}
+
 static int
 geo_cmd_dir(struct cmd_dir *res, const char *cmd)
 {
 	int ofs = 0;
 	morton_t rep = 1;
-	char *end;
+	char *end, sc;
 
 	if (isdigit(cmd[0])) {
 		rep = strtoull(cmd, &end, 0);
 		ofs += end - &cmd[0];
 	}
 
-	res->dir = cmd[ofs];
+	res->dir = sc = cmd[ofs];
+	res->sdir = geo_dir_sanity(sc);
 	res->rep = rep;
-	if (dir_valid(res->dir))
-		return ofs + 1;
-	else {
-		res->dir = '\0';
-		return 0;
-	}
-}
 
-static inline int
-room_put_here(int descr, dbref player, char const *s)
-{
-	morton_t x;
-	char *end;
-	dbref here = getloc(player),
-	      there = strtol(s + 1, &end, 0);
-
-	x = pdb_where(here);
-
-	if (OWNER(here) != player) {
-		notify_fmt(player, "You don't own this room.");
-		return s - end;
-	}
-
-	if (!GETTMP(here))
-		SETTMP(here, 1);
-
-	enter_room(descr, player, there, NOTHING);
-	pdb_move(there, x);
-	return end - s;
-}
-
-static inline int
-teleport_human(int descr, dbref player, const char *cmd)
-{
-	morton_t x;
-	point3D_t p;
-	char *end = (char*) cmd;
-	ucoord_t obits = 0;
-
-	memset(p, 0, sizeof(p));
-
-	if (*end == '\0')
-		goto skip;
-
-	p[0] = strtol(end, &end, 0);
-	if (*end == '\0')
-		goto skip;
-
-	end++;
-	p[1] = strtol(end, &end, 0);
-	if (*end == '\0')
-		goto skip;
-
-	end++;
-	p[2] = strtol(end, &end, 0);
-	if (*end == '\0')
-		goto skip;
-
-	end++;
-	obits = strtol(end, &end, 0);
-
-skip:	x = morton3D_encode(p, obits);
-	x = teleport(descr, player, x);
-	CBUG(x);
-	return end - cmd;
-}
-
-static inline int
-geo_location_x(int descr, dbref player, char const *cmd) {
-	dbref who = player;
-	char const *s = cmd;
-	dbref i;
-
-	if (*s == '/') {
-		s++;
-		who = NOTHING;
-		if (!payfor(player, LOOKUP_COST))
-			return s - cmd;
-
-		for (i = 0; i < db_top; i++)
-			if (Typeof(i) == TYPE_PLAYER && string_prefix(NAME(i), s))
-				who = i;
-		if (who < 0)
-			return s - cmd;
-
-		s += strlen(s);
-	}
-
-	notify_fmt(player, "0x%llx", pdb_where(getloc(who)));
-	return s - cmd;
+	return ofs;
 }
 
 int
 geo_v(int descr, dbref player, char const *opcs)
 {
 	struct cmd_dir cd;
-	morton_t x;
 	char const *s = opcs;
-	int cont = 1;
 
-	for (; cont;) switch(*s++) {
-	case '\0':
-		cont = 0;
-		break;
-	case 'x':
-		s += geo_location_x(descr, player, s);
-		break;
-	case 'X':
-		s += geo_cmd_dir(&cd, s);
-		x = cd.rep;
-		notify_fmt(player, "Teleporting to 0x%llx.", x);
-		teleport(descr, player, x);
-		break;
-	case 't':
-		x = pdb_where(getloc(player));
-		{
-			point3D_t p;
-			morton3D_decode(p, x);
-			notify_fmt(player, "y: %d, x: %d, z: %d, extra: 0x%x", p[Y_COORD], p[X_COORD], p[2], OBITS(x));
-		}
-		break;
-	case 'T':
-		s += teleport_human(descr, player, s);
-		break;
-	case 'm':
-		x = pdb_where(getloc(player));
-		mark_set(player, *s, x);
-		s++;
-		break;
-	case '"':
-		x = mark_get(player, *s);
-		if (x == -1ULL)
-			break;
-		teleport(descr, player, x);
-		s++;
-		break;
-	case '#':
-		s += room_put_here(descr, player, s);
-		break;
-	default: {
+	for (;*s;) {
 		int ofs = 0;
-		s --;
-		op_t *op = op_map[(int) *s];
-		ofs += !!op;
+		op_t op = op_map[(int) *s]; // the op
+		op_a_t *aop = op.type ? NULL : op.op.a; 
+		ofs += !!(aop || op.type);
 		ofs += geo_cmd_dir(&cd, s + ofs);
 
-		if (cd.dir == '\0')
-			return opcs - s;
+		if (!(aop || op.op.b))
+			aop = &walk;
 
-		if (!op)
-			op = &walk;
+		if (aop) {
+			if (cd.sdir == '\0')
+				return opcs - s;
 
-		int j;
-		for (j = 0; j < cd.rep; j++)
-			op(descr, player, map[(int) cd.dir][0]);
+			ofs ++;
+			int j;
+			for (j = 0; j < cd.rep; j++)
+				aop(descr, player, cd.sdir);
+		} else
+			ofs += op.op.b(descr, player, cd);
+
 		s += ofs;
-	}}
+	}
 
 	return s - opcs;
 }
