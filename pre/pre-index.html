@@ -4,37 +4,35 @@
                 <title>Neverdark</title>
                 <link rel="manifest" href="manifest.json">
                 <link rel="shortcut icon" type="image/png" href="/nd256.png"/>
-                <meta name="viewport" content="width=600, user-scalable=no">
+                <meta name="viewport" content="width=device-width, user-scalable=no">
                 <!-- STYLE styles.css -->
         </head>
-        <body class="bg fg" style="scrollbar-color: #000 var(--cm); caret-color: var(--cm); font-family: 'Lucida Console', Monaco, monospace">
-                <div style="height: calc(100vh - 64pt); overflow: hidden; overflow-y: auto">
-                        <pre id="terminal" style="margin: 0 auto">
-                        <img width="405" src="art/neverdark.png" />
-                        </pre>
-                </div>
-                <form style="margin: 0">
-                        <input autofocus id="input" type="text" class="fg" autocomplete="off" style="width: 100%">
-                </form>
-                <footer>
-                        <div class="oa">
-                                <small style="float: left">
-                                        <a href="mailto:q@qnixsoft.com">Contact</a>
-                                        <a id="forget" style="display: none">Forget</a>
-                                </small>
-                                <small style="float: right">
-                                        <a href="/cgit/fbmuck">git</a>
-                                        <a href="docs">docs</a>
-                                        <a href="pre">pre</a>
-                                        <a href="src">src</a>
-                                        <a href="ssrc">ssrc</a>
-                                        <a href="#qr">1LpzW644C92QDNj9Lj4jscBQdmRYW2NfTj</a>
-                                </small>
+        <body class="bg fg">
+                <div id="view">
+                        <div id="term">
+                                <pre><img width="390" src="art/neverdark.png"></pre>
+                                <form>
+                                        <input autofocus type="text" class="fg" autocomplete="off" autocapitalize="off">
+                                </form>
                         </div>
-                </footer>
-                <!-- DEPS -->
-                <div class="oa ar" style="margin: 32pt; margin-top: 16pt">
-                        <a name="qr"><img height="86" style="padding: 24pt; background-color: white; image-rendering: optimizespeed" src="data:image/png;base64, iVBORw0KGgoAAAANSUhEUgAAAB0AAAAdAQMAAABsXfVMAAAABlBMVEX///8AAABVwtN+AAAAnElEQVQIHQGRAG7/AP4vK/gAgqfqCAC6DTLoALrrAugAukGa6ACC2CoIAP6qq/gAAHKQAAD70E1QAM0vPagAPicBoADNDDTQAFrqUdAAYAD9yAAimQJgAFlzjpAA/9GJaADgb5bQAJpHZ6AAkIy2AACXax/wAADAyMgA/rk6kACCUpiYALrQD/AAuq+FWAC6h1qQAILsB1AA/qvwgCwWPd0EB/d2AAAAAElFTkSuQmCC" /></a>
+                        <div id="map">
+                                <pre></pre>
+                        </div>
+                        <div class="session btns">
+                                <a id="forget" style="display: none"></a>
+                        </div>
+                        <div class="dir btns">
+                                <div>
+                                        <a onclick="ws.send('k')" class="mlb">k</a><a onclick="ws.send('K')">K</a>
+                                </div>
+                                <div>
+                                        <a onclick="ws.send('h')">h</a><a onclick="ws.send('l')" class="mlb">l</a>
+                                </div>
+                                <div>
+                                        <a onclick="ws.send('j')" class="mlb">j</a><a onclick="ws.send('J')">J</a>
+                                </div>
+                        </div>
                 </div>
+                <!-- DEPS -->
         </body>
 </html>

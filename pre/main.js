@@ -1,15 +1,10 @@
-/* based on websockify js demo code:
- *      VT100.js - GNU LGPL v2.1 by Frank Bi <bi@zompower.tk>
- *      wstelnet.js - 
- * No copyright infringement intended. GPLv2 <q@qnixsoft.com>
- */
+let ws = new WebSocket('wss://qnixsoft.com:4202', 'text');
 
-let websocket = new WebSocket('wss://qnixsoft.com:4202', 'text');
-
-const   term = document.getElementById('terminal'),
+const   term = document.querySelector('#term > pre'),
         form = document.querySelector('form'),
         input = document.querySelector('input'),
-        forget = document.getElementById('forget');
+        forgetbtn = document.getElementById('forget'),
+        map = document.querySelector('#map > pre');
 
 let username = localStorage.getItem('username');
 let password = localStorage.getItem('password');
@@ -17,44 +12,70 @@ let password = localStorage.getItem('password');
 function login() {
         localStorage.setItem('username', username);
         localStorage.setItem('password', password);
-        websocket.send(username + ';' + password);
-        forget.style.display = 'inline-block';
+        ws.send(username + ' ' + password);
+        forgetbtn.style.display = 'inline-block';
 }
 
-forget.onclick = function () {
+function forget() {
         localStorage.removeItem('username');
         localStorage.removeItem('password');
         location.reload();
-};
+}
 
-websocket.binaryType = 'arraybuffer';
+forgetbtn.onclick = forget;
 
-websocket.onopen = function () {
+ws.binaryType = 'arraybuffer';
+
+ws.onopen = function () {
         input.disabled = false;
         if (username && password)
                 login();
 };
 
-function output(stuff) {
-        term.innerHTML += stuff;
-        term.parentNode.scrollTop = term.parentNode.scrollHeight;
+function scroll_reset() {
+        term.scrollTop = term.scrollHeight;
 }
 
-websocket.onclose = function () {
+function output(stuff) {
+        term.innerHTML += stuff;
+        scroll_reset();
+}
+
+ws.onclose = function () {
         output("Socket connection closed\n");
         input.disabled = true;
-        forget.style.display = 'none';
+        forgetbtn.style.display = 'none';
 };
 
 if (!username)
         promptUsername();
 
-websocket.onmessage = function (e) {
-        output(e.data);
+function mcp_handler(j) {
+        if (j.key.startsWith("com-qnixsoft-web-auth-error"))
+                forget();
+        else if (j.key.startsWith("com-qnixsoft-web-view"))
+                map.innerHTML = j.value;
+        else if (j.key.startsWith("com-qnixsoft-web-art")) {
+                output('<img class="ah" src="' + j.value + '">');
+        }
+}
+
+ws.onmessage = function (e) {
+        let str = e.data;
+        let arr = JSON.parse(str);
+        console.log('received', arr);
+        for (let k in arr) {
+                if (arr[k].key == 'inband')
+                        output(arr[k].value);
+                else
+                        mcp_handler(arr[k]);
+        }
+        if (term.innerHTML.length > 8000)
+                term.innerHTML = term.innerHTML.substr(4000);
 };
 
-function send(e) {
-        websocket.send(input.value);
+function input_send(e) {
+        ws.send(input.value);
         input.value = "";
         return false;
 };
@@ -65,7 +86,7 @@ function gotPassword() {
         input.placeholder = input.value = "";
 
         login();
-        form.onsubmit = send;
+        form.onsubmit = input_send;
         return false;
 }
 
@@ -79,16 +100,15 @@ function gotUsername() {
 
 function promptUsername() {
         input.placeholder = "username";
-        password = null;
         form.onsubmit = gotUsername;
         return false;
 }
 
 if (username) {
-        forget.style.display = 'inline-block';
-        form.onsubmit = send;
+        forgetbtn.style.display = 'inline-block';
+        form.onsubmit = input_send;
 } else {
-        forget.style.display = 'none';
+        forgetbtn.style.display = 'none';
         form.onsubmit = gotUsername;
 }
 
@@ -96,3 +116,5 @@ navigator.serviceWorker.register('sw.js').then(
         function(registration) {},
         function(err) { console.error('sw.js registration failed: ', err); },
 );
+
+window.addEventListener('orientationchange', scroll_reset);

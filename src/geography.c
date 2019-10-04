@@ -10,6 +10,7 @@
 #include <db4/db.h>
 #include "kill.h"
 #include "externs.h"
+#include "web.h"
 #undef NDEBUG
 #include "debug.h"
 
@@ -57,7 +58,7 @@ static const morton_t m1 = 0x111111111111ULL;
 static const morton_t m0 = 0x800000000000ULL;
 
 // global buffer for map? // FIXME d bio_limit
-static char map_buf[256];
+static char map_buf[8 * BUFSIZ];
 
 static const char * v = "|";
 static const char * l = ANSI_FG_WHITE "+";
@@ -1422,11 +1423,10 @@ floor_get(dbref what) {
 		return floor;
 }
 
-static void
-dr_vs(int descr, dbref player, struct bio *n, dbref *g)
+static char *
+dr_vs(int descr, dbref player, struct bio *n, dbref *g, char *b)
 {
 	const char *bg, *wp;
-	char *b = map_buf;
 	dbref *g_max = g + VIEW_SIZE;
 	dbref prev;
 	unsigned floor;
@@ -1498,8 +1498,8 @@ dr_vs(int descr, dbref player, struct bio *n, dbref *g)
 		b = dr_v(b, prev, wp);
 	}
 
-	*b = '\0';
-	notify(player, map_buf);
+        b = stpcpy(b, ANSI_RESET"\n");
+        return b;
 }
 
 static inline char *
@@ -1517,12 +1517,11 @@ dr_h(char *b, char const *bg, char const *wp, char *w, int toggle)
 	return b;
 }
 
-static inline void
-dr_hs_n(int descr, dbref player, struct bio *n, dbref *g)
+static inline char *
+dr_hs_n(int descr, dbref player, struct bio *n, dbref *g, char *b)
 {
 	dbref *g_max = g + VIEW_SIZE;
 	const char *wp, *bg;
-	char *b = map_buf;
 	char wb[32], *w;
 	unsigned floor;
 	int toggle;
@@ -1576,8 +1575,8 @@ dr_hs_n(int descr, dbref player, struct bio *n, dbref *g)
 			w = (char *) h_open;
 	}
 
-	*b = '\0';
-	notify(player, map_buf);
+        b = stpcpy(b, ANSI_RESET"\n");
+        return b;
 }
 
 static inline void
@@ -1611,6 +1610,8 @@ geo_view(int descr, dbref player)
 	morton_t code = geo_where(getloc(player));
 	static const size_t bdi = VIEW_SIZE * (VIEW_SIZE - 1);
 	struct bio bd[VIEW_M], *n_max = bd + bdi, *n_p = bd;
+        char *p = map_buf;
+        /* size_t l = sizeof(map_buf); */
 	dbref o[VIEW_M], *o_p;
 	point3D_t pos;
 	ucoord_t obits = OBITS(code);
@@ -1621,14 +1622,17 @@ geo_view(int descr, dbref player)
 
 	o_p = o;
 
-	dr_vs(descr, player, n_p, o_p);
+	p = dr_vs(descr, player, n_p, o_p, p);
 
 	for (; n_p < n_max;) {
-		dr_hs_n(descr, player, n_p, o_p);
+		p = dr_hs_n(descr, player, n_p, o_p, p);
 		n_p += VIEW_SIZE;
 		o_p += VIEW_SIZE;
-		dr_vs(descr, player, n_p, o_p);
+		p = dr_vs(descr, player, n_p, o_p, p);
 	}
+
+        if (web_geo_view(descr, map_buf))
+                notify(player, map_buf);
 }
 
 /* }}} */

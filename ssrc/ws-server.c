@@ -14,9 +14,11 @@
 #include <netdb.h> 
 #include <netinet/in.h> 
 #include <stdlib.h> 
+#include <fcntl.h> 
 #include <string.h> 
 #include <sys/socket.h> 
 #include <sys/types.h> 
+#include "debug.h"
 
 #define PORT 4202
 
@@ -28,27 +30,22 @@
 #define MASKED(head) !!(head[1] & 0x80)
 #define PAYLOAD_LEN(head) ((unsigned char) (head[1] & 0x7f))
 
-#define HTMLSIZ (BUFSIZ * 4)
+#define HTMLSIZ (BUFSIZ * 16)
 
-#if 0
-static inline void
-profile_tick(char *s)
-{
-	struct timeval tick;
-	if (!gettimeofday(&tick, NULL))
-		fprintf(stderr, "PROFILE %s %llu:%lu\n", s, tick.tv_sec, tick.tv_usec);
-}
-#else
-#define profile_tick(...) do {} while (0)
-#endif
-
-#define debug(...) fprintf(stderr, __VA_ARGS__)
+#define GET_FLAG(ws, x)		( (ws)->flags & x )
+#define SET_FLAGS(ws, x)	{ (ws)->flags |= x ; }
+#define UNSET_FLAGS(mcp, x)	{ (ws)->flags &= ~(x) ; }
 
 enum ws_flags {
-	WSF_CLOSING = 1,
-	WSF_RECONNECT = 2,
-	WSF_AUTH = 4,
-	WSF_OLD = 8,
+	CLOSING = 1,
+	AUTH = 2,
+	OLD = 4,
+	MCP_CONTINUES = 8,
+	MCP_INBAND = 16,
+	MCP_VALUE = 32,
+	MCP_OPEN = 64,
+	MCP_CLOSED = 128,
+	MCP_ONCE = 256,
 };
 
 struct attr { int fg, bg, x; };
@@ -57,9 +54,11 @@ struct ws {
 	SSL *cSSL;
 	char username[32];
 	char password[32];
+	char *mcpk, *mcpv;
+	unsigned long hash;
 	int tfd;
 	int flags;
-	int esc_state;
+	int esc_state, mcp;
 	unsigned addr; 
 	struct attr c_attr, csi;
 };
@@ -71,16 +70,17 @@ struct frame {
 	char data[BUFSIZ];
 };
 
+int __b64_ntop(unsigned char const *src, size_t srclength,
+	       char *target, size_t targsize);
+
 static struct ws wss[FD_SETSIZE];
 static int cfds[FD_SETSIZE];
 static int sfd = -1; 
 static unsigned nt = 0;
 
-int __b64_ntop(unsigned char const *src, size_t srclength,
-	       char *target, size_t targsize);
-
 static inline void
-ws_handshake(SSL *cSSL) {
+ws_handshake(struct ws *ws) {
+	SSL *cSSL = ws->cSSL;
 	static char const common_resp[]
 		= "HTTP/1.1 101 Switching Protocols\r\n"
 		"Upgrade: websocket\r\n"
@@ -94,7 +94,7 @@ ws_handshake(SSL *cSSL) {
 	char buf[BUFSIZ];
 	char *s;
 
-	while (SSL_read(cSSL, buf, sizeof(buf)) > 0) {
+	while (SSL_read(cSSL, buf, sizeof(buf)) > 0)
 		for (s = buf; s && *s; s = strchr(s, '\n'))
 			if (!strncasecmp(++s, kkey, sizeof(kkey) - 1)) {
 				SHA_CTX c;
@@ -108,10 +108,10 @@ ws_handshake(SSL *cSSL) {
 				__b64_ntop(hash, sizeof(hash), result, sizeof(result));
 				SSL_write(cSSL, common_resp, sizeof(common_resp) - 1);
 				SSL_write(cSSL, result, sizeof(result) - 1);
+				ws->hash = * (unsigned long *) result;
 				SSL_write(cSSL, "\r\n\r\n", 4);
 				return;
 			}
-	}
 }
 
 static int
@@ -131,35 +131,43 @@ telnet_connect()
 	if (connect(tfd, (struct sockaddr *) &tservaddr, sizeof(tservaddr)))
 		return -1;
 
+	fcntl(tfd, F_SETFL, O_NONBLOCK);
 	return tfd;
 }
 
 static inline void
-forward_ip(struct ws *ws)
+mcp_auth(struct ws *ws)
 {
-	unsigned old = !!(ws->flags & WSF_OLD);
-	char w = 'w';
-
-	write(ws->tfd, &w, sizeof(w));
-	write(ws->tfd, &ws->addr, sizeof(ws->addr));
-	write(ws->tfd, &old, sizeof(old));
+	char buf[BUFSIZ];
+	size_t len = snprintf(buf, sizeof(buf),
+			     "#$#com-qnixsoft-web-auth %lu username: \"%s\" password: \"%s\"\r\n"
+			      , ws->hash, ws->username, ws->password);
+	write(ws->tfd, buf, len);
+	SET_FLAGS(ws, AUTH);
 }
 
 static inline void
-auth(struct ws *ws)
-{
-	char buf[126];
-	size_t len = snprintf(buf, sizeof(buf), "c %s %s\r\n",
-			      ws->username, ws->password);
-	write(ws->tfd, buf, len);
-	ws->flags |= WSF_AUTH;
+mcp_negotiate(struct ws *ws) {
+	char buf[BUFSIZ];
+	size_t n = snprintf
+		(buf, sizeof(buf),
+		 "#$#mcp authentication-key: %lu version: \"1.0\" to: \"2.1\"\r\n"
+		 "#$#mcp-negotiate-can %lu package: \"mcp-negotiate\" min-version: \"1.0\" max-version: \"2.0\"\r\n"
+		 "#$#mcp-negotiate-can %lu package: \"com-qnixsoft-web\" min-version: \"1.0\" max-version: \"1.0\"\r\n"
+		 "#$#mcp-negotiate-can %lu package: \"org-fuzzball-notify\" min-version: \"1.0\" max-version: \"1.0\"\r\n"
+		 "#$#mcp-negotiate-can %lu package: \"org-fuzzball-help\" min-version: \"1.0\" max-version: \"1.0\"\r\n"
+		 "#$#mcp-negotiate-end %lu\r\n"
+		 "#$#com-qnixsoft-web-identify %lu ip: \"%u\" old: \"%u\"\r\n"
+		 , ws->hash, ws->hash, ws->hash, ws->hash, ws->hash, ws->hash, ws->hash,
+		 ws->addr, !!GET_FLAG(ws, OLD));
+	write(ws->tfd, buf, n);
+	if (GET_FLAG(ws, AUTH))
+		mcp_auth(ws);
 }
 
 static inline void
 telnet_close(struct ws *ws, fd_set *fdset)
 {
-	/* ws->flags &= ~WSF_AUTH; */
-	debug("TELNET_CLOSE %d\n", ws->tfd);
 	cfds[ws->tfd] = 0;
 	FD_CLR(ws->tfd, fdset);
 	close(ws->tfd);
@@ -171,7 +179,6 @@ static inline void
 ws_close(int cfd, fd_set *fdset)
 {
 	struct ws *ws = &wss[cfd];
-	debug("WS_CLOSE %d\n", cfd);
 	if (ws->tfd != -1)
 		telnet_close(ws, fdset);
 	FD_CLR(cfd, fdset);
@@ -189,7 +196,7 @@ ws_close_policy(int cfd) {
 
 	SSL_write(ws->cSSL, head, sizeof(head));
 	SSL_write(ws->cSSL, &code, sizeof(code));
-	ws->flags |= WSF_CLOSING;
+	SET_FLAGS(ws, CLOSING);
 }
 
 static void
@@ -200,8 +207,6 @@ ws_read(int cfd, fd_set *fdset)
 	SSL *cSSL = ws->cSSL;
 	uint64_t pl;
 	int i, n;
-
-	profile_tick("WS_READ");
 
 	n = SSL_read(cSSL, frame.head, sizeof(frame.head));
 	if (n != sizeof(frame.head))
@@ -235,62 +240,52 @@ ws_read(int cfd, fd_set *fdset)
 	}
 
 	n = SSL_read(cSSL, frame.data, pl);
-	if (n != pl) {
-		debug("BAD PL %d / %llu\n", n, pl);
-		// should disconnect
+	if (n != pl)
 		goto error;
-	}
 
 	for (i = 0; i < pl; i++)
 		frame.data[i] ^= frame.mk[i % 4];
 
 	frame.data[i] = '\0';
-	if ((ws->flags & WSF_AUTH)) {
+	if (GET_FLAG(ws, AUTH)) {
 		if (ws->tfd != -1) {
 			frame.data[i++] = '\n';
 			write(ws->tfd, frame.data, i);
 		}
 	} else {
-		char *p = strchr(frame.data, ';');
-		if (!p) {
-			debug("BAD AUTH STRING\n");
-			return;
-		}
+		char *p = strchr(frame.data, ' ');
+		if (!p)
+			goto error;
 
 		*p = '\0';
 		strncpy(ws->username, frame.data, sizeof(ws->username));
 		frame.data[frame.pl] = '\0';
 		strncpy(ws->password, p + 1, sizeof(ws->password));
-		auth(ws);
+		SET_FLAGS(ws, AUTH);
+		mcp_auth(ws);
 	}
 
 	return;
-error:
-	ws_close_policy(cfd);
+error:	ws_close_policy(cfd);
 }
 
 static inline int
 telnet_open(int cfd, fd_set *fdset) {
 	struct ws *ws = &wss[cfd];
-	debug("TELNET OPEN %d\n", cfd);
 	ws->tfd = telnet_connect();
 	if (ws->tfd == -1)
 		return -1;
 	cfds[ws->tfd] = cfd;
 	FD_SET(ws->tfd, fdset);
-	forward_ip(ws);
-	ws->flags |= WSF_OLD;
 	nt++;
-	debug("%d!\n", ws->tfd);
-	if ((ws->flags & WSF_AUTH))
-		auth(ws);
+	mcp_negotiate(ws);
+	SET_FLAGS(ws, OLD);
 	return 0;
 }
 
 static inline int
 ws_new(SSL_CTX *sslctx, fd_set *afdset)
 {
-	profile_tick("WS_NEW");
 	/* static const char noservice[] = "HTTP/1.1 503 Service Unavailable\r\nConnection: close\r\n\r\n"; */
 	struct sockaddr_in cli; 
 	SSL *cSSL;
@@ -302,11 +297,11 @@ ws_new(SSL_CTX *sslctx, fd_set *afdset)
 		return 1;
 
 	ip = inet_ntoa(cli.sin_addr);
-	debug("WS_NEW %d %s\n", cfd, ip);
+	debug("WS_NEW %d %s", cfd, ip);
 
 	cSSL = SSL_new(sslctx);
 	SSL_set_fd(cSSL, cfd);
-	
+
 	if (SSL_accept(cSSL) <= 0) {
 		ERR_print_errors_fp(stderr);
 		SSL_shutdown(cSSL);
@@ -315,231 +310,378 @@ ws_new(SSL_CTX *sslctx, fd_set *afdset)
 		return 1;
 	}
 
-	ws_handshake(cSSL);
-	FD_SET(cfd, afdset);
-
 	struct ws *ws = &wss[cfd];
-
 	ws->cSSL = cSSL;
-	debug("start cSSL %p\n", cSSL);
 	ws->csi.fg = ws->c_attr.fg = 7;
 	ws->csi.bg = ws->c_attr.bg = 0;
 	ws->csi.x = ws->c_attr.x = 0;
 	ws->addr = cli.sin_addr.s_addr;
+	ws->mcp = 1;
+	UNSET_FLAGS(ws, MCP_CONTINUES);
+
+	ws_handshake(ws);
+	FD_SET(cfd, afdset);
+
 	telnet_open(cfd, afdset);
 
 	return 0;
 }
 
 static void params_push(struct ws *ws, int x) {
-        int     fg = ws->c_attr.fg,
-                bg = ws->c_attr.bg;
- 
-        switch (x) {
-                case 0: fg = 7; bg = 0; break;
-                case 1: fg += 8; break;
-                default: if (x >= 40)
-                                bg = x - 40;
-			 else if (x >= 30)
-                                fg = (fg >= 8 ? 8 : 0) + x - 30;
-        }
+	int     fg = ws->c_attr.fg,
+		bg = ws->c_attr.bg;
+
+	switch (x) {
+	case 0: fg = 7; bg = 0; break;
+	case 1: fg += 8; break;
+	default: if (x >= 40)
+			 bg = x - 40;
+		 else if (x >= 30)
+			 fg = (fg >= 8 ? 8 : 0) + x - 30;
+	}
 
 	ws->csi.fg = fg;
 	ws->csi.bg = bg;
 	ws->csi.x = x;
 }
 
-static size_t
-telnet_parse(struct ws *ws, char *html, char *data, size_t n, fd_set *fdset)
+static int
+ws_write(SSL *cSSL, char *data, size_t n)
 {
-	size_t html_len;
-	char *p, *end_tag = "";
-	register int esc_state = ws->esc_state;
-
-	for (html_len = 0, p = data; html_len < HTMLSIZ && *p && p < data + n; p++) {
-		register char ch = *p;
-
-		switch (ch) {
-                        case '\x18':
-                        case '\x1a':
-                                esc_state = 0;
-                                continue;
-                        case '\x1b':
-                                esc_state = 1;
-                                continue;
-                        case '\x9b':
-                                esc_state = 2;
-                                continue;
-                        case '\x07': 
-				esc_state = 7;
-				continue;
-                        case '\x00':
-                        case '\x7f':
-                        case '\v':
-                        case '\r':
-                        case '\f':
-				continue;
-		}
-
-                switch (esc_state) {
-                        case 0:
-                                switch (ch) {
-                                        case '&':
-						html_len += snprintf(&html[html_len], HTMLSIZ - html_len, "&amp;");
-						break;
-                                        /* case '<': */
-						/* html_len += snprintf(&html[html_len], HTMLSIZ - html_len, "&lt;"); */
-						/* break; */
-                                        /* case '>': */
-						/* html_len += snprintf(&html[html_len], HTMLSIZ - html_len, "&gt;"); */
-						/* break; */
-					default:
-						html[html_len] = ch;
-						html_len++;
-                                }
-                                break;
-                        case 1:
-                                switch (ch) {
-                                        case '[':
-                                                esc_state = 2;
-                                                break;
-
-                                        case '=':
-                                        case '>':
-                                        case 'H':
-                                                esc_state = 0; /* IGNORED */
-                                                break;
-                                }
-                                break;
-                        case 2: // just saw CSI
-                                switch (ch) {
-                                        case 'K':
-                                        case 'H':
-                                        case 'J':
-                                                esc_state = 0;
-                                                continue;
-                                        case '?':
-                                                esc_state = 5;
-                                                continue;
-                                }
-                                params_push(ws, 0);
-                                esc_state = 3;
-                        case 3: // saw CSI and parameters
-                                switch (ch) {
-				case 'm':
-					if (ws->c_attr.bg != ws->csi.bg
-					    || ws->c_attr.fg != ws->csi.fg) {
-						char * span_class_end = "";
-						int a = ws->csi.fg != 7, b = ws->csi.bg != 0;
-						html_len += snprintf(&html[html_len],
-								     HTMLSIZ - html_len,
-								     "%s", end_tag);
-						if (a || b) {
-							html_len += snprintf(&html[html_len],
-									     HTMLSIZ - html_len,
-									     "<span class=\"");
-							span_class_end = "\">";
-							end_tag = "</span>";
-						}
-
-						if (a)
-							html_len += snprintf(&html[html_len],
-									     HTMLSIZ - html_len,
-									     "fg%d ", ws->csi.fg);
-						if (b)
-							html_len += snprintf(&html[html_len],
-									     HTMLSIZ - html_len,
-									     "bg%d ", ws->csi.bg);
-
-						html_len += snprintf(&html[html_len],
-								     HTMLSIZ - html_len,
-								     "%s", span_class_end);
-
-						ws->c_attr.fg = ws->csi.fg;
-						ws->c_attr.bg = ws->csi.bg;
-						ws->c_attr.x = 0;
-						ws->csi.x = 0;
-					}
-
-					esc_state = 0;
-					break;
-				case '[':
-					esc_state = 4;
-					break;
-				case ';':
-					params_push(ws, 0);
-					break;
-				default:
-					if (ch >= '0' && ch <= '9')
-						params_push(ws, ws->csi.x * 10 + (ch - '0'));
-					else
-						esc_state = 0;
-                                }
-                                break;
-                        case 5: params_push(ws, ch);
-                                esc_state = 6;
-                                break;
-			case 7:
-				switch (ch) {
-				case '0':
-					ws->flags &= ~WSF_AUTH;
-					break;
-				case '1':
-					telnet_close(ws, fdset);
-				}
-                        case 4:
-                        case 6:
-                                esc_state = 0;
-                                break;
-                }
-        }
-	ws->esc_state = esc_state;
-	html[html_len] = '\0';
-	return html_len;
-}
-
-static void
-telnet_read(int tfd, fd_set *fdset)
-{
-	profile_tick("TELNET_READ");
-	char data[BUFSIZ];
-	char html[HTMLSIZ];
 	unsigned char head[2] = { 0x81, 0x00 };
-	int cfd = cfds[tfd];
-	struct ws *ws = &wss[cfd];
-	SSL *cSSL = ws->cSSL;
-	ssize_t n;
-
-	debug("telnet_read %d cSSL %p\n", tfd, cSSL);
-	n = read(tfd, data, sizeof(data));
-
-	if (n == 0) {
-		telnet_close(ws, fdset);
-		return;
-	} else if (n < 0) {
-		perror("TELNET_READ");
-		return;
-	}
-
-	data[n] = '\0';
-	n = telnet_parse(ws, html, data, n, fdset);
 
 	if (n < 126) {
 		head[1] |= n;
-		SSL_write(cSSL, head, sizeof(head));
+		if (SSL_write(cSSL, head, sizeof(head)) < sizeof(head))
+			return -1;
 	} else if (n < (1 << 16)) {
 		uint16_t nn = htons(n);
 		head[1] |= 126;
-		SSL_write(cSSL, head, sizeof(head));
-		SSL_write(cSSL, &nn, sizeof(nn));
+		if (SSL_write(cSSL, head, sizeof(head)) < sizeof(head)
+		    || SSL_write(cSSL, &nn, sizeof(nn)) < sizeof(nn))
+			return -1;
 	} else {
 		uint64_t nn = htonl(n);
 		head[1] |= 127;
-		SSL_write(cSSL, head, sizeof(head));
-		SSL_write(cSSL, &nn, sizeof(nn));
+		if (SSL_write(cSSL, head, sizeof(head)) < sizeof(head)
+		    || SSL_write(cSSL, &nn, sizeof(nn)) < sizeof(nn))
+			return -1;
 	}
 
-	SSL_write(cSSL, html, n);
+	return SSL_write(cSSL, data, n) < n;
+}
+
+static char data[BUFSIZ];
+static ssize_t data_len;
+static char html[HTMLSIZ];
+static size_t html_len;
+
+static inline void
+json_close(struct ws *ws)
+{
+	if (GET_FLAG(ws, MCP_OPEN)) {
+		html_len += snprintf(&html[html_len], HTMLSIZ - html_len,
+				     "\" }");
+		SET_FLAGS(ws, MCP_CLOSED);
+		UNSET_FLAGS(ws, MCP_OPEN | MCP_INBAND | MCP_VALUE);
+	}
+}
+
+static inline void
+json_open(struct ws *ws, const char *str)
+{
+	if (GET_FLAG(ws, MCP_ONCE)) {
+		json_close(ws);
+		html[html_len++] = ',';
+	}
+	html_len += snprintf(&html[html_len], HTMLSIZ - html_len, "{ \"key\": \"%s", str);
+	UNSET_FLAGS(ws, MCP_CLOSED | MCP_VALUE);
+	SET_FLAGS(ws, MCP_OPEN | MCP_ONCE);
+}
+
+static inline void
+json_inband_open(struct ws *ws)
+{
+	json_open(ws, "inband\", \"value\": \"");
+	SET_FLAGS(ws, MCP_VALUE | MCP_INBAND);
+}
+
+static inline void
+mcp_handler(struct ws *ws) {
+	char *buf = html;
+	static const char end[] = "mcp-negotiate-end";
+	static const char view[] = "com-qnixsoft-web-view";
+	static const char art[] = "com-qnixsoft-web-art";
+	static const char aerr[] = "com-qnixsoft-web-auth-error";
+	if (!strncmp(buf, end, sizeof(end) - 1)) {
+		if (GET_FLAG(ws, AUTH))
+			mcp_auth(ws);
+	/* } else if (!strncmp(buf, view, sizeof(view) - 1) */
+	/* 	   || !strncmp(buf, art, sizeof(art) - 1) */
+	/* 	   || !strncmp(buf, aerr, sizeof(aerr) - 1)) { */
+		/* ws_write(ws->cSSL, buf, html_len - 1); */
+	/* } else { */
+	/* 	debug("oops unfiltered\n"); */
+	}
+	json_close(ws);
+	/* debug("mcp handling '%s' '%s'", ws->mcpk, html); */
+	ws->mcpk = NULL;
+}
+
+static inline void
+csi_change(struct ws *ws, char ** end_tag_r)
+{
+	char * span_class_end = "";
+	int a = ws->csi.fg != 7, b = ws->csi.bg != 0;
+	html_len += snprintf(&html[html_len],
+			     HTMLSIZ - html_len,
+			     "%s", *end_tag_r);
+	if (a || b) {
+		html_len += snprintf(&html[html_len],
+				     HTMLSIZ - html_len,
+				     "<span class=\\\"");
+		span_class_end = "\\\">";
+		*end_tag_r = "</span>";
+	}
+
+	if (a)
+		html_len += snprintf(&html[html_len],
+				     HTMLSIZ - html_len,
+				     "fg%d ", ws->csi.fg);
+	if (b)
+		html_len += snprintf(&html[html_len],
+				     HTMLSIZ - html_len,
+				     "bg%d ", ws->csi.bg);
+
+	html_len += snprintf(&html[html_len],
+			     HTMLSIZ - html_len,
+			     "%s", span_class_end);
+
+	ws->c_attr.fg = ws->csi.fg;
+	ws->c_attr.bg = ws->csi.bg;
+	ws->c_attr.x = 0;
+	ws->csi.x = 0;
+}
+
+static inline void
+esc_state_0(struct ws *ws, char *p) {
+	int ret = 0;
+
+	switch (*p) {
+	case '#':
+		switch (ws->mcp) {
+		case 3:
+		case 1:
+			ws->mcp++;
+			return;
+		}
+		break;
+	case '$':
+		if (ws->mcp == 2) {
+			ws->mcp++;
+			return;
+		} else
+			break;
+	case '/':
+	case '\\':
+	case '"':
+	case '\t':
+		// chars that must be json escaped
+		if (ws->mcp)
+			return;
+		html[html_len++] = '\\';
+		html[html_len++] = *p;
+		return;
+	case '*':
+		if (ws->mcp == 4) {
+			ws->mcp = 5;
+			return;
+		} else if (ws->mcpk && !GET_FLAG(ws, MCP_CONTINUES)) {
+			SET_FLAGS(ws, MCP_CONTINUES | MCP_VALUE);
+			return;
+		}
+		break;
+	case '\n':
+		if (GET_FLAG(ws, MCP_VALUE)) {
+			html[html_len++] = '\\';
+			html[html_len++] = 'n';
+		} else if (!GET_FLAG(ws, MCP_INBAND))
+			mcp_handler(ws);
+		ws->mcp = 1;
+		return;
+	case ':':
+		switch (ws->mcp) {
+		case 4:
+			mcp_handler(ws);
+			ws->mcp = 6;
+			UNSET_FLAGS(ws, MCP_CONTINUES);
+			return;
+		case 5:
+			ws->mcp = 0;
+			return;
+		}
+		break;
+	case ' ':
+		if (ws->mcp == 0 && ws->mcpk && !GET_FLAG(ws, MCP_CONTINUES)) {
+			html_len += snprintf(&html[html_len], HTMLSIZ - html_len,
+					     "\", \"value\": \"");
+			SET_FLAGS(ws, MCP_VALUE);
+			ws->mcp = 6;
+			return;
+		}
+	}
+
+	switch (ws->mcp) {
+	case 6:
+	case 5: return;
+	case 0: break;
+
+	case 4: // new mcp command
+		json_open(ws, "");
+		ws->mcpk = &html[html_len];
+		break;
+
+	default: // mcp turned out impossible
+		if (!GET_FLAG(ws, MCP_INBAND))
+			json_inband_open(ws);
+		ws->mcp--;
+		strncpy(&html[html_len], "#$#", ws->mcp);
+		html_len += ws->mcp;
+
+	}
+
+	ws->mcp = 0;
+	html[html_len++] = *p;
+}
+
+static inline void
+esc_state_any(struct ws *ws, char *p, char **end_tag) {
+	register char ch = *p;
+
+	switch (ch) {
+	case '\x18':
+	case '\x1a':
+		ws->esc_state = 0;
+		return;
+	case '\x1b':
+		ws->esc_state = 1;
+		return;
+	case '\x9b':
+		ws->esc_state = 2;
+		return;
+	case '\x07': 
+	case '\x00':
+	case '\x7f':
+	case '\v':
+	case '\r':
+	case '\f':
+		return;
+	}
+
+	switch (ws->esc_state) {
+	case 0:
+		esc_state_0(ws, p);
+		break;
+	case 1:
+		switch (ch) {
+		case '[':
+			ws->esc_state = 2;
+			break;
+		case '=':
+		case '>':
+		case 'H':
+			ws->esc_state = 0; /* IGNORED */
+		}
+		break;
+	case 2: // just saw CSI
+		switch (ch) {
+		case 'K':
+		case 'H':
+		case 'J':
+			ws->esc_state = 0;
+			return;
+		case '?':
+			ws->esc_state = 5;
+			return;
+		}
+		params_push(ws, 0);
+		ws->esc_state = 3;
+	case 3: // saw CSI and parameters
+		switch (ch) {
+		case 'm':
+			if (ws->c_attr.bg != ws->csi.bg
+			    || ws->c_attr.fg != ws->csi.fg)
+				csi_change(ws, end_tag);
+			ws->esc_state = 0;
+			break;
+		case '[':
+			ws->esc_state = 4;
+			break;
+		case ';':
+			params_push(ws, 0);
+			break;
+		default:
+			if (ch >= '0' && ch <= '9')
+				params_push(ws, ws->csi.x * 10 + (ch - '0'));
+			else
+				ws->esc_state = 0;
+		}
+		break;
+
+	case 5: params_push(ws, ch);
+		ws->esc_state = 6;
+		break;
+	case 4:
+	case 6: ws->esc_state = 0;
+		break;
+
+	default: CBUG(1);
+	}
+}
+
+static void
+telnet_parse(int tfd, fd_set *fdset)
+{
+	char *p, *end_tag = "";
+	int cfd = cfds[tfd], retry = 0;
+	struct ws *ws = &wss[cfd];
+	html_len = 0;
+	UNSET_FLAGS(ws, MCP_CLOSED | MCP_OPEN
+                    | MCP_VALUE | MCP_INBAND | MCP_ONCE);
+
+	html[html_len++] = '[';
+
+again:	data_len = read(tfd, data, sizeof(data) - 1);
+
+	if (data_len == 0) {
+		telnet_close(ws, fdset);
+		return;
+	} else if (data_len < 0) {
+		CBUG(errno != EAGAIN);
+		if (GET_FLAG(ws, MCP_CONTINUES))
+			goto again;
+		retry ++;
+		if (retry < 3) {
+			struct timespec to = { .tv_sec = 0, .tv_nsec = 3000 };
+			nanosleep(&to, NULL);
+			goto again;
+		}
+		if (ws->mcpk)
+			mcp_handler(ws);
+		json_close(ws);
+		html[html_len++] = ']';
+#if 0
+		html[html_len] = '\0';
+		debug("OUT mcp %d '%s'", ws->mcp, html);
+#endif
+		ws_write(ws->cSSL, html, html_len);
+		return;
+	}
+
+	for (p = data; html_len < HTMLSIZ && *p && p < data + data_len; p++)
+		esc_state_any(ws, p, &end_tag);
+
+	goto again;
 }
 
 int main() 
@@ -548,6 +690,7 @@ int main()
 	SSL_CTX *sslctx;
 	fd_set rfdset, afdset;
 
+	/* signal(SIGPIPE, SIG_IGN); */
 	bzero(&servaddr, sizeof(servaddr)); 
 
 	// assign IP, PORT 
@@ -601,8 +744,8 @@ int main()
 			if (i == sfd)
 				ws_new(sslctx, &afdset);
 			else if (wss[i].tfd == 0)
-				telnet_read(i, &afdset);
-			else if ((wss[i].flags & WSF_CLOSING))
+				telnet_parse(i, &afdset);
+			else if (GET_FLAG(&wss[i], CLOSING))
 				ws_close(i, &afdset);
 			else
 				ws_read(i, &afdset);

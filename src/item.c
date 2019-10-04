@@ -6,8 +6,9 @@
 #include "kill.h"
 #include "db.h"
 #include "interface.h"
-#include "debug.h"
 #include "geography.h"
+#undef NDEBUG
+#include "debug.h"
 
 #define DMG_WEAPON(x) IE(x, DMG_G)
 #define WTS_WEAPON(eq) phys_wts[GETEQT(eq)]
@@ -532,14 +533,20 @@ mob_obj_random()
 void
 mobs_aggro(int descr, dbref player)
 {
+        struct living *me;
 	dbref tmp;
 	int klock = 0;
+
+        CBUG(GETLID(player) < 0);
+        me = living_get(player);
+        if (me->who != player)
+                me = living_put(player);
 
 	DOLIST(tmp, DBFETCH(getloc(player))->contents) {
 		int lid = GETLID(tmp);
 		if (lid >= 0 && GETAGGRO(tmp)) {
 			struct living *liv = living_get(tmp);
-			liv->target = living_get(player);
+			liv->target = me;
 			klock++;
 		}
 	}

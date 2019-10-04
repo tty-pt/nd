@@ -57,7 +57,7 @@ func s:Connect()
 				\ "term_kill": "int",
 				\ "curwin": 1,
 				\ })
-	call term_sendkeys(muckt, " c One qovmjbl\<cr>")
+	call term_sendkeys(muckt, "c One qovmjbl\<cr>")
 	let s:muckw = win_getid()
 	let s:muckb = bufnr('%')
 	call win_gotoid(id)

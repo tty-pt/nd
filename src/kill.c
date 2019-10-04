@@ -806,6 +806,7 @@ void
 do_living_init()
 {
 	register PropPtr p = get_property((dbref) 0, "_/living");
+        memset(living, 0, sizeof(living));
 
 	if (p) {
 		const char *liv_s = PropDataStr(p), *l;
@@ -974,17 +975,18 @@ do_living_save()
 	PData mydat;
 
 	// TODO? use mask?
-	for (i = 0; i < m; i++, n++)
-		if (n->who > 0 && (Typeof(n->who) == TYPE_PLAYER
-				   || Typeof(n->who) == TYPE_THING))
+	for (i = 0; i < m; i++, n++) {
+		if (n->who > 0 && n->who < db_top && (Typeof(n->who) == TYPE_PLAYER
+				   || Typeof(n->who) == TYPE_THING)
+                    && GETLID(n->who) >= 0)
 		{
 			register size_t d;
 			d = snprintf(b, sizeof(buf) - len, "#%d ", n->who);
 			len += d;
-			if (len > sizeof(buf))
-				abort();
+                        CBUG(len > sizeof(buf));
 			b += d;
 		}
+        }
 
 	mydat.flags = PROP_STRTYP;
 	mydat.data.str = buf;

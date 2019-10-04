@@ -11,6 +11,9 @@ all: ../index.html
 ../index.html: pre-index.html ${js} styles.css
 	${scripts}/html_tool.sh pre-index.html ${js} > $@
 
+styles.css: pre-styles.css
+	myth pre-styles.css $@
+
 app.min.js: ${open-js}
 	jsc --js ${open-js} --entry_point main --js_output_file $@ \
 		-O ${COMPILE} --module_resolution BROWSER

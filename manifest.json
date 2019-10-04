@@ -2,7 +2,6 @@
         "name": "Neverdark",
         "start_url": "/",
         "display": "standalone",
-        "orientation": "portrait",
         "background_color": "#3c403c",
         "theme_color": "#c1c3da",
 	"icons": [{

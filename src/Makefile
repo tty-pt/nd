@@ -23,7 +23,7 @@ fbmuck-obj-y := crt_malloc.o geometry.o noise.o geography.o item.o kill.o shop.o
 	props.o p_stack.o p_strings.o random.o rob.o sanity.o set.o \
 	signal.o smatch.o snprintf.o speech.o strftime.o stringutil.o \
 	timequeue.o timestamp.o unparse.o utils.o wiz.o \
-	version.o copyright.o interface.o
+	version.o copyright.o interface.o web.o
 
 prochelp-obj-y := prochelp.o
 

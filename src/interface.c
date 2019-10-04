@@ -11,6 +11,7 @@
 #include "config.h"
 #include "match.h"
 #include "mpi.h"
+#include "web.h"
 
 #include <sys/types.h>
 
@@ -65,6 +66,8 @@
 #include "kill.h"
 #include "geography.h"
 #include "item.h"
+#undef NDEBUG
+#include "debug.h"
 
 typedef enum {
 	TELNET_STATE_NORMAL,
@@ -1631,15 +1634,6 @@ initializesock(int s, const char *hostname, int is_ssl)
 		descriptor_list->prev = &d->next;
 	d->next = descriptor_list;
 	d->prev = &descriptor_list;
-	{
-		char w = '\0';
-		read(s, &w, sizeof(w));
-		if (w == 'w') {
-			read(s, &d->web.ip, sizeof(d->web.ip));
-			read(s, &d->web.old, sizeof(d->web.old));
-		} else
-			memset(&d->web, 0, sizeof(d->web));
-	}
 	descriptor_list = d;
 	remember_descriptor(d);
 
@@ -1654,8 +1648,6 @@ initializesock(int s, const char *hostname, int is_ssl)
 #endif
 
 	mcp_negotiation_start(&d->mcpframe);
-	if (!d->web.old)
-		welcome_user(d);
 	return d;
 }
 
@@ -2367,80 +2359,97 @@ interact_warn(dbref player)
 	}
 }
 
+int
+auth(int descr, char *user, char *password)
+{
+        int created = 0;
+        dbref player = connect_player(user, password);
+	struct descriptor_data *d = descrdata_by_descr(descr);
+
+        if ((wizonly_mode || (PLAYERMAX && con_players_curr >= PLAYERMAX_LIMIT)) && !TrueWizard(player)) {
+                queue_ansi(d, wizonly_mode
+                           ? "Sorry, but the game is in maintenance mode currently, and "
+                           "only wizards are allowed to connect.  Try again later."
+                           : PLAYERMAX_BOOTMESG);
+                queue_string(d, "\r\n");
+                d->booted = 1;
+                return 1;
+        }
+
+        if (player == NOTHING) {
+#if REGISTRATION
+                queue_ansi(d, connect_fail);
+                /* if (d->web.ip) */
+                /*         web_logout(d->descriptor); */
+                log_status("FAILED CONNECT %s on descriptor %d", user, d->descriptor);
+                return 1;
+#else
+                player = create_player(user, password);
+
+                if (player == NOTHING) {
+                        queue_ansi(d, create_fail);
+                        /* if (d->web.ip) */
+                        /*         web_logout(d->descriptor); */
+
+                        log_status("FAILED CREATE %s on descriptor %d", user, d->descriptor);
+                        return 1;
+                }
+
+                log_status("CREATED %s(%d) on descriptor %d",
+                           NAME(player), player, d->descriptor);
+                created = 1;
+#endif
+        } else
+                log_status("CONNECTED: %s(%d) on descriptor %d",
+                           NAME(player), player, d->descriptor);
+        d->connected = 1;
+        d->connected_at = time(NULL);
+        d->player = player;
+        update_desc_count_table();
+        remember_player_descr(player, d->descriptor);
+        /* cks: someone has to initialize this somewhere. */
+        PLAYER_SET_BLOCK(d->player, 0);
+        welcome_user(d);
+        spit_file(player, MOTD_FILE);
+        announce_connect(d, player);
+        if (created) {
+                do_help(player, "begin", "");
+                living_put(player);
+        } else {
+                interact_warn(player);
+                if (sanity_violated && Wizard(player))
+                        notify(player,
+                               "#########################################################################\n"
+                               "## WARNING!  The DB appears to be corrupt!  Please repair immediately! ##\n"
+                               "#########################################################################");
+        }
+        if (!(web_support(d->descriptor) && d->web.old))
+                geo_view(d->descriptor, player);
+
+        con_players_curr++;
+        return 0;
+}
+
+void
+identify(int descr, unsigned ip, unsigned old)
+{
+	struct descriptor_data *d = descrdata_by_descr(descr);
+        d->web.ip = ip;
+        d->web.old = old;
+}
+
 void
 check_connect(struct descriptor_data *d, const char *msg)
 {
 	char command[MAX_COMMAND_LEN];
 	char user[MAX_COMMAND_LEN];
 	char password[MAX_COMMAND_LEN];
-	dbref player;
 
 	parse_connect(msg, command, user, password);
 
-	if (*command == 'c') {
-		int created = 0;
-		player = connect_player(user, password);
-
-		if ((wizonly_mode || (PLAYERMAX && con_players_curr >= PLAYERMAX_LIMIT)) && !TrueWizard(player)) {
-			queue_ansi(d, wizonly_mode
-				   ? "Sorry, but the game is in maintenance mode currently, and "
-				   "only wizards are allowed to connect.  Try again later."
-				   : PLAYERMAX_BOOTMESG);
-			queue_string(d, "\r\n");
-			d->booted = 1;
-			return;
-		}
-
-		if (player == NOTHING) {
-#if REGISTRATION
-			queue_ansi(d, connect_fail);
-                        if (d->web.ip)
-                                queue_ansi(d, "\a0");
-			log_status("FAILED CONNECT %s on descriptor %d", user, d->descriptor);
-			return;
-#else
-			player = create_player(user, password);
-
-			if (player == NOTHING) {
-				queue_ansi(d, create_fail);
-                                if (d->web.ip)
-                                        queue_ansi(d, "\a0");
-
-				log_status("FAILED CREATE %s on descriptor %d", user, d->descriptor);
-				return;
-			}
-
-			log_status("CREATED %s(%d) on descriptor %d",
-				   NAME(player), player, d->descriptor);
-			created = 1;
-#endif
-		} else
-			log_status("CONNECTED: %s(%d) on descriptor %d",
-				   NAME(player), player, d->descriptor);
-		d->connected = 1;
-		d->connected_at = time(NULL);
-		d->player = player;
-		update_desc_count_table();
-		remember_player_descr(player, d->descriptor);
-		/* cks: someone has to initialize this somewhere. */
-		PLAYER_SET_BLOCK(d->player, 0);
-		spit_file(player, MOTD_FILE);
-		announce_connect(d, player);
-		if (created) {
-			do_help(player, "begin", "");
-			living_put(player);
-		} else {
-			interact_warn(player);
-			if (sanity_violated && Wizard(player))
-				notify(player,
-				       "#########################################################################\n"
-				       "## WARNING!  The DB appears to be corrupt!  Please repair immediately! ##\n"
-				       "#########################################################################");
-		}
-		if (!d->web.old)
-                        geo_view(d->descriptor, player);
-		con_players_curr++;
-        } else if (*command && !d->web.old)
+	if (*command == 'c')
+                auth(d->descriptor, user, password);
+        else
 		welcome_user(d);
 }
 
@@ -2517,9 +2526,7 @@ close_sockets(const char *msg) {
 		if (d->connected) {
 			forget_player_descr(d->player, d->descriptor);
 		}
-		if (d->web.ip)
-			socket_write(d, "\a1", 1);
-		else {
+		if (!d->web.ip) {
 			socket_write(d, msg, strlen(msg));
 			socket_write(d, shutdown_message, strlen(shutdown_message));
 		}
@@ -3564,23 +3571,18 @@ art(int descr, const char *art)
 	struct descriptor_data *d;
 
 	if (*art == '/' || strstr(art, "..")
-	    || !(string_prefix(art, "bird/")
-		|| string_prefix(art, "fish/")))
+	    || (!(string_prefix(art, "bird/")
+		|| string_prefix(art, "fish/")
+                || !strchr(art, '/'))))
 
 		return;
 	
         d = descrdata_by_descr(descr);
 
-	if (d->web.ip) {
-		snprintf(buf, sizeof(buf), "../art/%s.png", art);
-		if ( access(buf, F_OK) != -1 ) {
-			ssize_t n;
-			n = snprintf(buf, sizeof(buf), "<img class=\"ah\" src=\"./art/%s.png\">\r\n", art);
-			/* queue_ansi(d, buf); */
-			queue_write(d, buf, n);
-			return;
-		}
-	}
+	/* queue_string(d, "\r\n"); */
+
+        if (!web_art(descr, art, buf, sizeof(buf)))
+                return;
 
 	snprintf(buf, sizeof(buf), "../art/%s.txt", art);
 
@@ -3606,7 +3608,7 @@ mob_welcome(struct descriptor_data *d)
 {
 	struct obj const *o = mob_obj_random();
 	if (o) {
-		assert(*o->name != '\0');
+		CBUG(*o->name == '\0');
 		queue_string(d, o->name);
 		queue_string(d, "\r\n\r\n");
 		art(d->descriptor, o->art);
@@ -3625,26 +3627,25 @@ welcome_user(struct descriptor_data *d)
 	char *ptr;
 	char buf[BUFFER_LEN];
 
-        if (!d->web.ip) {
-		if ((f = fopen(WELC_FILE, "rb")) == NULL) {
-			queue_ansi(d, DEFAULT_WELCOME_MESSAGE);
-			perror("spit_file: welcome.txt");
-		} else {
-			while (fgets(buf, sizeof(buf) - 3, f)) {
-				ptr = index(buf, '\n');
-				if (ptr && ptr > buf && *(ptr - 1) != '\r') {
-					*ptr++ = '\r';
-					*ptr++ = '\n';
-					*ptr++ = '\0';
-				}
-				queue_ansi(d, buf);
-			}
-			fclose(f);
-		}
-	}
+        if (!web_support(d->descriptor)) {
+                if ((f = fopen(WELC_FILE, "rb")) == NULL) {
+                        queue_ansi(d, DEFAULT_WELCOME_MESSAGE);
+                        perror("spit_file: welcome.txt");
+                } else {
+                        while (fgets(buf, sizeof(buf) - 3, f)) {
+                                ptr = index(buf, '\n');
+                                if (ptr && ptr > buf && *(ptr - 1) != '\r') {
+                                        *ptr++ = '\r';
+                                        *ptr++ = '\n';
+                                        *ptr++ = '\0';
+                                }
+                                queue_ansi(d, buf);
+                        }
+                        fclose(f);
+                }
+        }
 
-        if (!d->web.old)
-		mob_welcome(d);
+        mob_welcome(d);
 
 	if (wizonly_mode) {
 		queue_ansi(d, "## The game is currently in maintenance mode, and only wizards will be able to connect.\r\n");
