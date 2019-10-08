@@ -21,8 +21,8 @@
 /src/version.h
 /src/fbmuck
 /src/prochelp
+/src/ws-server
 /src/.depend
-/ssrc/ws
 /pre/app.min.js
 /tmp
 game/data/mpihelp.txt

@@ -87,8 +87,7 @@ ws_handshake(struct ws *ws) {
 		"Connection: upgrade\r\n"
 		"Sec-Websocket-Protocol: text\r\n"
 		"Sec-Websocket-Accept: ",
-		kkey[] = "Sec-WebSocket-Key",
-		debugv[] = "dGhlIHNhbXBsZSBub25jZQ==";
+		kkey[] = "Sec-WebSocket-Key";
 	unsigned char hash[SHA_DIGEST_LENGTH];
 	unsigned char result[29];
 	char buf[BUFSIZ];
@@ -199,7 +198,7 @@ ws_close_policy(int cfd) {
 	SET_FLAGS(ws, CLOSING);
 }
 
-static void
+static inline void
 ws_read(int cfd, fd_set *fdset)
 {
 	struct frame frame;
@@ -327,7 +326,9 @@ ws_new(SSL_CTX *sslctx, fd_set *afdset)
 	return 0;
 }
 
-static void params_push(struct ws *ws, int x) {
+static inline void
+params_push(struct ws *ws, int x)
+{
 	int     fg = ws->c_attr.fg,
 		bg = ws->c_attr.bg;
 
@@ -345,7 +346,7 @@ static void params_push(struct ws *ws, int x) {
 	ws->csi.x = x;
 }
 
-static int
+static inline int
 ws_write(SSL *cSSL, char *data, size_t n)
 {
 	unsigned char head[2] = { 0x81, 0x00 };
@@ -410,9 +411,9 @@ static inline void
 mcp_handler(struct ws *ws) {
 	char *buf = html;
 	static const char end[] = "mcp-negotiate-end";
-	static const char view[] = "com-qnixsoft-web-view";
-	static const char art[] = "com-qnixsoft-web-art";
-	static const char aerr[] = "com-qnixsoft-web-auth-error";
+	/* static const char view[] = "com-qnixsoft-web-view"; */
+	/* static const char art[] = "com-qnixsoft-web-art"; */
+	/* static const char aerr[] = "com-qnixsoft-web-auth-error"; */
 	if (!strncmp(buf, end, sizeof(end) - 1)) {
 		if (GET_FLAG(ws, AUTH))
 			mcp_auth(ws);
@@ -465,8 +466,6 @@ csi_change(struct ws *ws, char ** end_tag_r)
 
 static inline void
 esc_state_0(struct ws *ws, char *p) {
-	int ret = 0;
-
 	switch (*p) {
 	case '#':
 		switch (ws->mcp) {
@@ -690,7 +689,6 @@ int main()
 	SSL_CTX *sslctx;
 	fd_set rfdset, afdset;
 
-	/* signal(SIGPIPE, SIG_IGN); */
 	bzero(&servaddr, sizeof(servaddr)); 
 
 	// assign IP, PORT 
