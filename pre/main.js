@@ -112,15 +112,15 @@ if (username) {
         form.onsubmit = gotUsername;
 }
 
-document.body.addEventListener('keypress', function(e) {
+document.body.onkeypress = function(e) {
         if (document.activeElement == input)
                 return;
         input.focus();
         if (e.key.length == 1)
                 input.value += e.key;
-});
+};
 
-window.addEventListener('orientationchange', scroll_reset);
+window.onorientationchange = scroll_reset;
 
 navigator.serviceWorker.register('sw.js').then(
         function(registration) {},
