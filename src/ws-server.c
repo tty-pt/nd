@@ -688,6 +688,7 @@ int main()
 	struct sockaddr_in servaddr; 
 	SSL_CTX *sslctx;
 	fd_set rfdset, afdset;
+        int tr = 1;
 
 	bzero(&servaddr, sizeof(servaddr)); 
 
@@ -697,12 +698,14 @@ int main()
 	servaddr.sin_port = htons(PORT); 
 
 	if ((sfd = socket(AF_INET, SOCK_STREAM, 0)) == -1
+            || setsockopt(sfd, SOL_SOCKET, SO_REUSEADDR, &tr, sizeof(int))
 	    || bind(sfd, (struct sockaddr *) &servaddr, sizeof(servaddr)) != 0
 	    || listen(sfd, 5) != 0) {
 		perror("...");
 		return 1;
 	}
 
+        signal(SIGPIPE, SIG_IGN);
 	SSL_load_error_strings();
 	SSL_library_init();
 	OpenSSL_add_all_algorithms();
