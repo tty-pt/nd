@@ -61,6 +61,7 @@ static struct bio chunks_bio_raw[CHUNK_M * 4],
 		  chunks_bio[CHUNK_M * 4],
 		  *bio;
 static struct rect chunks_r;
+static coord_t chunks_obits = -1;
 static const noise_t noise_fourth = (NOISE_MAX >> 2);
 static noise_t n_he[CHUNK_M],
 	       n_cl[CHUNK_M],
@@ -609,7 +610,8 @@ noise_chunks(point_t pos, ucoord_t obits)
 		r.l[I] = n[I] << CHUNK_Y;
 	}
 
-	if (r.s[0] >= chunks_r.s[0]
+	if (obits == chunks_obits
+            && r.s[0] >= chunks_r.s[0]
 	    && r.s[1] >= chunks_r.s[1]
 	    && r.s[0] + r.l[0] <= chunks_r.s[0] + chunks_r.l[0]
 	    && r.s[1] + r.l[1] <= chunks_r.s[1] + chunks_r.l[1])
