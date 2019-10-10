@@ -253,7 +253,6 @@ input:focus {
 }
 
 #term > pre img {
-  width: 94%;
   margin: 6pt auto;
   display: block;
 }

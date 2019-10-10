@@ -54,9 +54,9 @@ function mcp_handler(j) {
         if (j.key.startsWith("com-qnixsoft-web-auth-error"))
                 forget();
         else if (j.key.startsWith("com-qnixsoft-web-view"))
-                map.innerHTML = j.value;
+                map.innerHTML = j.data;
         else if (j.key.startsWith("com-qnixsoft-web-art")) {
-                output('<img class="ah" src="' + j.value + '">');
+                output('<img class="ah" src="' + j.src + '">');
         }
 }
 
