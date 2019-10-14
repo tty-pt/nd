@@ -8,31 +8,31 @@
                 <!-- STYLE styles.css -->
         </head>
         <body class="bg fg">
-                <div id="view">
-                        <div id="term">
-                                <pre><img width="94%" src="art/neverdark.png"></pre>
-                                <form>
-                                        <input autofocus type="text" class="fg" autocomplete="off" autocapitalize="off">
-                                </form>
-                        </div>
-                        <div id="map">
-                                <pre></pre>
-                        </div>
-                        <div class="session btns">
-                                <a id="forget" style="display: none"></a>
-                        </div>
-                        <div class="dir btns">
-                                <div>
-                                        <a onclick="ws.send('k')" class="mlb">k</a><a onclick="ws.send('K')">K</a>
-                                </div>
-                                <div>
-                                        <a onclick="ws.send('h')">h</a><a onclick="ws.send('l')" class="mlb">l</a>
-                                </div>
-                                <div>
-                                        <a onclick="ws.send('j')" class="mlb">j</a><a onclick="ws.send('J')">J</a>
-                                </div>
-                        </div>
+                <div id="term">
+                        <pre><img width="94%" src="art/neverdark.png"></pre>
+                        <form>
+                                <input autofocus class="fg" autocomplete="off" autocapitalize="off">
+                        </form>
                 </div>
+                <div id="map">
+                        <div>
+                                <h4 style="margin-top: 0"></h4>
+                                <small></small>
+                        </div>
+                        <pre style="font-size: 15pt"></pre>
+                </div>
+                <div id="session" class="btns" style="right: 0; top: 0">
+                        <a id="forget" style="display: none; background-image: url(art/die.png)"></a>
+                </div>
+                <div id="dir" class="btns">
+                        <div><a id="k" class="mlb">k</a><a id="up">K</a></div>
+                        <div><a id="h">h</a><a id="l" class="mlb">l</a></div>
+                        <div><a id="j" class="mlb">j</a><a id="down">J</a></div>
+                </div>
+                <div id="act" class="btns">
+                        <div></div>
+                </div>
+                <div id="contents" class="btns"></div>
                 <!-- DEPS -->
         </body>
 </html>

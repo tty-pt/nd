@@ -18,6 +18,9 @@
 #include "match.h"
 #include "dbsearch.h"
 #include "externs.h"
+#include "web.h"
+#undef NDEBUG
+#include "debug.h"
 
 #define EXEC_SIGNAL '@'			/* Symbol which tells us what we're looking at
 					 * is an execution order and not a message.    */
@@ -53,18 +56,18 @@ exec_or_notify_prop(int descr, dbref player, dbref thing,
 	int mpiflags = Prop_Blessed(thing, propname)? MPI_ISBLESSED : 0;
 
 	if (message)
-		exec_or_notify(descr, player, thing, message, whatcalled, mpiflags);
+		notify(player, exec_or_notify(descr, player, thing, message, whatcalled, mpiflags));
 }
 
-void
+const char *
 exec_or_notify(int descr, dbref player, dbref thing,
 			   const char *message, const char *whatcalled,
 			   int mpiflags)
 {
+	static char buf[BUFFER_LEN];
 	const char *p;
 	char *p2;
 	char *p3;
-	char buf[BUFFER_LEN];
 	char tmpcmd[BUFFER_LEN];
 	char tmparg[BUFFER_LEN];
 
@@ -96,9 +99,9 @@ exec_or_notify(int descr, dbref player, dbref thing,
 		}
 		if (i < 0 || i >= db_top || (Typeof(i) != TYPE_PROGRAM)) {
 			if (*p) {
-				notify(player, p);
+				return p;
 			} else {
-				notify(player, "You see nothing special.");
+				return "You see nothing special.";
 			}
 		} else {
 			struct frame *tmpfr;
@@ -115,16 +118,19 @@ exec_or_notify(int descr, dbref player, dbref thing,
 			}
 			strcpyn(match_args, sizeof(match_args), tmparg);
 			strcpyn(match_cmdname, sizeof(match_cmdname), tmpcmd);
+			return NULL;
 		}
 	} else {
 		p = do_parse_mesg(descr, player, thing, p, whatcalled, buf, sizeof(buf), MPI_ISPRIVATE | mpiflags);
-		notify(player, p);
+		return p;
 	}
 }
 
 static void
-look_contents(dbref player, dbref loc, const char *contents_name)
+look_contents(int descr, dbref player, dbref loc, const char *contents_name)
 {
+        char buf[BUFSIZ];
+        size_t buf_l = 0;
 	dbref thing;
 	dbref can_see_loc;
 
@@ -132,18 +138,18 @@ look_contents(dbref player, dbref loc, const char *contents_name)
 	can_see_loc = (!Dark(loc) || controls(player, loc));
 
 	/* check to see if there is anything there */
-	DOLIST(thing, DBFETCH(loc)->contents) {
-		if (can_see(player, thing, can_see_loc)) {
-			/* something exists!  show him everything */
-			notify(player, contents_name);
-			DOLIST(thing, DBFETCH(loc)->contents) {
-				if (can_see(player, thing, can_see_loc)) {
-					notify(player, unparse_object(player, thing));
-				}
-			}
-			break;				/* we're done */
-		}
+	if (DBFETCH(loc)->contents > 0) {
+                DOLIST(thing, DBFETCH(loc)->contents) {
+                        if (can_see(player, thing, can_see_loc)) {
+                                buf_l += snprintf(&buf[buf_l], BUFSIZ - buf_l,
+                                         "\n%s", unparse_object(player, thing));
+                        }
+                }
 	}
+
+        buf[buf_l] = '\0';
+
+        notify_fmt(player, "%s%s", contents_name, buf);
 }
 
 extern void art(dbref descr, const char *arts);
@@ -157,8 +163,8 @@ look_simple(int descr, dbref player, dbref thing)
 		art(descr, art_str);
 
 	if (GETDESC(thing)) {
-		exec_or_notify(descr, player, thing, GETDESC(thing), "(@Desc)",
-				Prop_Blessed(thing, MESGPROP_DESC)? MPI_ISBLESSED : 0);
+		notify(player, exec_or_notify(descr, player, thing, GETDESC(thing), "(@Desc)",
+				Prop_Blessed(thing, MESGPROP_DESC)? MPI_ISBLESSED : 0));
 	} else if (!art_str) {
 		notify(player, "You see nothing special.");
 	}
@@ -167,30 +173,31 @@ look_simple(int descr, dbref player, dbref thing)
 void
 look_room(int descr, dbref player, dbref loc, int verbose)
 {
+	char const *description = NULL;
 	/* tell him the name, and the number if he can link to it */
-	if (!GETTMP(loc))
-		notify(player, unparse_object(player, loc));
-	else
-		notify_fmt(player, "#%d", loc);
 
 	/* tell him the description */
 	if (Typeof(loc) == TYPE_ROOM) {
 		if (GETDESC(loc)) {
-			exec_or_notify(descr, player, loc, GETDESC(loc), "(@Desc)",
+			description = exec_or_notify(descr, player, loc, GETDESC(loc), "(@Desc)",
 				Prop_Blessed(loc, MESGPROP_DESC)? MPI_ISBLESSED : 0);
 		}
 		/* tell him the appropriate messages if he has the key */
 		can_doit(descr, player, loc, 0);
 	} else {
 		if (GETIDESC(loc)) {
-			exec_or_notify(descr, player, loc, GETIDESC(loc), "(@Idesc)",
+			description = exec_or_notify(descr, player, loc, GETIDESC(loc), "(@Idesc)",
 				Prop_Blessed(loc, MESGPROP_IDESC)? MPI_ISBLESSED : 0);
 		}
 	}
 	ts_useobject(loc);
 
-	/* tell him the contents */
-	look_contents(player, loc, "You see:");
+	if (web_look(descr, player, loc, description)) {
+		notify(player, unparse_object(player, loc));
+		notify(player, description);
+		/* tell him the contents */
+		look_contents(descr, player, loc, "You see:");
+	}
 #if LOOK_PROPQUEUES
 	{
 		char obj_num[20];
@@ -255,7 +262,7 @@ do_look_at(int descr, dbref player, const char *name, const char *detail)
 					notify(player, "Permission denied. (Your location isn't the same as what you're looking at)");
 				} else {
 					look_simple(descr, player, thing);
-					look_contents(player, thing, "Carrying:");
+					look_contents(descr, player, thing, "Carrying:");
 #if LOOK_PROPQUEUES
 					snprintf(obj_num, sizeof(obj_num), "#%d", thing);
 					envpropqueue(descr, player, thing, player, thing,
@@ -270,7 +277,7 @@ do_look_at(int descr, dbref player, const char *name, const char *detail)
 				} else {
 					look_simple(descr, player, thing);
 					if (!(FLAGS(thing) & HAVEN)) {
-						look_contents(player, thing, "Contains:");
+						look_contents(descr, player, thing, "Contains:");
 						ts_useobject(thing);
 					}
 #if LOOK_PROPQUEUES
@@ -325,8 +332,8 @@ do_look_at(int descr, dbref player, const char *name, const char *detail)
 #ifdef DISKBASE
 				propfetch(thing, lastmatch);	/* DISKBASE PROPVALS */
 #endif
-				exec_or_notify(descr, player, thing, PropDataStr(lastmatch), "(@detail)",
-					(PropFlags(lastmatch) & PROP_BLESSED)? MPI_ISBLESSED : 0);
+				notify(player, exec_or_notify(descr, player, thing, PropDataStr(lastmatch), "(@detail)",
+					(PropFlags(lastmatch) & PROP_BLESSED)? MPI_ISBLESSED : 0));
 			} else if (ambig_flag) {
 				notify(player, AMBIGUOUS_MESSAGE);
 			} else if (*detail) {

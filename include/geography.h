@@ -14,6 +14,17 @@
 extern unsigned short day_tick;
 extern const char *geo_map[]; // map of characters for commands, not geo_view
 
+/* TODO isomorphic (wasm) */
+
+enum gexit_flags {
+        GEF_WEST = 1,
+        GEF_SOUTH = 2,
+        GEF_NORTH = 4,
+        GEF_EAST = 8,
+        GEF_DOWN = 16,
+        GEF_UP = 32,
+};
+
 int geo_init(void);
 void geo_update(void);
 int geo_close(void);
@@ -29,5 +40,6 @@ int gexit_is(dbref exit);
 void gexit_dest_set(dbref exit, dbref dest);
 int gexit_can(dbref player, dbref exit);
 void gexit_snull(int descr, dbref player, dbref exit);
+int gexits(int descr, dbref player, dbref where);
 
 #endif

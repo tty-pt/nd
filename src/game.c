@@ -20,6 +20,7 @@
 #include "fbstrings.h"
 #include "debug.h"
 #include "geography.h"
+#include "kill.h"
 
 /* declarations */
 static const char *dumpfile = 0;
@@ -503,6 +504,11 @@ process_command(int descr, dbref player, char *command)
 	struct timeval endtime;
 	double totaltime;
 	morton_t x = geo_where(getloc(player));
+
+        // set current descriptor (needed for death)
+        CBUG(GETLID(player) < 0);
+        struct living *liv = living_get(player);
+        liv->descr = descr;
 
 	if (command == 0)
 		abort();

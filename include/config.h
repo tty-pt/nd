@@ -127,7 +127,7 @@
 #define WELC_FILE "data/welcome.txt"	/* For the opening screen      */
 #define MOTD_FILE "data/motd.txt"	/* For the message of the day  */
 
-#define HELP_FILE "data/help.txt"	/* For the 'help' command      */
+#define HELP_FILE "data/muckhelp.txt"	/* For the 'help' command      */
 #define HELP_DIR  "data/help"	/* For 'help' subtopic files   */
 #define NEWS_FILE "data/news.txt"	/* For the 'news' command      */
 #define NEWS_DIR  "data/news"	/* For 'news' subtopic files   */

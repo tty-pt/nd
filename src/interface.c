@@ -2426,6 +2426,8 @@ auth(int descr, char *user, char *password)
         if (!(web_support(d->descriptor) && d->web.old))
                 geo_view(d->descriptor, player);
 
+        look_room(d->descriptor, player, getloc(player), 0);
+
         con_players_curr++;
         return 0;
 }

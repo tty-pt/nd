@@ -478,8 +478,10 @@ _kill(dbref attacker, dbref target)
 	} else {
 		if (tar->target) {
 			dbref tartar = tar->target->who;
-			SETKLOCK(tartar, GETKLOCK(tartar) - GETAGGRO(target));
+                        if (GETAGGRO(target))
+                                SETKLOCK(tartar, GETKLOCK(tartar) - 1);
 		}
+
 		if (GETTMP(getloc(target))) {
 			int descr = 0;
 			if (att) {
@@ -647,9 +649,9 @@ do_kill(int descr, dbref player, const char *what)
 	dbref target = strcmp(what, "me")
 		? contents_find(descr, player, here, what)
 		: player;
-	struct living *att = living_get(player),
-		      *tar;
+	struct living *att, *tar;
 
+        att = GETLID(player) ? living_get(player) : living_put(player);
 
 	if (FLAGS(here) & HAVEN
 	    || target == NOTHING
@@ -680,11 +682,10 @@ do_killing_update(struct living *liv)
 {
 	struct living *livt = liv->target;
 
-	if (!livt || livt == liv)
-		return;
-
-	// target is no longer here
-	if (Typeof(livt->who) == TYPE_GARBAGE
+	if (!livt
+            || livt == liv
+            || livt->who < 0
+            || Typeof(livt->who) == TYPE_GARBAGE
 	    || getloc(livt->who) != getloc(liv->who)) {
 		liv->target = NULL;
 		return;
@@ -737,10 +738,12 @@ do_heal(int descr, dbref player, const char *name)
 
 	if (!(FLAGS(player) & WIZARD)
 	    || target < 0
-	    || !(tar = living_get(target)))
-		notify(player, "You can't do that.");
-	return;
+	    || GETLID(target) < 0) {
+                notify(player, "You can't do that.");
+                return;
+        }
 
+        tar = living_get(target);
 	tar->hp = HP_MAX(target);
 	tar->mp = MP_MAX(target);
 	tar->hunger = tar->thirst = 0;

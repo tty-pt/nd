@@ -11,6 +11,9 @@
 #include "defaults.h"
 #include "interface.h"
 #include "props.h"
+#include "item.h"
+#undef NDEBUG
+#include "debug.h"
 
 const char *
 unparse_flags(dbref thing)
@@ -88,15 +91,73 @@ static const char *rarity_str[] = {
 	ANSI_BOLD ANSI_FG_MAGENTA "Mythical" ANSI_RESET
 };
 
+enum actions {
+        ACT_LOOK = 1,
+        ACT_KILL = 2,
+        ACT_SHOP = 4,
+        ACT_DRINK = 8,
+        ACT_OPEN = 16,
+        ACT_CHOP = 32,
+        ACT_FILL = 64,
+};
+
+struct icon
+icon(dbref what)
+{
+        static char buf[BUFSIZ];
+        struct icon ret = {
+                .actions = ACT_LOOK,
+                .icon = ANSI_RESET ANSI_BOLD "?",
+        };
+        dbref aux;
+        switch (Typeof(what)) {
+        case TYPE_ROOM:
+                ret.icon = ANSI_FG_YELLOW "-";
+                break;
+        case TYPE_PLAYER:
+                ret.actions |= ACT_KILL;
+                ret.icon = ANSI_BOLD ANSI_FG_BLUE "#";
+                break;
+        case TYPE_THING:
+                if (GETSHOP(what)) {
+                        ret.actions |= ACT_SHOP;
+                        ret.icon = ANSI_BOLD ANSI_FG_GREEN "$";
+                        break;
+                } else if (GETLID(what) >= 0) {
+                        ret.actions |= ACT_KILL;
+                        ret.icon = ANSI_BOLD ANSI_FG_YELLOW "!";
+                        break;
+                } else if (GETDRINK(what) >= 0) {
+                        ret.actions |= ACT_DRINK | ACT_FILL;
+                        ret.icon = ANSI_BOLD ANSI_FG_BLUE "~";
+                        break;
+                } else if ((aux = GETPLID(what)) >= 0) {
+                        struct plant *pl = &plants[aux];
+
+                        ret.actions |= ACT_CHOP | ACT_OPEN;
+                        snprintf(buf, sizeof(buf), "%s%c%s", pl->pre,
+                                 GETSTACK(what) > TREE_HALF ? pl->big : pl->small,
+                                 pl->post); 
+
+                        // use the icon immediately
+                        ret.icon = buf;
+                        break;
+                }
+                break;
+        }
+        return ret;
+}
+
+#define BUFF(...) buf_l += snprintf(&buf[buf_l], BUFFER_LEN - buf_l, __VA_ARGS__)
+
 const char *
 unparse_object(dbref player, dbref loc)
 {
 	static char buf[BUFFER_LEN];
-	if (player == NOTHING)
-		goto islog;
-	if (Typeof(player) != TYPE_PLAYER)
+        size_t buf_l = 0;
+	if (player != NOTHING && Typeof(player) != TYPE_PLAYER)
 		player = OWNER(player);
-islog:
+
 	switch (loc) {
 	case NOTHING:
 		return "*NOTHING*";
@@ -108,27 +169,27 @@ islog:
 		if (loc < 0 || loc >= db_top)
 			return "*INVALID*";
 
-		char *s = buf;
 		unsigned n = GETSTACK(loc);
 		if (n)
-			s += snprintf(s, sizeof(buf), "(%ux) ", n);
+			BUFF("(%ux) ", n);
 
 		if (GETEQW(loc)) {
 			n = GETRARE(loc);
 
 			if (n != 1)
-				s += snprintf(s, sizeof(buf) - (s - buf), "(%s) ", rarity_str[n]);
+                                BUFF("(%s) ", rarity_str[n]);
 		}
 
-		s += snprintf(s, sizeof(buf) - (s - buf), "%.*s", (BUFFER_LEN / 2), NAME(loc));
+                BUFF("%s", NAME(loc));
 
 		if ((player == NOTHING) || (!(FLAGS(player) & STICKY) &&
 			(can_link_to(player, NOTYPE, loc) ||
 			 ((Typeof(loc) != TYPE_PLAYER) &&
 			  (controls_link(player, loc) || (FLAGS(loc) & CHOWN_OK))))))
 
-			snprintf(s, sizeof(buf) - (s - buf), "(#%d%s)", loc, unparse_flags(loc));
+                        BUFF("(#%d%s)", loc, unparse_flags(loc));
 
+                buf[buf_l] = '\0';
 		return buf;
 	}
 }

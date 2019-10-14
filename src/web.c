@@ -2,6 +2,7 @@
 #include "mcp.h"
 #include "externs.h"
 #include "interface.h"
+#include "geography.h"
 #undef NDEBUG
 #include "debug.h"
 
@@ -95,5 +96,47 @@ web_art(int descr, char const *art, char *buf, size_t n)
         mcp_mesg_arg_append(&msg, "src", buf);
         mcp_frame_output_mesg(mfr, &msg);
         mcp_mesg_clear(&msg);
+        return 0;
+}
+
+int
+web_look(int descr, dbref player, dbref loc, char const *description)
+{
+        char buf[BUFSIZ];
+        dbref thing, can_see_loc;
+	McpMesg msg;
+	McpFrame *mfr = web_frame(descr);
+	if (!mfr)
+                return 1;
+
+        mcp_mesg_init(&msg, MCP_WEB_PKG, "look");
+        if (Typeof(loc) == TYPE_ROOM) {
+                mcp_mesg_arg_append(&msg, "room", "1");
+                snprintf(buf, sizeof(buf), "%d", gexits(descr, player, loc));
+                mcp_mesg_arg_append(&msg, "exits", buf);
+
+        }
+        mcp_mesg_arg_append(&msg, "name", unparse_object(player, loc));
+        mcp_mesg_arg_append(&msg, "description", description);
+        mcp_frame_output_mesg(mfr, &msg);
+        mcp_mesg_clear(&msg);
+
+	can_see_loc = (!Dark(loc) || controls(player, loc));
+
+	// use callbacks for mcp like this versus telnet
+        DOLIST(thing, DBFETCH(loc)->contents) {
+                if (can_see(player, thing, can_see_loc)) {
+                        struct icon ico = icon(thing);
+                        mcp_mesg_init(&msg, MCP_WEB_PKG, "look-content");
+                        mcp_mesg_arg_append(&msg, "name", NAME(thing));
+                        mcp_mesg_arg_append(&msg, "pname", unparse_object(player, thing));
+                        mcp_mesg_arg_append(&msg, "icon", ico.icon);
+                        snprintf(buf, sizeof(buf), "%d", ico.actions);
+                        mcp_mesg_arg_append(&msg, "actions", buf);
+                        mcp_frame_output_mesg(mfr, &msg);
+                        mcp_mesg_clear(&msg);
+                }
+        }
+
         return 0;
 }

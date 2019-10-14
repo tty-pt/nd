@@ -490,7 +490,7 @@ fruit_size(struct plant *pl, struct bio *b)
 }
 
 static inline void
-plant_add(int descr, dbref player, struct bio *b, dbref where, unsigned char plid, unsigned char n)
+plant_add(int descr, dbref player, dbref where, struct bio *b, unsigned char plid, unsigned char n)
 {
 	if (n == 0)
 		return;
@@ -500,26 +500,34 @@ plant_add(int descr, dbref player, struct bio *b, dbref where, unsigned char pli
 	struct boolexp *key = parse_boolexp(descr, player, NAME(player), 0);
 	unsigned yield = plant_yield(pl, b, n);
 	SETCONLOCK(plant, key);
+        SETPLID(plant, plid);
 	SETFOOD(fruit, fruit_size(pl, b));
 	if (yield > 1)
 		SETSTACK(fruit, yield);
 }
 
 static inline void
+_plants_add(int descr, dbref player, dbref where, struct bio *b,
+            unsigned char plid[3], unsigned char pln)
+{
+	register int i, aux;
+        for (i = 0; i < 3; i++) {
+                aux = TREE_N(pln, i);
+                if (aux)
+                        plant_add(descr, player, where, b, plid[i], aux);
+        }
+}
+
+static inline void
 plants_add(int descr, dbref player, struct bio *b, dbref where)
 {
-	unsigned char plid[EXTRA_TREE], pln[EXTRA_TREE];
-	int i;
+	unsigned char e_plid[EXTRA_TREE], e_pln;
 
-	for (i = 0; i < 3; i++)
-		if (b->pln[i])
-			plant_add(descr, player, b, where, b->plid[i], b->pln[i]);
-
-	noise_rplants(plid, pln, b);
-
-	for (i = 0; i < EXTRA_TREE; i++)
-		if (pln[i])
-			plant_add(descr, player, b, where, plid[i], pln[i]);
+        if (b->pln)
+                _plants_add(descr, player, where, b, b->plid, b->pln);
+	noise_rplants(e_plid, &e_pln, b);
+        if (e_pln)
+                _plants_add(descr, player, where, b, e_plid, e_pln);
 }
 
 static inline void
@@ -532,7 +540,6 @@ others_add(int descr, dbref player, struct bio *b, dbref where, morton_t p)
 		return;
 	if (n && (v & 0x18))
 		obj_stack_add(stone, where, n);
-	plants_add(descr, player, b, where);
 }
 
 /* }}} */
@@ -782,13 +789,14 @@ exits_fix(int descr, dbref player, dbref there, dbref exit)
 static void
 exits_infer(int descr, dbref player, dbref here)
 {
-	const char *s = "wedsun";
+	const char *s = "wsnedu";
 
 	for (; *s; s++) {
 		dbref oexit, exit_there, there = geo_there(here, *s);
 
 		if (there < 0) {
-			gexit(descr, player, here, NOTHING, *s);
+                        if (*s != 'u' && *s != 'd')
+                                gexit(descr, player, here, NOTHING, *s);
 			continue;
 		}
 
@@ -829,13 +837,14 @@ geo_room_at(int descr, dbref player, morton_t x)
 		morton_decode(pos, x);
 		if (pos[2] != 0)
 			return there;
-		SETTREE(there, (!!(bio->pln[0]))
-			| ((!!(bio->pln[1])) << 1)
-			| ((!!(bio->pln[2])) << 2));
+		SETTREE(there, bio->pln);
 		SETFLOOR(there, bio->bio_idx);
 		mobs_add(bio, there);
 		others_add(descr, player, bio, there, x);
+                plants_add(descr, player, bio, there);
 	}
+	DBDIRTY(there);
+	DBDIRTY(loc);
 	return there;
 }
 
@@ -1312,12 +1321,14 @@ dr_room(int descr, dbref player, struct bio *n, dbref here, char *buf, const cha
 	if (tmp > 0 && DBFETCH(tmp)->sp.exit.ndest
 	    && DBFETCH(tmp)->sp.exit.dest[0] >= 0)
 		b = stpcpy(b, ANSI_FG_WHITE "<");
-	else if (tree & 1) {
+	else if (tree & 3) {
 		struct plant *pl = &plants[n->plid[0]];
 		b = stpcpy(b, pl->pre);
-		*b++ = n->pln[0] > TREE_HALF ? pl->big : pl->small;
+		*b++ = (tree & 3) > TREE_HALF ? pl->big : pl->small;
 	} else
 		*b++ = ' ';
+
+        tree >>= 2;
 
 	{
 		int max_prio = 0;
@@ -1363,10 +1374,11 @@ dr_room(int descr, dbref player, struct bio *n, dbref here, char *buf, const cha
 			break;
 		}
 
-		if (emp == ' ' && tree & 2) {
+		if (emp == ' ' && (tree & 3)) {
 			struct plant *pl = &plants[n->plid[1]];
 			pre = pl->pre;
-			emp = n->pln[1] > TREE_HALF ? pl->big : pl->small;
+			emp = (tree & 3) > TREE_HALF
+                                ? pl->big : pl->small;
 		}
 
 		b = stpcpy(b, ANSI_RESET);
@@ -1375,14 +1387,15 @@ dr_room(int descr, dbref player, struct bio *n, dbref here, char *buf, const cha
 		*b++ = emp;
 	}
 
+        tree >>= 2;
 	tmp = gexit_where(descr, player, here, 'u');
 	if (tmp > 0 && DBFETCH(tmp)->sp.exit.ndest
 	    && DBFETCH(tmp)->sp.exit.dest[0] >= 0)
 		b = stpcpy(b, ANSI_FG_WHITE ">");
-	else if (tree & 4) {
+	else if (tree & 3) {
 		struct plant *pl = &plants[n->plid[2]];
 		b = stpcpy(b, pl->pre);
-		*b++ = n->pln[2] > TREE_HALF ? pl->big : pl->small;
+		*b++ = (tree & 3) > TREE_HALF ? pl->big : pl->small;
 	} else
 		*b++ = ' ';
 
@@ -1447,24 +1460,24 @@ dr_vs(int descr, dbref player, struct bio *n, dbref *g, char *b)
 		if (*g >= 0)
 			b = dr_room(descr, player, n, *g, b, bg);
 		else {
-			if (n->pln[0]) {
+			if (TREE_N(n->pln, 0)) {
 				struct plant *pl = &plants[n->plid[0]];
 				b = stpcpy(b, pl->pre);
-				*b++ = n->pln[0] > TREE_HALF ? pl->big : pl->small;
+				*b++ = TREE_N(n->pln, 0) > TREE_HALF ? pl->big : pl->small;
 			} else
 				*b++ = ' ';
 
-			if (n->pln[1]) {
+			if (TREE_N(n->pln, 1)) {
 				struct plant *pl = &plants[n->plid[1]];
 				b = stpcpy(b, pl->pre);
-				*b++ = n->pln[1] > TREE_HALF ? pl->big : pl->small;
+				*b++ = TREE_N(n->pln, 1) > TREE_HALF ? pl->big : pl->small;
 			} else
 				*b++ = ' ';
 
-			if (n->pln[2]) {
+			if (TREE_N(n->pln, 2)) {
 				struct plant *pl = &plants[n->plid[2]];
 				b = stpcpy(b, pl->pre);
-				*b++ = n->pln[2] > TREE_HALF ? pl->big : pl->small;
+				*b++ = TREE_N(n->pln, 2) > TREE_HALF ? pl->big : pl->small;
 			} else
 				*b++ = ' ';
 		}
@@ -1616,6 +1629,7 @@ geo_view(int descr, dbref player)
 	point3D_t pos;
 	ucoord_t obits = OBITS(code);
 
+        /* memset(map_buf, 0, sizeof(map_buf)); */
 	morton_decode(pos, code);
 	noise_view(bd, pos, obits);
 	map_search(o, pos, obits);
@@ -1701,3 +1715,15 @@ geo_v(int descr, dbref player, char const *opcs)
 }
 
 /* }}} */
+
+int gexits(int descr, dbref player, dbref where) {
+        int i, ret;
+        register char *s;
+        for (s = "wsnedu", ret = 0, i = 1; *s; s++, i <<= 1) {
+                dbref tmp = gexit_where(descr, player, where, *s);
+                if (tmp < 0)
+                        continue;
+                ret |= i;
+        }
+        return ret;
+}

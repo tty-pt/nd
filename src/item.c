@@ -431,7 +431,7 @@ mob_add(unsigned mid, dbref where, struct bio *b) {
 	struct living *liv;
 	dbref nu;
 
-	if ((bird_is(mob) && !(b->pln[0] || b->pln[1] || b->pln[2]))
+	if ((bird_is(mob) && !(b->pln))
 	    || (!NIGHT_IS && (mob->type == ELM_DARK || mob->type == ELM_VAMP))
 	    || random() >= (RAND_MAX >> mob->y))
 		return NOTHING;

@@ -208,6 +208,10 @@ typedef int dbref;				/* offset into db */
 #define GETCONSUN(x)	get_property_value(x, MESGPROP_CONSUN)
 #define SETCONSUN(x, y)	set_property_value(x, MESGPROP_CONSUN, y)
 
+#define MESGPROP_PLID	"_/plid"
+#define GETPLID(x)	(get_property_value(x, MESGPROP_PLID) - 1)
+#define SETPLID(x, y)	set_property_value(x, MESGPROP_PLID, y + 1)
+
 #define MESGPROP_DOOR	"_/door"
 #define GETDOOR(x)	get_property_value(x, MESGPROP_DOOR)
 #define SETDOOR(x, y)	set_property_value(x, MESGPROP_DOOR, y)

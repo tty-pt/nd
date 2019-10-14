@@ -51,19 +51,19 @@ enum ws_flags {
 };
 
 enum mcp_state {
-        MCP_ECHO_ML_ARG_VALUE = 0,
         // 1 means "\n" was read from telnet
         // 2 means "\n#"
         // 3 means "\n#$"
         MCP_CONFIRMED = 4, // "\n#$#"
-        MCP_SKIP_MULTILINE_KEY = 5, 
-        MCP_SKIP_LINE = 6, 
-        MCP_SKIP_HASH = 7, 
-        MCP_ECHO_ARG_KEY = 8,
-        MCP_SEEK_ARG_VALUE = 9,
-        MCP_ECHO_ARG_VALUE = 10,
-        MCP_SEEK_ARG_KEY = 11,
-	MCP_ECHO_KEY = 12,
+	MCP_ECHO_KEY,
+        MCP_SKIP_HASH, 
+        MCP_ECHO_ARG_KEY,
+        MCP_SEEK_ARG_VALUE,
+        MCP_ECHO_ARG_VALUE,
+        MCP_SEEK_ARG_KEY,
+        MCP_SEEK_ML_VALUE, 
+        MCP_ECHO_ML_VALUE,
+        MCP_SKIP_LINE, 
 };
 
 struct attr { int fg, bg, x; };
@@ -77,11 +77,11 @@ struct ws {
 	SSL *cSSL;
 	char username[32];
 	char password[32];
-	char *mcpk, *mcpv;
+	char *mcpk, *mcpv, *end_tag;
 	unsigned long hash;
 	int tfd;
 	int flags;
-	int esc_state, mcp;
+	int esc_state, mcp, csi_changed;
 	unsigned addr; 
 	struct attr c_attr, csi;
         struct mcp_arg mcp_args[3];
@@ -341,6 +341,7 @@ ws_new(SSL_CTX *sslctx, fd_set *afdset)
 	ws->csi.x = ws->c_attr.x = 0;
 	ws->addr = cli.sin_addr.s_addr;
 	ws->mcp = 1;
+	ws->end_tag = "";
 	UNSET_FLAGS(ws, MCP_CONTINUES);
 
 	ws_handshake(ws);
@@ -403,13 +404,21 @@ static char html[HTMLSIZ];
 static size_t html_len;
 
 static inline void
+end_tag_reset(struct ws *ws)
+{
+	WRITEF("%s", ws->end_tag);
+	ws->end_tag = "";
+}
+
+static inline void
 json_close(struct ws *ws)
 {
 	if (GET_FLAG(ws, MCP_OPEN)) {
-                if (ws->mcp != MCP_ECHO_ML_ARG_VALUE && !GET_FLAG(ws, MCP_CONTINUES)
+                if (ws->mcp != MCP_ECHO_ML_VALUE && !GET_FLAG(ws, MCP_CONTINUES)
                     && !(GET_FLAG(ws, MCP_INBAND) && GET_FLAG(ws, MCP_VALUE))) {
                         html_len -= 6;
                 }
+		end_tag_reset(ws);
                 WRITEF("\" }");
 		SET_FLAGS(ws, MCP_CLOSED);
 		UNSET_FLAGS(ws, MCP_OPEN | MCP_INBAND | MCP_VALUE);
@@ -458,29 +467,22 @@ mcp_handler(struct ws *ws) {
 }
 
 static inline void
-csi_change(struct ws *ws, char ** end_tag_r)
+csi_change(struct ws *ws)
 {
-	char * span_class_end = "";
 	int a = ws->csi.fg != 7, b = ws->csi.bg != 0;
-        WRITEF("%s", *end_tag_r);
+        WRITEF("%s", ws->end_tag);
 
 	if (a || b) {
                 WRITEF("<span class=\\\"");
-		span_class_end = "\\\">";
-		*end_tag_r = "</span>";
-	}
+		if (a)
+			WRITEF("fg%d ", ws->csi.fg);
+		if (b)
+			WRITEF("bg%d", ws->csi.bg);
 
-	if (a)
-                WRITEF("fg%d ", ws->csi.fg);
-	if (b)
-                WRITEF("bg%d ", ws->csi.bg);
-
-        WRITEF("%s", span_class_end);
-
-	ws->c_attr.fg = ws->csi.fg;
-	ws->c_attr.bg = ws->csi.bg;
-	ws->c_attr.x = 0;
-	ws->csi.x = 0;
+		WRITEF("\\\">");
+		ws->end_tag = "</span>";
+	} else
+		ws->end_tag = "";
 }
 
 static inline void
@@ -506,6 +508,7 @@ esc_state_0(struct ws *ws, char *p) {
                         return;
                 }
                 if (ws->mcp == MCP_ECHO_ARG_VALUE) {
+			end_tag_reset(ws);
                         WRITEF("\", \"");
                         ws->mcp = MCP_SEEK_ARG_KEY;
                         return;
@@ -513,7 +516,7 @@ esc_state_0(struct ws *ws, char *p) {
 	case '\\':
 	case '\t':
 		// chars that must be json escaped
-		if (ws->mcp)
+		if (ws->mcp != MCP_ECHO_ML_VALUE)
 			return;
 	case '/':
 		html[html_len++] = '\\';
@@ -522,7 +525,7 @@ esc_state_0(struct ws *ws, char *p) {
 	case '*':
 		switch (ws->mcp) {
 		case MCP_CONFIRMED:
-			ws->mcp = MCP_SKIP_MULTILINE_KEY;
+			ws->mcp = MCP_SEEK_ML_VALUE;
 			return;
 		case MCP_ECHO_ARG_KEY:
 			SET_FLAGS(ws, MCP_CONTINUES | MCP_VALUE);
@@ -535,8 +538,9 @@ esc_state_0(struct ws *ws, char *p) {
 		if (GET_FLAG(ws, MCP_VALUE)) {
 			html[html_len++] = '\\';
 			html[html_len++] = 'n';
-		} else if (!GET_FLAG(ws, MCP_INBAND))
+		} else if (!GET_FLAG(ws, MCP_INBAND)) {
 			mcp_handler(ws);
+		}
 		ws->mcp = 1;
 		return;
 	case ':':
@@ -550,8 +554,8 @@ esc_state_0(struct ws *ws, char *p) {
 			ws->mcp = MCP_SKIP_LINE;
 			UNSET_FLAGS(ws, MCP_CONTINUES);
 			return;
-		case MCP_SKIP_MULTILINE_KEY:
-			ws->mcp = MCP_ECHO_ML_ARG_VALUE;
+		case MCP_SEEK_ML_VALUE:
+			ws->mcp = MCP_ECHO_ML_VALUE;
 			return;
 		}
 		break;
@@ -574,7 +578,7 @@ esc_state_0(struct ws *ws, char *p) {
 	switch (ws->mcp) {
 	case MCP_SKIP_HASH:
 	case MCP_SKIP_LINE:
-	case MCP_SKIP_MULTILINE_KEY:
+	case MCP_SEEK_ML_VALUE:
 	case MCP_SEEK_ARG_VALUE:
 	case MCP_SEEK_ARG_KEY:
                 return;
@@ -582,7 +586,7 @@ esc_state_0(struct ws *ws, char *p) {
 	case MCP_ECHO_KEY:
         case MCP_ECHO_ARG_KEY:
         case MCP_ECHO_ARG_VALUE:
-	case MCP_ECHO_ML_ARG_VALUE:
+	case MCP_ECHO_ML_VALUE:
                 break;
 
 	case MCP_CONFIRMED: // new mcp command
@@ -597,8 +601,13 @@ esc_state_0(struct ws *ws, char *p) {
 		ws->mcp--;
 		strncpy(&html[html_len], "#$#", ws->mcp);
 		html_len += ws->mcp;
-                ws->mcp = MCP_ECHO_ML_ARG_VALUE;
+                ws->mcp = MCP_ECHO_ML_VALUE;
 
+	}
+
+	if (ws->csi_changed) {
+		csi_change(ws);
+		ws->csi_changed = 0;
 	}
 
 	html[html_len++] = *p;
@@ -661,7 +670,13 @@ esc_state_any(struct ws *ws, char *p, char **end_tag) {
 		case 'm':
 			if (ws->c_attr.bg != ws->csi.bg
 			    || ws->c_attr.fg != ws->csi.fg)
-				csi_change(ws, end_tag);
+			{
+				ws->c_attr.fg = ws->csi.fg;
+				ws->c_attr.bg = ws->csi.bg;
+				ws->c_attr.x = 0;
+				ws->csi.x = 0;
+				ws->csi_changed = 1;
+			}
 			ws->esc_state = 0;
 			break;
 		case '[':
@@ -720,7 +735,7 @@ again:	data_len = read(tfd, data, sizeof(data) - 1);
 			mcp_handler(ws);
 		json_close(ws);
 		html[html_len++] = ']';
-#if 1
+#if 0
 		html[html_len] = '\0';
 		debug("OUT mcp %d '%s'", ws->mcp, html);
 #endif

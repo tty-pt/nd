@@ -432,7 +432,7 @@ bio_idx(ucoord_t rn, coord_t tmp)
 }
 
 static inline int
-noise_plant(unsigned char *plid, unsigned char *pln, struct bio *b, noise_t v, unsigned char n)
+noise_plant(unsigned char *plid, struct bio *b, noise_t v, unsigned char n)
 {
 	struct plant *pl = &plants[n];
 
@@ -448,22 +448,22 @@ noise_plant(unsigned char *plid, unsigned char *pln, struct bio *b, noise_t v, u
 		v = (v >> 1) & TREE_N_MASK;
 		if (v == 3)
 			v = 0;
-		*pln = v;
-		return 1;
+                return v;
 	}
 
 	return 0;
 }
 
+// returns max plid (i)
+
 static inline unsigned char
-noise_plants(unsigned char *plid, unsigned char *pln, struct bio *b, unsigned n, unsigned o)
+noise_plants(unsigned char *plid, unsigned char *pln_r, struct bio *b, unsigned n, unsigned o)
 {
 	noise_t v = b->ty;
-	register int i;
+	register int i, pln = 0, cpln;
 	unsigned char *plidc = plid;
 
 	memset(plid, 0, n);
-	memset(pln, 0, n);
 
 	for (i = o;
 	     i < plid_max && plidc < plid + n;
@@ -471,44 +471,44 @@ noise_plants(unsigned char *plid, unsigned char *pln, struct bio *b, unsigned n,
 		if (!v)
 			v = ~b->ty >> 4;
 
-		if (noise_plant(plidc, pln, b, v, i)) {
+                cpln = noise_plant(plidc, b, v, i);
+		if (cpln) {
 			plidc++;
-			pln++;
+                        pln |= cpln << (i * 2);
 		}
 	}
 
+        *pln_r = pln;
 	return i;
 }
 
-static inline void
-shuffle(unsigned char plid[3], unsigned char pln[3], noise_t v)
+static inline unsigned char
+shuffle(unsigned char plid[3], unsigned char pln, noise_t v)
 {
-	register unsigned char aux;
+        unsigned char apln[3] = {
+                TREE_N(pln, 0),
+                TREE_N(pln, 1),
+                TREE_N(pln, 2)
+        };
+	register unsigned char i, aux;
 
-	if (v & 1) {
-		aux = plid[0];
-		plid[0] = plid[1];
-		plid[1] = aux;
+        for (i = 1; i < 3; i++) {
+                if (!(v & i))
+                        continue;
+                aux = plid[i - 1];
+                plid[i - 1] = plid[i];
+                plid[i] = aux;
 
-		aux = pln[0];
-		pln[0] = pln[1];
-		pln[1] = aux;
-	}
+                aux = apln[i - 1];
+                apln[i - 1] = apln[i];
+                apln[i] = aux;
+        }
 
-	if (v & 2) {
-		aux = plid[1];
-		plid[1] = plid[2];
-		plid[2] = aux;
-
-		aux = pln[1];
-		pln[1] = pln[2];
-		pln[2] = aux;
-	}
+        return apln[0] | (apln[1] << 2) | (apln[2] << 4);
 }
 
 unsigned char
-noise_rplants(unsigned char plid[EXTRA_TREE], unsigned char pln[EXTRA_TREE],
-		  struct bio *b)
+noise_rplants(unsigned char plid[EXTRA_TREE], unsigned char *pln, struct bio *b)
 {
 	return noise_plants(plid, pln, b, EXTRA_TREE, b->mplid);
 }
@@ -537,8 +537,8 @@ noise_full(size_t i, point_t s, ucoord_t obits)
 		r->tmp = temp(obits, _he, _tm, s[Y_COORD] + (j >> CHUNK_Y));
 		r->ty = XXH(&_tm, sizeof(noise_t), PLANTS_SEED);
 		r->bio_idx = _he < w ? 0 : bio_idx(r->rn, r->tmp);
-		r->mplid = noise_plants(r->plid, r->pln, r, 3, 0);
-		shuffle(r->plid, r->pln, ~(r->ty >> 8));
+		r->mplid = noise_plants(r->plid, &r->pln, r, 3, 0);
+		r->pln = shuffle(r->plid, r->pln, ~(r->ty >> 8));
 	}
 }
 

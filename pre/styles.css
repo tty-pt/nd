@@ -124,6 +124,13 @@ body {
   caret-color: #9589c5;
   font-family: 'Lucida Console', Monaco, monospace;
   margin: 0;
+  -ms-interpolation-mode: nearest-neighbor;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: pixelated;
+  height: 100%;
+  overflow: hidden;
+  position: relative;
+  font-size: 10pt;
 }
 
 h1,
@@ -153,9 +160,8 @@ form {
 input {
   width: 100%;
   border: solid thin #2c2c2c;
-  padding: 4px 8px;
-  border-radius: 2px;
-  font-size: 12pt;
+  padding: 9pt 11pt;
+  border-radius: 0 0 10pt 10pt;
   margin: 0;
   background: #4c504c;
   color: #c1c3da;
@@ -166,12 +172,33 @@ input {
 .btns {
   position: absolute;
   z-index: 2;
-  right: 0;
+  -webkit-tap-highlight-color: rgba(0.05, 0.05, 0.05, 0.1);
+  text-align: right;
   -webkit-user-select: none;
   -moz-user-select: none;
   -ms-user-select: none;
   user-select: none;
-  -webkit-tap-highlight-color: rgba(0.05, 0.05, 0.05, 0.3);
+  top: 50%;
+}
+
+#dir.btns {
+  right: 0;
+  margin-top: -72px;
+}
+
+#act.btns {
+  left: 0;
+  margin-top: -116px;
+  text-align: left;
+}
+
+#act.btns > div {
+  margin-bottom: 3pt;
+}
+
+#contents.btns {
+  left: 0;
+  margin-top: -48px;
 }
 
 .btns a {
@@ -181,8 +208,6 @@ input {
   background-color: #8a77ac;
   background-repeat: no-repeat;
   background-position: center center;
-  color: #c1c3da;
-  font-size: 11pt;
   width: 32px;
   height: 32px;
   line-height: 32px;
@@ -199,50 +224,23 @@ a.mlb {
   margin-left: 48px;
 }
 
-.session.btns {
-  top: 0;
-  text-align: right;
-}
-
-.dir.btns {
-  top: 50%;
-  margin-top: -74px;
-}
-
-#forget {
-  background-image: url("art/die.png");
-}
-
 input:focus {
   border: solid thin #9589c5;
   outline: #9589c5;
 }
 
-#view {
-  height: 100%;
-  display: -ms-flexbox;
-  display: flex;
-  overflow: hidden;
-  position: relative;
-}
-
-#view > div:not(.btns) {
+#term {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  max-width: 350pt;
+  width: 100%;
+  z-index: 3;
   display: -ms-flexbox;
   display: flex;
   -ms-flex-direction: column;
   flex-direction: column;
-  height: 100%;
-}
-
-#term {
-  width: 100%;
-  z-index: 1;
-  background-color: rgba(0.05, 0.05, 0.05, 0.3);
-  -ms-interpolation-mode: nearest-neighbor;
-  image-rendering: -moz-crisp-edges;
-  image-rendering: pixelated;
-  max-width: 400pt;
-  font-size: 3vw;
+  max-height: 50%;
 }
 
 #term > pre {
@@ -250,15 +248,21 @@ input:focus {
   margin: 0;
   -ms-flex-positive: 1;
   flex-grow: 1;
+  background-color: rgba(0.05, 0.05, 0.05, 0.1);
+  text-shadow: 2px 2px 3px black;
+}
+
+#term > pre.small {
+  max-height: 30pt;
+}
+
+#term > pre img.ah {
+  height: 256px;
 }
 
 #term > pre img {
   margin: 6pt auto;
   display: block;
-}
-
-#term > pre img.ah {
-  height: 256px;
 }
 
 #map {
@@ -267,7 +271,6 @@ input:focus {
   top: 0;
   right: 0;
   bottom: 0;
-  font-size: 15pt;
   z-index: -1;
   display: -ms-flexbox;
   display: flex;
@@ -277,22 +280,17 @@ input:focus {
   align-items: center;
   -ms-flex-positive: 1;
   flex-grow: 1;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
 }
 
-@media only screen and (min-width: 400pt) {
-  #term {
-    font-size: inherit;
-  }
-
-  #map {
-    left: 50%;
-  }
-}
-
-@media only screen and (min-width: 700pt) {
-  #map {
-    position: inherit;
-    background: none;
-    left: 0;
-  }
+#map > div {
+  position: absolute;
+  top: 0;
+  background-color: rgba(0.05, 0.05, 0.05, 0.1);
+  border-radius: 10pt;
+  padding: 10pt;
+  max-width: 60%;
 }

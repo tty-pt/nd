@@ -136,7 +136,7 @@ extern void do_entrances(int descr, dbref player, const char *name, const char *
 extern void do_contents(int descr, dbref player, const char *name, const char *flags);
 extern void exec_or_notify_prop(int descr, dbref player, dbref thing,
 						   const char *propname, const char *whatcalled);
-extern void exec_or_notify(int descr, dbref player, dbref thing,
+extern const char * exec_or_notify(int descr, dbref player, dbref thing,
 						   const char *message, const char *whatcalled,
 						   int mpiflags);
 
@@ -300,6 +300,12 @@ extern struct boolexp *negate_boolexp(struct boolexp *b);
 extern void free_boolexp(struct boolexp *b);
 
 /* From unparse.c */
+struct icon {
+        int actions;
+        char *icon;
+};
+
+extern struct icon icon(dbref);
 extern const char *unparse_object(dbref player, dbref object);
 extern const char *unparse_boolexp(dbref player, struct boolexp *b, int fullname);
 

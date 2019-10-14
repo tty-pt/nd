@@ -11,6 +11,8 @@
 #define EXTRA_TREE 4
 #define TREE_N_MASK 0x3
 #define TREE_HALF (TREE_N_MASK >> 1)
+#define TREE_N(pln, i) ((pln >> (i * 2)) & 3)
+#define B_TREE_N(b, i) TREE_N(b->pln, i)
 
 typedef XXH32_hash_t noise_t;
 typedef long snoise_t;
@@ -20,7 +22,7 @@ struct bio {
 	ucoord_t rn;
 	noise_t ty;
 	unsigned char plid[3], mplid;
-	unsigned char pln[3];
+	unsigned char pln;
 	enum biome_type bio_idx;
 };
 
@@ -38,8 +40,6 @@ extern struct plant plants[];
 
 struct bio * noise_point(morton_t p);
 void noise_view(struct bio to[VIEW_M], point_t pos, ucoord_t obits);
-unsigned char noise_rplants(unsigned char plid[EXTRA_TREE],
-			    unsigned char pln[EXTRA_TREE],
-			    struct bio *b);
+unsigned char noise_rplants(unsigned char plid[EXTRA_TREE], unsigned char *pln, struct bio *b);
 
 #endif
