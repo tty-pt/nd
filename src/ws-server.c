@@ -89,13 +89,12 @@ struct ws {
 	SSL *cSSL;
 	char username[32];
 	char password[32];
-	char *mcpk, *mcpv, *end_tag;
+	char *mcpk, *mcpv;
 	unsigned long hash;
 	int cfd, tfd;
 	int flags;
-	int esc_state, mcp, csi_changed;
+	int mcp;
 	unsigned addr; 
-	struct attr c_attr, csi;
         struct mcp_arg mcp_args[3];
         int mcp_args_l;
 };
@@ -353,12 +352,11 @@ ws_new(fd_set *afdset)
 	}
 #endif
 
-	ws->csi.fg = ws->c_attr.fg = 7;
-	ws->csi.bg = ws->c_attr.bg = 0;
-	ws->csi.x = ws->c_attr.x = 0;
+	/* ws->csi.fg = ws->c_attr.fg = 7; */
+	/* ws->csi.bg = ws->c_attr.bg = 0; */
+	/* ws->csi.x = ws->c_attr.x = 0; */
 	ws->addr = cli.sin_addr.s_addr;
 	ws->mcp = 1;
-	ws->end_tag = "";
 	UNSET_FLAGS(ws, MCP_CONTINUES);
 
 	ws_handshake(cfd);
@@ -367,26 +365,6 @@ ws_new(fd_set *afdset)
 	telnet_open(cfd, afdset);
 
 	return 0;
-}
-
-static inline void
-params_push(struct ws *ws, int x)
-{
-	int     fg = ws->c_attr.fg,
-		bg = ws->c_attr.bg;
-
-	switch (x) {
-	case 0: fg = 7; bg = 0; break;
-	case 1: fg += 8; break;
-	default: if (x >= 40)
-			 bg = x - 40;
-		 else if (x >= 30)
-			 fg = (fg >= 8 ? 8 : 0) + x - 30;
-	}
-
-	ws->csi.fg = fg;
-	ws->csi.bg = bg;
-	ws->csi.x = x;
 }
 
 static inline int
@@ -421,13 +399,6 @@ static char html[HTMLSIZ];
 static size_t html_len;
 
 static inline void
-end_tag_reset(struct ws *ws)
-{
-	WRITEF("%s", ws->end_tag);
-	ws->end_tag = "";
-}
-
-static inline void
 json_close(struct ws *ws)
 {
 	if (GET_FLAG(ws, MCP_OPEN)) {
@@ -435,7 +406,6 @@ json_close(struct ws *ws)
                     && !(GET_FLAG(ws, MCP_INBAND) && GET_FLAG(ws, MCP_VALUE))) {
                         html_len -= 6;
                 }
-		end_tag_reset(ws);
                 WRITEF("\" }");
 		SET_FLAGS(ws, MCP_CLOSED);
 		UNSET_FLAGS(ws, MCP_OPEN | MCP_INBAND | MCP_VALUE);
@@ -484,27 +454,40 @@ mcp_handler(struct ws *ws) {
 }
 
 static inline void
-csi_change(struct ws *ws)
-{
-	int a = ws->csi.fg != 7, b = ws->csi.bg != 0;
-        WRITEF("%s", ws->end_tag);
+/* <<<<<<< HEAD */
+/* csi_change(struct ws *ws) */
+/* { */
+/* 	int a = ws->csi.fg != 7, b = ws->csi.bg != 0; */
+/*         WRITEF("%s", ws->end_tag); */
 
-	if (a || b) {
-                WRITEF("<span class=\\\"");
-		if (a)
-			WRITEF("cf%d ", ws->csi.fg);
-		if (b)
-			WRITEF("c%d", ws->csi.bg);
+/* 	if (a || b) { */
+/*                 WRITEF("<span class=\\\""); */
+/* 		if (a) */
+/* 			WRITEF("cf%d ", ws->csi.fg); */
+/* 		if (b) */
+/* 			WRITEF("c%d", ws->csi.bg); */
 
-		WRITEF("\\\">");
-		ws->end_tag = "</span>";
-	} else
-		ws->end_tag = "";
-}
+/* 		WRITEF("\\\">"); */
+/* 		ws->end_tag = "</span>"; */
+/* 	} else */
+/* 		ws->end_tag = ""; */
+/* } */
 
-static inline void
-esc_state_0(struct ws *ws, char *p) {
+/* static inline void */
+/* esc_state_0(struct ws *ws, char *p) { */
+/* ======= */
+esc_state_any(struct ws *ws, char *p) {
 	switch (*p) {
+	case '\x18':
+	case '\x1a':
+		WRITEF("\\\\x18");
+		return;
+	case '\x1b':
+		WRITEF("\\\\x1b");
+		return;
+	case '\x9b':
+		WRITEF("\\\\x9b");
+		return;
 	case '#':
 		switch (ws->mcp) {
 		case 3:
@@ -525,7 +508,6 @@ esc_state_0(struct ws *ws, char *p) {
                         return;
                 }
                 if (ws->mcp == MCP_ECHO_ARG_VALUE) {
-			end_tag_reset(ws);
                         WRITEF("\", \"");
                         ws->mcp = MCP_SEEK_ARG_KEY;
                         return;
@@ -637,109 +619,13 @@ esc_state_0(struct ws *ws, char *p) {
 
 	}
 
-	if (ws->csi_changed) {
-		csi_change(ws);
-		ws->csi_changed = 0;
-	}
-
 	html[html_len++] = *p;
-}
-
-static inline void
-esc_state_any(struct ws *ws, char *p, char **end_tag) {
-	register char ch = *p;
-
-	switch (ch) {
-	case '\x18':
-	case '\x1a':
-		ws->esc_state = 0;
-		return;
-	case '\x1b':
-		ws->esc_state = 1;
-		return;
-	case '\x9b':
-		ws->esc_state = 2;
-		return;
-	case '\x07': 
-	case '\x00':
-	case '\x7f':
-	case '\v':
-	case '\r':
-	case '\f':
-		return;
-	}
-
-	switch (ws->esc_state) {
-	case 0:
-		esc_state_0(ws, p);
-		break;
-	case 1:
-		switch (ch) {
-		case '[':
-			ws->esc_state = 2;
-			break;
-		case '=':
-		case '>':
-		case 'H':
-			ws->esc_state = 0; /* IGNORED */
-		}
-		break;
-	case 2: // just saw CSI
-		switch (ch) {
-		case 'K':
-		case 'H':
-		case 'J':
-			ws->esc_state = 0;
-			return;
-		case '?':
-			ws->esc_state = 5;
-			return;
-		}
-		params_push(ws, 0);
-		ws->esc_state = 3;
-	case 3: // saw CSI and parameters
-		switch (ch) {
-		case 'm':
-			if (ws->c_attr.bg != ws->csi.bg
-			    || ws->c_attr.fg != ws->csi.fg)
-			{
-				ws->c_attr.fg = ws->csi.fg;
-				ws->c_attr.bg = ws->csi.bg;
-				ws->c_attr.x = 0;
-				ws->csi.x = 0;
-				ws->csi_changed = 1;
-			}
-			ws->esc_state = 0;
-			break;
-		case '[':
-			ws->esc_state = 4;
-			break;
-		case ';':
-			params_push(ws, 0);
-			break;
-		default:
-			if (ch >= '0' && ch <= '9')
-				params_push(ws, ws->csi.x * 10 + (ch - '0'));
-			else
-				ws->esc_state = 0;
-		}
-		break;
-
-	case 5: params_push(ws, ch);
-		ws->esc_state = 6;
-		break;
-	case 4:
-	case 6: ws->esc_state = 0;
-		break;
-
-	default: CBUG(1);
-	}
 }
 
 static void
 telnet_parse(int tfd, fd_set *fdset)
 {
-	char *p, *end_tag = "";
+	char *p;
 	int cfd = cfds[tfd], retry = 0;
 	struct ws *ws = &wss[cfd];
 	html_len = 0;
@@ -776,7 +662,7 @@ again:	data_len = read(tfd, data, sizeof(data) - 1);
 	}
 
 	for (p = data; html_len < HTMLSIZ && *p && p < data + data_len; p++)
-		esc_state_any(ws, p, &end_tag);
+		esc_state_any(ws, p);
 
 	goto again;
 }

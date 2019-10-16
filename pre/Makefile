@@ -2,7 +2,7 @@ scripts := ${srcdir}/scripts
 
 # COMPILE=ADVANCED
 
-srcs := main
+srcs := metal-loader main
 open-js := ${libs:%=../lib/%.js} ${srcs:%=%.js}
 js != [[ -z "${COMPILE}" ]] && echo ${open-js} || echo app.min.js
 

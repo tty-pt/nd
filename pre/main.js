@@ -28,6 +28,8 @@ let   dir_lbl = [ 'h', 'j', 'k', 'l', 'down', 'up' ],
                 return a;
         });
 
+metal.run("/web/wasm-cli");
+
 function actions_reset() {
         act.style.display = 'none';
         target = null;

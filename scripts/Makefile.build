@@ -6,6 +6,7 @@ cflags-y	+= -I/usr/local/include -I${srcdir}/include
 ldflags-y	+= -L/usr/local/lib
 #ldlibs-y ommited
 
+LD := ${CC}
 CFLAGS		+= ${cflags-y}
 LDFLAGS		+= ${ldflags-y}
 LDLIBS		+= ${ldlibs-y}
