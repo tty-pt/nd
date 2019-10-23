@@ -1,4 +1,5 @@
-*.o
+/wasm/src/*.o
+/wasm/src/wasm-cli
 /bgplg
 /*.html
 /game/geo.db
@@ -16,9 +17,8 @@
 /game/data/std-db.db
 /game/data/info/muckhelp
 /docs/muckhelp.html
-/include/autoconf.h
-/include/defines.h
 /src/version.h
+/src/*.o
 /src/fbmuck
 /src/prochelp
 /src/ws-server

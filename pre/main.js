@@ -28,7 +28,8 @@ let   dir_lbl = [ 'h', 'j', 'k', 'l', 'down', 'up' ],
                 return a;
         });
 
-metal.run("/web/wasm-cli");
+metal.config(term);
+metal.run("/wasm/src/wasm-cli");
 
 function actions_reset() {
         act.style.display = 'none';
@@ -178,9 +179,9 @@ function mcp_handler(j) {
 ws.onmessage = function (e) {
         let arr = JSON.parse(e.data);
         for (let k in arr) {
-                if (arr[k].key == 'inband')
-                        output(arr[k].value);
-                else
+                if (arr[k].key == 'inband') {
+			metal.write(arr[k].value);
+		} else
                         mcp_handler(arr[k]);
         }
         if (term.innerHTML.length > 8000)

@@ -51,7 +51,6 @@ function js_emem(ofs, p, p_len) {
 }
 
 function init(_shbuf) {
-        console.log('shmem_init');
         shbuf = _shbuf;
         evt_n = new Int32Array(shbuf, 0, 1);
         self.onmessage = null;
@@ -74,18 +73,16 @@ function js_run(ptr, len) {
         const buf = new Uint8Array(memory.buffer, ptr, len);
         const path = _jsnstr(buf, len);
 
-        console.log('js run', path);
         run(path);
 }
 
 function flush(p, l) {
         const str = jsnstr(memory.buffer, p, l);
-        console.log(str);
+	postMessage(str);
 }
 
 function js_shutdown(e) {}
 function js_sleep() {}
-function tty_read() {}
 const kenv = {
         _console_log,
         flush,
@@ -94,7 +91,6 @@ const kenv = {
 
         js_shutdown,
         js_sleep,
-        tty_read,
 
         js_emem,
         evt_count,
@@ -118,7 +114,7 @@ function wasm_load(path, env) {
 let syscall, evt_loop;
 
 const booted = wasm_load(
-        '/metal/bin/metal.wasm',
+        '/wasm/bin/metal.wasm',
         kenv,
 ).then(exports => {
         memory = exports.memory;
@@ -131,7 +127,6 @@ const booted = wasm_load(
                 __syscall5: exports.__syscall5,
                 __syscall6: exports.__syscall6,
         };
-        console.log('metal exports', exports, syscall);
         exports.start_kernel();
         evt_loop = exports.evt_loop;
         evt_loop();
@@ -148,7 +143,6 @@ function run(path) {
         next_pid++;
 
         return wasm_load(path, syscall).then(exports => {
-                console.log('loaded program', path, exports);
                 dead = exports.dead;
                 prog.memory = exports.memory;
                 exports._start(exports.argc);
