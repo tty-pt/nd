@@ -1,6 +1,6 @@
 ARCH=wasm32
 TARGET=${ARCH}-unknown-unknown
-sysroot:=${srcdir}/metal
+sysroot:=${PWD}/..
 LLVM_ROOT:=/usr/local
 CC:=${LLVM_ROOT}/bin/clang
 CFLAGS += --sysroot ${sysroot} --target=${TARGET} -I${sysroot}/include

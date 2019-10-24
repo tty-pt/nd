@@ -73,36 +73,36 @@ main(int argc, char *argv[], char *envp[])
 	for (;;) {
 		ch = getchar();
 		switch (ch) {
-		case '\\':
-			ch = getchar();
-			switch (ch) {
-			case 'x':
-				scanf("%hhx", &ch);
-				switch (ch) {
-					case '\x18':
-					case '\x1a':
-						esc_state = 0;
-						continue;
-					case '\x1b':
-						esc_state = 1;
-						continue;
-					case '\x9b':
-						esc_state = 2;
-						continue;
-					case '\x07': 
-					case '\x00':
-					case '\x7f':
-						continue;
-				}
-				printf("%hhx", ch);
-				continue;
-			case 'n':
-				putchar('\n');
-				continue;
-			default:
-				putchar('\\');
-				break;
-			}
+//		case '\\':
+//			ch = getchar();
+//			switch (ch) {
+//			case 'x':
+//				scanf("%hhx", &ch);
+//				switch (ch) {
+//					case '\x18':
+//					case '\x1a':
+//						esc_state = 0;
+//						continue;
+//					case '\x1b':
+//						esc_state = 1;
+//						continue;
+//					case '\x9b':
+//						esc_state = 2;
+//						continue;
+//					case '\x07': 
+//					case '\x00':
+//					case '\x7f':
+//						continue;
+//				}
+//				printf("%hhx", ch);
+//				continue;
+//			case 'n':
+//				putchar('\n');
+//				continue;
+//			default:
+//				putchar('\\');
+//				break;
+//			}
 		case '\v':
 		case '\r':
 		case '\f':

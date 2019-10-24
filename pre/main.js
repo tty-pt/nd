@@ -28,7 +28,9 @@ let   dir_lbl = [ 'h', 'j', 'k', 'l', 'down', 'up' ],
                 return a;
         });
 
-metal.config(term);
+metal.worker.onmessage = function (e) {
+	output(e.data);
+}
 metal.run("/wasm/src/wasm-cli");
 
 function actions_reset() {
