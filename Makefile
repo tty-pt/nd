@@ -16,6 +16,9 @@ $(subdirs-cleaner):
 cleaner: ${subdirs-cleaner}
 	rm config.status config.cache config.log
 
+web: src
+	${srcdir}/src/ws-server
+
 game/data/: ${subdirs}
 
-.PHONY: cleaner ${subdirs-cleaner}
+.PHONY: cleaner ${subdirs-cleaner} web

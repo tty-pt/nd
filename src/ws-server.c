@@ -21,6 +21,7 @@
 #include <ctype.h> 
 #include "debug.h"
 
+#define SECURE
 #define PORT 4202
 
 #define FIN(head) !!(head[0] & 0x80)
