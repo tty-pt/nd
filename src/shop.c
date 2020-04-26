@@ -40,10 +40,10 @@ do_shop(dbref player)
 		int stock = GETSTACK(tmp);
 
 		if (stock)
-			notify_fmt(player, "%-13s %5dP\t(%d)",
+			notify_fmt(player, "%-13s %5dP (%d)",
 				   NAME(tmp), GETVALUE(tmp), stock);
 		else
-			notify_fmt(player, "%-13s %5dP\t(Inf)",
+			notify_fmt(player, "%-13s %5dP (Inf)",
 				   NAME(tmp), GETVALUE(tmp));
 
 		tmp = DBFETCH(tmp)->next;

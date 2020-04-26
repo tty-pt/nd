@@ -353,8 +353,12 @@ ws_new(fd_set *afdset)
 	}
 #endif
 
+	ws->csi.fg = ws->c_attr.fg = 7;
+	ws->csi.bg = ws->c_attr.bg = 0;
+	ws->csi.x = ws->c_attr.x = 0;
 	ws->addr = cli.sin_addr.s_addr;
 	ws->mcp = 1;
+	ws->end_tag = "";
 	UNSET_FLAGS(ws, MCP_CONTINUES);
 
 	ws_handshake(cfd);
@@ -786,7 +790,7 @@ int main()
 		return 1;
 	}
 
-        signal(SIGPIPE, SIG_IGN);
+        /* signal(SIGPIPE, SIG_IGN); */
 #ifdef SECURE
 	SSL_load_error_strings();
 	SSL_library_init();
