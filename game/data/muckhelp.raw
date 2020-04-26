@@ -13,15 +13,21 @@
 begin
 Welcome to NeverDark.
 
-  This is a fork of fbmuck and I will soon share its code.  It adds is
-noise-based geography, a simple combat system, and websockets support.
-It also removes automake, resolver, restart, parameter and windows support.
+  This is a fork of fbmuck, which is GPL'd work. I've worked on a noise
+algorithm before this, and this is an attempt to share it, as a sort of
+online CV experience. I've always delayed sharing the code because of my
+deep, deep shame.
 
-  This game is literally running inside GDB inside VIM right now. Haha.
+  So I just keep working on it, how much do I mean this? Well, I've made
+this in a way u hopefully don't notice when I build.
 
-  To walk in a given direction you type "up", "down", "south", "west", etc.
-Alternatively you can use "J" to go down, "10k" to move north ten times.
-For more information, please consult ":help walk".
+  Room positions are 3D, but terrain is 2D. How big is the world?
+2^16. Is there only one? No. 2^16. How many biomes? Actually 13,
+counting with Jesus. Gots some combat, spells, bufs, etc.
+
+  It is quite pre-alpha but I'll keep working on it when I can.
+
+  Check out the code at https://qnixsoft.com/src.
 
   All vanilla fbmuck commands are preceded with ":". Typing ":say hello"
 would result in your character saying hello, "'hello" has the same result.

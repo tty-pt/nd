@@ -53,7 +53,7 @@ endfunc
 func s:Connect()
 	let id = win_getid()
 	call MuckBuffer()
-	let muckt = term_start('telnet qnixsoft.com 4201', {
+	let muckt = term_start('telnet localhost 4201', {
 				\ "term_kill": "int",
 				\ "curwin": 1,
 				\ })
@@ -105,7 +105,9 @@ autocmd! QuickfixCmdPost make call Restart()
 
 File ./src/fbmuck
 Args -gamedir ./game -dbin ../game/data/std-db.db -dbout ../game/data/std-db.db
-StartRun
+GdbStart
+Gdb handle SIGPIPE noprint nostop
+Run
 
 nmap <leader>d :StartRun<cr>
 nmap <leader>c :call ConnectIgnore()<cr>

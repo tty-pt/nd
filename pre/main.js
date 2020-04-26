@@ -1,5 +1,4 @@
-let ws = new WebSocket('wss://qnixsoft.com:4202', 'text');
-
+let ws = new WebSocket('ws://localhost:4202', 'text');
 let target = null;
 
 const   dir_lbl = [ 'h', 'j', 'k', 'l', 'down', 'up' ],

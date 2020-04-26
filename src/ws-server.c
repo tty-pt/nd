@@ -18,6 +18,7 @@
 #include <string.h> 
 #include <sys/socket.h> 
 #include <sys/types.h> 
+#include <ctype.h> 
 #include "debug.h"
 
 #define PORT 4202
@@ -37,6 +38,16 @@
 #define UNSET_FLAGS(mcp, x)	{ (ws)->flags &= ~(x) ; }
 
 #define WRITEF(...) html_len += snprintf(&html[html_len], HTMLSIZ - html_len, __VA_ARGS__)
+
+#ifdef SECURE
+#define WS_READ(cfd, to, len) \
+	SSL_read(wss[cfd].cSSL, to, len)
+#define WS_WRITE(cfd, from, len) \
+	SSL_write(wss[cfd].cSSL, from, len)
+#else
+#define WS_READ(cfd, to, len) read(cfd, to, len)
+#define WS_WRITE(cfd, from, len) write(cfd, from, len)
+#endif
 
 enum ws_flags {
 	CLOSING = 1,
@@ -79,7 +90,7 @@ struct ws {
 	char password[32];
 	char *mcpk, *mcpv, *end_tag;
 	unsigned long hash;
-	int tfd;
+	int cfd, tfd;
 	int flags;
 	int esc_state, mcp, csi_changed;
 	unsigned addr; 
@@ -102,10 +113,12 @@ static struct ws wss[FD_SETSIZE];
 static int cfds[FD_SETSIZE];
 static int sfd = -1; 
 static unsigned nt = 0;
+#ifdef SECURE
+SSL_CTX *sslctx;
+#endif
 
 static inline void
-ws_handshake(struct ws *ws) {
-	SSL *cSSL = ws->cSSL;
+ws_handshake(int cfd) {
 	static char const common_resp[]
 		= "HTTP/1.1 101 Switching Protocols\r\n"
 		"Upgrade: websocket\r\n"
@@ -118,7 +131,7 @@ ws_handshake(struct ws *ws) {
 	char buf[BUFSIZ];
 	char *s;
 
-	while (SSL_read(cSSL, buf, sizeof(buf)) > 0)
+	while (WS_READ(cfd, buf, sizeof(buf)) > 0)
 		for (s = buf; s && *s; s = strchr(s, '\n'))
 			if (!strncasecmp(++s, kkey, sizeof(kkey) - 1)) {
 				SHA_CTX c;
@@ -130,10 +143,10 @@ ws_handshake(struct ws *ws) {
 				SHA1_Update(&c, "258EAFA5-E914-47DA-95CA-C5AB0DC85B11", 36);
 				SHA1_Final(hash, &c);
 				__b64_ntop(hash, sizeof(hash), result, sizeof(result));
-				SSL_write(cSSL, common_resp, sizeof(common_resp) - 1);
-				SSL_write(cSSL, result, sizeof(result) - 1);
-				ws->hash = * (unsigned long *) result;
-				SSL_write(cSSL, "\r\n\r\n", 4);
+				WS_WRITE(cfd, common_resp, sizeof(common_resp) - 1);
+				WS_WRITE(cfd, result, sizeof(result) - 1);
+				wss[cfd].hash = * (unsigned long *) result;
+				WS_WRITE(cfd, "\r\n\r\n", 4);
 				return;
 			}
 }
@@ -206,21 +219,22 @@ ws_close(int cfd, fd_set *fdset)
 	if (ws->tfd != -1)
 		telnet_close(ws, fdset);
 	FD_CLR(cfd, fdset);
+#ifdef SECURE
 	SSL_shutdown(ws->cSSL);
 	SSL_free(ws->cSSL);
+#endif
 	close(cfd);
 	memset(ws, 0, sizeof(struct ws));
 }
 
 static inline void
 ws_close_policy(int cfd) {
-	struct ws * ws = &wss[cfd];
 	unsigned char head[2] = { 0x88, 0x02 };
 	unsigned code = 1008;
 
-	SSL_write(ws->cSSL, head, sizeof(head));
-	SSL_write(ws->cSSL, &code, sizeof(code));
-	SET_FLAGS(ws, CLOSING);
+	WS_WRITE(cfd, head, sizeof(head));
+	WS_WRITE(cfd, &code, sizeof(code));
+	SET_FLAGS(&wss[cfd], CLOSING);
 }
 
 static inline void
@@ -228,11 +242,10 @@ ws_read(int cfd, fd_set *fdset)
 {
 	struct frame frame;
 	struct ws *ws = &wss[cfd];
-	SSL *cSSL = ws->cSSL;
 	uint64_t pl;
 	int i, n;
 
-	n = SSL_read(cSSL, frame.head, sizeof(frame.head));
+	n = WS_READ(cfd, frame.head, sizeof(frame.head));
 	if (n != sizeof(frame.head))
 		goto error;
 
@@ -240,13 +253,13 @@ ws_read(int cfd, fd_set *fdset)
 
 	if (pl == 126) {
 		uint16_t rpl;
-		n = SSL_read(cSSL, &rpl, sizeof(rpl));
+		n = WS_READ(cfd, &rpl, sizeof(rpl));
 		if (n != sizeof(rpl))
 			goto error;
 		pl = rpl;
 	} else if (pl == 127) {
 		uint64_t rpl;
-		n = SSL_read(cSSL, &rpl, sizeof(rpl));
+		n = WS_READ(cfd, &rpl, sizeof(rpl));
 		if (n != sizeof(rpl))
 			goto error;
 		pl = rpl;
@@ -254,7 +267,7 @@ ws_read(int cfd, fd_set *fdset)
 
 	frame.pl = pl;
 
-	n = SSL_read(cSSL, frame.mk, sizeof(frame.mk));
+	n = WS_READ(cfd, frame.mk, sizeof(frame.mk));
 	if (n != sizeof(frame.mk))
 		goto error;
 
@@ -263,7 +276,7 @@ ws_read(int cfd, fd_set *fdset)
 		return;
 	}
 
-	n = SSL_read(cSSL, frame.data, pl);
+	n = WS_READ(cfd, frame.data, pl);
 	if (n != pl)
 		goto error;
 
@@ -308,11 +321,11 @@ telnet_open(int cfd, fd_set *fdset) {
 }
 
 static inline int
-ws_new(SSL_CTX *sslctx, fd_set *afdset)
+ws_new(fd_set *afdset)
 {
 	/* static const char noservice[] = "HTTP/1.1 503 Service Unavailable\r\nConnection: close\r\n\r\n"; */
 	struct sockaddr_in cli; 
-	SSL *cSSL;
+	struct ws *ws;
 	char *ip = NULL;
 	int len = sizeof(struct sockaddr),
 	    cfd = accept(sfd, (struct sockaddr *) &cli, &len);
@@ -323,28 +336,27 @@ ws_new(SSL_CTX *sslctx, fd_set *afdset)
 	ip = inet_ntoa(cli.sin_addr);
 	debug("WS_NEW %d %s", cfd, ip);
 
-	cSSL = SSL_new(sslctx);
-	SSL_set_fd(cSSL, cfd);
+	ws = &wss[cfd];
+	ws->cfd = cfd;
 
-	if (SSL_accept(cSSL) <= 0) {
+#ifdef SECURE
+	ws->cSSL = SSL_new(sslctx);
+	SSL_set_fd(ws->cSSL, cfd);
+
+	if (SSL_accept(ws->cSSL) <= 0) {
 		ERR_print_errors_fp(stderr);
-		SSL_shutdown(cSSL);
-		SSL_free(cSSL);
+		SSL_shutdown(ws->cSSL);
+		SSL_free(ws->cSSL);
 		close(cfd);
 		return 1;
 	}
+#endif
 
-	struct ws *ws = &wss[cfd];
-	ws->cSSL = cSSL;
-	ws->csi.fg = ws->c_attr.fg = 7;
-	ws->csi.bg = ws->c_attr.bg = 0;
-	ws->csi.x = ws->c_attr.x = 0;
 	ws->addr = cli.sin_addr.s_addr;
 	ws->mcp = 1;
-	ws->end_tag = "";
 	UNSET_FLAGS(ws, MCP_CONTINUES);
 
-	ws_handshake(ws);
+	ws_handshake(cfd);
 	FD_SET(cfd, afdset);
 
 	telnet_open(cfd, afdset);
@@ -373,29 +385,29 @@ params_push(struct ws *ws, int x)
 }
 
 static inline int
-ws_write(SSL *cSSL, char *data, size_t n)
+ws_write(int cfd, char *data, size_t n)
 {
 	unsigned char head[2] = { 0x81, 0x00 };
 
 	if (n < 126) {
 		head[1] |= n;
-		if (SSL_write(cSSL, head, sizeof(head)) < sizeof(head))
+		if (WS_WRITE(cfd, head, sizeof(head)) < sizeof(head))
 			return -1;
 	} else if (n < (1 << 16)) {
 		uint16_t nn = htons(n);
 		head[1] |= 126;
-		if (SSL_write(cSSL, head, sizeof(head)) < sizeof(head)
-		    || SSL_write(cSSL, &nn, sizeof(nn)) < sizeof(nn))
+		if (WS_WRITE(cfd, head, sizeof(head)) < sizeof(head)
+		    || WS_WRITE(cfd, &nn, sizeof(nn)) < sizeof(nn))
 			return -1;
 	} else {
 		uint64_t nn = htonl(n);
 		head[1] |= 127;
-		if (SSL_write(cSSL, head, sizeof(head)) < sizeof(head)
-		    || SSL_write(cSSL, &nn, sizeof(nn)) < sizeof(nn))
+		if (WS_WRITE(cfd, head, sizeof(head)) < sizeof(head)
+		    || WS_WRITE(cfd, &nn, sizeof(nn)) < sizeof(nn))
 			return -1;
 	}
 
-	return SSL_write(cSSL, data, n) < n;
+	return WS_WRITE(cfd, data, n) < n;
 }
 
 static char data[BUFSIZ];
@@ -575,6 +587,9 @@ esc_state_0(struct ws *ws, char *p) {
                 }
 	}
 
+	if (!isprint(*p))
+		return;
+
 	switch (ws->mcp) {
 	case MCP_SKIP_HASH:
 	case MCP_SKIP_LINE:
@@ -739,7 +754,7 @@ again:	data_len = read(tfd, data, sizeof(data) - 1);
 		html[html_len] = '\0';
 		debug("OUT mcp %d '%s'", ws->mcp, html);
 #endif
-		ws_write(ws->cSSL, html, html_len);
+		ws_write(cfd, html, html_len);
 		return;
 	}
 
@@ -752,7 +767,6 @@ again:	data_len = read(tfd, data, sizeof(data) - 1);
 int main() 
 { 
 	struct sockaddr_in servaddr; 
-	SSL_CTX *sslctx;
 	fd_set rfdset, afdset;
         int tr = 1;
 
@@ -772,6 +786,7 @@ int main()
 	}
 
         signal(SIGPIPE, SIG_IGN);
+#ifdef SECURE
 	SSL_load_error_strings();
 	SSL_library_init();
 	OpenSSL_add_all_algorithms();
@@ -780,6 +795,7 @@ int main()
 	SSL_CTX_use_certificate_file(sslctx, "/etc/ssl/0.0.0.0:443.crt" , SSL_FILETYPE_PEM);
 	SSL_CTX_use_PrivateKey_file(sslctx, "/etc/ssl/private/0.0.0.0:443.key", SSL_FILETYPE_PEM);
 	ERR_print_errors_fp(stderr);
+#endif
 	FD_ZERO(&afdset);
 	FD_SET(sfd, &afdset);
 
@@ -811,7 +827,7 @@ int main()
 				continue;
 
 			if (i == sfd)
-				ws_new(sslctx, &afdset);
+				ws_new(&afdset);
 			else if (wss[i].tfd == 0)
 				telnet_parse(i, &afdset);
 			else if (GET_FLAG(&wss[i], CLOSING))
