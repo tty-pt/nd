@@ -64,7 +64,7 @@ forgetbtn.onclick = forget;
 ws.binaryType = 'arraybuffer';
 
 ws.onopen = function () {
-        input.disabled = false;
+        // input.disabled = false;
         if (username && password)
                 login();
 };
@@ -80,7 +80,7 @@ function output(stuff) {
 
 ws.onclose = function () {
         output("Socket connection closed\n");
-        input.disabled = true;
+        // input.disabled = true;
         forgetbtn.style.display = 'none';
 };
 
@@ -142,7 +142,12 @@ ws.onmessage = function (e) {
 function input_send(e) {
         cmd(input.value);
         input.value = "";
+        input.blur();
         return false;
+};
+
+input.onclick = function (e) {
+        console.log("onclick", e);
 };
 
 function gotPassword() {
@@ -160,12 +165,15 @@ function gotUsername() {
         input.value = "";
         input.placeholder = input.type = 'password';
         form.onsubmit = gotPassword;
+        output("Thanks. What would your password be?\n");
         return false;
 }
 
 function promptUsername() {
         input.placeholder = "username";
+        input.focus();
         form.onsubmit = gotUsername;
+        output("Please insert username to login/register\n");
         return false;
 }
 
@@ -177,21 +185,63 @@ if (username) {
         form.onsubmit = gotUsername;
 }
 
-document.body.onkeypress = function(e) {
-        if (document.activeElement == input)
+window.onkeydown = function(e) {
+        if (document.activeElement == input) {
+                switch (e.key) {
+                        case "Escape":
+                                input.blur();
+                }
                 return;
-        input.focus();
-        if (e.key.length == 1)
-                input.value += e.key;
+        }
+        switch (e.key) {
+                case "s":
+                        input.focus();
+                        input.value = ":say ";
+                        input.focus();
+                        e.preventDefault();
+                        break;
+                case ":":
+                        input.value = ":";
+                        input.focus();
+                        e.preventDefault();
+                        break;
+                case "a":
+                        input.focus();
+                        e.preventDefault();
+                        break;
+                case "ArrowUp":
+                        input.value = "k";
+                        input_send();
+                        break;
+                case "ArrowDown":
+                        input.value = "j";
+                        input_send();
+                        break;
+                case "ArrowLeft":
+                        input.value = "h";
+                        input_send();
+                        break;
+                case "ArrowRight":
+                        input.value = "l";
+                        input_send();
+                        break;
+                case "Shift":
+                case "Control":
+                case "Alt":
+                        break;
+                default:
+                        input.value += e.key;
+                        input_send();
+        }
 };
 
 window.onorientationchange = scroll_reset;
 
-term.onclick = function (e) {
-        term.classList = term.classList == '' ? 'small' : '';
-        scroll_reset();
-        actions_reset();
-};
+// term.onclick = function (e) {
+//         term.classList = term.classList == '' ? 'small' : '';
+//         scroll_reset();
+//         actions_reset();
+// };
 
 if (navigator.serviceWorker) {
         navigator.serviceWorker.register('sw.js').then(

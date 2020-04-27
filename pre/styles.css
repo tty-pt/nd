@@ -165,8 +165,6 @@ input {
   margin: 0;
   background: #4c504c;
   color: #c1c3da;
-  -ms-flex-positive: 1;
-  flex-grow: 1;
 }
 
 .btns {
@@ -229,18 +227,18 @@ input:focus {
   outline: #9589c5;
 }
 
+input:not(:focus) {
+  height: 10px;
+}
+
 #term {
-  position: absolute;
-  left: 0;
-  bottom: 0;
-  max-width: 350pt;
   width: 100%;
   z-index: 3;
   display: -ms-flexbox;
   display: flex;
   -ms-flex-direction: column;
   flex-direction: column;
-  max-height: 50%;
+  height: 100%;
 }
 
 #term > pre {
@@ -260,10 +258,7 @@ input:focus {
   height: 256px;
 }
 
-#term > pre img {
-  margin: 6pt auto;
-  display: block;
-}
+/* #term > pre img { margin: 6pt auto; display: block; } */
 
 #map {
   position: absolute;

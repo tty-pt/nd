@@ -790,7 +790,7 @@ int main()
 		return 1;
 	}
 
-        /* signal(SIGPIPE, SIG_IGN); */
+        signal(SIGPIPE, SIG_IGN);
 #ifdef SECURE
 	SSL_load_error_strings();
 	SSL_library_init();
