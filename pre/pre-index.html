@@ -5,32 +5,48 @@
                 <link rel="manifest" href="manifest.json">
                 <link rel="shortcut icon" type="image/png" href="/nd256.png"/>
                 <meta name="viewport" content="width=device-width, user-scalable=no">
-                <!-- STYLE styles.css -->
+                <!-- STYLE ../styles.css -->
+                <!-- STYLE ../vim.css -->
         </head>
-        <body class="bg fg">
-                <form id="term">
-                        <pre><img width="270px" src="art/neverdark.png"><br /></pre>
-                        <input class="fg" autocomplete="off" autocapitalize="off">
-                </form>
-                <div id="map">
-                        <div>
-                                <h4 style="margin-top: 0"></h4>
-                                <small></small>
+        <body class="cf cb sfv vn f">
+                <div class="hn f c">
+                        <span id="title" class="fg">Neverdark - welcome</span>
+                        <a class="sh sv pxs" id="forget" style="display: none; background-image: url(art/die.png)"></a>
+                </div>
+                <div id="main" class="hn f fg">
+                        <form id="left" class="vn f fg">
+                                <pre id="term" class="fg">
+                                                <img src="art/neverdark.png"><br />
+                                </pre>
+                                <input class="cf" autocomplete="off" autocapitalize="off">
+                        </form>
+                        <div id="right" class="vn ts f">
+                                <pre id="map"></pre>
+                                <div class="hn f">
+                                        <div class="vn fg">
+                                                <div id="description"></div>
+                                                <div id="contents" class="vn"></div>
+                                        </div>
+                                        <div id="dir" class="vn tar tnow">
+                                                <div class="hn">
+                                                        <a class="round t pxs"></a><a id="k" class="round t pxs c0">k</a><a id="up" class="round t pxs c0">K</a>
+                                                </div>
+                                                <div class="hn">
+                                                        <a id="h" class="round t pxs c0">h</a><a class="round t pxs"></a><a id="l" class="round t pxs c0">l</a>
+                                                </div>
+                                                <div class="hn">
+                                                        <a class="round t pxs"></a><a id="j" class="round t pxs c0">j</a><a id="down" class="round t pxs c0">J</a>
+                                                </div>
+                                                <div id="act" class="hn">
+                                                </div>
+                                        </div>
+                                </div>
+                                <div id="modal" class="modal sfv">
+
+                                </div>
                         </div>
-                        <pre style="font-size: 15pt"></pre>
                 </div>
-                <div id="session" class="btns" style="right: 0; top: 0">
-                        <a id="forget" style="display: none; background-image: url(art/die.png)"></a>
-                </div>
-                <div id="dir" class="btns">
-                        <div><a id="k" class="mlb">k</a><a id="up">K</a></div>
-                        <div><a id="h">h</a><a id="l" class="mlb">l</a></div>
-                        <div><a id="j" class="mlb">j</a><a id="down">J</a></div>
-                </div>
-                <div id="act" class="btns">
-                        <div></div>
-                </div>
-                <div id="contents" class="btns"></div>
+
                 <!-- DEPS -->
         </body>
 </html>

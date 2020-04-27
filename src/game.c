@@ -1311,6 +1311,9 @@ process_command(int descr, dbref player, char *command)
 			} else if (!string_compare(command, "map")) {
 				geo_view(descr, player);
 				break;
+			} else if (!string_compare(command, "meme")) {
+                                Matched("meme");
+                                do_meme(descr, player, arg1);
 			} else {
 				if (string_compare(command, "man"))
 					goto bad;

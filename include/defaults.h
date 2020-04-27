@@ -152,7 +152,7 @@
  */
 #define FREE_FRAMES_POOL 8
 
-#define PLAYER_START ((dbref) 354)	/* room number of player start location */
+#define PLAYER_START ((dbref) 208)	/* room number of player start location */
 
 /* Server support of @doing (reads the _/do prop on WHOs) */
 #define WHO_DOING 1

@@ -140,3 +140,18 @@ web_look(int descr, dbref player, dbref loc, char const *description)
 
         return 0;
 }
+
+void do_meme(int descr, dbref player, char const *url) {
+	McpMesg msg;
+	McpFrame *mfr = web_frame(descr);
+	if (!mfr) {
+                do_say(player, url);
+                return;
+        }
+
+        mcp_mesg_init(&msg, MCP_WEB_PKG, "meme");
+        mcp_mesg_arg_append(&msg, "who", NAME(player));
+        mcp_mesg_arg_append(&msg, "url", url);
+        mcp_frame_output_mesg(mfr, &msg);
+        mcp_mesg_clear(&msg);
+}

@@ -1,7 +1,7 @@
 #!/bin/make -f
 
 srcdir := ${PWD}
-subdirs := src/ pre/ game/data/
+subdirs := src/ vss/ pre/ game/data/
 
 include scripts/Makefile.common
 

@@ -4,20 +4,21 @@ let target = null;
 const   dir_lbl = [ 'h', 'j', 'k', 'l', 'down', 'up' ],
         action_lbl = [ 'look', 'kill', 'shop', 'drink', 'open', 'chop', 'fill' ],
 
-        term = document.querySelector('#term > pre'),
+        term = document.querySelector('#term'),
         form = document.querySelector('form'),
         input = document.querySelector('input'),
         forgetbtn = document.getElementById('forget'),
         contents_btns = document.getElementById('contents'),
-        rtitle = document.querySelector('#map > div > h4'),
-        rdesc = document.querySelector('#map > div > small'),
-        map = document.querySelector('#map > pre'),
+        rtitle = document.querySelector('#title'),
+        rdesc = document.querySelector('#description'),
+        map = document.querySelector('#map'),
         dir_btns = dir_lbl.map(id => document.querySelector('#dir #' + id));
         act = document.getElementById('act'),
         target_lbl = act.children[0],
         action_btns = action_lbl.map(id => {
                 let a = document.createElement('a');
                 a.style.backgroundImage = 'url(art/' + id + '.png)'
+                a.classList.add("sh", "sv", "pxs");
                 a.style.display = 'none';
                 a.onclick = function () {
                         cmd(":" + id + " " + target.name);
@@ -92,7 +93,7 @@ let actionable = {};
 function actions_init(name) {
         act.style.display = 'block';
         target = actionable[name];
-        target_lbl.innerHTML = target.pname;
+        // target_lbl.innerHTML = target.pname;
         for (let i = 0; i < action_lbl.length; i++)
                 action_btns[i].style.display
                         = (target.actions & (1 << i)) ? '' : 'none';
@@ -113,8 +114,30 @@ function mcp_handler(j) {
                 output('<img class="ah" src="' + j.src + '">');
         else if (j.key.startsWith("com-qnixsoft-web-look-content")) {
                 actionable[j.name] = j;
-                contents_btns.innerHTML += j.icon.replace(/span/g, 'a')
-                        .replace(/<a cl/, '<a onclick="actions_init(\'' + j.name + '\')" cl');
+                let className = "";
+                let str = j.icon;
+                let idx = str.indexOf("\"");
+
+                if (idx >= 0) {
+                        str = str.substr(idx + 1);
+                        idx = str.indexOf("\"");
+                        if (idx >= 0) {
+                                className = str.substr(0, idx);
+                                idx = str.indexOf(">");
+                                if (idx >= 0) {
+                                        str = str.substr(idx + 1, str.indexOf("<") - idx - 1);
+                                }
+                        }
+                }
+
+                const a = document.createElement("a");
+                a.onclick = actions_init.bind(null, j.name);
+                const icon = document.createElement("span");
+                icon.innerHTML = str;
+                icon.className = className;
+                a.appendChild(icon);
+                a.innerHTML += " " + j.name;
+                contents_btns.appendChild(a);
         } else if (j.key.startsWith("com-qnixsoft-web-look")) {
                 if (j.room) {
                         rtitle.innerHTML = j.name;
@@ -123,6 +146,17 @@ function mcp_handler(j) {
                         dir_init(j.exits);
                         actionable = {};
                 }
+        } else if (j.key.startsWith("com-qnixsoft-web-meme")) {
+                let a = document.createElement("a");
+                output(j.who + " says:\n");
+                a.href = j.url;
+                let img = document.createElement("img");
+                img.src = j.url;
+                img.alt = j.url;
+                img.onload = scroll_reset;
+                a.appendChild(img);
+                term.appendChild(a);
+                output("\n");
         }
 }
 
@@ -140,9 +174,14 @@ ws.onmessage = function (e) {
 };
 
 function input_send(e) {
-        cmd(input.value);
-        input.value = "";
+        let str = input.value;
+        if (input.value.match("http")) {
+                const url = str.substr(str.indexOf("h"));
+                str = ":meme " + url; 
+        }
+        cmd(str);
         input.blur();
+        input.value = "";
         return false;
 };
 
@@ -169,9 +208,14 @@ function gotUsername() {
         return false;
 }
 
+function focus() {
+        input.focus();
+        scroll_reset();
+}
+
 function promptUsername() {
         input.placeholder = "username";
-        input.focus();
+        focus();
         form.onsubmit = gotUsername;
         output("Please insert username to login/register\n");
         return false;
@@ -195,18 +239,17 @@ window.onkeydown = function(e) {
         }
         switch (e.key) {
                 case "s":
-                        input.focus();
                         input.value = ":say ";
-                        input.focus();
+                        focus();
                         e.preventDefault();
                         break;
                 case ":":
                         input.value = ":";
-                        input.focus();
+                        focus();
                         e.preventDefault();
                         break;
                 case "a":
-                        input.focus();
+                        focus();
                         e.preventDefault();
                         break;
                 case "ArrowUp":

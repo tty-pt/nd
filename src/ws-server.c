@@ -492,9 +492,9 @@ csi_change(struct ws *ws)
 	if (a || b) {
                 WRITEF("<span class=\\\"");
 		if (a)
-			WRITEF("fg%d ", ws->csi.fg);
+			WRITEF("cf%d ", ws->csi.fg);
 		if (b)
-			WRITEF("bg%d", ws->csi.bg);
+			WRITEF("c%d", ws->csi.bg);
 
 		WRITEF("\\\">");
 		ws->end_tag = "</span>";
