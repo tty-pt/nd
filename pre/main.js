@@ -1,12 +1,13 @@
 let ws = new WebSocket('wss://' + window.location.hostname + ':4202', 'text');
 let target = null;
 
-const   dir_lbl = [ 'h', 'j', 'k', 'l', 'down', 'up' ],
+let   dir_lbl = [ 'h', 'j', 'k', 'l', 'down', 'up' ],
         action_lbl = [ 'look', 'kill', 'shop', 'drink', 'open', 'chop', 'fill' ],
 
         term = document.querySelector('#term'),
         form = document.querySelector('form'),
         input = document.querySelector('input'),
+        modal = document.getElementById('modal'),
         forgetbtn = document.getElementById('forget'),
         contents_btns = document.getElementById('contents'),
         rtitle = document.querySelector('#title'),
@@ -65,14 +66,26 @@ forgetbtn.onclick = forget;
 ws.binaryType = 'arraybuffer';
 
 ws.onopen = function () {
-        // input.disabled = false;
-        if (username && password)
+        if (username && password) {
                 login();
+                help_hide();
+        }
 };
 
 function scroll_reset() {
         term.scrollTop = term.scrollHeight;
 }
+
+function help_show() {
+        modal.classList.add("f");
+        modal.classList.remove("dn");
+}
+
+function help_hide() {
+        modal.classList.add("dn");
+        modal.classList.remove("f");
+}
+
 
 function output(stuff) {
         term.innerHTML += stuff;
@@ -230,6 +243,7 @@ if (username) {
 }
 
 window.onkeydown = function(e) {
+        help_hide();
         if (document.activeElement == input) {
                 switch (e.key) {
                         case "Escape":

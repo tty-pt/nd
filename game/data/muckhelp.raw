@@ -48,7 +48,7 @@ The word 'me' refers to yourself. Some things to do when starting out:
 3) set your gender, if you wish it known, with "@set me=sex:male" or
     "@set me=sex:female" (or "@set me=sex:neuter" to be an 'it').
 
-~~alsosee walking,kill,@desc,look,@lock,rob,@set,gender
+~~alsosee geo,walking,kill,@desc,look,@lock,rob,@set,gender
 ~
 ~
 say

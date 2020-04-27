@@ -6,6 +6,8 @@
 	--cbm: rgba(0.05, 0.05, 0.05, 0.1);
 }
 
+#modal { z-index: 3; }
+
 .cf { background: var(--c); }
 .cb { color: var(--cf); }
 .oa { overflow: auto; }
@@ -35,6 +37,10 @@ a,a:visited {
         /* background-color: var(--C0); */
         text-decoration: none;
         cursor: pointer;
+}
+
+#modal a {
+        color: var(--cm);
 }
 
 a:hover { color: white; }

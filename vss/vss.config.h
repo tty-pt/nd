@@ -11,6 +11,7 @@ CALL(HORIZONTAL, SS)
 CALL(VERTICAL, SS)
 /* CALL(FLEX_VERTICAL, SS) */
 CALL(ROUND_T, TS)
+CALL(ROUND_EDGE, SS)
 ROUND_PADDING( xs, )
 /* main { color: C_black !important; } */
 a {

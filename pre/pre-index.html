@@ -11,6 +11,7 @@
         <body class="cf cb sfv vn f">
                 <div class="hn f c">
                         <span id="title" class="fg">Neverdark - welcome</span>
+                        <a class="sh sv pxs" id="help" onclick="help_show()">?</a>
                         <a class="sh sv pxs" id="forget" style="display: none; background-image: url(art/die.png)"></a>
                 </div>
                 <div id="main" class="hn f fg">
@@ -41,10 +42,44 @@
                                                 </div>
                                         </div>
                                 </div>
-                                <div id="modal" class="modal sfv">
-
-                                </div>
                         </div>
+                </div>
+                <div id="modal" class="abs sfv vn c fcc oh">
+                        <!-- <div> -->
+                        <span class="r c0 p">
+                                <h4>Help</h4>
+                                <p><b>s</b> To chat.</p>
+                                <p><b>a</b> to interact with the muck directly.</p>
+                                <p><b>:</b> to use muck commands.</p>
+                                <p>
+                                        There are many ways to move. I hope it's mostly obvious!<br />
+                                        This game is very early stage and its future is uncertain.<br />
+                                        My IP is subject to change and will not be fixed anymore.<br />
+                                        And I have to find a job.<br />
+                                        <br />
+                                        It's mostly an interactive CV, but you can use it freely <br />
+                                        to chat with your friends. I don't keep logs and you are <br />
+                                        protected by SSL + WebSockets. Meme at will.<br />
+                                        <br />
+                                        The project is fully <a href="github.com/quirinpa/neverdark">open-source</a> and <a href="src/game.c">live</a>.<br />
+                                        <br />
+                                        These 2^16 worlds are all running inside Gdb, so if you <br />
+                                        cause a segfault, i can debug it.<br />
+                                        <br />
+                                        The contents and art were done by chivas. But you too <br />
+                                        can customize game content.<br />
+                                        <br />
+                                        But if you do a bad job, you might be attacked at <br />
+                                        night by his minions.<br />
+                                        <br />
+                                        There is an extremely bad bug with websockets right <br />
+                                        now. I hope i can fix it. Fast. <br />
+                                        <br />
+                                        You can find donation instructions <a href="http://www.vim.org/sponsor">here</a>.<br />
+                                </p>
+                                <p><b>:help startingout</b> will get you further.</p>
+                        </span>
+                        <!-- </div> -->
                 </div>
 
                 <!-- DEPS -->
