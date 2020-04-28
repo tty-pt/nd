@@ -174,8 +174,7 @@ function mcp_handler(j) {
 }
 
 ws.onmessage = function (e) {
-        let str = e.data;
-        let arr = JSON.parse(str);
+        let arr = JSON.parse(e.data);
         for (let k in arr) {
                 if (arr[k].key == 'inband')
                         output(arr[k].value);

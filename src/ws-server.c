@@ -530,11 +530,23 @@ esc_state_0(struct ws *ws, char *p) {
                         ws->mcp = MCP_SEEK_ARG_KEY;
                         return;
                 }
+                html[html_len++] = '\\';
+                html[html_len++] = '"';
+                return;
 	case '\\':
+		// chars that must be json escaped
+		if (ws->mcp != MCP_ECHO_ML_VALUE)
+			return;
+                html[html_len++] = '\\';
+                html[html_len++] = '\\';
+                return;
 	case '\t':
 		// chars that must be json escaped
 		if (ws->mcp != MCP_ECHO_ML_VALUE)
 			return;
+                html[html_len++] = '\\';
+                html[html_len++] = 't';
+                return;
 	case '/':
 		html[html_len++] = '\\';
 		html[html_len++] = *p;
