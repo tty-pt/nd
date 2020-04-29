@@ -342,6 +342,7 @@ enter_room(int descr, dbref player, dbref loc, dbref exit)
 		}
 
 		mobs_aggro(descr, player);
+		geo_notify(descr, player);
 	}
 
 

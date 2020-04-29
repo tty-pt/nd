@@ -6,8 +6,6 @@
 #undef NDEBUG
 #include "debug.h"
 
-#define MCP_WEB_PKG "com-qnixsoft-web"
-
 extern int auth(int descr, char *user, char *password);
 extern void identify(int descr, unsigned ip, unsigned old);
 
@@ -42,7 +40,7 @@ mcppkg_web(McpFrame * mfr, McpMesg * msg, McpVer ver, void *context)
         }
 }
 
-static inline McpFrame *
+void *
 web_frame(int descr)
 {
 	McpFrame *mfr = descr_mcpframe(descr);
@@ -141,17 +139,34 @@ web_look(int descr, dbref player, dbref loc, char const *description)
         return 0;
 }
 
+void web_room_mcp(dbref room, void *msg) {
+	dbref tmp;
+
+	for (tmp = DBFETCH(room)->contents;
+	     tmp > 0;
+	     tmp = DBFETCH(tmp)->next)
+	{
+		int *darr, dcount, di;
+
+		if (Typeof(tmp) != TYPE_PLAYER)
+			continue;
+
+		darr = get_player_descrs(OWNER(tmp), &dcount);
+		for (di = 0; di < dcount; di++) {
+			McpFrame *mfr = web_frame(darr[di]);
+			if (!mfr)
+				continue;
+			mcp_frame_output_mesg(mfr, msg);
+		}
+	}
+}
+
 void do_meme(int descr, dbref player, char const *url) {
 	McpMesg msg;
-	McpFrame *mfr = web_frame(descr);
-	if (!mfr) {
-                do_say(player, url);
-                return;
-        }
-
+        // FIXME should also work in the terminal
         mcp_mesg_init(&msg, MCP_WEB_PKG, "meme");
         mcp_mesg_arg_append(&msg, "who", NAME(player));
         mcp_mesg_arg_append(&msg, "url", url);
-        mcp_frame_output_mesg(mfr, &msg);
+        web_room_mcp(getloc(player), &msg);
         mcp_mesg_clear(&msg);
 }

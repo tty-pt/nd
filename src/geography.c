@@ -30,6 +30,12 @@
 #define GOTHER(c) geo_map[GOTHEO(c)]
 #define GSIMM(c) (*GOTHER(c))
 
+#define VIEW_BDI (VIEW_SIZE * (VIEW_SIZE - 1))
+#define GEON_RADIUS (VIEW_AROUND + 1)
+#define GEON_SIZE (GEON_RADIUS * 2 + 1)
+#define GEON_M (GEON_SIZE * GEON_SIZE)
+#define GEON_BDI (GEON_SIZE * (GEON_SIZE - 1))
+
 typedef struct {
 	dbref what;
 	morton_t where;
@@ -1593,14 +1599,17 @@ dr_hs_n(int descr, dbref player, struct bio *n, dbref *g, char *b)
 }
 
 static inline void
-map_search(dbref *mat, point3D_t pos, ucoord_t flags)
+map_search(dbref *mat, point3D_t pos, ucoord_t flags, unsigned radius)
 {
+	const unsigned side = 2 * radius + 1;
+	const unsigned m = side * side;
+
 	struct rect3D vpr3D = {
-		{ pos[0] - VIEW_AROUND, pos[1] - VIEW_AROUND, pos[2] },
-		{ VIEW_SIZE, VIEW_SIZE, 1 },
+		{ pos[0] - radius, pos[1] - radius, pos[2] },
+		{ side, side, 1 },
 	};
 
-	static const size_t m = 49;
+	/* static const size_t m = 49; */
 	geo_range_t buf[m];
 	size_t n;
 	int i;
@@ -1611,7 +1620,7 @@ map_search(dbref *mat, point3D_t pos, ucoord_t flags)
 	for (i = 0; i < n; i++) {
 		point3D_t p;
 		morton_decode(p, buf[i].where);
-		mat[point_rel_idx(p, vpr3D.s, VIEW_SIZE)] = buf[i].what;
+		mat[point_rel_idx(p, vpr3D.s, side)] = buf[i].what;
 	}
 }
 
@@ -1621,8 +1630,7 @@ void
 geo_view(int descr, dbref player)
 {
 	morton_t code = geo_where(getloc(player));
-	static const size_t bdi = VIEW_SIZE * (VIEW_SIZE - 1);
-	struct bio bd[VIEW_M], *n_max = bd + bdi, *n_p = bd;
+	struct bio bd[VIEW_M], *n_max = bd + VIEW_BDI, *n_p = bd;
         char *p = map_buf;
         /* size_t l = sizeof(map_buf); */
 	dbref o[VIEW_M], *o_p;
@@ -1632,7 +1640,7 @@ geo_view(int descr, dbref player)
         /* memset(map_buf, 0, sizeof(map_buf)); */
 	morton_decode(pos, code);
 	noise_view(bd, pos, obits);
-	map_search(o, pos, obits);
+	map_search(o, pos, obits, VIEW_AROUND);
 
 	o_p = o;
 
@@ -1726,4 +1734,26 @@ int gexits(int descr, dbref player, dbref where) {
                 ret |= i;
         }
         return ret;
+}
+
+void geo_notify(int descr, dbref player) {
+
+        dbref o[GEON_M], *o_p;
+        point3D_t pos;
+	morton_t x = geo_where(getloc(player));
+	char buf[BUFFER_LEN + 2];
+        morton_decode(pos, x);
+        map_search(o, pos, OBITS(x), GEON_RADIUS);
+	McpMesg msg;
+	mcp_mesg_init(&msg, MCP_WEB_PKG, "enter");
+	snprintf(buf, sizeof(buf), "0x%llx", x);
+	mcp_mesg_arg_append(&msg, "x", buf);
+	for (o_p = o; o_p < o + GEON_BDI; o_p++) {
+		dbref loc = *o_p;
+		if (loc < 0 || Typeof(loc) != TYPE_ROOM)
+			continue;
+
+		web_room_mcp(loc, &msg);
+	}
+	mcp_mesg_clear(&msg);
 }
