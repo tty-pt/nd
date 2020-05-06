@@ -1,7 +1,12 @@
+import { strin, strout } from '../wasm/metal-env.js';
+import { metal_write, metal_init, metal_input, memory } from '../wasm/cli/wasm-cli.js';
 let ws = new WebSocket('wss://' + window.location.hostname + ':4202', 'text');
+
+metal_init();
+
 let target = null;
 
-let   dir_lbl = [ 'h', 'j', 'k', 'l', 'down', 'up' ],
+let dir_lbl = [ 'h', 'j', 'k', 'l', 'down', 'up' ],
         action_lbl = [ 'look', 'kill', 'shop', 'drink', 'open', 'chop', 'fill' ],
 
         term = document.querySelector('#term'),
@@ -13,7 +18,7 @@ let   dir_lbl = [ 'h', 'j', 'k', 'l', 'down', 'up' ],
         rtitle = document.querySelector('#title'),
         rdesc = document.querySelector('#description'),
         map = document.querySelector('#map'),
-        dir_btns = dir_lbl.map(id => document.querySelector('#dir #' + id));
+        dir_btns = dir_lbl.map(id => document.querySelector('#dir #' + id)),
         act = document.getElementById('act'),
         target_lbl = act.children[0],
         action_btns = action_lbl.map(id => {
@@ -27,11 +32,6 @@ let   dir_lbl = [ 'h', 'j', 'k', 'l', 'down', 'up' ],
                 act.appendChild(a);
                 return a;
         });
-
-metal.worker.onmessage = function (e) {
-	output(e.data);
-}
-metal.run("/wasm/src/wasm-cli");
 
 function actions_reset() {
         act.style.display = 'none';
@@ -123,71 +123,10 @@ function dir_init(mask) {
                         = (mask & 1 << i) ? 1 : nop_opacity;
 }
 
-function mcp_handler(j) {
-        if (j.key.startsWith("com-qnixsoft-web-auth-error"))
-                forget();
-        else if (j.key.startsWith("com-qnixsoft-web-view"))
-                map.innerHTML = j.data;
-        else if (j.key.startsWith("com-qnixsoft-web-art"))
-                output('<img class="ah" src="' + j.src + '">');
-        else if (j.key.startsWith("com-qnixsoft-web-look-content")) {
-                actionable[j.name] = j;
-                let className = "";
-                let str = j.icon;
-                let idx = str.indexOf("\"");
-
-                if (idx >= 0) {
-                        str = str.substr(idx + 1);
-                        idx = str.indexOf("\"");
-                        if (idx >= 0) {
-                                className = str.substr(0, idx);
-                                idx = str.indexOf(">");
-                                if (idx >= 0) {
-                                        str = str.substr(idx + 1, str.indexOf("<") - idx - 1);
-                                }
-                        }
-                }
-
-                const a = document.createElement("a");
-                a.onclick = actions_init.bind(null, j.name);
-                const icon = document.createElement("span");
-                icon.innerHTML = str;
-                icon.className = className;
-                a.appendChild(icon);
-                a.innerHTML += " " + j.name;
-                contents_btns.appendChild(a);
-        } else if (j.key.startsWith("com-qnixsoft-web-look")) {
-                if (j.room) {
-                        rtitle.innerHTML = j.name;
-                        rdesc.innerHTML = j.description;
-                        contents_btns.innerHTML = '';
-                        dir_init(j.exits);
-                        actionable = {};
-                }
-        } else if (j.key.startsWith("com-qnixsoft-web-meme")) {
-                let a = document.createElement("a");
-                output(j.who + " says:\n");
-                a.href = j.url;
-                let img = document.createElement("img");
-                img.src = j.url;
-                img.alt = j.url;
-                img.onload = scroll_reset;
-                a.appendChild(img);
-                term.appendChild(a);
-                output("\n");
-        }
-}
-
 ws.onmessage = function (e) {
-        let arr = JSON.parse(e.data);
-        for (let k in arr) {
-                if (arr[k].key == 'inband') {
-			metal.write(arr[k].value);
-		} else
-                        mcp_handler(arr[k]);
-        }
-        if (term.innerHTML.length > 8000)
-                term.innerHTML = term.innerHTML.substr(4000);
+        console.log("inserted", e.data);
+        strin(memory, metal_input(), e.data, 4096);
+        console.log('got', strout(memory, metal_write(), 8282));
 };
 
 function input_send(e) {

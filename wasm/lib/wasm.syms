@@ -5,3 +5,4 @@ __syscall3
 __syscall4
 __syscall5
 __syscall6
+console_log

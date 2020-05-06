@@ -1,5 +1,11 @@
-/wasm/src/*.o
-/wasm/src/wasm-cli
+/metal.tar.gz
+/wasm/bin
+/wasm/lib
+/wasm/include
+/wasm/**/*.o
+/wasm/**/*.js
+/wasm/**/*.wasm
+/wasm/metal.mk
 /bgplg
 /*.html
 /game/geo.db
