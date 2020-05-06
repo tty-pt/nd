@@ -1,7 +1,7 @@
 #!/bin/make -f
 
 srcdir := ${PWD}
-subdirs := src/ vss/ pre/ game/data/ wasm/cli
+subdirs := src/ vss/ pre/ game/data/ wasm/cli/
 
 include scripts/Makefile.common
 
@@ -21,12 +21,13 @@ web: src
 
 game/data/: ${subdirs}
 
-wasm/cli: wasm
+wasm/cli/: wasm/lib
 
-wasm: metal.tar.gz
+wasm/lib: metal.tar.gz
 	cd wasm && tar xzf ../metal.tar.gz
 
+clean-y += metal.tar.gz
 metal.tar.gz:
-	curl -O https://github.com/quirinpa/metal/raw/master/metal.tar.gz
+	curl -LO https://github.com/quirinpa/metal/raw/master/metal.tar.gz
 
 .PHONY: cleaner ${subdirs-cleaner} web
