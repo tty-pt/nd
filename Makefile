@@ -23,10 +23,15 @@ game/data/: ${subdirs}
 
 wasm/cli/: wasm/lib
 
-wasm/lib: metal.tar.gz
-	cd wasm && tar xzf ../metal.tar.gz
+METAL-DIR := ${HOME}/metal/
+metal-tar := $(METAL-DIR)metal.tar.gz
 
-clean-y += metal.tar.gz
+$(metal-tar):
+	${MAKE} -C ${METAL-DIR} tar
+wasm/lib: ${metal-tar}
+	cd wasm && tar xzf ${metal-tar}
+clean-y += ${metal-tar}
+
 metal.tar.gz:
 	curl -LO https://github.com/quirinpa/metal/raw/master/metal.tar.gz
 
