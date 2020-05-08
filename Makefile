@@ -21,18 +21,24 @@ web: src
 
 game/data/: ${subdirs}
 
-wasm/cli/: wasm/lib
+wasm/cli/: wasm/lib/
 
-METAL-DIR := ${HOME}/metal/
+mt := git
+metal-dir-git := ${HOME}/metal/
+METAL-DIR := ${metal-dir-${mt}}
 metal-tar := $(METAL-DIR)metal.tar.gz
+# mt-phony-git := ${metal-tar}
+
+metal-tar: $(metal-tar)
 
 $(metal-tar):
 	${MAKE} -C ${METAL-DIR} tar
-wasm/lib: ${metal-tar}
+
+wasm/lib/: ${metal-tar}
 	cd wasm && tar xzf ${metal-tar}
-clean-y += ${metal-tar}
 
 metal.tar.gz:
 	curl -LO https://github.com/quirinpa/metal/raw/master/metal.tar.gz
 
-.PHONY: cleaner ${subdirs-cleaner} web
+.PHONY: cleaner ${subdirs-cleaner} web \
+	${mt-phony-${mt}} metal-tar

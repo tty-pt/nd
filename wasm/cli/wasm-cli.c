@@ -1,12 +1,6 @@
 #include <stdio.h>
-#include <string.h>
-#include <ctype.h>
-#include <stdlib.h>
 #include <metal.h>
-
-#define GET_FLAG(x)	( mcp.flags & x )
-#define SET_FLAGS(x)	{ mcp.flags |= x ; }
-#define UNSET_FLAGS(x)	( mcp.flags &= ~(x) )
+#include "mcp.h"
 
 struct attr {
         int fg, bg, x;
@@ -18,44 +12,11 @@ struct tty {
         char *end_tag;
 } ttys[2];
 
-enum mcp_flags {
-	MCP_ON = 1,
-	MCP_KEY = 2,
-	MCP_MULTI = 4,
-	MCP_ARG = 8,
-	MCP_NOECHO = 16,
-	MCP_SKIP = 32,
-	MCP_SECOND = 64,
-
-	MCP_NAME = 128,
-	MCP_HASH = 256,
-	JSON_CLOSED = 512,
-};
-
-enum mcp_state {
-	// unknown
-        // 1 means "\n" was read from telnet
-        // 2 means "\n#"
-        // 3 means "\n#$" and confirms mcp
-	MCP_CONFIRMED = 4,
-};
-
-struct mcp_arg {
-        char key[32];
-        char data[1024];
-};
-
-struct mcp {
-	int state, flags;
-        struct mcp_arg mcp_args[3];
-	char *mcpk, *mcpv;
-        int mcp_args_l;
-} mcp;
-
 /* exporting pointers stopped working
  * on transition to asm.js */
 static char in_buf[4096];
 static char out_buf[8282];
+char *out_p;
 
 static inline void
 params_push(struct tty *tty, int x)
@@ -115,150 +76,7 @@ void tty_init(struct tty *tty) {
 	/* UNSET_FLAGS(MCP_MULTILINE); */
 }
 
-static inline ssize_t
-_json_close(char *out, struct tty *tty) {
-	char *fout = out;
-	SET_FLAGS(JSON_CLOSED);
-	out += sprintf(out, "\" },");
-	return out - fout;
-}
-
-static inline size_t
-_json_open(char *out, struct tty *tty, char *str)
-{
-	char *fout = out;
-	if (!GET_FLAG(JSON_CLOSED)) {
-		out += _json_close(out, tty);
-		UNSET_FLAGS(JSON_CLOSED);
-	}
-        out += sprintf(out, "{ \"key\": \"%s", str);
-	return out - fout;
-}
-
-static inline size_t
-json_inband_open(char *out, struct tty *tty)
-{
-	char *fout = out;
-	out += _json_open(out, tty, "inband\", value: \"");
-	mcp.flags = 0;
-	return out - fout;
-}
-
-/* static inline size_t */
-/* mcp_handler(char *out, struct tty *tty, char *in) { */
-/* 	/1* console_log(in, 17); *1/ */
-/* 	size_t ret = json_close(out, tty); */
-/* 	mcp.mcpk = NULL; */
-/* 	return ret; */
-/* } */
-
-static inline unsigned
-esc_state_0(char *out, struct tty *tty, char *p) {
-	char *fout = out;
-	unsigned ret = 1;
-
-	if (GET_FLAG(MCP_SKIP)) {
-		if (*p != '\n')
-			return 0;
-
-		mcp.state = 1;
-		mcp.flags ^= MCP_SKIP;
-	}
-
-	switch (*p) {
-	case '#':
-		switch (mcp.state) {
-		case 3:
-		case 1:
-			mcp.state++;
-			return 0;
-		}
-		break;
-	case '$':
-		if (mcp.state == 2) {
-			mcp.state++;
-			return 0;
-		}
-		break;
-	case '*':
-		if (mcp.state == MCP_CONFIRMED) {
-			// only assert MULTI
-			mcp.flags = MCP_MULTI | MCP_NOECHO;
-			mcp.state = 0;
-			return 0;
-		}
-
-		if (!GET_FLAG(MCP_ON) || !GET_FLAG(MCP_KEY))
-			break;
-
-		SET_FLAGS(MCP_MULTI | MCP_SKIP);
-		return sprintf(out, "\": \"");
-
-	case ':':
-		if (GET_FLAG(MCP_MULTI)) {
-			if (mcp.state == MCP_CONFIRMED) {
-				mcp.state = 0;
-				mcp.flags = MCP_SKIP;
-			} else
-				mcp.flags &= ~MCP_NOECHO;
-		} else if (GET_FLAG(MCP_KEY))
-			return sprintf(out, "\":");
-		break;
-
-	case '"':
-		if (!GET_FLAG(MCP_ON))
-			break;
-
-		mcp.flags ^= MCP_KEY;
-		if (GET_FLAG(MCP_KEY))
-			return sprintf(out, "\", \"");
-		break;
-
-	case ' ':
-		if (!GET_FLAG(MCP_ON))
-			break;
-		else if (GET_FLAG(MCP_NAME)) {
-			mcp.flags ^= MCP_NAME | MCP_HASH | MCP_NOECHO;
-			return sprintf(out, "\", \"");
-		} else if (GET_FLAG(MCP_HASH)) {
-			mcp.flags ^= MCP_HASH | MCP_KEY | MCP_NOECHO;
-			return 0;
-		} else if (GET_FLAG(MCP_KEY))
-			return 0;
-		break;
-	case '\n':
-		mcp.flags &= ~MCP_NOECHO;
-		mcp.state = 1;
-		return 0;
-	}
-
-	if (mcp.state == MCP_CONFIRMED) {
-		// new mcp
-		out += _json_open(out, tty, "");
-		mcp.mcpk = out;
-		mcp.flags = MCP_ON | MCP_NAME;
-		mcp.state = 0;
-	} else if (mcp.state) {
-		// mcp turned out impossible
-		if (GET_FLAG(MCP_ON))
-			out += json_inband_open(out, tty);
-		mcp.state--;
-		strncpy(out, "#$#", mcp.state);
-		out += mcp.state;
-		mcp.flags = 0;
-	}
-
-	/* if (tty->csi_changed) { */
-	/* 	out += csi_change(out, tty); */
-	/* 	tty->csi_changed = 0; */
-	/* } */
-
-	if (!GET_FLAG(MCP_NOECHO))
-		*out++ = *p;
-
-	return out - fout;
-}
-
+#if 0
 static inline size_t
 esc_state_any(char *out, struct tty *tty, char *p) {
 	size_t ret = 0;
@@ -288,7 +106,7 @@ esc_state_any(char *out, struct tty *tty, char *p) {
 	case 0:
 		/* *out = *p; */
 		/* return 1; */
-		return esc_state_0(out, tty, p);
+		return esc_state_0(tty, p);
 	case 1:
 		switch (ch) {
 		case '[':
@@ -355,15 +173,7 @@ esc_state_any(char *out, struct tty *tty, char *p) {
 
 	return ret;
 }
-
-void tty_parse(char *out, struct tty *tty) {
-	char *fout = out, *in;
-
-        for (in = in_buf; *in != '\0'; in++)
-		out += esc_state_any(out, tty, in);
-
-	*out = '\0';
-}
+#endif
 
 export
 void
@@ -371,14 +181,14 @@ metal_init() {
 	int i;
 	for (i = 0; i < sizeof(ttys) / sizeof(struct tty); i++)
 		tty_init(&ttys[i]);
-	mcp.state = 1;
-	mcp.flags = JSON_CLOSED;
+	out_p = out_buf;
+	mcp_init();
 }
 
 export
 char *
 metal_write() {
-        tty_parse(out_buf, &ttys[0]);
+	mcp_proc(in_buf);
 	return out_buf;
 }
 
