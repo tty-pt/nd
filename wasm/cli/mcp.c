@@ -3,7 +3,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
-#include <stdlib.h>
+/* #include <stdlib.h> */
+#include "tty.h"
 
 #define GET_FLAG(x)	( mcp.flags & x )
 #define SET_FLAGS(x)	{ mcp.flags |= x ; }
@@ -62,8 +63,11 @@ extern char *out_p;
 static void mcp_emit() {
 	struct mcp_arg *arg;
 	out_p += sprintf(out_p, "{ \"key\": \"%s\"", mcp.name);
-	for (arg = mcp.args; arg < &mcp.args[mcp.args_l]; arg++)
-		out_p += sprintf(out_p, ", \"%s\": \"%s\"", arg->key, arg->value);
+	for (arg = mcp.args; arg < &mcp.args[mcp.args_l]; arg++) {
+		out_p += sprintf(out_p, ", \"%s\": \"", arg->key);
+		out_p += tty_proc(out_p, arg->value);
+		*out_p ++ = '"';
+	}
 	out_p += sprintf(out_p, " }, ");
 	mcp_clear();
 }
