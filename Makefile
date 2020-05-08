@@ -29,7 +29,7 @@ cleaner: ${subdirs-cleaner}
 	rm config.status config.cache config.log
 
 web: src
-	${srcdir}/src/ws-server
+	${srcdir}/src/ws-server &
 
 game/data/: ${subdirs}
 

@@ -360,6 +360,7 @@ test_lock_false_default(int descr, dbref player, dbref thing, const char *lockpr
 int
 can_doit(int descr, dbref player, dbref thing, const char *default_fail_msg)
 {
+	struct living *liv;
 	char const *dwts = "door";
 	char dir = '\0';
 	int door = 0;
