@@ -119,27 +119,14 @@ form {
 #term {
         overflow: hidden auto;
         white-space: break-spaces;
-	/* overflow: auto; */
-	/* margin: 0; */
-	/* flex-grow: 1; */
-        /* text-shadow: 2px 2px 3px black; */
 }
 
 #term > pre.small { max-height: 30pt; }
 #term > pre img.ah { height: 256px; }
-/* #middle { margin-top: -1em; } */
-/* #left { margin-top: -1em; margin-bottom: -1em; } */
-/* #left #term { --webkit-transform: translateY(-1em); } */
 #right {
         width: 16.5em;
 }
 /* #term > pre img { margin: 6pt auto; display: block; } */
 
 pre { margin-top: -1em; }
-#map { margin: -1em; }
-#term { margin-bottom: -0.1em; }
-/* #map { */
-/*         /1* margin: -1em; *1/ */
-/*         user-select: none; */
-/* } */
-
+#map { margin-bottom: -1em; margin-left: -1em; }
