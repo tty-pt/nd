@@ -66,15 +66,16 @@ static inline size_t
 esc_state_0(char *out, struct tty *tty, char ch) {
 	char *fout = out;
 
-	if (!isprint(ch))
-		return 0;
-
 	if (tty->csi_changed) {
 		out += csi_change(out, tty);
 		tty->csi_changed = 0;
 	}
 
 	switch (ch) {
+        case '\n':
+                *out++ = '\\';
+                *out++ = 'n';
+                return out - fout;
 	case '"':
 	case '\\':
 		*out++ = '\\';

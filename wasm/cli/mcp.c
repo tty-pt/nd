@@ -92,8 +92,6 @@ mcp_proc_ch(char *p) {
 	if (GET_FLAG(MCP_SKIP)) {
 		if (*p != '\n')
 			return;
-
-		mcp.state = 1;
 		mcp.flags ^= MCP_SKIP;
 	}
 
@@ -169,8 +167,9 @@ mcp_proc_ch(char *p) {
 			return;
 		break;
 	case '\n':
-		mcp.flags &= ~MCP_NOECHO;
 		mcp.state = 1;
+		if (GET_FLAG(MCP_MULTI))
+			*mcp.cache_p++ = '\n';
 		return;
 	}
 

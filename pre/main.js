@@ -124,6 +124,8 @@ function dir_init(mask) {
 }
 
 function mcp_handler(j) {
+        if (j.key == 'inband')
+                output(j.data);
         if (j.key.startsWith("com-qnixsoft-web-auth-error"))
                 forget();
         else if (j.key.startsWith("com-qnixsoft-web-view"))
