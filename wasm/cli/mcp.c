@@ -179,14 +179,11 @@ mcp_proc_ch(char *p) {
 		mcp.state = 0;
 	} else if (mcp.state) {
 		// mcp turned out impossible
-		if (GET_FLAG(MCP_ON)) {
+		if (GET_FLAG(MCP_ON))
 			mcp_emit();
-			mcp.flags = 0;
-		}
-		mcp.state--;
-		strncpy(mcp.cache_p, "#$#", mcp.state);
+		strncpy(mcp.cache_p, "\n#$#", mcp.state);
 		mcp.cache_p += mcp.state;
-		mcp.flags = 0;
+		mcp.state = mcp.flags = 0;
 	}
 
 	if (!GET_FLAG(MCP_NOECHO))
