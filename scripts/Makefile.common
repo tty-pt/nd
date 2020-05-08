@@ -2,6 +2,7 @@ Q := @
 QD := 
 #GNU := 1
 
+scripts := ${srcdir}/scripts
 all: ${subdirs}
 
 .PHONY: all

@@ -2,12 +2,15 @@
         <head>
                 <meta charset="utf8"/>
                 <title>Neverdark</title>
-                <link rel="manifest" href="manifest.json">
-                <link rel="shortcut icon" type="image/png" href="/nd256.png"/>
                 <meta name="viewport" content="width=device-width, user-scalable=no">
-                <script type="module" src="pre/main.js"></script>
-                <!-- STYLE ../styles.css -->
-                <!-- STYLE ../vim.css -->
+		<link rel="modulepreload" href="wasm/metal.js" />
+		<link rel="modulepreload" href="wasm/metal-env.js" />
+		<link rel="modulepreload" href="wasm/cli/wasm-cli.js" />
+                <script type="module" src="main.js"></script>
+                <link rel="shortcut icon" type="image/png" href="/nd256.png"/>
+                <link rel="manifest" href="manifest.json">
+                <!-- STYLE styles.css -->
+                <!-- STYLE vim.css -->
         </head>
         <body class="cf cb sfv vn f">
                 <div class="hn f c">
@@ -44,7 +47,6 @@
                         </div>
                 </div>
                 <div id="modal" class="abs sfv vn c fcc oh f">
-                        <!-- <div> -->
                         <span class="r c0 p">
                                 <h4>Help</h4>
                                 <p><b>s</b> To chat.</p>
@@ -78,7 +80,6 @@
                                 </p>
                                 <p><b>:help startingout</b> will get you further.</p>
                         </span>
-                        <!-- </div> -->
                 </div>
 
                 <!-- DEPS -->

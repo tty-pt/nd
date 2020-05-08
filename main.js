@@ -1,4 +1,4 @@
-import { strin, strout } from '../wasm/metal-env.js';
+import { strin, strout } from './wasm/metal-env.js';
 import { mcp_init, mcp_proc, mcp_reset, mcp_input, memory } from '../wasm/cli/wasm-cli.js';
 let ws = new WebSocket('wss://' + window.location.hostname + ':4202', 'text');
 

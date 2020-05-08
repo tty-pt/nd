@@ -1,9 +1,14 @@
 #!/bin/make -f
 
 srcdir := ${PWD}
-subdirs := src/ vss/ pre/ game/data/ wasm/cli/
+subdirs := src/ vss/ game/data/ wasm/cli/
 
 include scripts/Makefile.common
+
+all: index.html
+
+index.html: pre-index.html
+	${scripts}/html_tool.sh pre-index.html ${inline-js} > $@
 
 subdirs-install := ${subdirs:%=%-install}
 $(subdirs-install):
