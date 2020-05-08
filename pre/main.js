@@ -181,7 +181,7 @@ function mcp_handler(j) {
 }
 
 ws.onmessage = function (e) {
-        // console.log("inserted", e.data);
+        console.log("inserted", e.data);
         strin(memory, mcp_input(), e.data, 4096);
         let output = mcp_proc();
         if (output) {
@@ -192,7 +192,7 @@ ws.onmessage = function (e) {
                         console.log('json', jsons);
                         jsons.forEach(mcp_handler);
                 } catch (e) {
-                        // console.warn(e);
+                        console.warn(e);
                 }
                 mcp_reset();
         } // else

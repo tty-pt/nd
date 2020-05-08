@@ -46,7 +46,7 @@ struct {
 
 static char in_buf[4096];
 static char out_buf[8282];
-char *out_p;
+char *out_p, *last_p;
 
 static inline void mcp_set(char *buf) {
 	/* *mcp.cache_p = '\0'; */
@@ -56,6 +56,7 @@ static inline void mcp_set(char *buf) {
 }
 
 static inline void mcp_clear() {
+	last_p = out_p - 2;
 	memset(mcp.args, 0, sizeof(mcp.args));
 	memset(mcp.name, 0, sizeof(mcp.name));
 	memset(mcp.cache, 0, sizeof(mcp.cache));
@@ -93,6 +94,8 @@ mcp_proc_ch(char *p) {
 		if (*p != '\n')
 			return;
 		mcp.flags ^= MCP_SKIP;
+		mcp.state = 1;
+		return;
 	}
 
 	switch (*p) {
@@ -129,9 +132,10 @@ mcp_proc_ch(char *p) {
 		if (GET_FLAG(MCP_MULTI)) {
 			if (mcp.state == MCP_CONFIRMED) {
 				mcp.state = 0;
-				mcp.flags = MCP_SKIP;
+				mcp.flags = MCP_SKIP | MCP_MULTI;
 				mcp_set(mcp_arg()->value);
 				mcp.args_l ++;
+				mcp_emit();
 			} else
 				mcp.flags &= ~MCP_NOECHO;
 			return;
@@ -197,16 +201,20 @@ mcp_proc_ch(char *p) {
 export char *
 mcp_proc() {
 	char *in;
-	if (!GET_FLAG(MCP_MULTI))
-		*out_p++ = '[';
+
         for (in = in_buf; *in != '\0'; in++)
 		mcp_proc_ch(in);
-	if (GET_FLAG(MCP_MULTI))
-		return NULL;
-	out_p -= 2;
-	*out_p++ = ']';
-	*out_p++ = '\0';
-	return out_buf;
+
+	if (!GET_FLAG(MCP_ON) && !GET_FLAG(MCP_MULTI))
+		inband_emit();
+
+	if (last_p != out_buf) {
+		*last_p++ = ']';
+		*last_p++ = '\0';
+		return out_buf;
+	}
+
+	return NULL;
 }
 
 export char *
@@ -215,13 +223,14 @@ mcp_input() {
 }
 
 export void
-mcp_init() {
-        mcp.state = 1;
-	out_p = out_buf;
+mcp_reset() {
+	last_p = out_p = out_buf;
+	*out_p++ = '[';
+	*out_p = '\0';
 }
 
 export void
-mcp_reset() {
-	out_p = out_buf;
-	*out_p = '\0';
+mcp_init() {
+        mcp.state = 1;
+	mcp_reset();
 }
