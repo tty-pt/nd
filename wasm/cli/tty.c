@@ -62,8 +62,27 @@ void tty_init(struct tty *tty) {
 }
 
 static inline size_t
+esc_state_0(char *out, struct tty *tty, char ch) {
+	char *fout = out;
+
+	if (tty->csi_changed) {
+		out += csi_change(out, tty);
+		tty->csi_changed = 0;
+	}
+
+	switch (ch) {
+	case '"':
+	/* case '/': */
+	/* case '\\': */
+		*out++ = '\\';
+	}
+
+	*out++ = ch;
+	return out - fout;
+}
+
+static inline size_t
 tty_proc_ch(char *out, struct tty *tty, char *p) {
-        char *fout = out;
 	register char ch = *p;
 
 	switch (ch) {
@@ -88,13 +107,7 @@ tty_proc_ch(char *out, struct tty *tty, char *p) {
 
 	switch (tty->esc_state) {
 	case 0:
-                if (tty->csi_changed) {
-                        out += csi_change(out, tty);
-                        tty->csi_changed = 0;
-                }
-
-		*out++ = *p;
-		return out - fout;
+		return esc_state_0(out, tty, ch);
 	case 1:
 		switch (ch) {
 		case '[':

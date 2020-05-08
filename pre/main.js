@@ -1,8 +1,8 @@
 import { strin, strout } from '../wasm/metal-env.js';
-import { metal_write, metal_init, metal_input, memory } from '../wasm/cli/wasm-cli.js';
+import { mcp_init, mcp_proc, mcp_reset, mcp_input, memory } from '../wasm/cli/wasm-cli.js';
 let ws = new WebSocket('wss://' + window.location.hostname + ':4202', 'text');
 
-metal_init();
+mcp_init();
 
 let target = null;
 
@@ -125,8 +125,15 @@ function dir_init(mask) {
 
 ws.onmessage = function (e) {
         console.log("inserted", e.data);
-        strin(memory, metal_input(), e.data, 4096);
-        console.log('got', strout(memory, metal_write(), 8282));
+        strin(memory, mcp_input(), e.data, 4096);
+        let output = mcp_proc();
+        if (output) {
+                const str = strout(memory, output, 8282);
+                // const json = JSON.parse(str);
+                console.log('got', str);
+                mcp_reset();
+        } else
+                console.log('waiting');
 };
 
 function input_send(e) {

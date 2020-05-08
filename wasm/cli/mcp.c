@@ -1,5 +1,6 @@
 #include "mcp.h"
 
+#include "metal.h"
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
@@ -43,6 +44,10 @@ struct {
 	char cache[2048], *cache_p;
 } mcp;
 
+static char in_buf[4096];
+static char out_buf[8282];
+char *out_p;
+
 static inline void mcp_set(char *buf) {
 	/* *mcp.cache_p = '\0'; */
 	memcpy(buf, mcp.cache, sizeof(mcp.cache));
@@ -57,8 +62,6 @@ static inline void mcp_clear() {
 	mcp.args_l = 0;
 	mcp.cache_p = mcp.cache;
 }
-
-extern char *out_p;
 
 static void mcp_emit() {
 	struct mcp_arg *arg;
@@ -126,7 +129,7 @@ mcp_proc_ch(char *p) {
 		if (GET_FLAG(MCP_MULTI)) {
 			if (mcp.state == MCP_CONFIRMED) {
 				mcp.state = 0;
-				mcp.flags = MCP_SKIP | MCP_MULTI;
+				mcp.flags = MCP_SKIP;
 				mcp_set(mcp_arg()->value);
 				mcp.args_l ++;
 			} else
@@ -190,12 +193,29 @@ mcp_proc_ch(char *p) {
 		*mcp.cache_p++ = *p;
 }
 
-void mcp_proc(char *input) {
+export char *
+mcp_proc() {
 	char *in;
-        for (in = input; *in != '\0'; in++)
+        for (in = in_buf; *in != '\0'; in++)
 		mcp_proc_ch(in);
+	if (GET_FLAG(MCP_MULTI))
+		return NULL;
+	return out_buf;
 }
 
-void mcp_init() {
+export char *
+mcp_input() {
+	return in_buf;
+}
+
+export void
+mcp_init() {
         mcp.state = 1;
+	out_p = out_buf;
+}
+
+export void
+mcp_reset() {
+	out_p = out_buf;
+	*out_p = '\0';
 }
