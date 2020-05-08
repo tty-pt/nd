@@ -1,6 +1,7 @@
 #include "tty.h"
 
 #include <stdio.h>
+#include <ctype.h>
 
 struct attr {
         int fg, bg, x;
@@ -40,13 +41,13 @@ csi_change(char *out, struct tty *tty)
         out += sprintf(out, "%s", tty->end_tag);
 
 	if (a || b) {
-                out += sprintf(out, "<span class=\"");
+                out += sprintf(out, "<span class=\\\"");
 		if (a)
 			out += sprintf(out, "cf%d", tty->csi.fg);
 		if (b)
 			out += sprintf(out, " c%d", tty->csi.bg);
 
-		out += sprintf(out, "\">");
+		out += sprintf(out, "\\\">");
 		tty->end_tag = "</span>";
 	} else
 		tty->end_tag = "";
@@ -65,6 +66,9 @@ static inline size_t
 esc_state_0(char *out, struct tty *tty, char ch) {
 	char *fout = out;
 
+	if (!isprint(ch))
+		return 0;
+
 	if (tty->csi_changed) {
 		out += csi_change(out, tty);
 		tty->csi_changed = 0;
@@ -72,8 +76,7 @@ esc_state_0(char *out, struct tty *tty, char ch) {
 
 	switch (ch) {
 	case '"':
-	/* case '/': */
-	/* case '\\': */
+	case '\\':
 		*out++ = '\\';
 	}
 

@@ -76,7 +76,9 @@ static void mcp_emit() {
 }
 
 static void inband_emit() {
-	out_p += sprintf(out_p, "{ \"key\": \"inband\", \"data\": \"%s\" }, ", mcp.cache);
+	out_p += sprintf(out_p, "{ \"key\": \"inband\", \"data\": \"");
+	out_p += tty_proc(out_p, mcp.cache);
+	out_p += sprintf(out_p, "\" }, ");
 	mcp_clear();
 }
 
@@ -196,10 +198,15 @@ mcp_proc_ch(char *p) {
 export char *
 mcp_proc() {
 	char *in;
+	if (!GET_FLAG(MCP_MULTI))
+		*out_p++ = '[';
         for (in = in_buf; *in != '\0'; in++)
 		mcp_proc_ch(in);
 	if (GET_FLAG(MCP_MULTI))
 		return NULL;
+	out_p -= 2;
+	*out_p++ = ']';
+	*out_p++ = '\0';
 	return out_buf;
 }
 

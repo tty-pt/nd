@@ -123,17 +123,78 @@ function dir_init(mask) {
                         = (mask & 1 << i) ? 1 : nop_opacity;
 }
 
+function mcp_handler(j) {
+        if (j.key.startsWith("com-qnixsoft-web-auth-error"))
+                forget();
+        else if (j.key.startsWith("com-qnixsoft-web-view"))
+                map.innerHTML = j.data;
+        else if (j.key.startsWith("com-qnixsoft-web-art"))
+                output('<img class="ah" src="' + j.src + '">');
+        else if (j.key.startsWith("com-qnixsoft-web-look-content")) {
+                actionable[j.name] = j;
+                let className = "";
+                let str = j.icon;
+                let idx = str.indexOf("\"");
+
+                if (idx >= 0) {
+                        str = str.substr(idx + 1);
+                        idx = str.indexOf("\"");
+                        if (idx >= 0) {
+                                className = str.substr(0, idx);
+                                idx = str.indexOf(">");
+                                if (idx >= 0) {
+                                        str = str.substr(idx + 1, str.indexOf("<") - idx - 1);
+                                }
+                        }
+                }
+
+                const a = document.createElement("a");
+                a.onclick = actions_init.bind(null, j.name);
+                const icon = document.createElement("span");
+                icon.innerHTML = str;
+                icon.className = className;
+                a.appendChild(icon);
+                a.innerHTML += " " + j.name;
+                contents_btns.appendChild(a);
+        } else if (j.key.startsWith("com-qnixsoft-web-look")) {
+                if (j.room) {
+                        rtitle.innerHTML = j.name;
+                        rdesc.innerHTML = j.description;
+                        contents_btns.innerHTML = '';
+                        dir_init(j.exits);
+                        actionable = {};
+                }
+        } else if (j.key.startsWith("com-qnixsoft-web-meme")) {
+                let a = document.createElement("a");
+                output(j.who + " says:\n");
+                a.href = j.url;
+                let img = document.createElement("img");
+                img.src = j.url;
+                img.alt = j.url;
+                img.onload = scroll_reset;
+                a.appendChild(img);
+                term.appendChild(a);
+                output("\n");
+        }
+}
+
 ws.onmessage = function (e) {
-        console.log("inserted", e.data);
+        // console.log("inserted", e.data);
         strin(memory, mcp_input(), e.data, 4096);
         let output = mcp_proc();
         if (output) {
                 const str = strout(memory, output, 8282);
-                // const json = JSON.parse(str);
-                console.log('got', str);
+                // console.log('got', str);
+                try {
+                        const jsons = JSON.parse(str);
+                        console.log('json', jsons);
+                        jsons.forEach(mcp_handler);
+                } catch (e) {
+                        // console.warn(e);
+                }
                 mcp_reset();
-        } else
-                console.log('waiting');
+        } // else
+                // console.log('waiting');
 };
 
 function input_send(e) {
