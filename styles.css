@@ -33,16 +33,10 @@ h1,h2,h3,h4,h5,h6 { color: var(--C15) }
 
 img { color: var(--cf); };
 a,a:visited {
-        /* color: var(--cm); */
-        /* background-color: var(--C0); */
         text-decoration: none;
         cursor: pointer;
 }
-
-#modal a {
-        color: var(--cm);
-}
-
+#modal a { color: var(--cm); }
 a:hover { color: white; }
 
 form { margin: 0; }
@@ -106,7 +100,6 @@ input:focus {
 input:not(:focus) {
         height: 10px;
 }
-
 
 form {
 	width: 100%;
