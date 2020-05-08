@@ -205,7 +205,11 @@ mcp_proc() {
         for (in = in_buf; *in != '\0'; in++)
 		mcp_proc_ch(in);
 
-	if (!GET_FLAG(MCP_ON) && !GET_FLAG(MCP_MULTI))
+	if (GET_FLAG(MCP_MULTI))
+		;
+	else if (GET_FLAG(MCP_ON))
+		mcp_emit();
+	else
 		inband_emit();
 
 	if (last_p != out_buf) {

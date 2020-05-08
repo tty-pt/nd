@@ -93,7 +93,7 @@ function help_hide() {
 
 
 function output(stuff) {
-        term.innerHTML += stuff;
+        term.append(stuff);
         scroll_reset();
 }
 
@@ -168,7 +168,7 @@ function mcp_handler(j) {
                 }
         } else if (j.key.startsWith("com-qnixsoft-web-meme")) {
                 let a = document.createElement("a");
-                output(j.who + " says:\n");
+                output("\n" + j.who + " says:\n");
                 a.href = j.url;
                 let img = document.createElement("img");
                 img.src = j.url;
@@ -181,15 +181,15 @@ function mcp_handler(j) {
 }
 
 ws.onmessage = function (e) {
-        console.log("inserted", e.data);
+        // console.log("inserted", e.data);
         strin(memory, mcp_input(), e.data, 4096);
-        let output = mcp_proc();
-        if (output) {
-                const str = strout(memory, output, 8282);
+        let ptr = mcp_proc();
+        if (ptr) {
+                const str = strout(memory, ptr, 8282);
                 // console.log('got', str);
                 try {
                         const jsons = JSON.parse(str);
-                        console.log('json', jsons);
+                        // console.log('json', jsons);
                         jsons.forEach(mcp_handler);
                 } catch (e) {
                         console.warn(e);
