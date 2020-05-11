@@ -144,4 +144,5 @@ set path=$PWD/src,$PWD/include
 " nnoremap gr :vimgrep <cword> src/*.c include/*.h<cr>
 set grepprg=ag\ --nogroup\ --nocolor
 nnoremap gr :grep <cword> src/*.c include/*.h<cr>
-term doas make web
+" term doas make web
+autocmd BufNewFile,BufRead *.hjs setf javascript.preproc

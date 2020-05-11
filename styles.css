@@ -1,25 +1,22 @@
-:root {
-	/* extra colors */
-	--c: #3c403c; --cf: #c1c3da;
+.modal { z-index: 3; top: 0; }
 
-	--cm: var(--C13); 
-	--cbm: rgba(0.05, 0.05, 0.05, 0.1);
-}
-
-#modal { z-index: 3; }
-
-.cf { background: var(--c); }
-.cb { color: var(--cf); }
 .oa { overflow: auto; }
 .ar { text-align: right; }
 .fl { float: left; }
 
 #main {
-        max-height: calc(100% - 2em);
+	overflow: hidden;
+	max-height: calc(100% - 24px);
+}
+
+#term {
+	overflow: auto;
+	max-height: calc(100% - 60px);
+	white-space: break-spaces;
+	margin-bottom: 0;
 }
 
 body {
-        caret-color: var(--cm);
         font-family: 'Lucida Console', Monaco, monospace;
 	margin: 0;
 	image-rendering: pixelated;
@@ -29,76 +26,24 @@ body {
 	font-size: 10pt;
 }
 
-h1,h2,h3,h4,h5,h6 { color: var(--C15) }
-
-img { color: var(--cf); };
+a {
+        background-repeat: no-repeat;
+        background-position: center;
+}
 a,a:visited {
         text-decoration: none;
         cursor: pointer;
 }
-#modal a { color: var(--cm); }
 a:hover { color: white; }
 
 form { margin: 0; }
 
 input {
 	width: 100%;
-        border: solid thin var(--C0);
-        padding: 9pt 11pt;
+        padding: 8px 11px;
         border-radius: 0 0 10pt 10pt;
         margin: 0; 
         background: #4c504c;
-        color: var(--fg);
-}
-
-.btns {
-	position: absolute;
-	z-index: 2;
-        -webkit-tap-highlight-color: var(--cbm);
-        text-align: right;
-        user-select: none;
-        top: 50%;
-}
-
-#dir.btns {
-        right: 0;
-        margin-top: -72px;
-}
-
-#act.btns {
-        left: 0;
-        margin-top: -116px;
-        text-align: left;
-}
-
-#act.btns > div { margin-bottom: 3pt; }
-
-#contents.btns { left: 0; margin-top: -48px; }
-
-.btns a {
-        display: inline-block;
-	padding: 1pt;
-        border: solid thin var(--C0);
-        background-color: var(--C5);
-        background-repeat: no-repeat;
-        background-position: center center;
-        width: 32px;
-        height: 32px;
-        line-height: 32px;
-        text-align: center;
-        border-radius: 50%;
-        margin: 2px;
-}
-
-.btns a:hover { border: solid thin var(--cm); }
-a.mlb { margin-left: 48px; }
-
-input:focus {
-        border: solid thin var(--cm);
-        outline: var(--cm);
-}
-input:not(:focus) {
-        height: 10px;
 }
 
 form {
@@ -107,11 +52,6 @@ form {
 	display: flex;
 	flex-direction: column;
         height: 100%;
-}
-
-#term {
-        overflow: hidden auto;
-        white-space: break-spaces;
 }
 
 #term > pre.small { max-height: 30pt; }

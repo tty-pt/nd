@@ -3,25 +3,22 @@
                 <meta charset="utf8"/>
                 <title>Neverdark</title>
                 <meta name="viewport" content="width=device-width, user-scalable=no">
-		<link rel="modulepreload" href="wasm/metal.js" />
-		<link rel="modulepreload" href="wasm/metal-env.js" />
-		<link rel="modulepreload" href="wasm/cli/wasm-cli.js" />
-                <script type="module" src="main.js"></script>
-                <link rel="shortcut icon" type="image/png" href="/nd256.png"/>
-                <link rel="manifest" href="manifest.json">
-                <!-- STYLE styles.css -->
-                <!-- STYLE vim.css -->
+                <link rel="shortcut icon" type="image/png" href="./nd256.png"/>
+                <!-- <link rel="manifest" href="./manifest.json"> -->
+		<link rel="stylesheet"  href="./vim.css" />
+		<link rel="stylesheet" href="./styles.css" />
+		<script src="./lib/text.min.js"></script>
         </head>
         <body class="cf cb sfv vn f">
                 <div class="hn f c">
                         <span id="title" class="fg">Neverdark - welcome</span>
                         <a class="sh sv pxs" id="help" onclick="help_show()">?</a>
-                        <a class="sh sv pxs" id="forget" style="display: none; background-image: url(art/die.png)"></a>
+                        <a class="sh sv pxs" id="forget" style="display: none; background-image: url(./art/die.png)"></a>
                 </div>
                 <div id="main" class="hn f fg">
                         <form id="left" class="vn f fg">
                                 <pre id="term" class="fg"></pre>
-                                <input class="cf" autocomplete="off" autocapitalize="off">
+                                <input name="cmd" class="cf" autocomplete="off" autocapitalize="off">
                         </form>
                         <div id="right" class="vn ts f">
                                 <pre id="map"></pre>
@@ -46,7 +43,7 @@
                                 </div>
                         </div>
                 </div>
-                <div id="modal" class="abs sfv vn c fcc oh f">
+                <div class="modal abs sfv vn c fcc oh f">
                         <span class="r c0 p">
                                 <h4>Help</h4>
                                 <p><b>s</b> To chat.</p>
@@ -81,7 +78,6 @@
                                 <p><b>:help startingout</b> will get you further.</p>
                         </span>
                 </div>
-
-                <!-- DEPS -->
+                <script src="./main.js"></script>
         </body>
 </html>

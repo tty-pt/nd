@@ -21,7 +21,6 @@
 #include <ctype.h> 
 #include "debug.h"
 
-#define SECURE
 #define PORT 4202
 
 #define FIN(head) !!(head[0] & 0x80)
@@ -40,7 +39,7 @@
 
 #define WRITEF(...) html_len += snprintf(&html[html_len], HTMLSIZ - html_len, __VA_ARGS__)
 
-#ifdef SECURE
+#ifdef CONFIG_SECURE
 #define WS_READ(cfd, to, len) \
 	SSL_read(wss[cfd].cSSL, to, len)
 #define WS_WRITE(cfd, from, len) \
@@ -83,7 +82,7 @@ static struct ws wss[FD_SETSIZE];
 static int cfds[FD_SETSIZE];
 static int sfd = -1; 
 static unsigned nt = 0;
-#ifdef SECURE
+#ifdef CONFIG_SECURE
 SSL_CTX *sslctx;
 #endif
 
@@ -189,7 +188,7 @@ ws_close(int cfd, fd_set *fdset)
 	if (ws->tfd != -1)
 		telnet_close(ws, fdset);
 	FD_CLR(cfd, fdset);
-#ifdef SECURE
+#ifdef CONFIG_SECURE
 	SSL_shutdown(ws->cSSL);
 	SSL_free(ws->cSSL);
 #endif
@@ -309,7 +308,7 @@ ws_new(fd_set *afdset)
 	ws = &wss[cfd];
 	ws->cfd = cfd;
 
-#ifdef SECURE
+#ifdef CONFIG_SECURE
 	ws->cSSL = SSL_new(sslctx);
 	SSL_set_fd(ws->cSSL, cfd);
 
@@ -411,7 +410,7 @@ int main()
 	}
 
         signal(SIGPIPE, SIG_IGN);
-#ifdef SECURE
+#ifdef CONFIG_SECURE
 	SSL_load_error_strings();
 	SSL_library_init();
 	OpenSSL_add_all_algorithms();

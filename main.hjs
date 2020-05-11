@@ -1,28 +1,40 @@
-import { strin, strout } from './wasm/metal-env.js';
-import { mcp_init, mcp_proc, mcp_reset, mcp_input, memory } from '../wasm/cli/wasm-cli.js';
-let ws = new WebSocket('wss://' + window.location.hostname + ':4202', 'text');
+#include "./wasm/metal-env.js"
+#define METAL_IMPORT "env"
+#define METAL_NAME "metal"
+#include "./wasm/metal.js"
+#undef METAL_IMPORT
+#undef METAL_NAME
+#define METAL_IMPORT "metal"
+#define METAL_NAME "mcp"
+#include "./wasm/cli/wasm-cli.js"
 
-mcp_init();
+#define CONFIG_PROTO "ws"
 
-let target = null;
+var ws = new WebSocket(CONFIG_PROTO + "://" + window.location.hostname + ':4202', 'text');
 
-let dir_lbl = [ 'h', 'j', 'k', 'l', 'down', 'up' ],
+mcp.mcp_init();
+
+var target = null;
+
+var dir_lbl = [ 'h', 'j', 'k', 'l', 'down', 'up' ],
         action_lbl = [ 'look', 'kill', 'shop', 'drink', 'open', 'chop', 'fill' ],
 
         term = document.querySelector('#term'),
         form = document.querySelector('form'),
         input = document.querySelector('input'),
-        modal = document.getElementById('modal'),
+        modal = document.querySelector('.modal'),
         forgetbtn = document.getElementById('forget'),
         contents_btns = document.getElementById('contents'),
         rtitle = document.querySelector('#title'),
         rdesc = document.querySelector('#description'),
         map = document.querySelector('#map'),
-        dir_btns = dir_lbl.map(id => document.querySelector('#dir #' + id)),
+        dir_btns = dir_lbl.map(function(id) {
+		return document.querySelector('#dir #' + id);
+	}),
         act = document.getElementById('act'),
         target_lbl = act.children[0],
-        action_btns = action_lbl.map(id => {
-                let a = document.createElement('a');
+        action_btns = action_lbl.map(function(id) {
+                var a = document.createElement('a');
                 a.style.backgroundImage = 'url(art/' + id + '.png)'
                 a.classList.add("sh", "sv", "pxs");
                 a.style.display = 'none';
@@ -39,23 +51,28 @@ function actions_reset() {
 }
 
 function cmd(str) {
+	console.log("CMD", str);
         ws.send(str);
         actions_reset();
 }
 
-const nop_opacity = 0.2;
+var nop_opacity = 0.2;
 
 dir_btns.forEach(function(el) {
-        el.onclick = cmd.bind(null, el.innerHTML);
+        el.onclick = cmd.bind(null, el.id);
         el.style.opacity = nop_opacity;
 });
 
-let username = localStorage.getItem('username');
-let password = localStorage.getItem('password');
+var username = localStorage.getItem('username');
+var password = localStorage.getItem('password');
 
 function login() {
-        localStorage.setItem('username', username);
-        localStorage.setItem('password', password);
+	try {
+		localStorage.setItem('username', username);
+		localStorage.setItem('password', password);
+	} (e) {
+		console.warn(e);
+	}
         ws.send(username + ' ' + password);
         forgetbtn.style.display = 'inline-block';
 }
@@ -91,9 +108,9 @@ function help_hide() {
         modal.classList.remove("f");
 }
 
-
 function output(stuff) {
-        term.append(stuff);
+        // term.append(stuff);
+        term.innerHTML += stuff;
         scroll_reset();
 }
 
@@ -106,37 +123,38 @@ ws.onclose = function () {
 if (!username)
         promptUsername();
 
-let actionable = {};
+var actionable = {};
 
 function actions_init(name) {
         act.style.display = 'block';
         target = actionable[name];
         // target_lbl.innerHTML = target.pname;
-        for (let i = 0; i < action_lbl.length; i++)
+        for (var i = 0; i < action_lbl.length; i++)
                 action_btns[i].style.display
                         = (target.actions & (1 << i)) ? '' : 'none';
 }
 
 function dir_init(mask) {
-        for (let i = 0; i < dir_lbl.length; i++)
+        for (var i = 0; i < dir_lbl.length; i++)
                 dir_btns[i].style.opacity
                         = (mask & 1 << i) ? 1 : nop_opacity;
 }
 
 function mcp_handler(j) {
+	console.log('mcp_handler', j);
         if (j.key == 'inband')
                 output(j.data);
-        if (j.key.startsWith("com-qnixsoft-web-auth-error"))
+        if (j.key == "com-qnixsoft-web-auth-error")
                 forget();
-        else if (j.key.startsWith("com-qnixsoft-web-view"))
+        else if (j.key == "com-qnixsoft-web-view")
                 map.innerHTML = j.data;
-        else if (j.key.startsWith("com-qnixsoft-web-art"))
+        else if (j.key == "com-qnixsoft-web-art")
                 output('<img class="ah" src="' + j.src + '">');
-        else if (j.key.startsWith("com-qnixsoft-web-look-content")) {
+        else if (j.key == "com-qnixsoft-web-look-content") {
                 actionable[j.name] = j;
-                let className = "";
-                let str = j.icon;
-                let idx = str.indexOf("\"");
+                var className = "";
+                var str = j.icon;
+                var idx = str.indexOf("\"");
 
                 if (idx >= 0) {
                         str = str.substr(idx + 1);
@@ -150,15 +168,15 @@ function mcp_handler(j) {
                         }
                 }
 
-                const a = document.createElement("a");
+                var a = document.createElement("a");
                 a.onclick = actions_init.bind(null, j.name);
-                const icon = document.createElement("span");
+                var icon = document.createElement("span");
                 icon.innerHTML = str;
                 icon.className = className;
                 a.appendChild(icon);
                 a.innerHTML += " " + j.name;
                 contents_btns.appendChild(a);
-        } else if (j.key.startsWith("com-qnixsoft-web-look")) {
+        } else if (j.key == "com-qnixsoft-web-look") {
                 if (j.room) {
                         rtitle.innerHTML = j.name;
                         rdesc.innerHTML = j.description;
@@ -166,11 +184,11 @@ function mcp_handler(j) {
                         dir_init(j.exits);
                         actionable = {};
                 }
-        } else if (j.key.startsWith("com-qnixsoft-web-meme")) {
-                let a = document.createElement("a");
+        } else if (j.key == "com-qnixsoft-web-meme") {
+                var a = document.createElement("a");
                 output("\n" + j.who + " says:\n");
                 a.href = j.url;
-                let img = document.createElement("img");
+                var img = document.createElement("img");
                 img.src = j.url;
                 img.alt = j.url;
                 img.onload = scroll_reset;
@@ -181,31 +199,37 @@ function mcp_handler(j) {
 }
 
 ws.onmessage = function (e) {
-        // console.log("inserted", e.data);
-        strin(memory, mcp_input(), e.data, 4096);
-        let ptr = mcp_proc();
+        console.log("inserted", e.data);
+        env.strin(mcp.memory, mcp.mcp_input(), e.data, 4096);
+        var ptr = mcp.mcp_proc();
         if (ptr) {
-                const str = strout(memory, ptr, 8282);
-                // console.log('got', str);
+                var str = env.strout(mcp.memory, ptr, 8282);
                 try {
-                        const jsons = JSON.parse(str);
-                        // console.log('json', jsons);
-                        jsons.forEach(mcp_handler);
+                        var jsons = JSON.parse(str);
+                        console.log('jsons', jsons);
+			for (var i = 0; i < jsons.length; i++)
+				mcp_handler(jsons[i]);
                 } catch (e) {
+			console.log(str);
                         console.warn(e);
                 }
-                mcp_reset();
+                mcp.mcp_reset();
         } // else
                 // console.log('waiting');
 };
 
+var cmd_str = "";
+
+input.onchange = function (e) {
+	cmd_str = e.target.value;
+};
+
 function input_send(e) {
-        let str = input.value;
         if (input.value.match("http")) {
-                const url = str.substr(str.indexOf("h"));
-                str = ":meme " + url; 
+                var url = cmd_str.substr(cmd_str.indexOf("h"));
+                cmd_str = ":meme " + url; 
         }
-        cmd(str);
+        cmd(cmd_str);
         input.blur();
         input.value = "";
         return false;
@@ -256,66 +280,51 @@ if (username) {
 }
 
 window.onkeydown = function(e) {
+	console.log('onkeydown', e.keyCode, e);
         help_hide();
+
         if (document.activeElement == input) {
-                switch (e.key) {
-                        case "Escape":
+                switch (e.keyCode) {
+                        case 27:
                                 input.blur();
                 }
                 return;
         }
-        switch (e.key) {
-                case "s":
+
+        switch (e.keyCode) {
+                case 83:
                         input.value = ":say ";
                         focus();
                         e.preventDefault();
                         break;
-                case ":":
-                        input.value = ":";
+                case 186: // ":"
+			if (e.shiftKey) {
+				input.value = ":";
+				focus();
+				e.preventDefault();
+			}
+                        break;
+		case 65: // "a":
                         focus();
                         e.preventDefault();
                         break;
-                case "a":
-                        focus();
-                        e.preventDefault();
+		case 75:
+		case 38: // "ArrowUp":
+			cmd("k");
                         break;
-                case "ArrowUp":
-                        input.value = "k";
-                        input_send();
+		case 74:
+		case 49: // "ArrowDown":
+			cmd("j");
                         break;
-                case "ArrowDown":
-                        input.value = "j";
-                        input_send();
+		case 72:
+		case 37: // "ArrowLeft":
+			cmd("h");
                         break;
-                case "ArrowLeft":
-                        input.value = "h";
-                        input_send();
+		case 76:
+		case 39: // "ArrowRight":
+			cmd("l");
                         break;
-                case "ArrowRight":
-                        input.value = "l";
-                        input_send();
-                        break;
-                case "Shift":
-                case "Control":
-                case "Alt":
-                        break;
-                default:
-                        input.value += e.key;
-                        input_send();
         }
 };
 
 window.onorientationchange = scroll_reset;
-
-// term.onclick = function (e) {
-//         term.classList = term.classList == '' ? 'small' : '';
-//         scroll_reset();
-//         actions_reset();
-// };
-
-if (navigator.serviceWorker) {
-        navigator.serviceWorker.register('sw.js').then(
-                function(registration) {},
-                function(err) { console.error('sw.js registration failed: ', err); },
-        );
-}

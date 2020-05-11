@@ -1,4 +1,5 @@
 /metal.tar.gz
+/main.js
 /wasm/bin
 /wasm/lib
 /wasm/include
@@ -29,7 +30,6 @@
 /src/prochelp
 /src/ws-server
 /src/.depend
-/pre/app.min.js
 /tmp
 /vim.css
 /game/data/mpihelp.txt
