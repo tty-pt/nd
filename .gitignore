@@ -6,7 +6,7 @@
 /wasm/**/*.o
 /wasm/**/*.js
 /wasm/**/*.wasm
-/wasm/metal.mk
+/wasm/*.mk
 /bgplg
 /*.html
 /game/geo.db

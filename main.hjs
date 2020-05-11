@@ -1,9 +1,3 @@
-#include "./wasm/metal-env.js"
-#define METAL_IMPORT "env"
-#define METAL_NAME "metal"
-#include "./wasm/metal.js"
-#undef METAL_IMPORT
-#undef METAL_NAME
 #define METAL_IMPORT "metal"
 #define METAL_NAME "mcp"
 #include "./wasm/cli/wasm-cli.js"
@@ -67,12 +61,8 @@ var username = localStorage.getItem('username');
 var password = localStorage.getItem('password');
 
 function login() {
-	try {
-		localStorage.setItem('username', username);
-		localStorage.setItem('password', password);
-	} (e) {
-		console.warn(e);
-	}
+	// localStorage.setItem('username', username);
+	// localStorage.setItem('password', password);
         ws.send(username + ' ' + password);
         forgetbtn.style.display = 'inline-block';
 }
@@ -141,7 +131,7 @@ function dir_init(mask) {
 }
 
 function mcp_handler(j) {
-	console.log('mcp_handler', j);
+	// console.log('mcp_handler', j);
         if (j.key == 'inband')
                 output(j.data);
         if (j.key == "com-qnixsoft-web-auth-error")
@@ -199,14 +189,14 @@ function mcp_handler(j) {
 }
 
 ws.onmessage = function (e) {
-        console.log("inserted", e.data);
+        // console.log("inserted", e.data);
         env.strin(mcp.memory, mcp.mcp_input(), e.data, 4096);
         var ptr = mcp.mcp_proc();
         if (ptr) {
                 var str = env.strout(mcp.memory, ptr, 8282);
                 try {
                         var jsons = JSON.parse(str);
-                        console.log('jsons', jsons);
+                        // console.log('jsons', jsons);
 			for (var i = 0; i < jsons.length; i++)
 				mcp_handler(jsons[i]);
                 } catch (e) {
@@ -233,10 +223,6 @@ function input_send(e) {
         input.blur();
         input.value = "";
         return false;
-};
-
-input.onclick = function (e) {
-        console.log("onclick", e);
 };
 
 function gotPassword() {
@@ -280,7 +266,7 @@ if (username) {
 }
 
 window.onkeydown = function(e) {
-	console.log('onkeydown', e.keyCode, e);
+	// console.log('onkeydown', e.keyCode, e);
         help_hide();
 
         if (document.activeElement == input) {
@@ -310,11 +296,17 @@ window.onkeydown = function(e) {
                         break;
 		case 75:
 		case 38: // "ArrowUp":
-			cmd("k");
+			if (e.shiftKey)
+				cmd("K");
+			else
+				cmd("k");
                         break;
 		case 74:
 		case 49: // "ArrowDown":
-			cmd("j");
+			if (e.shiftKey)
+				cmd("J");
+			else
+				cmd("j");
                         break;
 		case 72:
 		case 37: // "ArrowLeft":

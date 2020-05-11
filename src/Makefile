@@ -54,8 +54,7 @@ install: all
 	${INSTALL} ${exe} ${INSTALL_BINDIR}
 	${INSTALL} -d ${INSTALL_HELPDIR}
 	cd ../game/data && ${INSTALL} -m 644 ${HELPFILES} ${INSTALL_HELPDIR}
-	${INSTALL} ../game/restart ${INSTALL_HELPDIR}/restart-script
 
-.PHONY: version.h cleaner install
+.PHONY: cleaner install
 
 # FIXME: Check base and minimal dbs into CVS as unpacked file trees under dbs/

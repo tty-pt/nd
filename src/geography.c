@@ -659,7 +659,7 @@ gexit(int descr, dbref player, dbref loc, dbref loc2, const char dir)
 	/* Initialize everything */
 	NAME(ref) = alloc_string(GNAME(dir));
 	DBFETCH(ref)->location = loc;
-	OWNER(ref) = player;
+	OWNER(ref) = 1;
 	FLAGS(ref) = TYPE_EXIT;
 
 	/* link it in */
@@ -827,7 +827,7 @@ geo_room_at(int descr, dbref player, morton_t x)
 	geo_put(x, there, DB_NOOVERWRITE);
 	NAME(there) = alloc_string("No name");
 	DBFETCH(there)->location = loc;
-	OWNER(there) = player;
+	OWNER(there) = 1;
 	DBFETCH(there)->exits = NOTHING;
 	DBFETCH(there)->sp.room.dropto = NOTHING;
 	FLAGS(there) = TYPE_ROOM | (FLAGS(player) & JUMP_OK);

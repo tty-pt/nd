@@ -4,17 +4,12 @@ srcdir := ${PWD}
 subdirs := src/ vss/ game/data/ wasm/cli/
 
 include scripts/Makefile.common
+include wasm/hjs.mk
 
-all: index.html main.js
+all: index.html main.js vim.css
 
-.SUFFIXES: .js .hjs
-
-js-flags-y := -E -P -nostdinc -undef -x c
-
-.hjs.js:
-	gcc ${js-flags-y} -o $@ $<
-
-index.html: pre-index.html vim.css
+inline-js := main.js
+index.html: pre-index.html ${inline-js}
 	${scripts}/html_tool.sh pre-index.html ${inline-js} > $@
 
 vim.css: FORCE
@@ -51,7 +46,7 @@ metal-tar: $(metal-tar)
 $(metal-tar):
 	${MAKE} -C ${METAL-DIR} tar
 
-wasm/lib/: ${mt-need-y}
+wasm/lib/ wasm/metal.hjs: ${mt-need-y}
 	cd wasm && tar xzf ${metal-tar}
 
 metal.tar.gz:
