@@ -1,0 +1,62 @@
+var canvas = document.querySelector("canvas");
+var ctx = canvas.getContext('2d');
+var tilemap = document.createElement("img");
+tilemap.src = "./art/tilemap.png";
+tilemap.classList.add("dn");
+
+var actions_lbl = [
+	"look", "kill", "shop",
+	"drink", "open", "chop",
+	"fill", "get", "die",
+];
+
+function tilemap_icon_cache(p, data) {
+	var a = document.createElement("a");
+	var id = actions_lbl[p];
+	a.style.backgroundImage = "url(" + data + ")";
+	a.classList.add("sh", "sv", "pxs");
+	a.style.display = 'none';
+	a.onclick = function () {
+		cmd(":" + id + " " + target.name);
+	};
+	act.appendChild(a);
+	return a;
+}
+
+var action_btns = [];
+var actions_init = null;
+
+function tilemap_cache() {
+	var p = 0;
+	for (var i = 0; i < 3; i++) {
+		for (var j = 0; j < 3; j++, p++) {
+			ctx.clearRect(0, 0, 16, 16);
+			ctx.drawImage(tilemap, 16 * j, 16 * i,
+				16, 16, 0, 0, 16, 16);
+
+			action_btns.push(tilemap_icon_cache(
+				p, canvas.toDataURL()
+			));
+		}
+	}
+
+	// forgetbtn.style.backgroundImage
+	// 	= action_btns[p].style.backgroundImage;
+
+	actions_init =  function (name) {
+		console.log("actions init", name);
+		act.style.display = 'block';
+		target = actionable[name];
+		// target_lbl.innerHTML = target.pname;
+		for (var i = 0; i < action_btns.length; i++)
+			action_btns[i].style.display
+				= (target.actions & (1 << i)) ? '' : 'none';
+	};
+
+	console.log(action_btns);
+}
+
+tilemap.onload = function () {
+	setTimeout(tilemap_cache, 0);
+};
+document.body.append(tilemap);

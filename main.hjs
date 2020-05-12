@@ -11,8 +11,6 @@ mcp.mcp_init();
 var target = null;
 
 var dir_lbl = [ 'h', 'j', 'k', 'l', 'down', 'up' ],
-        action_lbl = [ 'look', 'kill', 'shop', 'drink', 'open', 'chop', 'fill' ],
-
         term = document.querySelector('#term'),
         form = document.querySelector('form'),
         input = document.querySelector('input'),
@@ -26,18 +24,7 @@ var dir_lbl = [ 'h', 'j', 'k', 'l', 'down', 'up' ],
 		return document.querySelector('#dir #' + id);
 	}),
         act = document.getElementById('act'),
-        target_lbl = act.children[0],
-        action_btns = action_lbl.map(function(id) {
-                var a = document.createElement('a');
-                a.style.backgroundImage = 'url(art/' + id + '.png)'
-                a.classList.add("sh", "sv", "pxs");
-                a.style.display = 'none';
-                a.onclick = function () {
-                        cmd(":" + id + " " + target.name);
-                };
-                act.appendChild(a);
-                return a;
-        });
+        target_lbl = act.children[0];
 
 function actions_reset() {
         act.style.display = 'none';
@@ -115,14 +102,7 @@ if (!username)
 
 var actionable = {};
 
-function actions_init(name) {
-        act.style.display = 'block';
-        target = actionable[name];
-        // target_lbl.innerHTML = target.pname;
-        for (var i = 0; i < action_lbl.length; i++)
-                action_btns[i].style.display
-                        = (target.actions & (1 << i)) ? '' : 'none';
-}
+#include "canvas.hjs"
 
 function dir_init(mask) {
         for (var i = 0; i < dir_lbl.length; i++)

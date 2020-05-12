@@ -4,6 +4,8 @@
 .ar { text-align: right; }
 .fl { float: left; }
 
+canvas { vertical-align: inherit; }
+
 #main {
 	overflow: hidden;
 	max-height: calc(100% - 24px);

@@ -3,18 +3,21 @@
                 <meta charset="utf8"/>
                 <title>Neverdark</title>
                 <meta name="viewport" content="width=device-width, user-scalable=no">
-                <script src="./wasm/full-metal.js"></script>
                 <!-- <link rel="manifest" href="./manifest.json"> -->
+		<script src="./wasm/full-metal.js"></script>
 		<link rel="stylesheet"  href="./vim.css" />
 		<link rel="stylesheet" href="./styles.css" />
-		<script src="./lib/text.min.js"></script>
+		<link rel="preload" href="./art/tilemap.png" as="image" />
+		<!-- <script src="./lib/text.min.js"></script> -->
                 <link rel="shortcut icon" type="image/png" href="./nd256.png"/>
         </head>
         <body class="cf cb sfv vn f">
-                <div class="hn f c">
+                <div class="hxs f c">
                         <span id="title" class="fg">Neverdark - welcome</span>
-                        <a class="sh sv pxs" id="help" onclick="help_show()">?</a>
-                        <a class="sh sv pxs" id="forget" style="display: none; background-image: url(./art/die.png)"></a>
+			<span class="hn f">
+				<a class="tac sh sv pxs" id="help" onclick="help_show()">?</a>
+				<canvas id="forget" class="sh sv pxs" height=16 width=16></canvas>
+			</span>
                 </div>
                 <div id="main" class="hn f fg">
                         <form id="left" class="vn f fg">
