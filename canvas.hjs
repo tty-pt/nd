@@ -44,7 +44,6 @@ function tilemap_cache() {
 	// 	= action_btns[p].style.backgroundImage;
 
 	actions_init =  function (name) {
-		console.log("actions init", name);
 		act.style.display = 'block';
 		target = actionable[name];
 		// target_lbl.innerHTML = target.pname;
@@ -52,11 +51,9 @@ function tilemap_cache() {
 			action_btns[i].style.display
 				= (target.actions & (1 << i)) ? '' : 'none';
 	};
-
-	console.log(action_btns);
 }
 
 tilemap.onload = function () {
 	setTimeout(tilemap_cache, 0);
 };
-document.body.append(tilemap);
+document.body.appendChild(tilemap);

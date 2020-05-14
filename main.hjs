@@ -116,9 +116,13 @@ function mcp_handler(j) {
                 output(j.data);
         if (j.key == "com-qnixsoft-web-auth-error")
                 forget();
-        else if (j.key == "com-qnixsoft-web-view")
-                map.innerHTML = j.data;
-        else if (j.key == "com-qnixsoft-web-art")
+        else if (j.key == "com-qnixsoft-web-view") {
+		var b64 = j.data;
+		// TODO improve strin or make specific mapping
+		env.strin(mcp.memory, mcp.view_input(), b64, mcp.view_buf_l);
+		mcp.view_build();
+                // map.innerHTML = j.data;
+	} else if (j.key == "com-qnixsoft-web-art")
                 output('<img class="ah" src="' + j.src + '">');
         else if (j.key == "com-qnixsoft-web-look-content") {
                 actionable[j.name] = j;

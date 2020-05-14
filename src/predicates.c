@@ -416,7 +416,7 @@ can_doit(int descr, dbref player, dbref thing, const char *default_fail_msg)
 		if (GETSUCC(thing)) {
 			exec_or_notify_prop(descr, player, thing, MESGPROP_SUCC, "(@Succ)");
 		} else if (Typeof(thing) == TYPE_EXIT && gexit_is(thing))
-			notify_fmt(player, "You go %s.", GEXPAND(NAME(thing)[0]));
+			notify_fmt(player, "You go %s.", e_name(exit_e(thing)));
 		if (GETOSUCC(thing) && !Dark(player)) {
 			parse_oprop(descr, player, getloc(player), thing, MESGPROP_OSUCC,
 						   NAME(player), "(@Osucc)");

@@ -1,0 +1,13 @@
+Reduce code size.
+Make some code isomorphic.
+Map real-time updates.
+Binary comms.
+Fix build not knowing hjs dependencies (annoying).
+fix vi style command modifiers for web cli.
+realistic view (only things not blocked).
+Tier levels mob generation (noise).
+Room persistance until regeneration of resources or similar.
+Geography exits chown on adjacent claim.
+use mng to draw inventory, shop, dialogue, etc.
+Avatars.
+Remove references to morton_t outside noise & geo db stuff?

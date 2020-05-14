@@ -293,9 +293,9 @@ struct drop dagger_drop = {
 #define ARMORSET_LIST(s) & s ## _helmet, \
 	& s ## _chest, & s ## _pants
 
-ARMORSET_LIGHT(padded, 15, 5);
-ARMORSET_MEDIUM(hide, 15, 5);
-ARMORSET_HEAVY(chainmail, 15, 5);
+ARMORSET_LIGHT(padded, 15, 5)
+ARMORSET_MEDIUM(hide, 15, 5)
+ARMORSET_HEAVY(chainmail, 15, 5)
 
 #undef ARMORSET_LIGHT
 #undef ARMORSET_MEDIUM

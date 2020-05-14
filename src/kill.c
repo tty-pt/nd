@@ -6,6 +6,8 @@
 #include "item.h"
 #include "params.h"
 #include "geography.h"
+#include "view.h"
+#include "map.h"
 #undef NDEBUG
 #include "debug.h"
 
@@ -474,7 +476,7 @@ _kill(dbref attacker, dbref target)
 		moveto(target, PLAYER_HOME(target));
 		geo_clean(tar->descr, target, loc);
 		SETKLOCK(target, 0);
-		geo_view(tar->descr, target);
+		do_view(tar->descr, target);
 	} else {
 		if (tar->target) {
 			dbref tartar = tar->target->who;

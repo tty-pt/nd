@@ -17,7 +17,7 @@
 
 #include "params.h"
 #include "props.h"
-#include "geography.h"
+#include "map.h"
 
 #define TYPEOF(i)   (DBFETCH((i))->flags & TYPE_MASK)
 #define LOCATION(x) (DBFETCH((x))->location)
@@ -287,8 +287,6 @@ check_room(dbref player, dbref obj)
 		violate(player, obj, "has its dropto set to an invalid object");
 	} else if (i >= 0 && TYPEOF(i) != TYPE_THING && TYPEOF(i) != TYPE_ROOM) {
 		violate(player, obj, "has its dropto set to a non-room, non-thing object");
-	} else {
-		geo_where(obj);
 	}
 }
 

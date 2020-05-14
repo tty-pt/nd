@@ -15,7 +15,7 @@ src = ChangeLog COPYING ${real-obj-y:%.o=%.c} compress.c
 
 prochelp-obj-y := prochelp.o
 ws-server-obj-y := ws-server.o
-fbmuck-obj-y := crt_malloc.o geometry.o noise.o geography.o item.o kill.o shop.o \
+fbmuck-obj-y := crt_malloc.o geometry.o noise.o map.o view.o geography.o item.o kill.o shop.o \
         array.o boolexp.o compile.o create.o db.o db_header.o debugger.o \
 	disassem.o diskprop.o edit.o events.o game.o hashtab.o help.o inst.o \
 	interp.o log.o look.o match.o mcp.o mcpgui.o mcppkgs.o mfuns2.o \

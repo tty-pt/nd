@@ -76,8 +76,13 @@ esc_state_0(char *out, struct tty *tty, char ch) {
                 *out++ = '\\';
                 *out++ = 'n';
                 return out - fout;
+        case '\t':
+                *out++ = '\\';
+                *out++ = 't';
+                return out - fout;
 	case '"':
 	case '\\':
+	case '/':
 		*out++ = '\\';
 	}
 

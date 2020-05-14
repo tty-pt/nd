@@ -3,6 +3,7 @@
 #ifndef ITEM_H
 #define ITEM_H
 
+#include "geometry.h"
 #include "db.h"
 
 enum elm_type {
@@ -14,28 +15,6 @@ enum elm_type {
 	ELM_SPIRIT,
 	ELM_VAMP,
 	ELM_DARK,
-};
-
-enum biome_type {
-	BIOME_WATER,
-
-	BIOME_COLD_DRY,
-	BIOME_COLD,
-	BIOME_COLD_WET,
-
-	BIOME_TUNDRA,
-	BIOME_TAIGA,
-	BIOME_RAIN_FOREST,
-
-	BIOME_SHRUBLAND, // / grassland / woodland
-	BIOME_WOODLAND, // yellow tree
-	BIOME_FOREST, // temperate
-
-	BIOME_DESERT,
-	BIOME_SAVANNAH,
-	BIOME_SEASONAL_FOREST,
-
-	BIOME_VOLCANIC,
 };
 
 enum af {
@@ -53,12 +32,6 @@ enum af {
 	// these are flags, not types of buf
 	AF_NEG = 0x10,
 	AF_BUF = 0x20,
-};
-
-struct obj {
-	char const *name;
-	char const *art;
-	char const *description;
 };
 
 struct item {

@@ -5,9 +5,6 @@
 #include "xxhash.h"
 
 // TODO make these vars?
-#define VIEW_AROUND 3
-#define VIEW_SIZE ((VIEW_AROUND<<1) + 1)
-#define VIEW_M VIEW_SIZE * VIEW_SIZE
 #define EXTRA_TREE 4
 #define TREE_N_MASK 0x3
 #define TREE_HALF (TREE_N_MASK >> 1)
@@ -38,8 +35,8 @@ struct plant {
 
 extern struct plant plants[];
 
-struct bio * noise_point(morton_t p);
-void noise_view(struct bio to[VIEW_M], point_t pos, ucoord_t obits);
+struct bio * noise_point(pos_t p);
+void noise_view(struct bio to[VIEW_M], pos_t pos);
 unsigned char noise_rplants(unsigned char plid[EXTRA_TREE], unsigned char *pln, struct bio *b);
 
 #endif

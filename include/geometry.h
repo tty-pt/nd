@@ -3,9 +3,11 @@
 
 #include <limits.h>
 #include <stdint.h>
+#ifndef WEB_CLIENT
 #include <stddef.h>
 #include <string.h>
 #include "db.h"
+#endif
 
 /* it is possible to add other coord_t (like char) but a corresponding
  * hash function must be used */
@@ -21,12 +23,19 @@
 #define WDIM X_COORD
 #define POOP register int I; for (I = 0; I < DIM; I++)
 #define POOP3D register int I; for (I = 0; I < 3; I++)
+#define POOP4D register int I; for (I = 0; I < 4; I++)
 #define POINT3D_ADD(r, a, b) { POOP3D r[I] = a[I] + b[I]; }
 
 #define DIM2 (DIM * 2)
 #define RECT_SIZE (2 * sizeof(point_t))
 
 #define OBITS(code) (code >> 48)
+
+#define VIEW_AROUND 3
+#define VIEW_SIZE ((VIEW_AROUND<<1) + 1)
+#define VIEW_M VIEW_SIZE * VIEW_SIZE
+#define VIEW_BDI (VIEW_SIZE * (VIEW_SIZE - 1))
+#define MORTON_READ(pos) (* (morton_t *) pos)
 
 typedef int16_t coord_t;
 typedef uint16_t ucoord_t;
@@ -36,7 +45,13 @@ typedef ucoord_t upoint_t[DIM];
 
 typedef coord_t point3D_t[3];
 typedef ucoord_t upoint3D_t[3];
-typedef uint64_t morton_t; // 3d morton, btw
+typedef coord_t point4D_t[4];
+typedef ucoord_t upoint4D_t[4];
+
+typedef point4D_t pos_t;
+typedef upoint4D_t upos_t;
+
+typedef uint64_t morton_t; // 4d morton, btw
 typedef int64_t smorton_t;
 
 struct rect {
@@ -44,13 +59,66 @@ struct rect {
 	upoint_t l;
 };
 
-struct rect3D {
-	point3D_t s;
-	upoint3D_t l;
+/* struct rect3D { */
+/* 	point3D_t s; */
+/* 	upoint3D_t l; */
+/* }; */
+
+struct rect4D {
+	point4D_t s;
+	upoint4D_t l;
 };
 
-morton_t morton_encode(point3D_t p, ucoord_t obits);
-void morton_decode(point3D_t p, morton_t code);
+enum exit {
+	E_NULL = 0,
+	E_WEST = 1,
+	E_NORTH = 2,
+	E_UP = 4,
+	E_EAST = 8,
+	E_SOUTH = 16,
+	E_DOWN = 32,
+	E_ALL = 63,
+};
+
+typedef struct {
+	const char name[16];
+	const char fname[16];
+	const char other[16];
+	enum exit simm;
+	coord_t dim, dis;
+} exit_t;
+
+enum biome_type {
+	BIOME_WATER,
+
+	BIOME_COLD_DRY,
+	BIOME_COLD,
+	BIOME_COLD_WET,
+
+	BIOME_TUNDRA,
+	BIOME_TAIGA,
+	BIOME_RAIN_FOREST,
+
+	BIOME_SHRUBLAND, // / grassland / woodland
+	BIOME_WOODLAND, // yellow tree
+	BIOME_FOREST, // temperate
+
+	BIOME_DESERT,
+	BIOME_SAVANNAH,
+	BIOME_SEASONAL_FOREST,
+
+	BIOME_VOLCANIC,
+};
+
+struct obj {
+	char const *name;
+	char const *art;
+	char const *description;
+};
+
+#ifndef WEB_CLI
+morton_t pos_morton(pos_t);
+void morton_pos(pos_t p, morton_t code);
 
 static inline morton_t
 point_rel_idx(point_t p, point_t s, smorton_t w)
@@ -62,6 +130,48 @@ point_rel_idx(point_t p, point_t s, smorton_t w)
 	if (s1 > p[X_COORD])
 		s1 -= UCOORD_MAX;
 	return (p[Y_COORD] - s0) * w + (p[X_COORD] - s1);
+}
+
+#endif
+
+extern enum exit e_map[];
+extern exit_t exit_map[];
+
+static inline enum exit
+dir_e(const char dir) {
+	return e_map[(int) dir];
+}
+
+static inline const char
+e_dir(enum exit e) {
+	return exit_map[e].name[0];
+}
+
+static inline enum exit
+e_simm(enum exit e) {
+	return exit_map[e].simm;
+}
+
+static inline const char *
+e_name(enum exit e) {
+	return exit_map[e].name;
+}
+
+static inline const char *
+e_fname(enum exit e) {
+	return exit_map[e].fname;
+}
+
+static inline const char *
+e_other(enum exit e) {
+	return exit_map[e].other;
+}
+
+static inline void
+pos_move(pos_t d, pos_t o, enum exit e) {
+	exit_t *ex = &exit_map[e];
+	POOP4D d[I] = o[I];
+	d[ex->dim] += ex->dis;
 }
 
 #endif

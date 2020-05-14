@@ -64,6 +64,8 @@
 #include "externs.h"
 #include "interp.h"
 #include "kill.h"
+#include "map.h"
+#include "view.h"
 #include "geography.h"
 #include "item.h"
 #undef NDEBUG
@@ -590,7 +592,7 @@ main(int argc, char **argv)
 		set_password(GOD, num_one_new_passwd);
 	}
 
-	geo_init();
+	CBUG(map_init());
 
 	if (!sanity_interactive && !db_conversion_flag) {
 		set_signals();
@@ -607,7 +609,7 @@ main(int argc, char **argv)
 
 		/* go do it */
 		shovechars();
-		geo_close();
+		map_close();
 		do_living_save();
 
 		close_sockets("\r\nServer shutting down.\r\n");
@@ -2424,7 +2426,7 @@ auth(int descr, char *user, char *password)
                                "#########################################################################");
         }
         if (!(web_support(d->descriptor) && d->web.old))
-                geo_view(d->descriptor, player);
+                do_view(d->descriptor, player);
 
         look_room(d->descriptor, player, getloc(player), 0);
 

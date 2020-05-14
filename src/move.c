@@ -14,8 +14,7 @@
 #include "geography.h"
 #include "item.h"
 #include "kill.h"
-#undef NDEBUG
-#include "debug.h"
+#include "map.h"
 
 void
 moveto(dbref what, dbref where)
@@ -457,10 +456,24 @@ trigger(int descr, dbref player, dbref exit, int pflag)
 	succ = 0;
 
 	// quickfix for gexits
-	if (gexit_is(exit) && !DBFETCH(exit)->sp.exit.ndest)
-		gexit_dest_set(exit, NOTHING);
+	if (gexit_is(exit)) {
+		union specific sp
+			= DBFETCH(exit)->sp;
+		if (sp.exit.ndest && sp.exit.dest[0] != NOTHING)
+			dest = sp.exit.dest[0];
+		else
+			dest = geo_there(getloc(exit), exit_e(exit));
 
-	for (i = 0; i < DBFETCH(exit)->sp.exit.ndest; i++) {
+		if (dest > 0) {
+			enter_room(descr, player, dest, exit);
+			succ = 1;
+		} else {
+			dest = geo_room(descr, player, exit);
+			enter_room(descr, player, dest, exit);
+			succ = 1;
+		}
+
+	} else for (i = 0; i < DBFETCH(exit)->sp.exit.ndest; i++) {
 		dest = (DBFETCH(exit)->sp.exit.dest)[i];
 		if (dest == HOME) {
 			dest = PLAYER_HOME(player);
@@ -470,13 +483,6 @@ trigger(int descr, dbref player, dbref exit, int pflag)
 				notify(player, "That would be an undefined operation.");
 				continue;
 			}
-		}
-
-		if (dest == NOTHING) {
-			dest = geo_room(descr, player, exit);
-			enter_room(descr, player, dest, exit);
-			succ = 1;
-			continue;
 		}
 
 		switch (Typeof(dest)) {
@@ -1016,7 +1022,7 @@ recycle(int descr, dbref player, dbref thing)
 			}
 		notify_except(DBFETCH(thing)->contents, NOTHING,
 					  "You feel a wrenching sensation...", player);
-		geo_delete(thing);
+		map_delete(thing);
 		break;
 	case TYPE_THING:
 		if (GETLID(thing) >= 0) {

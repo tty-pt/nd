@@ -2,7 +2,7 @@ srcdir	:= ../${srcdir}
 
 -include Makefile
 
-cflags-y	+= -I/usr/local/include -I${srcdir}/include
+cflags-y	+= -I/usr/local/include -I${srcdir}/include --pedantic -Wall
 ldflags-y	+= -L/usr/local/lib
 #ldlibs-y ommited
 

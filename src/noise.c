@@ -594,7 +594,7 @@ spread(unsigned ny)
 }
 
 static inline void
-noise_chunks(point_t pos, ucoord_t obits)
+noise_chunks(point_t pos)
 {
 	struct rect r;
 	size_t n[DIM], i;
@@ -610,7 +610,7 @@ noise_chunks(point_t pos, ucoord_t obits)
 		r.l[I] = n[I] << CHUNK_Y;
 	}
 
-	if (obits == chunks_obits
+	if (pos[3] == chunks_obits
             && r.s[0] >= chunks_r.s[0]
 	    && r.s[1] >= chunks_r.s[1]
 	    && r.s[0] + r.l[0] <= chunks_r.s[0] + chunks_r.l[0]
@@ -628,7 +628,7 @@ noise_chunks(point_t pos, ucoord_t obits)
 		     s[X_COORD] += CHUNK_SIZE)
 
 		{
-			noise_full(i, s, obits);
+			noise_full(i, s, pos[3]);
 			i += CHUNK_M;
 		}
 
@@ -648,20 +648,18 @@ struct bio empty[VIEW_M] = {
 };
 
 void
-noise_view(struct bio to[VIEW_M], point_t pos, ucoord_t obits)
+noise_view(struct bio to[VIEW_M], pos_t pos)
 {
 	if (pos[2] == 0) {
-		noise_chunks(pos, obits);
+		noise_chunks(pos);
 		view_print(to, pos);
 	} else
 		memcpy(to, &empty, sizeof(empty));
 }
 
 struct bio *
-noise_point(morton_t p)
+noise_point(pos_t p)
 {
-	point3D_t pos;
-	morton_decode(pos, p);
-	noise_chunks(pos, OBITS(p));
-	return &bio[view_idx(pos)];
+	noise_chunks(p);
+	return &bio[view_idx(p)];
 }

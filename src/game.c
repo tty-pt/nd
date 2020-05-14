@@ -21,6 +21,9 @@
 #include "debug.h"
 #include "geography.h"
 #include "kill.h"
+#include "view.h"
+#include "web.h"
+#include "map.h"
 
 /* declarations */
 static const char *dumpfile = 0;
@@ -503,7 +506,8 @@ process_command(int descr, dbref player, char *command)
 	struct timeval starttime;
 	struct timeval endtime;
 	double totaltime;
-	morton_t x = geo_where(getloc(player));
+	pos_t pos;
+	map_where(pos, getloc(player));
 
         // set current descriptor (needed for death)
         CBUG(GETLID(player) < 0);
@@ -1309,7 +1313,7 @@ process_command(int descr, dbref player, char *command)
 				do_mpihelp(player, arg1, arg2);
 				break;
 			} else if (!string_compare(command, "map")) {
-				geo_view(descr, player);
+				do_view(descr, player);
 				break;
 			} else if (!string_compare(command, "meme")) {
                                 Matched("meme");
@@ -1510,9 +1514,12 @@ end_of_command:
 					(int) DBFETCH(player)->location, " ", command);
 	}
 out:
-	if (geo_where(getloc(player)) != x)
-		geo_view(descr, player);
-
+	{
+		pos_t pos2;
+		map_where(pos2, getloc(player));
+		if (MORTON_READ(pos2) != MORTON_READ(pos))
+			do_view(descr, player);
+	}
 }
 
 #undef Matched
