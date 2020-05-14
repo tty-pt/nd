@@ -43,77 +43,10 @@ typedef struct {
 
 unsigned short day_tick = 0;
 
-/* STUFF THAT SHOULD BE IN item.c {{{ */
-
-dbref
-obj_stack_add(struct obj o, dbref where, unsigned char n)
-{
-	CBUG(n <= 0);
-	dbref nu = obj_add(o, where);
-	if (n > 1)
-		SETSTACK(nu, n);
-	return nu;
-}
-
-static inline unsigned
-plant_yield(struct plant *pl, struct bio *b, unsigned char n)
-{
-	register unsigned ptmin = pl->tmp_min;
-	return random() % (1 + n * (b->tmp - ptmin) * pl->yield / (pl->tmp_max - ptmin));
-}
-
-// FIXME Y ???
-static inline int
-fruit_size(struct plant *pl, struct bio *b)
-{
-	return 3;
-}
-
-static inline void
-plant_add(int descr, dbref player, dbref where, struct bio *b, unsigned char plid, unsigned char n)
-{
-	if (n == 0)
-		return;
-	struct plant *pl = &plants[plid];
-	dbref plant = obj_stack_add(pl->o, where, n);
-	dbref fruit = obj_add(pl->fruit, plant);
-	struct boolexp *key = parse_boolexp(descr, player, NAME(player), 0);
-	unsigned yield = plant_yield(pl, b, n);
-	SETCONLOCK(plant, key);
-        SETPLID(plant, plid);
-	SETFOOD(fruit, fruit_size(pl, b));
-	if (yield > 1)
-		SETSTACK(fruit, yield);
-}
-
-static inline void
-_plants_add(int descr, dbref player, dbref where, struct bio *b,
-            unsigned char plid[3], unsigned char pln)
-{
-	register int i, aux;
-        for (i = 0; i < 3; i++) {
-                aux = TREE_N(pln, i);
-                if (aux)
-                        plant_add(descr, player, where, b, plid[i], aux);
-        }
-}
-
-static inline void
-plants_add(int descr, dbref player, struct bio *b, dbref where)
-{
-	unsigned char e_plid[EXTRA_TREE], e_pln;
-
-        if (b->pln)
-                _plants_add(descr, player, where, b, b->plid, b->pln);
-	noise_rplants(e_plid, &e_pln, b);
-        if (e_pln)
-                _plants_add(descr, player, where, b, e_plid, e_pln);
-}
-
 static inline void
 others_add(int descr, dbref player, struct bio *b, dbref where, pos_t p)
 {
-	noise_t v = XXH32(&p, sizeof(pos_t), 0);
+	noise_t v = uhash(&p, sizeof(pos_t), 0);
 	unsigned char n = v & 0x7;
 	static struct obj stone = { "stone", "", "" };
 	if (b->bio_idx == BIOME_WATER)
@@ -416,11 +349,13 @@ geo_room_at(int descr, dbref player, pos_t pos)
 	if (pos[2] != 0)
 		return there;
 
-	SETTREE(there, bio->pln);
+	SETTREE(there, bio->pd.n);
 	SETFLOOR(there, bio->bio_idx);
 	mobs_add(bio, there);
 	others_add(descr, player, bio, there, pos);
-	plants_add(descr, player, bio, there);
+	plants_add(descr, player, there,
+			&bio->pd, bio->ty,
+			bio->tmp, bio->rn);
 	DBDIRTY(there);
 	DBDIRTY(loc);
 	return there;

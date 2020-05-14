@@ -96,7 +96,7 @@ ws_handshake(int cfd) {
 		"Sec-Websocket-Accept: ",
 		kkey[] = "Sec-WebSocket-Key";
 	unsigned char hash[SHA_DIGEST_LENGTH];
-	unsigned char result[29];
+	char result[29];
 	char buf[BUFSIZ];
 	char *s;
 

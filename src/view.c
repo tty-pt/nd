@@ -1,19 +1,22 @@
 #include "view.h"
 
+#include "map.h"
+#include "geography.h"
+#include "item.h"
+
+#ifndef WEB_CLIENT
 #include "db.h"
 #include "externs.h"
 #include "props.h"
 #include "params.h"
-
-#include "map.h"
-#include "geography.h"
-#include "item.h"
 #include "web.h"
+#endif
 
 /* #undef NDEBUG */
 #include "debug.h"
 
-#define BIOME_BG(i)	(NIGHT_IS ? ANSI_RESET : biome_bgs[i])
+#define BIOME_BG(i) (NIGHT_IS \
+		? ANSI_RESET : biomes[i].bg)
 
 // global buffer for map? // FIXME d bio_limit
 static char view_buf[8 * BUFSIZ];
@@ -41,51 +44,14 @@ vtf_t vtf_map[] = {
 	},
 };
 
-/* BIOME_BGS {{{ */
-char const *biome_bgs[] = {
-	// Water BOLD WHITE "~~~"
-	ANSI_BG_BLUE,
-
-	// ----
-
-	// Cold dry desert, Pile of frozen rocks, BOLD WHITE "o" "O"
-	ANSI_BG_BLUE,
-	// Cold stone, Block of ice, BOLD GREEN "o" "O"
-	ANSI_BG_CYAN,
-	// Cold snowy rock, Bear, BOLD YELLOW " 8 "
-	ANSI_BG_WHITE,
-
-	// Tundra, frozen pine BOLD WHITE "x" "X"
-	ANSI_BG_CYAN,
-	// Taiga
-	ANSI_BG_GREEN,
-	// Temperate rain forest
-	ANSI_BG_GREEN,
-
-	// Woodland / Grassland / Shrubland
-	ANSI_BG_GREEN,
-	// ?
-	ANSI_BG_GREEN,
-	// Temperate forest
-	ANSI_BG_GREEN,
-
-	// desert
-	ANSI_BG_YELLOW,
-	// Savannah
-	ANSI_BG_YELLOW,
-	// Temperate Seasonal forest, "Red Tree" RED "x" "X"
-	ANSI_RESET,
-
-	// Volcanic, Puddle of lava, BOLD RED "o" "O"
-	ANSI_RESET,
-};
-
 static inline char *
-dr_tree(view_tile_t *t, int n, char *b) {
-	if (TREE_N(t->pln, n)) {
-		struct plant *pl = &plants[t->plid[n]];
+dr_tree(struct plant_data pd, int n, char *b) {
+	if (PLANT_N(pd.n, n)) {
+		struct plant *pl
+			= &plants[pd.id[n]];
 		b = stpcpy(b, pl->pre);
-		*b++ = TREE_N(t->pln, n) > TREE_HALF ? pl->big : pl->small;
+		*b++ = PLANT_N(pd.n, n) > PLANT_HALF
+			? pl->big : pl->small;
 	} else
 		*b++ = ' ';
 	return b;
@@ -103,7 +69,7 @@ dr_room(int descr, dbref player, view_tile_t *t, char *buf, const char *bg)
 	if (t->exits & E_DOWN)
 		b = stpcpy(b, ANSI_FG_WHITE "<");
 	else
-		b = dr_tree(t, 0, b);
+		b = dr_tree(t->pd, 0, b);
 
 
 	for (i = 0; i < VTF_MAX; i++) {
@@ -121,13 +87,13 @@ dr_room(int descr, dbref player, view_tile_t *t, char *buf, const char *bg)
 		b = stpcpy(b, vtf->pre);
 		*b++ = vtf->emp;
 	} else
-		b = dr_tree(t, 1, b);
+		b = dr_tree(t->pd, 1, b);
 
 
 	if (t->exits & E_UP)
 		b = stpcpy(b, ANSI_FG_WHITE ">");
 	else
-		b = dr_tree(t, 2, b);
+		b = dr_tree(t->pd, 2, b);
 
 	b = stpcpy(b, ANSI_RESET);
 	b = stpcpy(b, bg);
@@ -193,9 +159,9 @@ dr_vs(char *b, int descr, dbref player, view_tile_t *t)
 		if (t->room >= 0)
 			b = dr_room(descr, player, t, b, bg);
 		else {
-			b = dr_tree(t, 0, b);
-			b = dr_tree(t, 1, b);
-			b = dr_tree(t, 2, b);
+			b = dr_tree(t->pd, 0, b);
+			b = dr_tree(t->pd, 1, b);
+			b = dr_tree(t->pd, 2, b);
 		}
 
 		tp = t;
@@ -428,8 +394,7 @@ view_build_tile(int descr, dbref player,
 
 	t->room = loc;
 	t->bio_idx = n->bio_idx;
-	memcpy(t->plid, n->plid, sizeof(n->plid));
-	memcpy(&t->pln, &n->pln, sizeof(n->pln));
+	memcpy(&t->pd, &n->pd, sizeof(n->pd));
 }
 
 static inline view_tile_t *

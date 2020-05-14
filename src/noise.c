@@ -27,14 +27,14 @@
  * TODO think before changing stuff
  * */
 
+#include "biome.h"
 #include "item.h"
-/* #include "morton.h" */
 #include <string.h>
 #include "xxhash.h"
 #include "params.h"
 #include "debug.h"
 
-#define XXH XXH32
+#define HASH XXH32
 
 #define CHUNK_Y 5
 #define CHUNK_SIZE (1 << CHUNK_Y)
@@ -69,48 +69,6 @@ static noise_t n_he[CHUNK_M],
 
 /* REGARDING DRAWABLE THINGS THAT DEPEND ON NOISE {{{ */
 
-/* TODO calculate water needs */
-struct plant plants[] = {{
-	// taiga
-	{ "pinus silvestris", "", "" }, ANSI_BOLD ANSI_FG_GREEN, 'x', 'X', ANSI_RESET_BOLD,
-	-65, 70, 50, 200, 1,
-	{ "fruit", "", "" }, 1,
-}, {	// temperate rainforest
-	{ "pseudotsuga menziesii", "", "" }, ANSI_BOLD ANSI_FG_GREEN, 't', 'T', ANSI_RESET_BOLD,
-	32, 100, 180, 350, 1,
-	{ "fruit", "", "" }, 1,
-}, {	// woodland / grassland / shrubland
-	{ "betula pendula", "", "" }, ANSI_FG_YELLOW, 'x', 'X', "",
-	-4, 86, 400, 700, 1,
-	{ "fruit", "", "" }, 1,
-}, {	// woodland / grassland?
-	{ "betula pubescens", "", "" }, ANSI_FG_WHITE, 'x', 'X', "",
-	0, 96, 500, 900, 1,
-	{ "fruit", "", "" }, 1,
-}, {	// temperate forest
-	{ "abies alba", "", "" }, ANSI_BOLD ANSI_FG_GREEN, 'x', 'X', ANSI_RESET_BOLD,
-	-40, 86, 100, 200, 1,
-	{ "fruit", "", "" }, 1,
-}, {	// desert
-	{ "arthrocereus rondonianus", "", "" }, ANSI_BOLD ANSI_FG_GREEN, 'i', 'I', "",
-	110, 130, 10, 150, 1,
-	{ "fruit", "", "" }, 1,
-}, {	// savannah
-	{ "acacia senegal", "", "" }, ANSI_BOLD ANSI_FG_GREEN, 't', 'T', "",
-	40, 120, 20, 120, 1,
-	{ "fruit", "", "" }, 1,
-}, {
-	{ "daucus carota", "", "" }, ANSI_FG_WHITE, 'x', 'X', "",
-	38, 96, 100, 200, 1,
-	{ "carrot", "", "" }, 1,
-}, {
-	{ "solanum lycopersicum", "", "" }, ANSI_FG_RED, 'x', 'X', "", 
-	50, 98, 100, 200, 5,
-	{ "tomato", "", "" }, 1,
-}};
-
-static const unsigned char plid_max = sizeof(plants) / sizeof(struct plant);
-
 /* WORLD GEN STATIC VARS {{{ */
 
 static coord_t tmp_max = 170,
@@ -134,7 +92,7 @@ water_level(ucoord_t obits)
 static inline unsigned
 rain(ucoord_t obits, noise_t w, noise_t he, noise_t cl)
 {
-	smorton_t x;
+	snoise_t x;
 	x = w - he;
 	x += cl / 50;
 	// change 300 to affect how
@@ -154,7 +112,7 @@ sun_dist(ucoord_t obits)
 static inline coord_t
 temp(ucoord_t obits, noise_t he, noise_t tm, coord_t pos_y) // fahrenheit * 10
 {
-	smorton_t x = 0;
+	snoise_t x = 0;
 	x = he - water_level(obits) + (tm - NOISE_MAX) / 3;
 	// change 200 to affect how
 	// terrain height decreases temperature
@@ -168,14 +126,18 @@ temp(ucoord_t obits, noise_t he, noise_t tm, coord_t pos_y) // fahrenheit * 10
 /* }}} */
 /* }}} */
 
+noise_t uhash(void *p, size_t l, int seed) {
+	return HASH(p, sizeof(point_t), seed);
+}
+
 /* gets a (deterministic) random value for point p */
 
 static inline noise_t
 r(point_t p, unsigned seed, unsigned w)
 {
-	/* morton_t m = morton2D_point(p); */
-	/* return XXH(&m, sizeof(morton_t), seed); */
-	register noise_t v = XXH(p, sizeof(point_t), seed);
+	/* noise_t m = morton2D_point(p); */
+	/* return XXH(&m, sizeof(noise_t), seed); */
+	register noise_t v = HASH(p, sizeof(point_t), seed);
 	return ((long long unsigned) v) >> w;
 }
 
@@ -431,88 +393,6 @@ bio_idx(ucoord_t rn, coord_t tmp)
 	return 1 + rn_bit + tmp_bit;
 }
 
-static inline int
-noise_plant(unsigned char *plid, struct bio *b, noise_t v, unsigned char n)
-{
-	struct plant *pl = &plants[n];
-
-	CBUG(n >= plid_max);
-
-	if (((v >> 6) ^ (v >> 3) ^ v) & 1)
-		return 0;
-
-	if (v & 0x18
-	    && b->tmp < pl->tmp_max && b->tmp > pl->tmp_min
-	    && b->rn < pl->rn_max && b->rn > pl->rn_min) {
-		*plid = n;
-		v = (v >> 1) & TREE_N_MASK;
-		if (v == 3)
-			v = 0;
-                return v;
-	}
-
-	return 0;
-}
-
-// returns max plid (i)
-
-static inline unsigned char
-noise_plants(unsigned char *plid, unsigned char *pln_r, struct bio *b, unsigned n, unsigned o)
-{
-	noise_t v = b->ty;
-	register int i, pln = 0, cpln;
-	unsigned char *plidc = plid;
-
-	memset(plid, 0, n);
-
-	for (i = o;
-	     i < plid_max && plidc < plid + n;
-	     i++, v >>= 8) {
-		if (!v)
-			v = ~b->ty >> 4;
-
-                cpln = noise_plant(plidc, b, v, i);
-		if (cpln) {
-			plidc++;
-                        pln |= cpln << (i * 2);
-		}
-	}
-
-        *pln_r = pln;
-	return i;
-}
-
-static inline unsigned char
-shuffle(unsigned char plid[3], unsigned char pln, noise_t v)
-{
-        unsigned char apln[3] = {
-                TREE_N(pln, 0),
-                TREE_N(pln, 1),
-                TREE_N(pln, 2)
-        };
-	register unsigned char i, aux;
-
-        for (i = 1; i < 3; i++) {
-                if (!(v & i))
-                        continue;
-                aux = plid[i - 1];
-                plid[i - 1] = plid[i];
-                plid[i] = aux;
-
-                aux = apln[i - 1];
-                apln[i - 1] = apln[i];
-                apln[i] = aux;
-        }
-
-        return apln[0] | (apln[1] << 2) | (apln[2] << 4);
-}
-
-unsigned char
-noise_rplants(unsigned char plid[EXTRA_TREE], unsigned char *pln, struct bio *b)
-{
-	return noise_plants(plid, pln, b, EXTRA_TREE, b->mplid);
-}
-
 static inline void
 noise_full(size_t i, point_t s, ucoord_t obits)
 {
@@ -535,14 +415,15 @@ noise_full(size_t i, point_t s, ucoord_t obits)
 		register noise_t _he = n_he[j], w = water_level(obits);
 		r->rn = rain(obits, w, _he, _cl);
 		r->tmp = temp(obits, _he, _tm, s[Y_COORD] + (j >> CHUNK_Y));
-		r->ty = XXH(&_tm, sizeof(noise_t), PLANTS_SEED);
+		r->ty = HASH(&_tm, sizeof(noise_t), PLANTS_SEED);
 		r->bio_idx = _he < w ? 0 : bio_idx(r->rn, r->tmp);
-		r->mplid = noise_plants(r->plid, &r->pln, r, 3, 0);
-		r->pln = shuffle(r->plid, r->pln, ~(r->ty >> 8));
+		r->pd.max = 0;
+		plants_noise(&r->pd, r->ty, r->tmp, r->rn, 3);
+		plants_shuffle(&r->pd, ~(r->ty >> 8));
 	}
 }
 
-static inline morton_t
+static inline noise_t
 view_idx(point_t pos)
 {
 	CBUG(chunks_r.s[Y_COORD] > pos[Y_COORD]);

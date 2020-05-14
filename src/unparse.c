@@ -136,7 +136,7 @@ icon(dbref what)
 
                         ret.actions |= ACT_CHOP | ACT_OPEN;
                         snprintf(buf, sizeof(buf), "%s%c%s", pl->pre,
-                                 GETSTACK(what) > TREE_HALF ? pl->big : pl->small,
+                                 GETSTACK(what) > PLANT_HALF ? pl->big : pl->small,
                                  pl->post); 
 
                         // use the icon immediately

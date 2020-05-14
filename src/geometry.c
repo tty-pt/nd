@@ -1,5 +1,9 @@
 #include "geometry.h"
 #include "debug.h"
+#ifndef WEB_CLIENT
+#include "db.h"
+#include "props.h"
+#endif
 
 enum exit e_map[] = {
 	[0 ... 254] = E_NULL,
@@ -119,3 +123,34 @@ morton_pos(pos_t p, morton_t code)
 	p[3] = OBITS(code);
 	debug("decoded point x%llx -> %d %d %d %d", code, p[0], p[1], p[2], p[3]);
 }
+
+#ifndef WEB_CLIENT
+dbref
+obj_add(struct obj o, dbref where)
+{
+	CBUG(where < 0);
+	dbref nu = new_object();
+	NAME(nu) = alloc_string(o.name);
+	SETART(nu, alloc_string(o.art));
+	SETDESC(nu, alloc_string(o.description));
+	ALLOC_THING_SP(nu);
+	DBFETCH(nu)->location = where;
+	OWNER(nu) = 1;
+	FLAGS(nu) = TYPE_THING;
+	THING_SET_HOME(nu, where);
+	PUSH(nu, DBFETCH(where)->contents);
+	DBDIRTY(where);
+	return nu;
+}
+
+dbref
+obj_stack_add(struct obj o, dbref where, unsigned char n)
+{
+	CBUG(n <= 0);
+	dbref nu = obj_add(o, where);
+	if (n > 1)
+		SETSTACK(nu, n);
+	return nu;
+}
+
+#endif

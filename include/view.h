@@ -2,6 +2,7 @@
 #define VIEW_H
 
 #include "geometry.h"
+#include "biome.h"
 
 #define ROOM_MAX 32
 
@@ -20,11 +21,10 @@ typedef struct {
 
 typedef struct view_tile {
 	int players[ROOM_MAX]; /* dbref actually */
-	enum biome_type bio_idx;
+	enum biome bio_idx;
 	dbref room;
 	ucoord_t flags, exits, doors;
-	unsigned char plid[3];
-	unsigned char pln;
+	struct plant_data pd;
 } view_tile_t;
 
 typedef view_tile_t view_t[VIEW_M];

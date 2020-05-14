@@ -65,24 +65,6 @@ rarity_get() {
 	return 5; // MYTHICAL
 }
 
-dbref
-obj_add(struct obj o, dbref where)
-{
-	CBUG(where < 0);
-	dbref nu = new_object();
-	NAME(nu) = alloc_string(o.name);
-	SETART(nu, alloc_string(o.art));
-	SETDESC(nu, alloc_string(o.description));
-	ALLOC_THING_SP(nu);
-	DBFETCH(nu)->location = where;
-	OWNER(nu) = 1;
-	FLAGS(nu) = TYPE_THING;
-	THING_SET_HOME(nu, where);
-	PUSH(nu, DBFETCH(where)->contents);
-	DBDIRTY(where);
-	return nu;
-}
-
 int
 equip_calc(struct living *p, dbref eq)
 {
@@ -431,7 +413,7 @@ mob_add(unsigned mid, dbref where, struct bio *b) {
 	struct living *liv;
 	dbref nu;
 
-	if ((bird_is(mob) && !(b->pln))
+	if ((bird_is(mob) && !(b->pd.n))
 	    || (!NIGHT_IS && (mob->type == ELM_DARK || mob->type == ELM_VAMP))
 	    || random() >= (RAND_MAX >> mob->y))
 		return NOTHING;

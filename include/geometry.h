@@ -54,6 +54,8 @@ typedef upoint4D_t upos_t;
 typedef uint64_t morton_t; // 4d morton, btw
 typedef int64_t smorton_t;
 
+typedef int ref_t;
+
 struct rect {
 	point_t s;
 	upoint_t l;
@@ -88,51 +90,11 @@ typedef struct {
 	coord_t dim, dis;
 } exit_t;
 
-enum biome_type {
-	BIOME_WATER,
-
-	BIOME_COLD_DRY,
-	BIOME_COLD,
-	BIOME_COLD_WET,
-
-	BIOME_TUNDRA,
-	BIOME_TAIGA,
-	BIOME_RAIN_FOREST,
-
-	BIOME_SHRUBLAND, // / grassland / woodland
-	BIOME_WOODLAND, // yellow tree
-	BIOME_FOREST, // temperate
-
-	BIOME_DESERT,
-	BIOME_SAVANNAH,
-	BIOME_SEASONAL_FOREST,
-
-	BIOME_VOLCANIC,
-};
-
 struct obj {
 	char const *name;
 	char const *art;
 	char const *description;
 };
-
-#ifndef WEB_CLI
-morton_t pos_morton(pos_t);
-void morton_pos(pos_t p, morton_t code);
-
-static inline morton_t
-point_rel_idx(point_t p, point_t s, smorton_t w)
-{
-	smorton_t s0 = s[Y_COORD],
-		s1 = s[X_COORD];
-	if (s0 > p[Y_COORD])
-		s0 -= UCOORD_MAX;
-	if (s1 > p[X_COORD])
-		s1 -= UCOORD_MAX;
-	return (p[Y_COORD] - s0) * w + (p[X_COORD] - s1);
-}
-
-#endif
 
 extern enum exit e_map[];
 extern exit_t exit_map[];
@@ -174,4 +136,27 @@ pos_move(pos_t d, pos_t o, enum exit e) {
 	d[ex->dim] += ex->dis;
 }
 
+#ifndef WEB_CLI
+morton_t pos_morton(pos_t);
+void morton_pos(pos_t p, morton_t code);
+
+static inline morton_t
+point_rel_idx(point_t p, point_t s, smorton_t w)
+{
+	smorton_t s0 = s[Y_COORD],
+		s1 = s[X_COORD];
+	if (s0 > p[Y_COORD])
+		s0 -= UCOORD_MAX;
+	if (s1 > p[X_COORD])
+		s1 -= UCOORD_MAX;
+	return (p[Y_COORD] - s0) * w + (p[X_COORD] - s1);
+}
+
+ref_t
+obj_add(struct obj o, ref_t where);
+
+ref_t
+obj_stack_add(struct obj o, ref_t where,
+		unsigned char n);
+#endif
 #endif
