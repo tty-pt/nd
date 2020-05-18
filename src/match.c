@@ -14,8 +14,8 @@
 #include "match.h"
 #include "interface.h"
 #include "externs.h"
+#include "mob.h"
 #include "kill.h"
-
 
 #define DOWNCASE(x) (tolower(x))
 
@@ -186,7 +186,7 @@ static void
 match_list(dbref first, struct match_data *md)
 {
 	dbref absolute;
-	struct living *liv = living_get(md->match_who);
+	mobi_t *liv = MOBI(md->match_who);
 	unsigned nth = liv->select;
 	liv->select = 0;
 

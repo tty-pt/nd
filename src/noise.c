@@ -27,8 +27,7 @@
  * TODO think before changing stuff
  * */
 
-#include "biome.h"
-#include "item.h"
+#include "noise.h"
 #include <string.h>
 #include "xxhash.h"
 #include "params.h"

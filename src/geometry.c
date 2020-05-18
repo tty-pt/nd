@@ -3,6 +3,7 @@
 #ifndef WEB_CLIENT
 #include "db.h"
 #include "props.h"
+#include "externs.h"
 #endif
 
 enum exit e_map[] = {
@@ -151,6 +152,15 @@ obj_stack_add(struct obj o, dbref where, unsigned char n)
 	if (n > 1)
 		SETSTACK(nu, n);
 	return nu;
+}
+
+dbref
+contents_find(int descr, dbref player, dbref where, const char *name)
+{
+	struct match_data md;
+	init_match_remote(descr, player, where, name, TYPE_THING, &md);
+	match_possession(&md);
+	return md.exact_match;
 }
 
 #endif

@@ -13,8 +13,9 @@
 #include "fb.h"
 #include "geography.h"
 #include "item.h"
+#include "mob.h"
 #include "kill.h"
-#include "map.h"
+#include "search.h"
 
 void
 moveto(dbref what, dbref where)
@@ -1026,7 +1027,7 @@ recycle(int descr, dbref player, dbref thing)
 		break;
 	case TYPE_THING:
 		if (GETLID(thing) >= 0) {
-			struct living *liv = living_get(thing);
+			mobi_t *liv = MOBI(thing);
 			liv->who = -1;
 		}
 		if (!Wizard(OWNER(thing)))

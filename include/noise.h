@@ -2,6 +2,7 @@
 #define NOISE_H
 
 #include "biome.h"
+#include "plant.h"
 
 typedef unsigned noise_t;
 typedef long snoise_t; // FIXME

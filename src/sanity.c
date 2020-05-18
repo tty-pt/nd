@@ -17,7 +17,7 @@
 
 #include "params.h"
 #include "props.h"
-#include "map.h"
+#include "search.h"
 
 #define TYPEOF(i)   (DBFETCH((i))->flags & TYPE_MASK)
 #define LOCATION(x) (DBFETCH((x))->location)

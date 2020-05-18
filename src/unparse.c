@@ -12,6 +12,7 @@
 #include "interface.h"
 #include "props.h"
 #include "item.h"
+#include "plant.h"
 #undef NDEBUG
 #include "debug.h"
 
@@ -132,7 +133,7 @@ icon(dbref what)
                         ret.icon = ANSI_BOLD ANSI_FG_BLUE "~";
                         break;
                 } else if ((aux = GETPLID(what)) >= 0) {
-                        struct plant *pl = &plants[aux];
+                        plant_t *pl = PLANT(aux);
 
                         ret.actions |= ACT_CHOP | ACT_OPEN;
                         snprintf(buf, sizeof(buf), "%s%c%s", pl->pre,

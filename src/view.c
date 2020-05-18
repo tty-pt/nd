@@ -1,6 +1,7 @@
 #include "view.h"
 
-#include "map.h"
+#include "search.h"
+#include "noise.h"
 #include "geography.h"
 #include "item.h"
 
@@ -47,8 +48,7 @@ vtf_t vtf_map[] = {
 static inline char *
 dr_tree(struct plant_data pd, int n, char *b) {
 	if (PLANT_N(pd.n, n)) {
-		struct plant *pl
-			= &plants[pd.id[n]];
+		plant_t *pl = PLANT(pd.id[n]);
 		b = stpcpy(b, pl->pre);
 		*b++ = PLANT_N(pd.n, n) > PLANT_HALF
 			? pl->big : pl->small;

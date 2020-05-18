@@ -23,7 +23,8 @@
 #include "kill.h"
 #include "view.h"
 #include "web.h"
-#include "map.h"
+#include "search.h"
+#include "mob.h"
 
 /* declarations */
 static const char *dumpfile = 0;
@@ -511,7 +512,7 @@ process_command(int descr, dbref player, char *command)
 
         // set current descriptor (needed for death)
         CBUG(GETLID(player) < 0);
-        struct living *liv = living_get(player);
+        mobi_t *liv = MOBI(player);
         liv->descr = descr;
 
 	if (command == 0)

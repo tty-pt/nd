@@ -64,10 +64,11 @@
 #include "externs.h"
 #include "interp.h"
 #include "kill.h"
-#include "map.h"
+#include "search.h"
 #include "view.h"
 #include "geography.h"
 #include "item.h"
+#include "mob.h"
 #undef NDEBUG
 #include "debug.h"
 
@@ -610,7 +611,7 @@ main(int argc, char **argv)
 		/* go do it */
 		shovechars();
 		map_close();
-		do_living_save();
+		mob_save();
 
 		close_sockets("\r\nServer shutting down.\r\n");
 
@@ -1011,7 +1012,7 @@ do_tick()
 		return;
 
 	time_since_combat = 0;
-	livings_update();
+	mob_update();
 	geo_update();
 }
 
@@ -1113,7 +1114,7 @@ shovechars()
 
 	(void) time(&now);
 
-	do_living_init();
+	mob_init();
 
 /* And here, we do the actual player-interaction loop */
 
@@ -2416,7 +2417,7 @@ auth(int descr, char *user, char *password)
         announce_connect(d, player);
         if (created) {
                 do_help(player, "begin", "");
-                living_put(player);
+                mob_put(player);
         } else {
                 interact_warn(player);
                 if (sanity_violated && Wizard(player))

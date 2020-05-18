@@ -11,8 +11,10 @@
 #include "kill.h"
 #include "externs.h"
 #include "web.h"
-#include "map.h"
+#include "search.h"
+#include "noise.h"
 #include "view.h"
+#include "mob.h"
 #undef NDEBUG
 #include "debug.h"
 
@@ -351,7 +353,7 @@ geo_room_at(int descr, dbref player, pos_t pos)
 
 	SETTREE(there, bio->pd.n);
 	SETFLOOR(there, bio->bio_idx);
-	mobs_add(bio, there);
+	mobs_add(there, bio->bio_idx, bio->pd.n);
 	others_add(descr, player, bio, there, pos);
 	plants_add(descr, player, there,
 			&bio->pd, bio->ty,

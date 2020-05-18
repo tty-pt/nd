@@ -818,7 +818,7 @@ do_pcreate(dbref player, const char *user, const char *password)
 		notify(player, "Create failed.");
 	} else {
 		log_status("PCREATED %s(%d) by %s(%d)", NAME(newguy), newguy, NAME(player), player);
-		living_put(newguy);
+		mob_put(newguy);
 		snprintf(buf, sizeof(buf), "Player %s created as object #%d.", user, newguy);
 		notify(player, buf);
 	}

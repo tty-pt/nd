@@ -3,6 +3,7 @@
 
 #include "geometry.h"
 #include "biome.h"
+#include "plant.h"
 
 #define ROOM_MAX 32
 
