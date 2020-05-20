@@ -3,7 +3,7 @@
 
 #include <limits.h>
 #include <stdint.h>
-#ifndef WEB_CLIENT
+#ifndef CLIENT
 #include <stddef.h>
 #include <string.h>
 #include "db.h"
@@ -158,7 +158,7 @@ obj_add(struct obj o, ref_t where);
 ref_t
 obj_stack_add(struct obj o, ref_t where,
 		unsigned char n);
-dbref
+ref_t
 contents_find(int descr, ref_t player, ref_t where,
 		const char *name);
 #endif

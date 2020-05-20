@@ -173,7 +173,7 @@ spells_init(spelli_t sps[8], dbref player)
 	char const *str = GETCURSPELLS(player);
 	unsigned i = 0;
 	unsigned intelligence = GETSTAT(player, INT);
-	memset(sps, 0, sizeof(spell_t) * 8);
+	memset(sps, 0, sizeof(spelli_t) * 8);
 
 	if (str && *str != '\0')
 		for (; i < 8; i ++) {

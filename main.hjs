@@ -178,15 +178,19 @@ ws.onmessage = function (e) {
         var ptr = mcp.mcp_proc();
         if (ptr) {
                 var str = env.strout(mcp.memory, ptr, 8282);
+		var jsons = null;
+
                 try {
-                        var jsons = JSON.parse(str);
-                        // console.log('jsons', jsons);
-			for (var i = 0; i < jsons.length; i++)
-				mcp_handler(jsons[i]);
-                } catch (e) {
+                        jsons = JSON.parse(str);
+		} catch (e) {
 			console.log(str);
                         console.warn(e);
-                }
+		}
+
+		if (jsons)
+			for (var i = 0; i < jsons.length; i++)
+				mcp_handler(jsons[i]);
+
                 mcp.mcp_reset();
         } // else
                 // console.log('waiting');

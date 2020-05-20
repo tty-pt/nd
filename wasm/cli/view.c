@@ -1,12 +1,15 @@
 #include "view.h"
+#include "metal.h"
 
 static char view_buf[128];
 /* static view_t view; */
 
-char *view_input() {
+export char *
+view_input() {
 	return view_buf;
 }
 
-int view_build() {
+export int
+view_build() {
 	return 0;
 }

@@ -1,7 +1,7 @@
 #include "biome.h"
 #include "params.h"
 #include "debug.h"
-#ifndef WEB_CLIENT
+#ifndef CLIENT
 #include "externs.h"
 #include "db.h"
 #endif

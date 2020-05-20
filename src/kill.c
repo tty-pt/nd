@@ -205,14 +205,11 @@ kill_target(dbref attacker, dbref target)
 		dbref loc = getloc(target);
 		moveto(target, PLAYER_HOME(target));
 		geo_clean(tar->descr, target, loc);
-		SETKLOCK(target, 0);
+		tar->klock = 0;
 		do_view(tar->descr, target);
 	} else {
-		if (tar->target) {
-			dbref tartar = tar->target->who;
-                        if (GETAGGRO(target))
-                                SETKLOCK(tartar, GETKLOCK(tartar) - 1);
-		}
+		if (tar->target && GETAGGRO(target))
+			tar->target->klock --;
 
 		if (GETTMP(getloc(target))) {
 			int descr = 0;
@@ -327,6 +324,8 @@ void
 kill_update(mobi_t *liv)
 {
 	mobi_t *livt = liv->target;
+
+	debug("kill_update %p %p\n", (void *) liv, (void *) livt);
 
 	if (!livt
             || livt == liv

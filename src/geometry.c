@@ -1,6 +1,6 @@
 #include "geometry.h"
 #include "debug.h"
-#ifndef WEB_CLIENT
+#ifndef CLIENT
 #include "db.h"
 #include "props.h"
 #include "externs.h"
@@ -125,7 +125,7 @@ morton_pos(pos_t p, morton_t code)
 	debug("decoded point x%llx -> %d %d %d %d", code, p[0], p[1], p[2], p[3]);
 }
 
-#ifndef WEB_CLIENT
+#ifndef CLIENT
 dbref
 obj_add(struct obj o, dbref where)
 {

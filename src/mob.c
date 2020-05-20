@@ -7,10 +7,11 @@
 #include "kill.h"
 
 #include "props.h"
-#include "debug.h"
 #include "externs.h"
 
 #include "params.h"
+
+#include "debug.h"
 
 #define HUNGER_Y	4
 #define THIRST_Y	2
@@ -276,6 +277,8 @@ mobi_init(mobi_t *liv, dbref who)
 		if (eq > 0)
 			equip_calc(liv->who, eq);
 	}
+
+	debug("mobi_init %d %d\n", who, liv->who);
 }
 
 mobi_t *
@@ -284,6 +287,8 @@ mob_put(dbref who)
 	register const unsigned m = MOBI_SIZE;
 	register mobi_t *liv;
 	register unsigned i;
+
+	debug("mob_put %d\n", who);
 
 	CBUG(who < 0 || Typeof(who) == TYPE_GARBAGE);
 
@@ -295,6 +300,7 @@ mob_put(dbref who)
 			liv = mobi_map;
 
 		if (liv->who <= 0) {
+			debug("will mobi_init %d %d %d", who, i, liv->who);
 			mobi_init(liv, who);
 			return liv;
 		}
@@ -430,7 +436,7 @@ mobs_aggro(int descr, dbref player)
 		}
 	}
 
-	SETKLOCK(player, GETKLOCK(player) + klock);
+	me->klock += klock;
 }
 
 void
@@ -464,7 +470,7 @@ do_eat(int descr, dbref player, const char *what)
 void
 mob_init() {
 	register PropPtr p = get_property((dbref) 0, "_/living");
-        memset(mobi_map, 0, sizeof(mobi_t));
+        memset(mobi_map, 0, sizeof(mobi_map));
 
 	if (p) {
 		const char *liv_s = PropDataStr(p), *l;
@@ -528,6 +534,7 @@ mobi_update(mobi_t *n)
 
 	dbref who = n->who;
 
+	debug("mobi_update %d resp %d\n", who, n->respawn_in);
 	if (n->respawn_in > 0) {
 		if (!--n->respawn_in)
 			respawn(who);
@@ -562,10 +569,11 @@ mob_update()
 
 	for (n = MOBI(0), e = n + MOBI_SIZE;
 	     n < e;
-	     n++)
+	     n++) {
 
 		if (n->who > 0)
 			mobi_update(n);
 		else if (n < mobi_cur)
 			mobi_cur = n;
+	}
 }

@@ -174,6 +174,7 @@
 #include "defaults.h"
 #include "externs.h"
 #include "geography.h"
+#include "mob.h"
 
 int
 OkObj(dbref obj)
@@ -368,7 +369,7 @@ can_doit(int descr, dbref player, dbref thing, const char *default_fail_msg)
 		return 0;
 	}
 
-	if (GETKLOCK(player)) {
+	if (MOBI(player)->klock) {
 		notify(player, "You can not do that right now.");
 		return 0;
 	}

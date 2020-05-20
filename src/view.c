@@ -5,7 +5,7 @@
 #include "geography.h"
 #include "item.h"
 
-#ifndef WEB_CLIENT
+#ifndef CLIENT
 #include "db.h"
 #include "externs.h"
 #include "props.h"

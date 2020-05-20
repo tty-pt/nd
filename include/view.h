@@ -21,28 +21,17 @@ typedef struct {
 } vtf_t;
 
 typedef struct view_tile {
-	int players[ROOM_MAX]; /* dbref actually */
+	ref_t players[ROOM_MAX]; /* dbref actually */
 	enum biome bio_idx;
-	dbref room;
+	ref_t room;
 	ucoord_t flags, exits, doors;
 	struct plant_data pd;
 } view_tile_t;
 
 typedef view_tile_t view_t[VIEW_M];
 
-#ifdef WEB_CLIENT
-#include "metal.h"
-
-export size_t view_buf_l;
-export char *view_input();
-export int view_build();
-
-#else
-#include "geometry.h"
-#include "db.h"
-
-void do_view(int descr, dbref player);
-
-#endif /* WEB_CLIENT */
+#ifndef CLIENT
+void do_view(int descr, ref_t player);
+#endif /* CLIENT */
 
 #endif
