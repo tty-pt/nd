@@ -8,6 +8,8 @@ include wasm/hjs.mk
 
 all: index.html main.js vim.css
 
+main.js: wasm/cli/
+
 inline-js := main.js
 index.html: pre-index.html ${inline-js}
 	${scripts}/html_tool.sh pre-index.html ${inline-js} > $@

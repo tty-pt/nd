@@ -10,7 +10,7 @@
 #include "search.h"
 #include "spell.h"
 #include "mob.h"
-#undef NDEBUG
+
 #include "debug.h"
 
 #define MESGPROP_CXP	"_/cxp"

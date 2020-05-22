@@ -119,9 +119,9 @@ function mcp_handler(j) {
         else if (j.key == "com-qnixsoft-web-view") {
 		var b64 = j.data;
 		// TODO improve strin or make specific mapping
-		env.strin(mcp.memory, mcp.view_input(), b64, mcp.view_buf_l);
-		mcp.view_build();
-                // map.innerHTML = j.data;
+		// env.strin(mcp.memory, mcp.view_input(), b64, mcp.view_buf_l);
+		// mcp.view_build();
+                map.innerHTML = j.data;
 	} else if (j.key == "com-qnixsoft-web-art")
                 output('<img class="ah" src="' + j.src + '">');
         else if (j.key == "com-qnixsoft-web-look-content") {
@@ -173,27 +173,31 @@ function mcp_handler(j) {
 }
 
 ws.onmessage = function (e) {
-        // console.log("inserted", e.data);
+        console.log("inserted", e.data);
         env.strin(mcp.memory, mcp.mcp_input(), e.data, 4096);
         var ptr = mcp.mcp_proc();
-        if (ptr) {
-                var str = env.strout(mcp.memory, ptr, 8282);
-		var jsons = null;
 
-                try {
-                        jsons = JSON.parse(str);
-		} catch (e) {
-			console.log(str);
-                        console.warn(e);
-		}
+	if (!ptr) {
+                console.log('waiting');
+		return;
+	}
 
-		if (jsons)
-			for (var i = 0; i < jsons.length; i++)
-				mcp_handler(jsons[i]);
+	var str = env.strout(mcp.memory, ptr, 8282);
+	var jsons = null;
 
-                mcp.mcp_reset();
-        } // else
-                // console.log('waiting');
+	try {
+		jsons = JSON.parse(str);
+		console.log("output", str);
+	} catch (e) {
+		console.log(str);
+		console.error(e);
+	}
+
+	if (jsons)
+		for (var i = 0; i < jsons.length; i++)
+			mcp_handler(jsons[i]);
+
+	mcp.mcp_reset();
 };
 
 var cmd_str = "";

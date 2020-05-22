@@ -18,6 +18,7 @@ enum mcp_flags {
 	MCP_ARG = 8,
 	MCP_NOECHO = 16,
 	MCP_SKIP = 32,
+	MCP_INBAND = 64,
 
 	MCP_NAME = 128,
 	MCP_HASH = 256,
@@ -62,6 +63,8 @@ static inline void mcp_clear() {
 	memset(mcp.cache, 0, sizeof(mcp.cache));
 	mcp.args_l = 0;
 	mcp.cache_p = mcp.cache;
+	mcp.flags = 0;
+	mcp.state = 1;
 }
 
 static void mcp_emit() {
@@ -79,6 +82,7 @@ static void mcp_emit() {
 static void inband_emit() {
 	out_p += sprintf(out_p, "{ \"key\": \"inband\", \"data\": \"");
 	out_p += tty_proc(out_p, mcp.cache);
+	/* out_p += sprintf(out_p, "%s", mcp.cache); */
 	out_p += sprintf(out_p, "\" }, ");
 	mcp_clear();
 }
@@ -132,10 +136,10 @@ mcp_proc_ch(char *p) {
 		if (GET_FLAG(MCP_MULTI)) {
 			if (mcp.state == MCP_CONFIRMED) {
 				mcp.state = 0;
-				mcp.flags = MCP_SKIP | MCP_MULTI;
 				mcp_set(mcp_arg()->value);
 				mcp.args_l ++;
 				mcp_emit();
+				mcp.flags = MCP_SKIP | MCP_MULTI;
 			} else
 				mcp.flags &= ~MCP_NOECHO;
 			return;
@@ -159,6 +163,7 @@ mcp_proc_ch(char *p) {
 	case ' ':
 		if (!GET_FLAG(MCP_ON))
 			break;
+
 		else if (GET_FLAG(MCP_NAME)) {
 			mcp.flags ^= MCP_NAME | MCP_HASH | MCP_NOECHO;
 			mcp_set(mcp.name);
@@ -181,7 +186,7 @@ mcp_proc_ch(char *p) {
 		// new mcp
 		if (mcp.name[0])
 			mcp_emit();
-		else
+		else if (GET_FLAG(MCP_INBAND))
 			inband_emit();
 		mcp.flags = MCP_ON | MCP_NAME;
 		mcp.state = 0;
@@ -189,9 +194,13 @@ mcp_proc_ch(char *p) {
 		// mcp turned out impossible
 		if (GET_FLAG(MCP_ON))
 			mcp_emit();
+
+		else if (!GET_FLAG(MCP_MULTI))
+			mcp.flags = MCP_INBAND;
+
 		strncpy(mcp.cache_p, "\n#$#", mcp.state);
 		mcp.cache_p += mcp.state;
-		mcp.state = mcp.flags = 0;
+		mcp.state = 0;
 	}
 
 	if (!GET_FLAG(MCP_NOECHO))
@@ -209,7 +218,7 @@ mcp_proc() {
 		;
 	else if (GET_FLAG(MCP_ON))
 		mcp_emit();
-	else
+	else if (GET_FLAG(MCP_INBAND))
 		inband_emit();
 
 	if (last_p != out_buf) {

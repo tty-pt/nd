@@ -60,6 +60,7 @@ void tty_init(struct tty *tty) {
 	tty->csi.bg = tty->c_attr.bg = 0;
 	tty->csi.x = tty->c_attr.x = 0;
         tty->end_tag = "";
+	tty->esc_state = 0;
 }
 
 static inline size_t
