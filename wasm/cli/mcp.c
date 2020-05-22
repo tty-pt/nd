@@ -57,7 +57,6 @@ static inline void mcp_set(char *buf) {
 }
 
 static inline void mcp_clear() {
-	last_p = out_p - 2;
 	memset(mcp.args, 0, sizeof(mcp.args));
 	memset(mcp.name, 0, sizeof(mcp.name));
 	memset(mcp.cache, 0, sizeof(mcp.cache));
@@ -76,14 +75,21 @@ static void mcp_emit() {
 		*out_p ++ = '"';
 	}
 	out_p += sprintf(out_p, " }, ");
+	last_p = out_p - 2;
 	mcp_clear();
 }
 
 static void inband_emit() {
-	out_p += sprintf(out_p, "{ \"key\": \"inband\", \"data\": \"");
-	out_p += tty_proc(out_p, mcp.cache);
-	/* out_p += sprintf(out_p, "%s", mcp.cache); */
-	out_p += sprintf(out_p, "\" }, ");
+	if (*mcp.cache) {
+		out_p += sprintf(out_p,
+				"{ \"key\": \"inband\","
+				" \"data\": \"");
+		out_p += tty_proc(out_p, mcp.cache);
+		/* out_p += sprintf(out_p, "%s", mcp.cache); */
+		out_p += sprintf(out_p, "\" }, ");
+		last_p = out_p - 2;
+	}
+	
 	mcp_clear();
 }
 
@@ -167,8 +173,12 @@ mcp_proc_ch(char *p) {
 		else if (GET_FLAG(MCP_NAME)) {
 			mcp.flags ^= MCP_NAME | MCP_HASH | MCP_NOECHO;
 			mcp_set(mcp.name);
-			mcp.args_l = 0;
+			if (*mcp.name)
+				mcp.args_l = 0;
+			else
+				mcp.flags = MCP_SKIP;
 			return;
+
 		} else if (GET_FLAG(MCP_HASH)) {
 			mcp.flags ^= MCP_HASH | MCP_KEY | MCP_NOECHO;
 			return;
