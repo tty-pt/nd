@@ -4,7 +4,7 @@ srcdir := ${PWD}
 subdirs := src/ vss/ game/data/ wasm/cli/
 
 include scripts/Makefile.common
-include wasm/hjs.mk
+-include wasm/hjs.mk
 
 all: index.html main.js vim.css
 
@@ -35,21 +35,23 @@ game/data/: ${subdirs}
 
 wasm/cli/: wasm/lib/
 
-mt := git
-metal-dir-git := ${HOME}/metal/
-METAL-DIR := ${metal-dir-${mt}}
-metal-tar := $(METAL-DIR)metal.tar.gz
-CONFIG-MT-NEED := y
-mt-need-$(CONFIG-MT-NEED) := ${metal-tar}
+mt := pkg
+metal-dir-git := ${MOME}/metal
+metal-tar-git := ${metal-dir-git}/metal/metal.tar.gz
+metal-tar-pkg := ../metal.tar.gz
+mt-need-git := ${metal-dir-git}metal.tar.gz
+mt-need-pkg := ./metal.tar.gz
 # mt-phony-git := ${metal-tar}
 
-metal-tar: $(metal-tar)
+metal-tar: $(metal-tar-${mt})
 
-$(metal-tar):
+$(metal-tar-pkg):
+
+$(metal-tar-git):
 	${MAKE} -C ${METAL-DIR} tar
 
-wasm/lib/ wasm/metal.hjs: ${mt-need-y}
-	cd wasm && tar xzf ${metal-tar}
+wasm/lib/ wasm/metal.hjs: ${mt-need-${mt}}
+	cd wasm && tar xzf ${metal-tar-${mt}}
 
 metal.tar.gz:
 	curl -LO https://github.com/quirinpa/metal/raw/master/metal.tar.gz
