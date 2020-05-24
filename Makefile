@@ -36,22 +36,18 @@ game/data/: ${subdirs}
 wasm/cli/: wasm/lib/
 
 mt := pkg
-metal-dir-git := ${MOME}/metal
-metal-tar-git := ${metal-dir-git}/metal/metal.tar.gz
-metal-tar-pkg := ../metal.tar.gz
-mt-need-git := ${metal-dir-git}metal.tar.gz
-mt-need-pkg := ./metal.tar.gz
+metal-dir := ${HOME}/metal
+metal-tar := ${metal-dir}/metal.tar.gz
+mt-need-y := ${metal-tar}
 # mt-phony-git := ${metal-tar}
 
-metal-tar: $(metal-tar-${mt})
+metal-tar: ${metal-tar}
 
-$(metal-tar-pkg):
+$(metal-tar):
+	${MAKE} -C ${metal-dir} tar
 
-$(metal-tar-git):
-	${MAKE} -C ${METAL-DIR} tar
-
-wasm/lib/ wasm/metal.hjs: ${mt-need-${mt}}
-	cd wasm && tar xzf ${metal-tar-${mt}}
+wasm/lib/ wasm/metal.hjs: ${mt-need-y}
+	cd wasm && tar xzf ${metal-tar}
 
 metal.tar.gz:
 	curl -LO https://github.com/quirinpa/metal/raw/master/metal.tar.gz
