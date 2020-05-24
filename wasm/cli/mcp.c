@@ -145,7 +145,7 @@ mcp_proc_ch(char *p) {
 				mcp_set(mcp_arg()->value);
 				mcp.args_l ++;
 				mcp_emit();
-				mcp.flags = MCP_SKIP | MCP_MULTI;
+				mcp.flags = MCP_SKIP;
 			} else
 				mcp.flags &= ~MCP_NOECHO;
 			return;
@@ -205,7 +205,7 @@ mcp_proc_ch(char *p) {
 		if (GET_FLAG(MCP_ON))
 			mcp_emit();
 
-		else if (!GET_FLAG(MCP_MULTI))
+		if (!GET_FLAG(MCP_MULTI))
 			mcp.flags = MCP_INBAND;
 
 		strncpy(mcp.cache_p, "\n#$#", mcp.state);
