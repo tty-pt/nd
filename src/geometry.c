@@ -163,4 +163,13 @@ contents_find(int descr, dbref player, dbref where, const char *name)
 	return md.exact_match;
 }
 
+dbref
+e_exit_where(int descr, dbref player, dbref loc, enum exit e)
+{
+	struct match_data md;
+	init_match_remote(descr, player, loc, e_name(e), TYPE_EXIT, &md),
+	match_room_exits(loc, &md);
+	return match_result(&md);
+}
+
 #endif

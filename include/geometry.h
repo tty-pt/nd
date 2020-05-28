@@ -99,6 +99,13 @@ struct obj {
 extern enum exit e_map[];
 extern exit_t exit_map[];
 
+static inline void
+pos_move(pos_t d, pos_t o, enum exit e) {
+	exit_t *ex = &exit_map[e];
+	POOP4D d[I] = o[I];
+	d[ex->dim] += ex->dis;
+}
+
 static inline enum exit
 dir_e(const char dir) {
 	return e_map[(int) dir];
@@ -129,14 +136,8 @@ e_other(enum exit e) {
 	return exit_map[e].other;
 }
 
-static inline void
-pos_move(pos_t d, pos_t o, enum exit e) {
-	exit_t *ex = &exit_map[e];
-	POOP4D d[I] = o[I];
-	d[ex->dim] += ex->dis;
-}
+#ifndef CLIENT
 
-#ifndef WEB_CLI
 morton_t pos_morton(pos_t);
 void morton_pos(pos_t p, morton_t code);
 
@@ -150,6 +151,27 @@ point_rel_idx(point_t p, point_t s, smorton_t w)
 	if (s1 > p[X_COORD])
 		s1 -= UCOORD_MAX;
 	return (p[Y_COORD] - s0) * w + (p[X_COORD] - s1);
+}
+
+static inline enum exit
+exit_e(ref_t exit) {
+	const char dir = NAME(exit)[0];
+	return dir_e(dir);
+}
+
+static inline int
+e_exit_is(ref_t exit)
+{ 
+	char const *fname = e_fname(exit_e(exit));
+	return *fname && !strncmp(NAME(exit), fname, 4);
+}
+
+ref_t e_exit_where(int descr, dbref player, ref_t loc, enum exit e);
+
+static inline ref_t
+e_exit_here(int descr, ref_t player, enum exit e)
+{
+	return e_exit_where(descr, player, getloc(player), e);
 }
 
 ref_t

@@ -269,7 +269,7 @@ could_doit(int descr, dbref player, dbref thing)
 		/* If exit is unlinked, can't do it.
 		 * Unless its a geo exit */
 		if (DBFETCH(thing)->sp.exit.ndest == 0) {
-			if (gexit_is(thing))
+			if (e_exit_is(thing))
 				goto geo;
 			else
 				return 0;
@@ -279,7 +279,7 @@ could_doit(int descr, dbref player, dbref thing)
 		source = DBFETCH(player)->location;
 		dest = *(DBFETCH(thing)->sp.exit.dest);
 
-		if (dest < 0 && gexit_is(thing))
+		if (dest < 0 && e_exit_is(thing))
 			goto geo;
 
 		else if (Typeof(dest) == TYPE_PLAYER) {
@@ -417,7 +417,7 @@ can_doit(int descr, dbref player, dbref thing, const char *default_fail_msg)
 		/* can do it */
 		if (GETSUCC(thing)) {
 			exec_or_notify_prop(descr, player, thing, MESGPROP_SUCC, "(@Succ)");
-		} else if (Typeof(thing) == TYPE_EXIT && gexit_is(thing))
+		} else if (Typeof(thing) == TYPE_EXIT && e_exit_is(thing))
 			notify_fmt(player, "You go %s.", e_name(exit_e(thing)));
 		if (GETOSUCC(thing) && !Dark(player)) {
 			parse_oprop(descr, player, getloc(player), thing, MESGPROP_OSUCC,

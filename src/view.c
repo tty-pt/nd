@@ -299,7 +299,7 @@ view_draw(int descr, dbref player, view_t view) {
 static inline void
 view_build_exit(view_tile_t *t, int descr, dbref player, dbref loc, enum exit e) {
 	register dbref tmp
-		= gexit_where(descr, player, loc, e);
+		= e_exit_where(descr, player, loc, e);
 
 	if (tmp > 0) {
 		t->exits |= e;
@@ -311,7 +311,7 @@ view_build_exit(view_tile_t *t, int descr, dbref player, dbref loc, enum exit e)
 static inline void
 view_build_exit_z(view_tile_t *t, int descr, dbref player, dbref loc, enum exit e) {
 	register dbref tmp
-		= gexit_where(descr, player, loc, e);
+		= e_exit_where(descr, player, loc, e);
 
 	if (tmp > 0 && DBFETCH(tmp)->sp.exit.ndest
 			&& DBFETCH(tmp)->sp.exit.dest[0] >= 0)
@@ -334,7 +334,7 @@ view_build_exit_s(view_tile_t *t, int descr, dbref player, dbref loc, pos_t p, e
 			tmp);
 
 	if (tmp > 0) {
-		tmp = gexit_where(descr, player, tmp, e_simm(e));
+		tmp = e_exit_where(descr, player, tmp, e_simm(e));
 		if (tmp > 0) {
 			t->exits |= e;
 			if (GETDOOR(tmp))

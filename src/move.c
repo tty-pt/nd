@@ -457,7 +457,7 @@ trigger(int descr, dbref player, dbref exit, int pflag)
 	succ = 0;
 
 	// quickfix for gexits
-	if (gexit_is(exit)) {
+	if (e_exit_is(exit)) {
 		union specific sp
 			= DBFETCH(exit)->sp;
 		if (sp.exit.ndest && sp.exit.dest[0] != NOTHING)
@@ -1010,7 +1010,7 @@ recycle(int descr, dbref player, dbref thing)
 			rest = DBFETCH(first)->next;
 			if (DBFETCH(first)->location == NOTHING
 			    || DBFETCH(first)->location == thing) {
-				if (gexit_is(first))
+				if (e_exit_is(first))
 					gexit_snull(descr, player, first);
 				recycle(descr, player, first);
 			}

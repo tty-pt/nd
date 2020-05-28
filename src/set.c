@@ -516,7 +516,7 @@ do_lock(int descr, dbref player, const char *name, const char *keyname)
 		return;
 	default:
 		if (Typeof(thing) == TYPE_EXIT
-		    && gexit_is(thing)
+		    && e_exit_is(thing)
 		    && geo_claim(descr, player, getloc(thing)))
 			return;
 
@@ -534,7 +534,7 @@ do_lock(int descr, dbref player, const char *name, const char *keyname)
 		} else {
 			/* everything ok, do it */
 			if (Typeof(thing) == TYPE_EXIT
-			    && gexit_is(thing)
+			    && e_exit_is(thing)
 			    && geo_claim(descr, player, getloc(thing)))
 				return;
 
