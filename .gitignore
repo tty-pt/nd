@@ -1,4 +1,4 @@
-#/metal.tar.gz
+/*.tar.gz
 /main.js
 /wasm/bin
 /wasm/lib

@@ -28,7 +28,7 @@ cleaner: ${subdirs-cleaner}
 	rm config.status config.cache config.log
 
 web: src
-	${srcdir}/src/ws-server &
+	${srcdir}/src/ws-server
 
 game/data/: ${subdirs}
 
@@ -51,5 +51,11 @@ wasm/lib/ wasm/metal.hjs: ${mt-need-y}
 metal.tar.gz:
 	curl -LO https://github.com/quirinpa/metal/raw/master/metal.tar.gz
 
+backup-date != date +%s
+backup := neverdark-${backup-date}.tar.gz
+backup: ${backup}
+$(backup):
+	tar czf $@ game/geo.db game/data/std-db.db
+
 .PHONY: cleaner ${subdirs-cleaner} web \
-	${mt-phony-${mt}} metal-tar
+	${mt-phony-${mt}} metal-tar backup

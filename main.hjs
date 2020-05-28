@@ -148,7 +148,7 @@ function mcp_handler(j) {
                 icon.innerHTML = str;
                 icon.className = className;
                 a.appendChild(icon);
-                a.innerHTML += " " + j.name;
+                a.innerHTML += " " + j.pname;
                 contents_btns.appendChild(a);
         } else if (j.key == "com-qnixsoft-web-look") {
                 if (j.room) {
