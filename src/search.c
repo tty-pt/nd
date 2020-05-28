@@ -349,13 +349,12 @@ map_get(pos_t p)
 		case 0:
 			ref = * (dbref *) pkey.data;
 #ifdef PRECOVERY
-			if (Typeof(ref) == TYPE_GARBAGE) {
+			if (Typeof(ref) != TYPE_ROOM) {
 				debug("GARBAGE %d REMOVED ;)", ref);
 				cur->c_del(cur, 0);
 				continue;
 			}
 #endif
-			CBUG(Typeof(ref) != TYPE_ROOM);
 			return ref;
 		case DB_NOTFOUND:
 			cur->close(cur);

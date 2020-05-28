@@ -14,8 +14,7 @@ inline-js := main.js
 index.html: pre-index.html ${inline-js}
 	${scripts}/html_tool.sh pre-index.html ${inline-js} > $@
 
-vim.css: FORCE
-	${MAKE} -C vss/
+vim.css: vss/
 
 subdirs-install := ${subdirs:%=%-install}
 $(subdirs-install):

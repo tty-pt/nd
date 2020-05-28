@@ -350,10 +350,10 @@ do_status(dbref player)
 		   "damage %d\tmdamage %d\tmdmg_mask 0x%x\n"
 		   "defense %d\tmdefense %d\tmdef_mask 0x%x\n"
 		   "klock   %u\thunger %u\tthirst %u",
-		   liv->hp, HP_MAX(player), liv->mp, MP_MAX(player), EM(liv, MOV),
-		   EV(liv, DODGE), liv->combo, liv->debuf_mask,
-		   EV(liv, DMG), EV(liv, MDMG), EM(liv, MDMG),
-		   EV(liv, DEF), EV(liv, MDEF), EM(liv, MDEF),
+		   liv->hp, HP_MAX(player), liv->mp, MP_MAX(player), MOBI_EM(liv, MOV),
+		   MOBI_EV(liv, DODGE), liv->combo, liv->debuf_mask,
+		   MOBI_EV(liv, DMG), MOBI_EV(liv, MDMG), MOBI_EM(liv, MDMG),
+		   MOBI_EV(liv, DEF), MOBI_EV(liv, MDEF), MOBI_EM(liv, MDEF),
 		   liv->klock, liv->hunger, liv->thirst);
 }
 
