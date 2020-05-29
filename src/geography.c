@@ -96,36 +96,6 @@ geo_there(dbref where, enum exit e)
 
 /* exit {{{ */
 
-static inline dbref
-gexit_dest(dbref exit)
-{
-#ifdef PRECOVERY
-	if (!DBFETCH(exit)->sp.exit.ndest)
-		return NOTHING;
-
-	else
-		return DBFETCH(exit)->sp.exit.dest[0];
-#else
-	CBUG(!DBFETCH(exit)->sp.exit.ndest);
-	return DBFETCH(exit)->sp.exit.dest[0];
-#endif
-}
-
-void
-gexit_dest_set(dbref exit, dbref dest)
-{
-	union specific *sp = &DBFETCH(exit)->sp;
-#ifdef PRECOVERY
-	if (!sp->exit.ndest) {
-		sp->exit.dest = (dbref *)malloc(sizeof(dbref));
-		sp->exit.ndest = 1;
-	}
-#else
-	CBUG(!sp->exit.ndest);
-#endif
-	sp->exit.dest[0] = dest;
-}
-
 static dbref
 gexit(int descr, dbref player, dbref loc, dbref loc2, enum exit e)
 {
@@ -145,7 +115,7 @@ gexit(int descr, dbref player, dbref loc, dbref loc2, enum exit e)
 
 	DBFETCH(ref)->sp.exit.ndest = 1;
 	DBFETCH(ref)->sp.exit.dest = (dbref *) malloc(sizeof(dbref));
-	gexit_dest_set(ref, loc2);
+	e_exit_dest_set(ref, loc2);
 	DBDIRTY(ref);
 
 	return ref;
@@ -238,7 +208,7 @@ exits_fix(int descr, dbref player, dbref there, dbref exit)
 		if (othere < 0 || GETTMP(othere)) {
 			if (oexit < 0)
 				continue;
-			gexit_dest_set(oexit, NOTHING);
+			e_exit_dest_set(oexit, NOTHING);
 			continue;
 		}
 
@@ -249,7 +219,7 @@ exits_fix(int descr, dbref player, dbref there, dbref exit)
 				continue;
 
 			gexit(descr, player, there, othere, e);
-			gexit_dest_set(othere_exit, there);
+			e_exit_dest_set(othere_exit, there);
 			continue;
 		}
 
@@ -257,12 +227,12 @@ exits_fix(int descr, dbref player, dbref there, dbref exit)
 			recycle(descr, player, oexit);
 
 		else {
-			gexit_dest_set(oexit, othere);
-			gexit_dest_set(othere_exit, there);
+			e_exit_dest_set(oexit, othere);
+			e_exit_dest_set(othere_exit, there);
 		}
 	}
 
-	gexit_dest_set(exit, there);
+	e_exit_dest_set(exit, there);
 }
 
 static void
@@ -287,7 +257,7 @@ exits_infer(int descr, dbref player, dbref here)
 		oexit = gexit(descr, player, here, there, e);
 		/* if (there > 0 && !GETTMP(there)) */
 		SETDOOR(oexit, GETDOOR(exit_there));
-		gexit_dest_set(exit_there, here);
+		e_exit_dest_set(exit_there, here);
 	}
 }
 
@@ -400,7 +370,7 @@ gexit_snull(int descr, dbref player, dbref exit)
 
 	oexit = e_exit_where(descr, player, there, e_simm(e));
 	if (oexit >= 0)
-		gexit_dest_set(oexit, NOTHING);
+		e_exit_dest_set(oexit, NOTHING);
 }
 
 static void
@@ -410,7 +380,7 @@ walk(int descr, dbref player, enum exit e) {
 	      there;
 
 	if (exit >= 0) {
-		there = gexit_dest(exit);
+		there = e_exit_dest(exit);
 		if (there > 0) {
 			pos_t pos;
 			geo_pos(pos, getloc(player), e);
@@ -422,30 +392,6 @@ walk(int descr, dbref player, enum exit e) {
 	e_move(descr, player, e);
 }
 
-/* used in predicates.c {{{ */
-
-int
-geo_lock(dbref room, enum exit e)
-{
-	pos_t pos;
-
-	if (e & (E_UP | E_DOWN))
-		return 0;
-
-	map_where(pos, room);
-	return pos[2] == 0;
-}
-
-int
-gexit_can(dbref player, dbref exit) {
-	enum exit e = exit_e(exit);
-	CBUG(exit < 0);
-	CBUG(gexit_dest(exit) >= 0);
-	return geo_lock(getloc(player), e);
-}
-
-/* }}} */
-
 static void
 carve(int descr, dbref player, enum exit e)
 {
@@ -454,7 +400,7 @@ carve(int descr, dbref player, enum exit e)
 	      exit = e_exit_here(descr, player, e);
 	int wall = 0;
 
-	if (!geo_lock(getloc(player), e)) {
+	if (!e_ground(getloc(player), e)) {
 		if (geo_claim(descr, player, here))
 			return;
 		if (GETVALUE(player) < ROOM_COST) {
@@ -467,7 +413,7 @@ carve(int descr, dbref player, enum exit e)
 		there = geo_there(here, e);
 		if (there < 0) {
 			there = geo_room(descr, player, exit);
-			gexit_dest_set(exit, there);
+			e_exit_dest_set(exit, there);
 		}
 		wall_around(descr, player, exit);
 		wall = 1;
@@ -490,7 +436,7 @@ uncarve(int descr, dbref player, enum exit e)
 	const char *s0 = "is";
 	dbref there, here = getloc(player),
 	      exit = e_exit_here(descr, player, e);
-	int ht, cd = geo_lock(here, e);
+	int ht, cd = e_ground(here, e);
 
 	if (cd) {
 		ht = GETTMP(here);
@@ -500,7 +446,7 @@ uncarve(int descr, dbref player, enum exit e)
 		if (here == there)
 			return;
 	} else {
-		there = gexit_dest(exit);
+		there = e_exit_dest(exit);
 		if (there < 0) {
 			notify(player, "No room there");
 			return;
@@ -580,7 +526,7 @@ gexit_claim(int descr, dbref player, dbref exit, dbref exit_there)
 	a = here > 0 && OWNER(here) == player && OWNER(exit) == player;
 	c = GETTMP(there);
 	b = !c && OWNER(there) == player && OWNER(exit_there) == player;
-	d = geo_lock(getloc(player), dir);
+	d = e_ground(getloc(player), dir);
 
 	if ( a && (b || c))
 		return 0;
@@ -743,7 +689,7 @@ pull(int descr, dbref player, struct cmd_dir cd)
 	if (exit < 0 || what < 0
 	    || Typeof(what) != TYPE_ROOM
 	    || OWNER(what) != player
-	    || ((there = gexit_dest(exit)) > 0
+	    || ((there = e_exit_dest(exit)) > 0
 		&& geo_clean(descr, player, there) == there))
 	{
 		notify(player, "You cannot do that.");

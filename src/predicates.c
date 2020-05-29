@@ -327,7 +327,7 @@ could_doit(int descr, dbref player, dbref thing)
 
 	goto out;
 geo:
-	if (!gexit_can(player, thing))
+	if (!e_exit_can(player, thing))
 		return 0;
 out:
 		/* Check the @lock on the thing, as a final test. */
@@ -360,7 +360,6 @@ test_lock_false_default(int descr, dbref player, dbref thing, const char *lockpr
 int
 can_doit(int descr, dbref player, dbref thing, const char *default_fail_msg)
 {
-	struct living *liv;
 	char const *dwts = "door";
 	char dir = '\0';
 	int door = 0;

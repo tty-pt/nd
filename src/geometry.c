@@ -4,6 +4,7 @@
 #include "db.h"
 #include "props.h"
 #include "externs.h"
+#include "search.h"
 #endif
 
 enum exit e_map[] = {
@@ -170,6 +171,41 @@ e_exit_where(int descr, dbref player, dbref loc, enum exit e)
 	init_match_remote(descr, player, loc, e_name(e), TYPE_EXIT, &md),
 	match_room_exits(loc, &md);
 	return match_result(&md);
+}
+
+int
+e_exit_can(dbref player, dbref exit) {
+	enum exit e = exit_e(exit);
+	CBUG(exit < 0);
+	CBUG(e_exit_dest(exit) >= 0);
+	return e_ground(getloc(player), e);
+}
+
+int
+e_ground(ref_t room, enum exit e)
+{
+	pos_t pos;
+
+	if (e & (E_UP | E_DOWN))
+		return 0;
+
+	map_where(pos, room);
+	return pos[2] == 0;
+}
+
+void
+e_exit_dest_set(dbref exit, dbref dest)
+{
+	union specific *sp = &DBFETCH(exit)->sp;
+#ifdef PRECOVERY
+	if (!sp->exit.ndest) {
+		sp->exit.dest = (dbref *)malloc(sizeof(dbref));
+		sp->exit.ndest = 1;
+	}
+#else
+	CBUG(!sp->exit.ndest);
+#endif
+	sp->exit.dest[0] = dest;
 }
 
 #endif

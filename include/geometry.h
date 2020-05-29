@@ -166,7 +166,20 @@ e_exit_is(ref_t exit)
 	return *fname && !strncmp(NAME(exit), fname, 4);
 }
 
+static inline ref_t
+e_exit_dest(dbref exit)
+{
+	if (!DBFETCH(exit)->sp.exit.ndest)
+		return NOTHING;
+
+	else
+		return DBFETCH(exit)->sp.exit.dest[0];
+}
+
 ref_t e_exit_where(int descr, dbref player, ref_t loc, enum exit e);
+int e_exit_can(ref_t player, ref_t exit);
+int e_ground(ref_t room, enum exit e);
+void e_exit_dest_set(dbref exit, dbref dest);
 
 static inline ref_t
 e_exit_here(int descr, ref_t player, enum exit e)
