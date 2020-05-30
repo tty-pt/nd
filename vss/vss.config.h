@@ -1,6 +1,6 @@
 #define CONFIG_IPH 12px
 #define CONFIG_ROUND
-#include "vss.h"
+#include "vss/vss.h"
 
 /* CALL(TEXT_SIZE, TS) */
 CALL(BG_COLOR, CS)
