@@ -4,10 +4,7 @@ srcdir := ${PWD}
 subdirs := src/ vss/ game/data/ client/
 
 include scripts/Makefile.common
-DESTDIR ?= /
-PREFIX ?= ${DESTDIR}usr/local
-MKDIR := ${PREFIX}/mk
-include ${MKDIR}/hjs.mk
+include /usr/local/mk/hjs.mk
 
 all: index.html main.js vim.css
 
