@@ -1,14 +1,17 @@
 #!/bin/make -f
 
 srcdir := ${PWD}
-subdirs := src/ vss/ game/data/ wasm/cli/
+subdirs := src/ vss/ game/data/ client/
 
 include scripts/Makefile.common
--include wasm/hjs.mk
+DESTDIR ?= /
+PREFIX ?= ${DESTDIR}usr/local
+MKDIR := ${PREFIX}/mk
+include ${MKDIR}/hjs.mk
 
 all: index.html main.js vim.css
 
-main.js: wasm/cli/
+main.js: client/
 
 inline-js := main.js
 index.html: pre-index.html ${inline-js}
@@ -31,25 +34,6 @@ web: src
 	${srcdir}/src/ws-server
 
 game/data/: ${subdirs}
-
-wasm/cli/: wasm/lib/
-
-mt := pkg
-metal-dir := ${HOME}/metal
-metal-tar := ${metal-dir}/metal.tar.gz
-mt-need-y := ${metal-tar}
-# mt-phony-git := ${metal-tar}
-
-metal-tar: ${metal-tar}
-
-$(metal-tar):
-	${MAKE} -C ${metal-dir} tar
-
-wasm/lib/ wasm/metal.hjs: ${mt-need-y}
-	cd wasm && tar xzf ${metal-tar}
-
-metal.tar.gz:
-	curl -LO https://github.com/quirinpa/metal/raw/master/metal.tar.gz
 
 backup-date != date +%s
 backup := neverdark-${backup-date}.tar.gz

@@ -1,12 +1,8 @@
 /*.tar.gz
 /main.js
-/wasm/bin
-/wasm/lib
-/wasm/include
-/wasm/**/*.o
-/wasm/**/*.js
-/wasm/**/*.wasm
-/wasm/*.mk
+/client/**/*.o
+/client/**/*.js
+/client/**/*.wasm
 /bgplg
 /*.html
 /game/geo.db
