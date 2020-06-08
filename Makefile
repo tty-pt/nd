@@ -16,9 +16,6 @@ index.html: pre-index.html ${inline-js}
 
 vim.css: vss/
 
-install: all
-	${INSTALL_SCRIPT} ${srcdir}/src/fbmuck ${PREFIX}/sbin/fbmuck
-
 subdirs-cleaner := ${subdirs:%=%-cleaner}
 $(subdirs-cleaner):
 	${MAKE} -C ${@:%-cleaner=%} cleaner
