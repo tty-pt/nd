@@ -42,4 +42,4 @@ $(backup):
 	tar czf $@ game/geo.db game/data/std-db.db
 
 .PHONY: cleaner ${subdirs-cleaner} web \
-	${mt-phony-${mt}} metal-tar backup
+	${mt-phony-${mt}} backup
