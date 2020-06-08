@@ -1,6 +1,6 @@
 {
         "name": "Neverdark",
-        "start_url": "/",
+        "start_url": "/neverdark",
         "display": "standalone",
         "background_color": "#3c403c",
         "theme_color": "#c1c3da",

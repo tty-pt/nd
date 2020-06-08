@@ -1,6 +1,6 @@
 #define METAL_IMPORT "metal"
 #define METAL_NAME "mcp"
-#include "./wasm/cli/wasm-cli.js"
+#include "./client/client.js"
 
 #define CONFIG_PROTO "ws"
 
