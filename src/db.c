@@ -450,38 +450,6 @@ macroload(FILE * f)
 }
 
 void
-log_program_text(struct line *first, dbref player, dbref i)
-{
-	FILE *f;
-	char fname[BUFFER_LEN];
-	time_t lt = time(NULL);
-
-	strcpyn(fname, sizeof(fname), PROGRAM_LOG);
-	f = fopen(fname, "ab");
-	if (!f) {
-		warn("Couldn't open file %s!", fname);
-		return;
-	}
-
-	fputs("#######################################", f);
-	fputs("#######################################\n", f);
-	fprintf(f, "PROGRAM %s, SAVED AT %s BY %s(%d)\n",
-			unparse_object(player, i), ctime(&lt), NAME(player), player);
-	fputs("#######################################", f);
-	fputs("#######################################\n\n", f);
-
-	while (first) {
-		if (!first->this_line)
-			continue;
-		fputs(first->this_line, f);
-		fputc('\n', f);
-		first = first->next;
-	}
-	fputs("\n\n\n", f);
-	fclose(f);
-}
-
-void
 write_program(struct line *first, dbref i)
 {
 	FILE *f;

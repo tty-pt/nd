@@ -110,7 +110,8 @@ do_gripe(dbref player, const char *message)
 
 	if (!message || !*message) {
 		if (Wizard(player)) {
-			spit_file(player, LOG_GRIPE);
+			/* FIXME */
+			/* spit_file(player, LOG_GRIPE); */
 		} else {
 			notify(player, "If you wish to gripe, use 'gripe <message>'.");
 		}
