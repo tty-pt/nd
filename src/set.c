@@ -78,7 +78,7 @@ do_name(int descr, dbref player, const char *name, char *newname)
 				return;
 			}
 			/* everything ok, notify */
-			log_status("NAME CHANGE: %s(#%d) to %s", NAME(thing), thing, newname);
+			warn("NAME CHANGE: %s(#%d) to %s", NAME(thing), thing, newname);
 			delete_player(thing);
 			if (NAME(thing)) {
 				free((void *) NAME(thing));
@@ -800,7 +800,7 @@ do_relink(int descr, dbref player, const char *thing_name, const char *dest_name
 			return;
 		default:
 			notify(player, "Internal error: weird object type.");
-			log_status("PANIC: weird object: Typeof(%d) = %d", thing, Typeof(thing));
+			warn("PANIC: weird object: Typeof(%d) = %d", thing, Typeof(thing));
 			return;
 	}
 

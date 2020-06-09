@@ -459,11 +459,9 @@ do_delete(dbref player, dbref program, int arg[], int argc)
 void
 do_quit(dbref player, dbref program)
 {
-	log_status("PROGRAM SAVED: %s by %s(%d)", unparse_object(player, program),
+	warn("PROGRAM SAVED: %s by %s(%d)", unparse_object(player, program),
 			   NAME(player), player);
 	write_program(PROGRAM_FIRST(program), program);
-
-	LOG_PROGRAM_TEXT(PROGRAM_FIRST(program), player, program);
 
 	free_prog_text(PROGRAM_FIRST(program));
 	PROGRAM_SET_FIRST(program, NULL);

@@ -221,7 +221,7 @@ do_abort_compile(COMPSTATE * cstat, const char *c)
 		cstat->force_err_display) {
 		notify_nolisten(cstat->player, _buf, 1);
 	} else {
-		log_muf("%s(#%d) [%s(#%d)] %s(#%d) %s",
+		warn("%s(#%d) [%s(#%d)] %s(#%d) %s",
 			NAME(OWNER(cstat->program)), OWNER(cstat->program),
 			NAME(cstat->program), cstat->program,
 			NAME(cstat->player), cstat->player,
@@ -3954,7 +3954,7 @@ init_primitives(void)
 	IN_FOR = get_primitive(" FOR");
 	IN_FOREACH = get_primitive(" FOREACH");
 	IN_TRYPOP = get_primitive(" TRYPOP");
-	log_status("MUF: %d primitives exist.", BASE_MAX);
+	warn("MUF: %d primitives exist.", BASE_MAX);
 }
 
 static const char *compile_c_version = "$RCSfile$ $Revision: 1.88 $";

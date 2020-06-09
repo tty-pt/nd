@@ -459,7 +459,7 @@ log_program_text(struct line *first, dbref player, dbref i)
 	strcpyn(fname, sizeof(fname), PROGRAM_LOG);
 	f = fopen(fname, "ab");
 	if (!f) {
-		log_status("Couldn't open file %s!", fname);
+		warn("Couldn't open file %s!", fname);
 		return;
 	}
 
@@ -490,7 +490,7 @@ write_program(struct line *first, dbref i)
 	snprintf(fname, sizeof(fname), "muf/%d.m", (int) i);
 	f = fopen(fname, "wb");
 	if (!f) {
-		log_status("Couldn't open file %s!", fname);
+		warn("Couldn't open file %s!", fname);
 		return;
 	}
 	while (first) {
@@ -1468,7 +1468,7 @@ db_read(FILE * f)
 				db_read_object_foxen(f, o, thisref, db_load_format, doing_deltas);
 				break;
 			default:
-				log2file("debug.log","got to end of case for db_load_format");
+				warn("got to end of case for db_load_format");
 				abort();
 				break;
 			}

@@ -90,11 +90,11 @@ void
 do_shutdown(dbref player)
 {
 	if (Wizard(player)) {
-		log_status("SHUTDOWN: by %s", unparse_object(player, player));
+		warn("SHUTDOWN: by %s", unparse_object(player, player));
 		shutdown_flag = 1;
 	} else {
 		notify(player, "Your delusions of grandeur have been duly noted.");
-		log_status("ILLEGAL SHUTDOWN: tried by %s", unparse_object(player, player));
+		warn("ILLEGAL SHUTDOWN: tried by %s", unparse_object(player, player));
 	}
 }
 
@@ -180,7 +180,7 @@ panic(const char *message)
 	char panicfile[2048];
 	FILE *f;
 
-	log_status("PANIC: %s", message);
+	warn("PANIC: %s", message);
 	fprintf(stderr, "PANIC: %s\n", message);
 
 	/* shut down interface */
@@ -203,11 +203,11 @@ panic(const char *message)
 		abort();
 #endif							/* NOCOREDUMP */
 	} else {
-		log_status("DUMPING: %s", panicfile);
+		warn("DUMPING: %s", panicfile);
 		fprintf(stderr, "DUMPING: %s\n", panicfile);
 		db_write(f);
 		fclose(f);
-		log_status("DUMPING: %s (done)", panicfile);
+		warn("DUMPING: %s (done)", panicfile);
 		fprintf(stderr, "DUMPING: %s (done)\n", panicfile);
 		(void) unlink(DELTAFILE_NAME);
 	}
@@ -247,9 +247,9 @@ dump_database(void)
 {
 	epoch++;
 
-	log_status("DUMPING: %s.#%d#", dumpfile, epoch);
+	warn("DUMPING: %s.#%d#", dumpfile, epoch);
 	dump_database_internal();
-	log_status("DUMPING: %s.#%d# (done)", dumpfile, epoch);
+	warn("DUMPING: %s.#%d# (done)", dumpfile, epoch);
 }
 
 /*
@@ -268,7 +268,7 @@ fork_and_dump(void)
 #endif
 
 	last_monolithic_time = time(NULL);
-	log_status("CHECKPOINTING: %s.#%d#", dumpfile, epoch);
+	warn("CHECKPOINTING: %s.#%d#", dumpfile, epoch);
 
 	DBDUMP_WARN();
 
@@ -356,7 +356,7 @@ dump_deltas(void)
 	}
 
 	epoch++;
-	log_status("DELTADUMP: %s.#%d#", dumpfile, epoch);
+	warn("DELTADUMP: %s.#%d#", dumpfile, epoch);
 
 #if DBDUMP_WARNING
 	DELTADUMP_WARN();
@@ -383,7 +383,7 @@ init_game(const char *infile, const char *outfile)
 	FILE *f;
 
 	if ((f = fopen(MACRO_FILE, "rb")) == NULL)
-		log_status("INIT: Macro storage file %s is tweaked.", MACRO_FILE);
+		warn("INIT: Macro storage file %s is tweaked.", MACRO_FILE);
 	else {
 		macroload(f);
 		fclose(f);
@@ -407,11 +407,11 @@ init_game(const char *infile, const char *outfile)
 	SRANDOM(getpid());			/* init random number generator */
 
 	/* ok, read the db in */
-	log_status("LOADING: %s", infile);
+	warn("LOADING: %s", infile);
 	fprintf(stderr, "LOADING: %s\n", infile);
 	if (db_read(input_file) < 0)
 		return -1;
-	log_status("LOADING: %s (done)", infile);
+	warn("LOADING: %s (done)", infile);
 	fprintf(stderr, "LOADING: %s (done)\n", infile);
 
 	/* set up dumper */
@@ -506,7 +506,6 @@ process_command(int descr, dbref player, char *command)
 	char ybuf[BUFFER_LEN];
 	struct timeval starttime;
 	struct timeval endtime;
-	double totaltime;
 	pos_t pos;
 	map_where(pos, getloc(player));
 
@@ -521,7 +520,7 @@ process_command(int descr, dbref player, char *command)
 	/* robustify player */
 	if (player < 0 || player >= db_top ||
 		(Typeof(player) != TYPE_PLAYER && Typeof(player) != TYPE_THING)) {
-		log_status("process_command: bad player %d", player);
+		warn("process_command: bad player %d", player);
 		return;
 	}
 
@@ -532,7 +531,7 @@ process_command(int descr, dbref player, char *command)
 			if (!*command)
 				goto out;
 			here = getloc(player);
-			log_command("%s%s%s%s(%d) in %s(%d):%s %s",
+			warn("%s%s%s%s(%d) in %s(%d):%s %s",
 						Wizard(OWNER(player)) ? "WIZ: " : "",
 						(Typeof(player) != TYPE_PLAYER) ? NAME(player) : "",
 						(Typeof(player) != TYPE_PLAYER) ? " owned by " : "",
@@ -542,7 +541,7 @@ process_command(int descr, dbref player, char *command)
 						(int) DBFETCH(player)->location, " ", command);
 #if LOG_INTERACTIVE
 		} else {
-			log_command("%s%s%s%s(%d) in %s(%d):%s %s",
+			warn("%s%s%s%s(%d) in %s(%d):%s %s",
 				    Wizard(OWNER(player)) ? "WIZ: " : "",
 				    (Typeof(player) != TYPE_PLAYER) ? NAME(player) : "",
 				    (Typeof(player) != TYPE_PLAYER) ? " owned by " : "",
@@ -1308,7 +1307,8 @@ process_command(int descr, dbref player, char *command)
 				do_move(descr, player, arg1, 0);
 				break;
 			} else if (!string_compare(command, "motd")) {
-				do_motd(player, full_command);
+				/* FIXME */
+				/* do_motd(player, full_command); */
 				break;
 			} else if (!string_compare(command, "mpi")) {
 				do_mpihelp(player, arg1, arg2);
@@ -1481,7 +1481,7 @@ process_command(int descr, dbref player, char *command)
 			notify(player, HUH_MESSAGE);
 #if LOG_FAILED_COMMANDS
 			if (!controls(player, DBFETCH(player)->location)) {
-				log_status("HUH from %s(%d) in %s(%d)[%s]: %s %s",
+				warn("HUH from %s(%d) in %s(%d)[%s]: %s %s",
 						   NAME(player), player, NAME(DBFETCH(player)->location),
 						   DBFETCH(player)->location,
 						   NAME(OWNER(DBFETCH(player)->location)), command, full_command);
@@ -1503,17 +1503,6 @@ end_of_command:
 	endtime.tv_usec -= starttime.tv_usec;
 	endtime.tv_sec -= starttime.tv_sec;
 
-	totaltime = endtime.tv_sec + (endtime.tv_usec * 1.0e-6);
-	if (totaltime > (CMD_LOG_THRESHOLD_MSEC / 1000.0)) {
-		log2file(LOG_CMD_TIMES, "%6.3fs, %.16s: %s%s%s%s(%d) in %s(%d):%s %s",
-					totaltime, ctime((time_t *)&starttime.tv_sec),
-					Wizard(OWNER(player)) ? "WIZ: " : "",
-					(Typeof(player) != TYPE_PLAYER) ? NAME(player) : "",
-					(Typeof(player) != TYPE_PLAYER) ? " owned by " : "",
-					NAME(OWNER(player)), (int) player,
-					NAME(DBFETCH(player)->location),
-					(int) DBFETCH(player)->location, " ", command);
-	}
 out:
 	{
 		pos_t pos2;

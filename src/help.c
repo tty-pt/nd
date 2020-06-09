@@ -445,51 +445,51 @@ do_news(dbref player, char *topic, char *seg)
 }
 
 
-void
-add_motd_text_fmt(const char *text)
-{
-	char buf[80];
-	const char *p = text;
-	int count = 4;
+/* void */
+/* add_motd_text_fmt(const char *text) */
+/* { */
+/* 	char buf[80]; */
+/* 	const char *p = text; */
+/* 	int count = 4; */
 
-	buf[0] = buf[1] = buf[2] = buf[3] = ' ';
-	while (*p) {
-		while (*p && (count < 68))
-			buf[count++] = *p++;
-		while (*p && !isspace(*p) && (count < 76))
-			buf[count++] = *p++;
-		buf[count] = '\0';
-		log2file(MOTD_FILE, "%s", buf);
-		while (*p && isspace(*p))
-			p++;
-		count = 0;
-	}
-}
+/* 	buf[0] = buf[1] = buf[2] = buf[3] = ' '; */
+/* 	while (*p) { */
+/* 		while (*p && (count < 68)) */
+/* 			buf[count++] = *p++; */
+/* 		while (*p && !isspace(*p) && (count < 76)) */
+/* 			buf[count++] = *p++; */
+/* 		buf[count] = '\0'; */
+/* 		log2file(MOTD_FILE, "%s", buf); */
+/* 		while (*p && isspace(*p)) */
+/* 			p++; */
+/* 		count = 0; */
+/* 	} */
+/* } */
 
 
-void
-do_motd(dbref player, char *text)
-{
-	time_t lt;
+/* void */
+/* do_motd(dbref player, char *text) */
+/* { */
+/* 	time_t lt; */
 
-	if (!*text || !Wizard(OWNER(player))) {
-		spit_file(player, MOTD_FILE);
-		return;
-	}
-	if (!string_compare(text, "clear")) {
-		unlink(MOTD_FILE);
-		log2file(MOTD_FILE, "%s %s", "- - - - - - - - - - - - - - - - - - -",
-				 "- - - - - - - - - - - - - - - - - - -");
-		notify(player, "MOTD cleared.");
-		return;
-	}
-	lt = time(NULL);
-	log2file(MOTD_FILE, "%.16s", ctime(&lt));
-	add_motd_text_fmt(text);
-	log2file(MOTD_FILE, "%s %s", "- - - - - - - - - - - - - - - - - - -",
-			 "- - - - - - - - - - - - - - - - - - -");
-	notify(player, "MOTD updated.");
-}
+/* 	if (!*text || !Wizard(OWNER(player))) { */
+/* 		spit_file(player, MOTD_FILE); */
+/* 		return; */
+/* 	} */
+/* 	if (!string_compare(text, "clear")) { */
+/* 		unlink(MOTD_FILE); */
+/* 		log2file(MOTD_FILE, "%s %s", "- - - - - - - - - - - - - - - - - - -", */
+/* 				 "- - - - - - - - - - - - - - - - - - -"); */
+/* 		notify(player, "MOTD cleared."); */
+/* 		return; */
+/* 	} */
+/* 	lt = time(NULL); */
+/* 	log2file(MOTD_FILE, "%.16s", ctime(&lt)); */
+/* 	add_motd_text_fmt(text); */
+/* 	log2file(MOTD_FILE, "%s %s", "- - - - - - - - - - - - - - - - - - -", */
+/* 			 "- - - - - - - - - - - - - - - - - - -"); */
+/* 	notify(player, "MOTD updated."); */
+/* } */
 
 
 void

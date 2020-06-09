@@ -446,7 +446,7 @@ prim_setname(PRIM_PROTOTYPE)
 			}
 
 			/* everything ok, notify */
-			log_status("NAME CHANGE (MUF): %s(#%d) to %s", NAME(ref), ref, b);
+			warn("NAME CHANGE (MUF): %s(#%d) to %s", NAME(ref), ref, b);
 			delete_player(ref);
 			if (NAME(ref)) {
 				free((void *) NAME(ref));
@@ -1758,7 +1758,7 @@ prim_newplayer(PRIM_PROTOTYPE)
     /* else he doesn't already exist, create him */
     newplayer = create_player(name, password);
 
-    log_status("PCREATED[MUF]: %s(%d) by %s(%d)",
+    warn("PCREATED[MUF]: %s(%d) by %s(%d)",
         NAME(newplayer), (int) newplayer, NAME(player), (int) player);
     
     CLEAR(oper1);
@@ -1826,7 +1826,7 @@ prim_copyplayer(PRIM_PROTOTYPE)
 	moveto(newplayer, PLAYER_HOME(ref));
 
 	/* link him to player_start */
-	log_status("PCREATE[MUF]: %s(%d) by %s(%d)",
+	warn("PCREATE[MUF]: %s(%d) by %s(%d)",
         NAME(newplayer), (int) newplayer, NAME(player), (int) player);
     
 	CLEAR(oper1);
@@ -1911,7 +1911,7 @@ prim_toadplayer(PRIM_PROTOTYPE)
 	}
 	dequeue_prog(victim, 0);  /* dequeue progs that player's running */
 
-	log_status("TOADED[MUF]: %s(%d) by %s(%d)", NAME(victim),
+	warn("TOADED[MUF]: %s(%d) by %s(%d)", NAME(victim),
 		   victim, NAME(player), player);
 
 	delete_player(victim);
@@ -2488,9 +2488,9 @@ prim_program_setlines(PRIM_PROTOTYPE)
 
 	write_program(lines, oper1->data.objref);
 
-	log_status("PROGRAM SAVED: %s by %s(%d)", unparse_object(player, oper1->data.objref), NAME(player), player);
+	warn("PROGRAM SAVED: %s by %s(%d)", unparse_object(player, oper1->data.objref), NAME(player), player);
 
-	LOG_PROGRAM_TEXT(lines, player, oper1->data.objref);
+	/* LOG_PROGRAM_TEXT(lines, player, oper1->data.objref); */
 
 	free_prog_text(lines);
 

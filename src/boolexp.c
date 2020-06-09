@@ -88,7 +88,7 @@ copy_bool(struct boolexp *old)
 		}
 		break;
 	default:
-		log_status("PANIC: copy_boolexp: Error in boolexp!");
+		warn("PANIC: copy_boolexp: Error in boolexp!");
 		abort();
 	}
 	return o;

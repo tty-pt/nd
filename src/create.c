@@ -252,7 +252,7 @@ _link_exit(int descr, dbref player, dbref exit, char *dest_name, dbref * dest_li
 			break;
 		default:
 			notify(player, "Internal error: weird object type.");
-			log_status("PANIC: weird object: Typeof(%d) = %d", dest, Typeof(dest));
+			warn("PANIC: weird object: Typeof(%d) = %d", dest, Typeof(dest));
 
 			if(dryrun)
 				error = 1;
@@ -457,7 +457,7 @@ do_link(int descr, dbref player, const char *thing_name, const char *dest_name)
 		break;
 	default:
 		notify(player, "Internal error: weird object type.");
-		log_status("PANIC: weird object: Typeof(%d) = %d", thing, Typeof(thing));
+		warn("PANIC: weird object: Typeof(%d) = %d", thing, Typeof(thing));
 		break;
 	}
 	DBDIRTY(thing);
@@ -1269,7 +1269,7 @@ set_source(dbref player, dbref action, dbref source)
 		break;
 	default:
 		notify(player, "Internal error: weird object type.");
-		log_status("PANIC: tried to source %d to %d: type: %d",
+		warn("PANIC: tried to source %d to %d: type: %d",
 				   action, source, Typeof(source));
 		return;
 		break;
@@ -1300,7 +1300,7 @@ unset_source(dbref player, dbref loc, dbref action)
 			DBSTORE(oldsrc, exits, remove_first(DBFETCH(oldsrc)->exits, action));
 			break;
 		default:
-			log_status("PANIC: source of action #%d was type: %d.", action, Typeof(oldsrc));
+			warn("PANIC: source of action #%d was type: %d.", action, Typeof(oldsrc));
 			return 0;
 			/* NOTREACHED */
 			break;

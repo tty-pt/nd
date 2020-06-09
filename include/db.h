@@ -300,7 +300,7 @@ enum at { ARMOR_LIGHT, ARMOR_MEDIUM, ARMOR_HEAVY, };
 #define SETART(x, y)	SETMESG(x, MESGPROP_ART, y)
 
 #define ISGUEST(x)	(get_property(x, MESGPROP_GUEST) != NULL)
-#define NOGUEST(_cmd,x) if(ISGUEST(x)) { char tmpstr[BUFFER_LEN]; log_status("Guest %s(#%d) failed attempt to %s.\n",NAME(x),x,_cmd); snprintf(tmpstr, sizeof(tmpstr), "Guests are not allowed to %s.\r", _cmd); notify_nolisten(x,tmpstr,1); return; }
+#define NOGUEST(_cmd,x) if(ISGUEST(x)) { char tmpstr[BUFFER_LEN]; warn("Guest %s(#%d) failed attempt to %s.\n",NAME(x),x,_cmd); snprintf(tmpstr, sizeof(tmpstr), "Guests are not allowed to %s.\r", _cmd); notify_nolisten(x,tmpstr,1); return; }
 
 /* #define DB_PARMSINFO     0x0001 */
 #define DB_COMPRESSED    0x0002

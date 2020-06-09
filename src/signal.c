@@ -229,7 +229,7 @@ RETSIGTYPE sig_dump_status(int i)
  */
 RETSIGTYPE sig_shutdown(int i)
 {
-	log_status("SHUTDOWN: via SIGNAL");
+	warn("SHUTDOWN: via SIGNAL");
 	shutdown_flag = 1;
 #if !defined(SYSV) && !defined(_POSIX_VERSION) && !defined(ULTRIX)
 	return 0;
@@ -277,7 +277,7 @@ RETSIGTYPE sig_reap(int i)
 		if (reapedpid == global_dumper_pid) {
 			int warnflag = 0;
 
-			log_status("forked DB dump task exited with status %d", status);
+			warn("forked DB dump task exited with status %d", status);
 
 			if (WIFSIGNALED(status)) {
 				warnflag = 1;

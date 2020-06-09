@@ -17,6 +17,8 @@
 /* Auto-generated list of extern functions */
 #include "externs-auto.h"
 
+#define warn(...) fprintf(stderr, __VA_ARGS__)
+
 /* Prototypes for externs not defined elsewhere */
 
 extern char match_args[];
@@ -339,19 +341,6 @@ extern void set_console(void);
 extern void check_cosole(void);
 #endif
 
-/* declared in log.c */
-extern void log2file(char *myfilename, char *format, ...);
-extern void log_error(char *format, ...);
-extern void log_gripe(char *format, ...);
-extern void log_muf(char *format, ...);
-extern void log_sanity(char *format, ...);
-extern void log_status(char *format, ...);
-extern void log_other(char *format, ...);
-extern void notify_fmt(dbref player, char *format, ...);
-extern void log_program_text(struct line *first, dbref player, dbref i);
-extern void log_command(char *format, ...);
-extern void log_user(dbref player, dbref program, char *logmessage);
-
 /* From timestamp.c */
 extern void ts_newobject(struct object *thing);
 extern void ts_useobject(dbref thing);
@@ -414,7 +403,6 @@ extern void mesg_init(void);
 extern void tune_load_parmsfile(dbref player);
 
 void dump_status(void);
-void log_status(char *format, ...);
 void kill_resolver(void);
 
 int add_mpi_event(int delay, int descr, dbref player, dbref loc, dbref trig, const char *mpi, const char *cmdstr, const char *argstr, int listen_p, int omesg_p, int bless_p);

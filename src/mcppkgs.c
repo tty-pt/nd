@@ -243,12 +243,12 @@ mcppkg_simpleedit(McpFrame * mfr, McpMesg * msg, McpVer ver, void *context)
 				curr = new_line;
 			}
 
-			log_status("PROGRAM SAVED: %s by %s(%d)",
+			warn("PROGRAM SAVED: %s by %s(%d)",
 					   unparse_object(player, obj), NAME(player), player);
 
 			write_program(PROGRAM_FIRST(obj), obj);
 
-			LOG_PROGRAM_TEXT(PROGRAM_FIRST(obj), player, obj);
+			/* LOG_PROGRAM_TEXT(PROGRAM_FIRST(obj), player, obj); */
 
 			do_compile(descr, player, obj, 1);
 

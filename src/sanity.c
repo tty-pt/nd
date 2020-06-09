@@ -557,9 +557,9 @@ san_fixed_log(char *format, int unparse, dbref ref1, dbref ref2)
 		if (ref2 >= 0) {
 			strcpyn(buf2, sizeof(buf2), unparse(ref2));
 		}
-		log2file("logs/sanfixed", format, buf1, buf2);
+		warn(format, buf1, buf2);
 	} else {
-		log2file("logs/sanfixed", format, ref1, ref2);
+		warn(format, ref1, ref2);
 	}
 }
 
@@ -727,8 +727,8 @@ create_lostandfound(dbref * player, dbref * room)
 		snprintf(player_name, sizeof(player_name), "lost+found%d", ++temp);
 	}
 	if (strlen(player_name) >= PLAYER_NAME_LIMIT) {
-		log2file("logs/sanfixed", "WARNING: Unable to get lost+found player, "
-				 "using %s", unparse(GOD));
+		warn("WARNING: Unable to get lost+found player, using %s",
+		     unparse(GOD));
 		*player = GOD;
 	} else {
 		const char *rpass;
@@ -749,7 +749,7 @@ create_lostandfound(dbref * player, dbref * room)
 		PUSH(*player, DBFETCH(*room)->contents);
 		DBDIRTY(*player);
 		add_player(*player);
-		log2file("logs/sanfixed", "Using %s (with password %s) to resolve "
+		warn("Using %s (with password %s) to resolve "
 				 "unknown owner", unparse(*player), rpass);
 	}
 	OWNER(*room) = *player;
@@ -1061,10 +1061,8 @@ sanfix(dbref player)
 					"Please re-run sanity check for details and fix it by hand.\n");
 		fprintf(stderr, "For details of repairs made, check logs/sanfixed.\n");
 	}
-	if (sanity_violated) {
-		log2file("logs/sanfixed",
-				 "WARNING: The database is still corrupted, please repair by hand");
-	}
+	if (sanity_violated)
+		warn("WARNING: The database is still corrupted, please repair by hand");
 }
 
 

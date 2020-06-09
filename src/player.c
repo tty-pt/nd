@@ -208,7 +208,7 @@ delete_player(dbref who)
 							NAME(ren), ren, namebuf);
 					wall_wizards(buf);
 
-					log_status("SANITY NAME CHANGE: %s(#%d) to %s", NAME(ren), ren, namebuf);
+					warn("SANITY NAME CHANGE: %s(#%d) to %s", NAME(ren), ren, namebuf);
 
 					if (ren == found) {
 						free_hash(NAME(ren), player_list, PLAYER_HASH_SIZE);

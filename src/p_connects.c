@@ -595,7 +595,7 @@ prim_descr_setuser(PRIM_PROTOTYPE)
 		if (ref != NOTHING) {
 			destname = NAME(ref);
 		}
-		log_status("DESCR_SETUSER: %s(%d) to %s(%d) on descriptor %d",
+		warn("DESCR_SETUSER: %s(%d) to %s(%d) on descriptor %d",
 				   NAME(player), player, destname, ref, oper1->data.number);
 	}
 	tmp = oper1->data.number;

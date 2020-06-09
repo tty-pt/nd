@@ -989,12 +989,12 @@ recycle(int descr, dbref player, dbref thing)
 	depth++;
 	if (force_level) {
 		if(thing == force_prog) {
-			log_status("SANITYCHECK: Was about to recycle FORCEing object #%d!", thing);
+			warn("SANITYCHECK: Was about to recycle FORCEing object #%d!", thing);
 			notify(player, "ERROR: Cannot recycle an object FORCEing you!");
 			return;
 		}
 		if((Typeof(thing) == TYPE_PROGRAM) && (PROGRAM_INSTANCES(thing) != 0)) {
-			log_status("SANITYCHECK: Trying to recycle a running program (#%d) from FORCE!", thing);
+			warn("SANITYCHECK: Trying to recycle a running program (#%d) from FORCE!", thing);
 			notify(player, "ERROR: Cannot recycle a running program from FORCE.");
 			return;
 		}

@@ -169,14 +169,6 @@
 /* run an m3 exit with the commandline being the parameter on HUH */
 #define M3_HUH 0
 
-/* Log the text of changed programs when they are saved.  This is helpful
- * for catching people who upload scanners, use them, then recycle them. */
-#if 1
-#define LOG_PROGRAM_TEXT(...) log_program_text(__VA_ARGS__)
-#else
-#define LOG_PROGRAM_TEXT(...) do {} while (0);
-#endif
-
 /* give a bit of warning before a database dump. */
 #define DBDUMP_WARNING 1
 #define DELTADUMP_WARNING 1

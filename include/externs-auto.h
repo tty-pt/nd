@@ -48,8 +48,6 @@ void init_match_remote(int descr, dbref player, dbref what, const char *name, in
 void kill_resolver(void);
 void list_proglines(dbref player, dbref program, struct frame *fr, int start, int end);
 void listenqueue(int descr, dbref player, dbref where, dbref trigger, dbref what, dbref xclude, const char *propname, const char *toparg, int mlev, int mt, int mpi_p);
-void log_command(char *format, ...);
-void log_status(char *format, ...);
 int mcpframe_to_descr(McpFrame * ptr);
 int mcpframe_to_user(McpFrame * ptr);
 void muf_backtrace(dbref player, dbref program, int count, struct frame *fr);

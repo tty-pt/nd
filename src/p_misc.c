@@ -168,7 +168,7 @@ prim_userlog(PRIM_PROTOTYPE)
 	} else {
 		*buf='\0';
 	}
-	log_user(player, program, buf);
+	/* log_user(player, program, buf); */
 	CLEAR(oper1);
 	return;
 }
