@@ -33,5 +33,27 @@ backup: ${backup}
 $(backup):
 	tar czf $@ game/geo.db game/data/std-db.db
 
+DESTDIR ?= /
+PREFIX ?= ${DESTDIR}usr/local
+INSTALL_SCRIPT ?= install
+INSTALL_DATA ?= install -m 644
+
+art-y := tilemap.png
+art-y := ${art-y:%=art/%}
+datadir := ${PREFIX}/share/neverdark
+
+${datadir}:
+	# mkdir -p ${datadir}
+art-install := ${art-y:%=${datadir}/%}
+$(art-install):
+	install -m 644 ${@:${datadir}/%=%} $@
+
+install: ${datadir} ${art-install}
+	${INSTALL_SCRIPT} ${srcdir}/src/fbmuck ${PREFIX}/bin/neverdark
+	${INSTALL_DATA} index.html ${datadir}/
+	${INSTALL_DATA} vim.css ${datadir}/
+	${INSTALL_DATA} styles.css ${datadir}/
+	${INSTALL_SCRIPT} ${srcdir}/src/fbmuck ${PREFIX}/bin/neverdark
+
 .PHONY: cleaner ${subdirs-cleaner} web \
 	${mt-phony-${mt}} backup
