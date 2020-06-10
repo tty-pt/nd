@@ -277,9 +277,7 @@ extern FILE *delta_outfile;
 short db_conversion_flag = 0;
 short wizonly_mode = 0;
 pid_t global_resolver_pid=0;
-#ifndef DISKBASE
 pid_t global_dumper_pid=0;
-#endif
 short global_dumpdone=0;
 
 time_t sel_prof_start_time;
@@ -335,26 +333,6 @@ main(int argc, char **argv)
 	int sanity_interactive;
 	int sanity_autofix;
 	int val;
-#ifdef DEBUG
-	/* This makes glibc's malloc abort() on heap errors. */
-	if(strcmp(DoNull(getenv("MALLOC_CHECK_")),"2") != 0) {
-		if(setenv("MALLOC_CHECK_","2",1) < 0) {
-			fprintf(stderr, "[debug]setenv failed: out of memory");
-			abort();
-		}
-		/* Make sure that the malloc checker really works by
-			respawning it... though I'm not sure if C specifies
-			that argv[argc] must be NULL? */
-		{
-			const char *argv2[argc+1];
-			int i=0;
-			for(i=0;i<argc;i++)
-				argv2[i] = argv[i];
-			argv2[argc] = NULL;
-		execvp(argv[0],argv2);
-		}
-	}
-#endif /* DEBUG */
 	listener_port[0] = TINYPORT;
 
     init_descriptor_lookup();
@@ -496,86 +474,11 @@ main(int argc, char **argv)
 	ipv6_enabled = 0;
 #endif
 
-#ifdef DISKBASE
-	if (!strcmp(infile_name, outfile_name)) {
-		fprintf(stderr, "Output file must be different from the input file.");
-		exit(3);
-	}
-#endif
-
-	if (!sanity_interactive) {
+	/* if (!sanity_interactive) { */
 
                 warn("INIT: TinyMUCK %s starting.", "version");
-
-#ifdef DETACH
-		/* Go into the background unless requested not to */
-		if (!sanity_interactive && !db_conversion_flag) {
-			fclose(stdin);
-			fclose(stdout);
-			fclose(stderr);
-			if (fork() != 0)
-				_exit(0);
-		}
-#endif
-
-		/* save the PID for future use */
-		if ((ffd = fopen(PID_FILE, "wb")) != NULL) {
-			fprintf(ffd, "%d\n", getpid());
-			fclose(ffd);
-		}
 		warn("%s PID is: %d", argv[0], getpid());
 
-#ifdef DETACH
-		if (!sanity_interactive && !db_conversion_flag) {
-			/* Detach from the TTY, log whatever output we have... */
-			freopen(LOG_ERR_FILE, "a", stderr);
-			setbuf(stderr, NULL);
-			freopen(LOG_FILE, "a", stdout);
-			setbuf(stdout, NULL);
-
-			/* Disassociate from Process Group */
-# ifdef _POSIX_SOURCE
-			setsid();
-# else
-#  ifdef SYSV
-			setpgrp();			/* The SysV way */
-#  else
-			setpgid(0, getpid());	/* The POSIX way. */
-#  endif						/* SYSV */
-
-#  ifdef  TIOCNOTTY				/* we can force this, POSIX / BSD */
-			{
-				int fd;
-				if ((fd = open("/dev/tty", O_RDWR)) >= 0) {
-					ioctl(fd, TIOCNOTTY, (char *) 0);	/* lose controll TTY */
-					close(fd);
-				}
-			}
-#  endif						/* TIOCNOTTY */
-# endif							/* !_POSIX_SOURCE */
-		}
-#endif							/* DETACH */
-
-	}
-
-/*
- * You have to change gid first, since setgid() relies on root permissions
- * if you don't call initgroups() -- and since initgroups() isn't standard,
- * I'd rather assume the user knows what he's doing.
-*/
-
-#ifdef MUD_GID
-	if (!sanity_interactive) {
-		do_setgid(MUD_GID);
-	}
-#endif							/* MUD_GID */
-#ifdef MUD_ID
-	if (!sanity_interactive) {
-		do_setuid(MUD_ID);
-	}
-#endif							/* MUD_ID */
-
-	/* Initialize MCP and some packages. */
 	mcp_initialize();
 	gui_initialize();
 
@@ -595,61 +498,26 @@ main(int argc, char **argv)
 
 	CBUG(map_init());
 
-	if (!sanity_interactive && !db_conversion_flag) {
-		set_signals();
+	set_signals();
 
-		if (!sanity_skip) {
-			sanity(AMBIGUOUS);
-			if (sanity_violated) {
-				wizonly_mode = 1;
-				if (sanity_autofix) {
-					sanfix(AMBIGUOUS);
-				}
-			}
+	if (!sanity_skip) {
+		sanity(AMBIGUOUS);
+		if (sanity_violated) {
+			wizonly_mode = 1;
+			if (sanity_autofix)
+				sanfix(AMBIGUOUS);
 		}
-
-		/* go do it */
-		shovechars();
-		map_close();
-		mob_save();
-
-		close_sockets("\r\nServer shutting down.\r\n");
-
-		do_dequeue(-1, (dbref) 1, "all");
 	}
 
-	if (sanity_interactive) {
-		san_main();
-	} else {
-		dump_database();
+	shovechars();
 
-#ifdef MALLOC_PROFILING
-		db_free();
-		free_old_macros();
-		purge_all_free_frames();
-		purge_timenode_free_pool();
-		purge_for_pool();
-		purge_for_pool(); /* have to do this a second time to purge all */
-		purge_try_pool();
-		purge_try_pool(); /* have to do this a second time to purge all */
-		purge_mfns();
-		cleanup_game();
-		tune_freeparms();
-#endif
+	map_close();
+	mob_save();
 
-#ifdef DISKBASE
-		fclose(input_file);
-#endif
-#ifdef DELTADUMPS
-		fclose(delta_infile);
-		fclose(delta_outfile);
-		(void) unlink(DELTAFILE_NAME);
-#endif
+	close_sockets("\r\nServer shutting down.\r\n");
 
-#ifdef MALLOC_PROFILING
-		CrT_summarize_to_file("malloc_log", "Shutdown");
-#endif
-	}
+	do_dequeue(-1, (dbref) 1, "all");
+	dump_database();
 
 	exit(0);
 	return 0;
@@ -1128,6 +996,10 @@ shovechars()
 	(void) time(&now);
 
 	mob_init();
+
+	/* Daemonize */
+	if (daemon(1, 1) != 0)
+		_exit(0);
 
 /* And here, we do the actual player-interaction loop */
 
