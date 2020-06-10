@@ -268,7 +268,7 @@ RETSIGTYPE sig_reap(int i)
 	if(!reapedpid)
 	{
 #ifdef DETACH
-		log2file(LOG_ERR_FILE,"SIG_CHILD signal handler called with no pid!");
+		warn("SIG_CHILD signal handler called with no pid!");
 #else
 		fprintf(stderr, "SIG_CHILD signal handler called with no pid!\n");
 #endif

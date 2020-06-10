@@ -27,7 +27,7 @@
  * keeping a terminal line open and such. Logs normal output to a file
  * and writes out a netmuck.pid file 
  */
-/* #define DETACH */
+#define DETACH
 
 #define GAME_DIR "/var/db/neverdark"
 
@@ -155,8 +155,8 @@
 #define RESOLVER_PID_FILE "hostfind.pid"	/* Write the resolver pid to ... */
 
 #ifdef DETACH
-# define LOG_FILE     "logs/fbmuck"     /* Log stdout to ... */
-# define LOG_ERR_FILE "logs/fbmuck.err" /* Log stderr to ... */
+# define LOG_FILE     "fbmuck"     /* Log stdout to ... */
+# define LOG_ERR_FILE "fbmuck.err" /* Log stderr to ... */
 #endif							/* DETACH */
 
 /************************************************************************
