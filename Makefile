@@ -41,14 +41,15 @@ INSTALL_DATA ?= install -m 644
 art-y := tilemap.png
 art-y := ${art-y:%=art/%}
 datadir := ${PREFIX}/share/neverdark
+artdir := ${datadir}/art
 
-${datadir}:
-	mkdir -p ${datadir}
+$(artdir):
+	mkdir -p $@
 art-install := ${art-y:%=${datadir}/%}
 $(art-install):
 	install -m 644 ${@:${datadir}/%=%} $@
 
-install: ${datadir} ${art-install}
+install: ${artdir} ${art-install}
 	${INSTALL_SCRIPT} ${srcdir}/src/fbmuck ${PREFIX}/bin/neverdark
 	${INSTALL_DATA} index.html ${datadir}/
 	${INSTALL_DATA} vim.css ${datadir}/
