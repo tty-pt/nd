@@ -43,7 +43,7 @@ art-y := ${art-y:%=art/%}
 datadir := ${PREFIX}/share/neverdark
 
 ${datadir}:
-	# mkdir -p ${datadir}
+	mkdir -p ${datadir}
 art-install := ${art-y:%=${datadir}/%}
 $(art-install):
 	install -m 644 ${@:${datadir}/%=%} $@
