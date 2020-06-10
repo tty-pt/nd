@@ -29,6 +29,8 @@
  */
 /* #define DETACH */
 
+#define GAME_DIR "/var/db/neverdark"
+
 /* Makes God (#1) immune to @force, @newpassword, and being set !Wizard.  
  */
 #define GOD_PRIV
@@ -44,7 +46,7 @@
  * changed objects, except when @dump or @shutdown are used, or when too
  * many deltas have already been saved to disk, #define this. 
  */
-#define DELTADUMPS
+/* #define DELTADUMPS */
 
 /*
  * Port where tinymuck lives -- Note: If you use a port lower than
