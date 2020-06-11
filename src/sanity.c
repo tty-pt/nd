@@ -1336,10 +1336,6 @@ extract_object(FILE * f, dbref d)
 		break;
 	}
 
-#ifdef DISKBASE
-	fetchprops(d, NULL);
-#endif
-
 	if (DBFETCH(d)->properties) {
 		fprintf(f, "  Properties:\n");
 		extract_props(f, d);

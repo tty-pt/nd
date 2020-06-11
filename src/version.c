@@ -22,17 +22,11 @@
 #include "version.h"
 
 const char *version = PATCHLEVEL;
-#ifdef DEBUG
-#define debug "Debug Version, assertions enabled"
-#else
-#define debug ""
-#endif
-
 
 const char *infotext[] =
 {
     VERSION,
-    debug,
+    "",
     HASH,
     DATE,
     " ",
@@ -103,7 +97,7 @@ do_version(dbref player)
 {
 	char s[BUFFER_LEN];
 
-	snprintf(s,BUFFER_LEN,"Version: %s Compiled on: %s %s",VERSION,DATE,debug);
+	snprintf(s,BUFFER_LEN,"Version: %s Compiled on: %s %s",VERSION,DATE,"");
 	notify(player, s);
 	return;
 }
@@ -120,7 +114,6 @@ do_showextver(dbref player) {
 	notify_nolisten(player, get_db_c_version(), 1);
 	notify_nolisten(player, get_debugger_c_version(), 1);
 	notify_nolisten(player, get_disassem_c_version(), 1);
-	notify_nolisten(player, get_diskprop_c_version(), 1);
 	notify_nolisten(player, get_edit_c_version(), 1);
 	notify_nolisten(player, get_events_c_version(), 1);
 	notify_nolisten(player, get_game_c_version(), 1);

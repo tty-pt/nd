@@ -1080,9 +1080,6 @@ prim_array_get_propdirs(PRIM_PROTOTYPE)
 		if (prop_read_perms(ProgUID, ref, buf, mlev)) {
 			prptr = get_property(ref, buf);
 			if (prptr) {
-#ifdef DISKBASE
-				propfetch(ref, prptr);
-#endif
 				if (PropDir(prptr)) {
 					if (count >= 511) {
 						array_free(nu);
@@ -1140,9 +1137,6 @@ prim_array_get_propvals(PRIM_PROTOTYPE)
 			if (prptr) {
 				int goodflag = 1;
 
-#ifdef DISKBASE
-				propfetch(ref, prptr);
-#endif
 				switch (PropType(prptr)) {
 				case PROP_STRTYP:
 					temp2.type = PROG_STRING;
@@ -1270,9 +1264,6 @@ prim_array_get_proplist(PRIM_PROTOTYPE)
 				temp2.type = PROG_INTEGER;
 				temp2.data.number = 0;
 			} else {
-#ifdef DISKBASE
-				propfetch(ref, prptr);
-#endif
 				switch (PropType(prptr)) {
 				  case PROP_STRTYP:
 					temp2.type = PROG_STRING;

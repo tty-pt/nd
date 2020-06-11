@@ -134,9 +134,6 @@ check_clean_time(void)
 		last_clean_time = currtime;
 		purge_for_pool();
 		PERIODIC_PROGRAM_PURGE();
-#ifdef DISKBASE
-		dispose_all_oldprops();
-#endif
 	}
 }
 

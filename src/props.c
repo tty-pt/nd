@@ -362,9 +362,6 @@ copy_proplist(dbref obj, PropPtr * nu, PropPtr old)
 	PropPtr p;
 
 	if (old) {
-#ifdef DISKBASE
-		propfetch(obj, old);
-#endif
 		p = new_prop(nu, PropName(old));
 		SetPFlagsRaw(p, PropFlagsRaw(old));
 		switch (PropType(old)) {

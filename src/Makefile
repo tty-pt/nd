@@ -19,7 +19,7 @@ fbmuck-obj-y := geometry.o plant.o biome.o noise.o search.o \
 	view.o item.o spell.o drink.o mob.o kill.o geography.o \
 	shop.o
 fbmuck-obj-y += crt_malloc.o array.o boolexp.o compile.o create.o db.o db_header.o debugger.o \
-	disassem.o diskprop.o edit.o events.o game.o hashtab.o help.o inst.o \
+	disassem.o edit.o events.o game.o hashtab.o help.o inst.o \
 	interp.o look.o match.o mcp.o mcpgui.o mcppkgs.o mfuns2.o \
 	mfuns.o move.o msgparse.o mufevent.o oldcompress.o p_array.o \
 	p_connects.o p_db.o p_error.o p_float.o player.o p_math.o p_mcp.o \

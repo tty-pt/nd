@@ -14,6 +14,7 @@
 #include "interface.h"
 #include "externs.h"
 #include "interp.h"
+#include "debug.h"
 
 #include <stdio.h>
 #include <sys/types.h>
@@ -136,7 +137,7 @@ free_timenode(timequeue ptr)
 	if (ptr->str3)
 		free(ptr->str3);
 	if (ptr->fr) {
-		DEBUGPRINT("free_timenode: ptr->type = MUF? %d  ptr->subtyp = MUF_TIMER? %d",
+		debug("free_timenode: ptr->type = MUF? %d  ptr->subtyp = MUF_TIMER? %d",
 						(ptr->typ == TQ_MUF_TYP), (ptr->subtyp == TQ_MUF_TIMER));
 		if (ptr->typ != TQ_MUF_TYP || ptr->subtyp != TQ_MUF_TIMER) {
 			if (ptr->fr->multitask != BACKGROUND)
@@ -996,14 +997,11 @@ dequeue_prog_real(dbref program, int killmode, const char *file, const int line)
 	int count = 0;
 	timequeue tmp, ptr;
 
-#ifdef DEBUG
-	fprintf(stderr,"[debug] dequeue_prog(#%d, %d) called from %s:%d\n",program,killmode,file,line);
-#endif /* DEBUG */
-	DEBUGPRINT("dequeue_prog: tqhead = %p\n",tqhead,0);
+	debug("dequeue_prog: tqhead = %p\n",tqhead,0);
 	while (tqhead) {
-		DEBUGPRINT("dequeue_prog: tqhead->called_prog = #%d, has_refs = %d ",
+		debug("dequeue_prog: tqhead->called_prog = #%d, has_refs = %d ",
 						tqhead->called_prog, has_refs(program,tqhead));
-		DEBUGPRINT("tqhead->uid = #%d\n", tqhead->uid,0);
+		debug("tqhead->uid = #%d\n", tqhead->uid,0);
 		if (tqhead->called_prog != program && !has_refs(program, tqhead) && tqhead->uid != program) {
 			break;
 		}
@@ -1013,7 +1011,7 @@ dequeue_prog_real(dbref program, int killmode, const char *file, const int line)
 			}
 		} else if (killmode == 1) {
 			if (!tqhead->fr) {
-				DEBUGPRINT("dequeue_prog: killmode 1, no frame\n",0,0);
+				debug("dequeue_prog: killmode 1, no frame\n",0,0);
 				break;
 			}
 		}
@@ -1026,9 +1024,9 @@ dequeue_prog_real(dbref program, int killmode, const char *file, const int line)
 
 	if (tqhead) {
 		for (tmp = tqhead, ptr = tqhead->next; ptr; tmp = ptr, ptr = ptr->next) {
-			DEBUGPRINT("dequeue_prog(2): ptr->called_prog=#%d, has_refs()=%d ",
+			debug("dequeue_prog(2): ptr->called_prog=#%d, has_refs()=%d ",
 							ptr->called_prog, has_refs(program, ptr));
-			DEBUGPRINT("ptr->uid=#%d.\n",ptr->uid,0);
+			debug("ptr->uid=#%d.\n",ptr->uid,0);
 			if (ptr->called_prog != program && !has_refs(program, ptr) && ptr->uid != program) {
 				continue;
 			}
@@ -1038,7 +1036,7 @@ dequeue_prog_real(dbref program, int killmode, const char *file, const int line)
 				}
 			} else if (killmode == 1) {
 				if (!ptr->fr) {
-					DEBUGPRINT("dequeue_prog(2): killmode 1, no frame.\n",0,0);
+					debug("dequeue_prog(2): killmode 1, no frame.\n",0,0);
 					continue;
 				}
 			}
@@ -1049,7 +1047,7 @@ dequeue_prog_real(dbref program, int killmode, const char *file, const int line)
 			ptr = tmp;
 		}
 	}
-	DEBUGPRINT("dequeue_prog(3): about to muf_event_dequeue(#%d, %d)\n",program, killmode);
+	debug("dequeue_prog(3): about to muf_event_dequeue(#%d, %d)\n",program, killmode);
 	if (count < (count += muf_event_dequeue(program, killmode)))
 			prog_clean(tqhead->fr);
 	for (ptr = tqhead; ptr; ptr = ptr->next) {
@@ -1061,11 +1059,6 @@ dequeue_prog_real(dbref program, int killmode, const char *file, const int line)
 	/* and just to make sure we got them all... otherwise, we need
 	 * to rethink what we're doing here. */
 	/* assert(PROGRAM_INSTANCES(program) == 0);*/
-#ifdef DEBUG
-	/* KLUDGE by premchai21 */
-	if (Typeof(program) == TYPE_PROGRAM)
-		fprintf(stderr,"[debug] dequeue_prog: %d instances of #%d\n",PROGRAM_INSTANCES(program),program);
-#endif
 	return (count);
 }
 

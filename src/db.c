@@ -185,14 +185,6 @@ db_clear_object(dbref i)
 	o->next = NOTHING;
 	o->properties = 0;
 
-#ifdef DISKBASE
-	o->propsfpos = 0;
-	o->propstime = 0;
-	o->propsmode = PROPS_UNLOADED;
-	o->nextold = NOTHING;
-	o->prevold = NOTHING;
-#endif
-
 	/* DBDIRTY(i); */
 	/* flags you must initialize yourself */
 	/* type-specific fields you must also initialize */
@@ -278,86 +270,6 @@ putproperties(FILE * f, dbref obj)
 extern FILE *input_file;
 extern FILE *delta_infile;
 extern FILE *delta_outfile;
-
-#ifdef DISKBASE
-
-int
-fetch_propvals(dbref obj, const char *dir)
-{
-	PropPtr p, pptr;
-	int cnt = 0;
-	char buf[BUFFER_LEN];
-	char name[BUFFER_LEN];
-
-	p = first_prop_nofetch(obj, dir, &pptr, name, sizeof(name));
-	while (p) {
-		cnt = (cnt || propfetch(obj, p));
-		if (PropDir(p) || (PropFlags(p) & PROP_DIRUNLOADED)) {
-			strcpyn(buf, sizeof(buf), dir);
-			strcatn(buf, sizeof(buf), name);
-			strcatn(buf, sizeof(buf), "/");
-			if (PropFlags(p) & PROP_DIRUNLOADED) {
-				SetPFlags(p, (PropFlags(p) & ~PROP_DIRUNLOADED));
-				if (FLAGS(obj) & SAVED_DELTA) {
-					getproperties(delta_infile, obj, buf);
-				} else {
-					getproperties(input_file, obj, buf);
-				}
-			}
-			fetch_propvals(obj, buf);
-		}
-		p = next_prop(pptr, p, name, sizeof(name));
-	}
-	return cnt;
-}
-
-
-void
-putprops_copy(FILE * f, dbref obj)
-{
-	char buf[BUFFER_LEN * 3];
-	char *ptr;
-	FILE *g;
-
-	if (DBFETCH(obj)->propsmode != PROPS_UNLOADED) {
-		if (fetch_propvals(obj, "/")) {
-			fseek(f, 0L, 2);
-		}
-		putproperties(f, obj);
-		return;
-	}
-	if (db_load_format < 8 || db_conversion_flag) {
-		if (fetchprops_priority(obj, 1, NULL) || fetch_propvals(obj, "/")) {
-			fseek(f, 0L, 2);
-		}
-		putproperties(f, obj);
-		return;
-	}
-	if (FLAGS(obj) & SAVED_DELTA) {
-		g = delta_infile;
-	} else {
-		g = input_file;
-	}
-	putstring(f, "*Props*");
-	if (DBFETCH(obj)->propsfpos) {
-		fseek(g, DBFETCH(obj)->propsfpos, 0);
-		ptr = fgets(buf, sizeof(buf), g);
-		if (!ptr)
-			abort();
-		for (;;) {
-			ptr = fgets(buf, sizeof(buf), g);
-			if (!ptr)
-				abort();
-			if (!string_compare(ptr, "*End*\n"))
-				break;
-			fputs(buf, f);
-		}
-	}
-	putstring(f, "*End*");
-}
-
-#endif							/* DISKBASE */
-
 
 void
 macrodump(struct macrotable *node, FILE * f)
@@ -480,10 +392,6 @@ db_write_object(FILE * f, dbref i)
 {
 	struct object *o = DBFETCH(i);
 	int j;
-#ifdef DISKBASE
-	long tmppos;
-#endif							/* DISKBASE */
-
 	putstring(f, NAME(i));
 	putref(f, o->location);
 	putref(f, o->contents);
@@ -496,14 +404,7 @@ db_write_object(FILE * f, dbref i)
 	putref(f, o->ts.modified);
 
 
-#ifdef DISKBASE
-	tmppos = ftell(f) + 1;
-	putprops_copy(f, i);
-	o->propsfpos = tmppos;
-	undirtyprops(i);
-#else							/* !DISKBASE */
 	putproperties(f, i);
-#endif							/* DISKBASE */
 
 
 	switch (Typeof(i)) {
@@ -560,14 +461,6 @@ db_write_list(FILE * f, int mode)
 			if (fprintf(f, "#%d\n", i) < 0)
 				abort();
 			db_write_object(f, i);
-#ifdef DISKBASE
-			if (mode == 1) {
-				FLAGS(i) &= ~SAVED_DELTA;	/* clear delta flag */
-			} else {
-				FLAGS(i) |= SAVED_DELTA;	/* set delta flag */
-				deltas_count++;
-			}
-#endif
 			FLAGS(i) &= ~OBJECT_CHANGED;	/* clear changed flag */
 		}
 	}
@@ -710,15 +603,6 @@ getproperties(FILE * f, dbref obj, const char *pdir)
 	char buf[BUFFER_LEN * 3], *p;
 	int datalen;
 
-#ifdef DISKBASE
-	/* if no props, then don't bother looking. */
-	if (!DBFETCH(obj)->propsfpos)
-		return;
-
-	/* seek to the proper file position. */
-	fseek(f, DBFETCH(obj)->propsfpos, 0);
-#endif
-
 	/* get rid of first line */
 	fgets(buf, sizeof(buf), f);
 
@@ -753,39 +637,6 @@ getproperties(FILE * f, dbref obj, const char *pdir)
 	}
 }
 
-#ifdef DISKBASE
-void
-skipproperties(FILE * f, dbref obj)
-{
-	char buf[BUFFER_LEN * 3];
-	int islisten = 0;
-
-	/* get rid of first line */
-	fgets(buf, sizeof(buf), f);
-
-	fgets(buf, sizeof(buf), f);
-	while (strcmp(buf, "***Property list end ***\n") && strcmp(buf, "*End*\n")) {
-		if (!islisten) {
-			if (string_prefix(buf, "_listen"))
-				islisten = 1;
-			if (string_prefix(buf, "~listen"))
-				islisten = 1;
-			if (string_prefix(buf, "~olisten"))
-				islisten = 1;
-		}
-		fgets(buf, sizeof(buf), f);
-	}
-	if (islisten) {
-		FLAGS(obj) |= LISTENER;
-	} else {
-		FLAGS(obj) &= ~LISTENER;
-	}
-}
-
-#endif
-
-
-
 void
 db_free_object(dbref i)
 {
@@ -795,13 +646,9 @@ db_free_object(dbref i)
 	if (NAME(i))
 		free((void *) NAME(i));
 
-#ifdef DISKBASE
-	unloadprops_with_prejudice(i);
-#else
 	if (o->properties) {
 		delete_proplist(o->properties);
 	}
-#endif
 
 	if (Typeof(i) == TYPE_EXIT && o->sp.exit.dest) {
 		free((void *) o->sp.exit.dest);
@@ -1018,10 +865,6 @@ db_read_object_old(FILE * f, struct object *o, dbref objno)
 		o->next = recyclable;
 		recyclable = objno;
 
-#ifdef DISKBASE
-		dirtyprops(objno);
-#endif
-
 		free((void *) NAME(objno));
 		NAME(objno) = "<garbage>";
 		SETDESC(objno, "<recyclable>");
@@ -1194,16 +1037,7 @@ db_read_object_foxen(FILE * f, struct object *o, dbref objno, int dtype, int rea
 	c = getc(f);
 	if (c == '*') {
 
-#ifdef DISKBASE
-		o->propsfpos = ftell(f);
-		if (o->propsmode == PROPS_CHANGED) {
-			getproperties(f, objno, NULL);
-		} else {
-			skipproperties(f, objno);
-		}
-#else
 		getproperties(f, objno, NULL);
-#endif
 
 		prop_flag++;
 	} else {

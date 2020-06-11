@@ -244,13 +244,6 @@ int online(dbref player);
 int online_init(void);
 dbref online_next(int *ptr);
 long max_open_files(void);
-#ifdef MUD_ID
-void do_setuid(char *user);
-#endif /* MUD_ID */
-#ifdef MUD_GID
-void do_setgid(char *group);
-#endif /* MUD_GID */
-
 #ifdef USE_SSL /* SSL for NIX and WinFuzz */
 ssize_t socket_read(struct descriptor_data *d, void *buf, size_t count);
 ssize_t socket_write(struct descriptor_data *d, const void *buf, size_t count);
@@ -500,13 +493,11 @@ main(int argc, char **argv)
 
 	set_signals();
 
-	if (!sanity_skip) {
-		sanity(AMBIGUOUS);
-		if (sanity_violated) {
-			wizonly_mode = 1;
-			if (sanity_autofix)
-				sanfix(AMBIGUOUS);
-		}
+	sanity(AMBIGUOUS);
+	if (sanity_violated) {
+		wizonly_mode = 1;
+		if (sanity_autofix)
+			sanfix(AMBIGUOUS);
 	}
 
 	shovechars();
@@ -2766,44 +2757,6 @@ announce_disconnect(struct descriptor_data *d)
 	ts_lastuseobject(player);
 	DBDIRTY(player);
 }
-
-#ifdef MUD_ID
-#include <pwd.h>
-void
-do_setuid(char *name)
-{
-	struct passwd *pw;
-
-	if ((pw = getpwnam(name)) == NULL) {
-		warn("can't get pwent for %s", name);
-		exit(1);
-	}
-	if (setuid(pw->pw_uid) == -1) {
-		warn("can't setuid(%d): ", pw->pw_uid);
-		perror("setuid");
-		exit(1);
-	}
-}
-#endif							/* MUD_ID */
-
-#ifdef MUD_GID
-#include <grp.h>
-void
-do_setgid(char *name)
-{
-	struct group *gr;
-
-	if ((gr = getgrnam(name)) == NULL) {
-		warn("can't get grent for group %s", name);
-		exit(1);
-	}
-	if (setgid(gr->gr_gid) == -1) {
-		warn("can't setgid(%d): ",gr->gr_gid);
-		perror("setgid");
-		exit(1);
-	}
-}
-#endif							/* MUD_GID */
 
 /***** O(1) Connection Optimizations *****/
 struct descriptor_data *descr_count_table[FD_SETSIZE];

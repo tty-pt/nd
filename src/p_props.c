@@ -187,9 +187,6 @@ prim_getprop(PRIM_PROTOTYPE)
 		CLEAR(oper1);
 		CLEAR(oper2);
 		if (prptr) {
-#ifdef DISKBASE
-			propfetch(obj2, prptr);
-#endif
 			switch (PropType(prptr)) {
 			case PROP_STRTYP:
 				temp = PropDataStr(prptr);
@@ -259,9 +256,6 @@ prim_getpropstr(PRIM_PROTOTYPE)
 		if (!ptr) {
 			temp = "";
 		} else {
-#ifdef DISKBASE
-			propfetch(oper2->data.objref, ptr);
-#endif
 			switch (PropType(ptr)) {
 			case PROP_STRTYP:
 				temp = PropDataStr(ptr);
@@ -387,9 +381,6 @@ prim_envprop(PRIM_PROTOTYPE)
 			result = 0;
 			PushInt(result);
 		} else {
-#ifdef DISKBASE
-			propfetch(what, ptr);
-#endif
 			switch (PropType(ptr)) {
 			case PROP_STRTYP:
 				PushString(PropDataStr(ptr));
@@ -452,9 +443,6 @@ prim_envpropstr(PRIM_PROTOTYPE)
 		if (!ptr) {
 			temp = "";
 		} else {
-#ifdef DISKBASE
-			propfetch(what, ptr);
-#endif
 			switch (PropType(ptr)) {
 			case PROP_STRTYP:
 				temp = PropDataStr(ptr);
