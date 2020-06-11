@@ -716,7 +716,7 @@ prim_ftostrc(PRIM_PROTOTYPE)
 		abort_interp("Non-float argument. (1)");
 	snprintf(buf,sizeof(buf), "%.15g", oper1->data.fnumber);
 	if (!strchr(buf, '.') && !strchr(buf, 'e') && !strchr(buf, 'n')) {
-		strcatn(buf, sizeof(buf), ".0");
+		strlcat(buf, ".0", sizeof(buf));
 	}
 
 	CLEAR(oper1);

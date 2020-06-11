@@ -531,7 +531,7 @@ muf_event_exists(struct frame* fr, const char* eventid)
 	int count = 0;
 	char pattern[BUFFER_LEN];
 	
-	strcpyn(pattern, sizeof(pattern), eventid);
+	strlcpy(pattern, eventid, sizeof(pattern));
 
 	for (ptr = fr->events; ptr; ptr = ptr->next)
 		if (equalstr(pattern, ptr->event))

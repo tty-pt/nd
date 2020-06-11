@@ -206,10 +206,10 @@ blessprops_wildcard(dbref player, dbref thing, const char *dir, const char *wild
 	}
 #endif
 
-	strcpyn(wld, sizeof(wld), wild);
+	strlcpy(wld, wild, sizeof(wld));
 	i = strlen(wld);
 	if (i && wld[i - 1] == PROPDIR_DELIMITER)
-		strcatn(wld, sizeof(wld), "*");
+		strlcat(wld, "*", sizeof(wld));
 	for (wldcrd = wld; *wldcrd == PROPDIR_DELIMITER; wldcrd++) ;
 	if (!strcmp(wldcrd, "**"))
 		recurse = 1;
@@ -554,19 +554,6 @@ do_stats(dbref player, const char *name)
 				   "%7d total object%s                     %7d old & unused",
 				   total, (total == 1) ? " " : "s", oldobjs);
 
-#ifdef DELTADUMPS
-		{
-			char buf[BUFFER_LEN];
-			struct tm *time_tm;
-			time_t lasttime = (time_t) get_property_value(0, "_sys/lastdumptime");
-
-			time_tm = localtime(&lasttime);
-			(void) strftime(buf, 40, "%a %b %e %T %Z", time_tm);
-			notify_fmt(player, "%7d unsaved object%s     Last dump: %s",
-					   altered, (altered == 1) ? "" : "s", buf);
-		}
-#endif
-
 	}
 }
 
@@ -806,8 +793,6 @@ do_serverdebug(int descr, dbref player, const char *arg1, const char *arg2)
 }
 
 
-long max_open_files(void);		/* from interface.c */
-
 void
 do_usage(dbref player)
 {
@@ -830,7 +815,8 @@ do_usage(dbref player)
 
 	notify_fmt(player, "Compiled on: %s", UNAME_VALUE);
 	notify_fmt(player, "Process ID: %d", pid);
-	notify_fmt(player, "Max descriptors/process: %ld", max_open_files());
+	notify_fmt(player, "Max descriptors/process: %ld", sysconf(_SC_OPEN_MAX));
+
 #ifdef HAVE_GETRUSAGE
 	notify_fmt(player, "Performed %d input servicings.", usage.ru_inblock);
 	notify_fmt(player, "Performed %d output servicings.", usage.ru_oublock);
@@ -1252,55 +1238,5 @@ do_all_topprofs(dbref player, char *arg1)
 	notify(player, "*Done*");
 }
 
-
-void
-do_memory(dbref who)
-{
-	if (!Wizard(OWNER(who))) {
-		notify(who, "Permission denied. (You don't need to know the memory stats)");
-		return;
-	}
-#ifndef NO_MEMORY_COMMAND
-# ifdef HAVE_MALLINFO
-	{
-		struct mallinfo mi;
-
-		mi = mallinfo();
-		notify_fmt(who, "Total allocated from system:   %6dk", (mi.arena / 1024));
-		notify_fmt(who, "Number of non-inuse chunks:    %6d", mi.ordblks);
-		notify_fmt(who, "Small block count:             %6d", mi.smblks);
-		notify_fmt(who, "Small block mem alloced:       %6dk", (mi.usmblks / 1024));
-		notify_fmt(who, "Small block memory free:       %6dk", (mi.fsmblks / 1024));
-#ifdef HAVE_STRUCT_MALLINFO_HBLKS
-		notify_fmt(who, "Number of mmapped regions:     %6d", mi.hblks);
-#endif
-		notify_fmt(who, "Total memory mmapped:          %6dk", (mi.hblkhd / 1024));
-		notify_fmt(who, "Total memory malloced:         %6dk", (mi.uordblks / 1024));
-		notify_fmt(who, "Mem allocated overhead:        %6dk", ((mi.arena - mi.uordblks) / 1024));
-		notify_fmt(who, "Memory free:                   %6dk", (mi.fordblks / 1024));
-#ifdef HAVE_STRUCT_MALLINFO_KEEPCOST
-		notify_fmt(who, "Top-most releasable chunk size:%6dk", (mi.keepcost / 1024));
-#endif
-#ifdef HAVE_STRUCT_MALLINFO_TREEOVERHEAD
-		notify_fmt(who, "Memory free overhead:    %6dk", (mi.treeoverhead / 1024));
-#endif
-#ifdef HAVE_STRUCT_MALLINFO_GRAIN
-		notify_fmt(who, "Small block grain: %6d", mi.grain);
-#endif
-#ifdef HAVE_STRUCT_MALLINFO_ALLOCATED
-		notify_fmt(who, "Mem chunks alloced:%6d", mi.allocated);
-#endif
-	}
-# endif							/* HAVE_MALLINFO */
-#endif							/* NO_MEMORY_COMMAND */
-
-#ifdef MALLOC_PROFILING
-	notify(who, "  ");
-	CrT_summarize(who);
-	CrT_summarize_to_file("malloc_log", "Manual Checkpoint");
-#endif
-
-	notify(who, "Done.");
-}
 static const char *wiz_c_version = "$RCSfile$ $Revision: 1.38 $";
 const char *get_wiz_c_version(void) { return wiz_c_version; }

@@ -2,7 +2,7 @@ srcdir	:= ../${srcdir}
 
 -include Makefile
 
-cflags-y	+= -I/usr/local/include -I${srcdir}/include --pedantic -Wall
+cflags-y	+= -I/usr/local/include -I${srcdir}/include --pedantic -Wall -Wno-gnu-zero-variadic-macro-arguments -Wno-gnu-designator
 ldflags-y	+= -L/usr/local/lib
 #ldlibs-y ommited
 

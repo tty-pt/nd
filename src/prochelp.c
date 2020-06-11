@@ -57,22 +57,6 @@ string_dup(const char *s)
 	return p;
 }
 
-/* from stringutil.c */
-char*
-strcpyn(char* buf, size_t bufsize, const char* src)
-{
-        int pos = 0;
-        char* dest = buf;
-
-        while (++pos < bufsize && *src) {
-                *dest++ = *src++;
-        }
-        *dest = '\0';
-        return buf;
-}
-
-
-
 char sect[256] = "";
 
 struct topiclist {
@@ -157,16 +141,16 @@ escape_html(char* buf, int buflen, const char* in)
 	char* out = buf;
 	while (*in) {
 		if (*in == '<') {
-			strcpyn(out, buflen, "&lt;");
+			strlcpy(out, "&lt;", buflen);
 			out += strlen(out);
 		} else if (*in == '>') {
-			strcpyn(out, buflen, "&gt;");
+			strlcpy(out, "&gt;", buflen);
 			out += strlen(out);
 		} else if (*in == '&') {
-			strcpyn(out, buflen, "&amp;");
+			strlcpy(out, "&amp;", buflen);
 			out += strlen(out);
 		} else if (*in == '"') {
-			strcpyn(out, buflen, "&quot;");
+			strlcpy(out, "&quot;", buflen);
 			out += strlen(out);
 		} else {
 			*out++ = *in;
@@ -226,7 +210,7 @@ print_section_topics(FILE * f, FILE * hf, const char *whichsect)
 			cnt = 0;
 			hcol = 0;
 			buf[0] = '\0';
-			strcpyn(sectname, sizeof(sectname), currsect);
+			strlcpy(sectname, currsect, sizeof(sectname));
 			sectptr = index(sectname, '|');
 			if (sectptr) {
 				*sectptr++ = '\0';
@@ -319,7 +303,7 @@ print_sections(FILE * f, FILE * hf, int cols)
 		cnt = 0;
 		hcol = 0;
 		buf[0] = '\0';
-		strcpyn(sectname, sizeof(sectname), currsect);
+		strlcpy(sectname, currsect, sizeof(sectname));
 		sectptr = index(sectname, '|');
 		if (sectptr) {
 			*sectptr++ = '\0';
@@ -394,7 +378,7 @@ print_topics(FILE * f, FILE * hf)
 
 		if (cnt > 0) {
 			if (!isalpha(alph)) {
-				strcpyn(buf, sizeof(buf), "Symbols");
+				strlcpy(buf, "Symbols", sizeof(buf));
 			} else {
 				buf[0] = alph;
 				buf[1] = '\'';
@@ -456,7 +440,7 @@ find_topics(FILE * infile)
 			} else {
 				if (!strncmp(buf, "~~section ", 10)) {
 					buf[strlen(buf) - 1] = '\0';
-					strcpyn(sect, sizeof(sect), (buf + 10));
+					strlcpy(sect, (buf + 10), sizeof(sect));
 					add_section(sect);
 				} else if (!strncmp(buf, "~~title ", 8)) {
 					buf[strlen(buf) - 1] = '\0';
@@ -480,7 +464,7 @@ find_topics(FILE * infile)
 			} else {
 				if (!strncmp(buf, "~~section ", 10)) {
 					buf[strlen(buf) - 1] = '\0';
-					strcpyn(sect, sizeof(sect), (buf + 10));
+					strlcpy(sect, (buf + 10), sizeof(sect));
 					add_section(sect);
 				} else if (!strncmp(buf, "~~title ", 8)) {
 					buf[strlen(buf) - 1] = '\0'; // omg?
@@ -592,7 +576,7 @@ process_lines(FILE * infile, FILE * outfile, FILE * htmlfile, int cols)
 							}
 						}
 						escape_html(buf3, sizeof(buf3), ptr2);
-						strcpyn(buf4, sizeof(buf4), buf3);
+						strlcpy(buf4, buf3, sizeof(buf4));
 						for (ptr3 = buf4; *ptr3; ptr3++) {
 							*ptr3 = tolower(*ptr3);
 						}

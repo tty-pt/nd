@@ -296,7 +296,7 @@ match_exits(dbref first, struct match_data *md)
 							md->exact_match = exit;
 							md->longest_match = strlen(md->match_name) - strlen(p);
 							if ((*p == ' ') || (partial && notnull)) {
-								strcpyn(match_args, sizeof(match_args), (partial && notnull)? p : (p + 1));
+								strlcpy(match_args, (partial && notnull)? p : (p + 1), sizeof(match_args));
 								{
 									char *pp;
 									int ip;
@@ -308,7 +308,7 @@ match_exits(dbref first, struct match_data *md)
 								}
 							} else {
 								*match_args = '\0';
-								strcpyn(match_cmdname, sizeof(match_cmdname), (char *) md->match_name);
+								strlcpy(match_cmdname, (char *) md->match_name, sizeof(match_cmdname));
 							}
 						} else if ((strlen(md->match_name) - strlen(p) ==
 									md->longest_match) && !((lev == md->match_level) &&
@@ -319,7 +319,7 @@ match_exits(dbref first, struct match_data *md)
 								md->block_equals = 0;
 							}
 							if ((*p == ' ') || (partial && notnull)) {
-								strcpyn(match_args, sizeof(match_args), (partial && notnull) ? p : (p + 1));
+								strlcpy(match_args, (partial && notnull) ? p : (p + 1), sizeof(match_args));
 								{
 									char *pp;
 									int ip;
@@ -331,7 +331,7 @@ match_exits(dbref first, struct match_data *md)
 								}
 							} else {
 								*match_args = '\0';
-								strcpyn(match_cmdname, sizeof(match_cmdname), (char *) md->match_name);
+								strlcpy(match_cmdname, (char *) md->match_name, sizeof(match_cmdname));
 							}
 						}
 					}
@@ -447,8 +447,8 @@ match_all_exits(struct match_data *md)
 	int limit = 88;
         int blocking = 0;
 
-	strcpyn(match_args, sizeof(match_args), "\0");
-	strcpyn(match_cmdname, sizeof(match_cmdname), "\0");
+	strlcpy(match_args, "\0", sizeof(match_args));
+	strlcpy(match_cmdname, "\0", sizeof(match_cmdname));
 	if ((loc = DBFETCH(md->match_from)->location) != NOTHING)
 		match_room_exits(loc, md);
 

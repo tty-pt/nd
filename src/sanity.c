@@ -552,10 +552,10 @@ san_fixed_log(char *format, int unparse, dbref ref1, dbref ref2)
 
 	if (unparse) {
 		if (ref1 >= 0) {
-			strcpyn(buf1, sizeof(buf1), unparse(ref1));
+			strlcpy(buf1, unparse(ref1), sizeof(buf1));
 		}
 		if (ref2 >= 0) {
-			strcpyn(buf2, sizeof(buf2), unparse(ref2));
+			strlcpy(buf2, unparse(ref2), sizeof(buf2));
 		}
 		warn(format, buf1, buf2);
 	} else {
@@ -1102,7 +1102,7 @@ sanechange(dbref player, const char *command)
 
 	if (results != 3) {
 		d = v = 0;
-		strcpyn(field, sizeof(field), "help");
+		strlcpy(field, "help", sizeof(field));
 	}
 
 	*buf2 = 0;
@@ -1113,31 +1113,31 @@ sanechange(dbref player, const char *command)
 	}
 
 	if (!strcmp(field, "next")) {
-		strcpyn(buf2, sizeof(buf2), unparse(NEXTOBJ(d)));
+		strlcpy(buf2, unparse(NEXTOBJ(d)), sizeof(buf2));
 		NEXTOBJ(d) = v;
 		DBDIRTY(d);
 		SanPrint(player, "## Setting #%d's next field to %s", d, unparse(v));
 
 	} else if (!strcmp(field, "exits")) {
-		strcpyn(buf2, sizeof(buf2), unparse(EXITS(d)));
+		strlcpy(buf2, unparse(EXITS(d)), sizeof(buf2));
 		EXITS(d) = v;
 		DBDIRTY(d);
 		SanPrint(player, "## Setting #%d's Exits list start to %s", d, unparse(v));
 
 	} else if (!strcmp(field, "contents")) {
-		strcpyn(buf2, sizeof(buf2), unparse(CONTENTS(d)));
+		strlcpy(buf2, unparse(CONTENTS(d)), sizeof(buf2));
 		CONTENTS(d) = v;
 		DBDIRTY(d);
 		SanPrint(player, "## Setting #%d's Contents list start to %s", d, unparse(v));
 
 	} else if (!strcmp(field, "location")) {
-		strcpyn(buf2, sizeof(buf2), unparse(LOCATION(d)));
+		strlcpy(buf2, unparse(LOCATION(d)), sizeof(buf2));
 		LOCATION(d) = v;
 		DBDIRTY(d);
 		SanPrint(player, "## Setting #%d's location to %s", d, unparse(v));
 
 	} else if (!strcmp(field, "owner")) {
-		strcpyn(buf2, sizeof(buf2), unparse(OWNER(d)));
+		strlcpy(buf2, unparse(OWNER(d)), sizeof(buf2));
 		OWNER(d) = v;
 		DBDIRTY(d);
 		SanPrint(player, "## Setting #%d's owner to %s", d, unparse(v));
@@ -1157,7 +1157,7 @@ sanechange(dbref player, const char *command)
 			return;
 		}
 
-		strcpyn(buf2, sizeof(buf2), unparse(*ip));
+		strlcpy(buf2, unparse(*ip), sizeof(buf2));
 		*ip = v;
 		DBDIRTY(d);
 		printf("Setting home to: %s\n", unparse(v));

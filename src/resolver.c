@@ -44,25 +44,6 @@ const char *get_resolver_c_version(void) { return resolver_c_version; }
 /* Time before the resolver gives up on a identd lookup.  Prevents hangs. */
 #define IDENTD_TIMEOUT 60
 
-
-/*
- * Like strncpy, except it guarentees null termination of the result string.
- * It also has a more sensible argument ordering.
- */
-char*
-strcpyn(char* buf, size_t bufsize, const char* src)
-{
-	int pos = 0;
-	char* dest = buf;
-
-	while (++pos < bufsize && *src) {
-		*dest++ = *src++;
-	}
-	*dest = '\0';
-	return buf;
-}
-
-
 int
 notify(int player, const char* msg)
 {
@@ -253,7 +234,7 @@ void hostadd_v6(struct in6_addr *ip, const char *name)
 	memcpy(&(ptr->ipnum_v6), ip, sizeof(struct in6_addr));
 	ptr->ipnum = 0;
 	ptr->time = 0;
-	strcpyn(ptr->name, sizeof(ptr->name), name);
+	strlcpy(ptr->name, name, sizeof(ptr->name));
 	hostprune();
 }
 #endif
@@ -276,7 +257,7 @@ void hostadd(long ip, const char *name)
 #endif
 	ptr->ipnum = ip;
 	ptr->time = 0;
-	strcpyn(ptr->name, sizeof(ptr->name), name);
+	strlcpy(ptr->name, name, sizeof(ptr->name));
 	hostprune();
 }
 
@@ -608,7 +589,7 @@ const char *addrout_v6(struct in6_addr *a, unsigned short prt, unsigned short my
 	he = gethostbyaddr(((char *) &addr), sizeof(addr), AF_INET6);
 
 	if (he) {
-		strcpyn(tmpbuf, sizeof(tmpbuf), he->h_name);
+		strlcpy(tmpbuf, he->h_name, sizeof(tmpbuf));
 		hostadd_v6(a, tmpbuf);
 		ptr = get_username_v6(a, prt, myprt);
 		if (ptr) {
@@ -656,7 +637,7 @@ const char *addrout(long a, unsigned short prt, unsigned short myprt)
 	he = gethostbyaddr(((char *) &addr), sizeof(addr), AF_INET);
 
 	if (he) {
-		strcpyn(tmpbuf, sizeof(tmpbuf), he->h_name);
+		strlcpy(tmpbuf, he->h_name, sizeof(tmpbuf));
 		hostadd(ntohl(a), tmpbuf);
 		ptr = get_username(a, prt, myprt);
 		if (ptr) {

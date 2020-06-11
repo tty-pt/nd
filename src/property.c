@@ -26,7 +26,7 @@ set_property_nofetch(dbref player, const char *pname, PData * dat)
 {
 	PropPtr p;
 	char buf[BUFFER_LEN];
-	char *n, *w;
+	char *n;
 
 	/* Make sure that we are passed a valid property name */
 	if (!pname)
@@ -40,7 +40,7 @@ set_property_nofetch(dbref player, const char *pname, PData * dat)
 		FLAGS(player) |= LISTENER;
 	}
 
-	w = strcpyn(buf, sizeof(buf), pname);
+	strlcpy(buf, pname, sizeof(buf));
 
 	/* truncate propnames with a ':' in them at the ':' */
 	n = index(buf, PROP_DELIMITER);
@@ -49,7 +49,7 @@ set_property_nofetch(dbref player, const char *pname, PData * dat)
 	if (!*buf)
 		return;
 
-	p = propdir_new_elem(&(DBFETCH(player)->properties), w);
+	p = propdir_new_elem(&(DBFETCH(player)->properties), buf);
 
 	/* free up any old values */
 	clear_propnode(p);
@@ -277,12 +277,11 @@ remove_property_nofetch(dbref player, const char *pname)
 {
 	PropPtr l;
 	char buf[BUFFER_LEN];
-	char *w;
 
-	w = strcpyn(buf, sizeof(buf), pname);
+	strlcpy(buf, pname, sizeof(buf));
 
 	l = DBFETCH(player)->properties;
-	l = propdir_delete_elem(l, w);
+	l = propdir_delete_elem(l, buf);
 	DBFETCH(player)->properties = l;
 	DBDIRTY(player);
 }
@@ -300,11 +299,10 @@ get_property(dbref player, const char *pname)
 {
 	PropPtr p;
 	char buf[BUFFER_LEN];
-	char *w;
 
-	w = strcpyn(buf, sizeof(buf), pname);
+	strlcpy(buf, pname, sizeof(buf));
 
-	p = propdir_get_elem(DBFETCH(player)->properties, w);
+	p = propdir_get_elem(DBFETCH(player)->properties, buf);
 	return (p);
 }
 
@@ -358,7 +356,7 @@ has_property_strict(int descr, dbref player, dbref what, const char *pname, cons
 									(MPI_ISPRIVATE | MPI_ISLOCK |
 									((PropFlags(p) & PROP_BLESSED)? MPI_ISBLESSED : 0)));
 			} else {
-				strcpyn(buf, sizeof(buf), str); 
+				strlcpy(buf, str, sizeof(buf)); 
 				ptr = buf;
 			}
 			has_prop_recursion_limit++;
@@ -560,14 +558,14 @@ first_prop_nofetch(dbref player, const char *dir, PropPtr * list, char *name, in
 		*list = DBFETCH(player)->properties;
 		p = first_node(*list);
 		if (p) {
-			strcpyn(name, maxlen, PropName(p));
+			strlcpy(name, PropName(p), maxlen);
 		} else {
 			*name = '\0';
 		}
 		return (p);
 	}
 
-	strcpyn(buf, sizeof(buf), dir);
+	strlcpy(buf, dir, sizeof(buf));
 	*list = p = propdir_get_elem(DBFETCH(player)->properties, buf);
 	if (!p) {
 		*name = '\0';
@@ -576,7 +574,7 @@ first_prop_nofetch(dbref player, const char *dir, PropPtr * list, char *name, in
 	*list = PropDir(p);
 	p = first_node(*list);
 	if (p) {
-		strcpyn(name, maxlen, PropName(p));
+		strlcpy(name, PropName(p), maxlen);
 	} else {
 		*name = '\0';
 	}
@@ -615,7 +613,7 @@ next_prop(PropPtr list, PropPtr prop, char *name, int maxlen)
 	if (!p || !(p = next_node(list, PropName(p))))
 		return ((PropPtr) 0);
 
-	strcpyn(name, maxlen, PropName(p));
+	strlcpy(name, PropName(p), maxlen);
 	return (p);
 }
 
@@ -637,7 +635,7 @@ next_prop_name(dbref player, char *outbuf, int outbuflen, char *name)
 	char buf[BUFFER_LEN];
 	PropPtr p, l;
 
-	strcpyn(buf, sizeof(buf), name);
+	strlcpy(buf, name, sizeof(buf));
 	if (!*name || name[strlen(name) - 1] == PROPDIR_DELIMITER) {
 		l = DBFETCH(player)->properties;
 		p = propdir_first_elem(l, buf);
@@ -645,8 +643,8 @@ next_prop_name(dbref player, char *outbuf, int outbuflen, char *name)
 			*outbuf = '\0';
 			return NULL;
 		}
-		strcpyn(outbuf, outbuflen, name);
-		strcatn(outbuf, outbuflen, PropName(p));
+		strlcpy(outbuf, name, outbuflen);
+		strlcat(outbuf, PropName(p), outbuflen);
 	} else {
 		l = DBFETCH(player)->properties;
 		p = propdir_next_elem(l, buf);
@@ -654,12 +652,12 @@ next_prop_name(dbref player, char *outbuf, int outbuflen, char *name)
 			*outbuf = '\0';
 			return NULL;
 		}
-		strcpyn(outbuf, outbuflen, name);
+		strlcpy(outbuf, name, outbuflen);
 		ptr = rindex(outbuf, PROPDIR_DELIMITER);
 		if (!ptr)
 			ptr = outbuf;
 		*(ptr++) = PROPDIR_DELIMITER;
-		strcpyn(ptr, outbuflen - (ptr-outbuf), PropName(p));
+		strlcpy(ptr, PropName(p), outbuflen - (ptr-outbuf));
 	}
 	return outbuf;
 }
@@ -679,7 +677,7 @@ is_propdir_nofetch(dbref player, const char *pname)
 	PropPtr p;
 	char w[BUFFER_LEN];
 
-	strcpyn(w, sizeof(w), pname);
+	strlcpy(w, pname, sizeof(w));
 	p = propdir_get_elem(DBFETCH(player)->properties, w);
 	if (!p)
 		return 0;
@@ -1120,15 +1118,15 @@ reflist_add(dbref obj, const char* propname, dbref toadd)
 			}
 			if (pat && !*pat) {
 				if (charcount > 0) {
-					strcpyn(outbuf, charcount, list);
+					strlcpy(outbuf, list, charcount);
 				}
-				strcatn(outbuf, sizeof(outbuf), temp);
+				strlcat(outbuf, temp, sizeof(outbuf));
 			} else {
-				strcpyn(outbuf, sizeof(outbuf), list);
+				strlcpy(outbuf, list, sizeof(outbuf));
 			}
 			snprintf(buf, sizeof(buf), " #%d", toadd);
 			if (strlen(outbuf) + strlen(buf) < BUFFER_LEN) {
-				strcatn(outbuf, sizeof(outbuf), buf);
+				strlcat(outbuf, buf, sizeof(outbuf));
 				for (temp = outbuf; isspace(*temp); temp++);
 				add_property(obj, propname, temp, 0);
 			}
@@ -1192,9 +1190,9 @@ reflist_del(dbref obj, const char* propname, dbref todel)
 			}
 			if (pat && !*pat) {
 				if (charcount > 0) {
-					strcpyn(outbuf, charcount, list);
+					strlcpy(outbuf, list, charcount);
 				}
-				strcatn(outbuf, sizeof(outbuf), temp);
+				strlcat(outbuf, temp, sizeof(outbuf));
 				for (temp = outbuf; isspace(*temp); temp++);
 				add_property(obj, propname, temp, 0);
 			}

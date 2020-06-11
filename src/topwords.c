@@ -29,25 +29,6 @@ hash_tab wordhash[WORD_HASH_SIZE];
 
 struct queue_node *sizehash[100000];
 
-
-/*
- * Like strncpy, except it guarentees null termination of the result string.
- * It also has a more sensible argument ordering.
- */
-char*
-strcpyn(char* buf, size_t bufsize, const char* src)
-{
-	int pos = 0;
-	char* dest = buf;
-
-	while (++pos < bufsize && *src) {
-		*dest++ = *src++;
-	}
-	*dest = '\0';
-	return buf;
-}
-
-
 int
 notify(int player, const char *msg)
 {
@@ -192,7 +173,7 @@ queue_add_node(const char *word, int pri)
 	tail = nu;
 	nu->count = 0;
 	nu->spcount = 0;
-	strcpyn(nu->word, sizeof(nu->word), word);
+	strlcpy(nu->word, word, sizeof(nu->word));
 	nu->len = strlen(nu->word);
 	if (nu->word[nu->len - 1] == ' ') {
 		nu->word[nu->len - 1] = '\0';
@@ -222,7 +203,7 @@ add_to_list(const char *word)
 		return;
 	}
 
-	strcpyn(buf, sizeof(buf), word);
+	strlcpy(buf, word, sizeof(buf));
 	if (buf[strlen(buf) - 1] == ' ') {
 		buf[strlen(buf) - 1] = '\0';
 		spcflag++;
@@ -250,7 +231,7 @@ remember_word_variants(const char *in)
 {
 	char word[32];
 
-	strcpyn(word, sizeof(word), in);
+	strlcpy(word, in, sizeof(word));
 	add_to_list(word);
 	/*
 	   t = word + strlen(word);

@@ -1184,7 +1184,7 @@ do_propset(int descr, dbref player, const char *name, const char *prop)
 
 	while (isspace(*prop))
 		prop++;
-	strcpyn(buf, sizeof(buf), prop);
+	strlcpy(buf, prop, sizeof(buf));
 
 	type = p = buf;
 	while (*p && *p != PROP_DELIMITER)

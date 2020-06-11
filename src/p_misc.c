@@ -500,7 +500,7 @@ prim_abort(PRIM_PROTOTYPE)
 	oper1 = POP();
 	if (oper1->type != PROG_STRING)
 		abort_interp("Invalid argument");
-	strcpyn(buf, sizeof(buf), DoNullInd(oper1->data.string));
+	strlcpy(buf, DoNullInd(oper1->data.string), sizeof(buf));
 	abort_interp(buf);
 }
 
@@ -819,7 +819,7 @@ prim_ext_name_okp(PRIM_PROTOTYPE)
 	if (oper2->type == PROG_STRING) {
 		if (!oper2->data.string)
 			abort_interp("Cannot be an empty string (2).");
-		strcpyn(buf, sizeof(buf), oper2->data.string->data );
+		strlcpy(buf, oper2->data.string->data , sizeof(buf));
 		for (ref = 0; buf[ref]; ref++)
 			buf[ref] = DOWNCASE(buf[ref]);
 		if ( !strcmp(buf,"e") || !strcmp(buf,"exit") ) {

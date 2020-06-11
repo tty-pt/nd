@@ -246,8 +246,6 @@ extern void parse_oprop(int descr, dbref player, dbref dest, dbref exit, const c
 extern void parse_omessage(int descr, dbref player, dbref dest, dbref exit, const char *msg, const char *prefix, const char *whatcalled, int mpiflags) ;
 
 /* From stringutil.c */
-extern int alphanum_compare(const char *s1, const char *s2);
-extern int string_compare(const char *s1, const char *s2);
 extern int string_prefix(const char *string, const char *prefix);
 extern const char *string_match(const char *src, const char *sub);
 extern char *pronoun_substitute(int descr, dbref player, const char *str);
@@ -257,14 +255,6 @@ extern void prefix_message(char* Dest, const char* Src, const char* Prefix, int 
 extern int is_prop_prefix(const char* Property, const char* Prefix);
 extern int has_suffix(const char* text, const char* suffix);
 extern int has_suffix_char(const char* text, char suffix);
-extern char* strcatn(char* buf, size_t bufsize, const char* src);
-extern char* strcpyn(char* buf, size_t bufsize, const char* src);
-
-
-#if !defined(MALLOC_PROFILING)
-extern char *string_dup(const char *s);
-#endif
-
 
 /* From utils.c */
 extern int member(dbref thing, dbref list);

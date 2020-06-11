@@ -85,7 +85,7 @@ prim_getpropval(PRIM_PROTOTYPE)
 		char type[BUFFER_LEN];
 		int len = oper1->data.string->length;
 
-		strcpyn(type, sizeof(type), oper1->data.string->data);
+		strlcpy(type, oper1->data.string->data, sizeof(type));
 		while (len-- > 0 && type[len] == PROPDIR_DELIMITER) {
 			type[len] = '\0';
 		}
@@ -127,7 +127,7 @@ prim_getpropfval(PRIM_PROTOTYPE)
 		char type[BUFFER_LEN];
 		int len = oper1->data.string->length;
 
-		strcpyn(type, sizeof(type), oper1->data.string->data);
+		strlcpy(type, oper1->data.string->data, sizeof(type));
 		while (len-- > 0 && type[len] == PROPDIR_DELIMITER) {
 			type[len] = '\0';
 		}
@@ -171,7 +171,7 @@ prim_getprop(PRIM_PROTOTYPE)
 		if (!prop_read_perms(ProgUID, oper2->data.objref, oper1->data.string->data, mlev))
 			abort_interp("Permission denied.");
 
-		strcpyn(type, sizeof(type), oper1->data.string->data);
+		strlcpy(type, oper1->data.string->data, sizeof(type));
 		while (len-- > 0 && type[len] == PROPDIR_DELIMITER) {
 			type[len] = '\0';
 		}
@@ -247,7 +247,7 @@ prim_getpropstr(PRIM_PROTOTYPE)
 		if (!prop_read_perms(ProgUID, oper2->data.objref, oper1->data.string->data, mlev))
 			abort_interp("Permission denied.");
 
-		strcpyn(type, sizeof(type), oper1->data.string->data);
+		strlcpy(type, oper1->data.string->data, sizeof(type));
 		while (len-- > 0 && type[len] == PROPDIR_DELIMITER) {
 			type[len] = '\0';
 		}
@@ -362,7 +362,7 @@ prim_envprop(PRIM_PROTOTYPE)
 		PropPtr ptr;
 		int len = oper1->data.string->length;
 
-		strcpyn(tname, sizeof(tname), oper1->data.string->data);
+		strlcpy(tname, oper1->data.string->data, sizeof(tname));
 		while (len-- > 0 && tname[len] == PROPDIR_DELIMITER) {
 			tname[len] = '\0';
 		}
@@ -433,7 +433,7 @@ prim_envpropstr(PRIM_PROTOTYPE)
 		const char *temp;
 		int len = oper1->data.string->length;
 
-		strcpyn(tname, sizeof(tname), oper1->data.string->data);
+		strlcpy(tname, oper1->data.string->data, sizeof(tname));
 		while (len-- > 0 && tname[len] == PROPDIR_DELIMITER) {
 			tname[len] = '\0';
 		}
@@ -518,7 +518,7 @@ prim_blessprop(PRIM_PROTOTYPE)
 		if (*tmpe)
 			abort_interp("Illegal propname");
 
-		strcpyn(tname, sizeof(tname), oper2->data.string->data);
+		strlcpy(tname, oper2->data.string->data, sizeof(tname));
 		while (len-- > 0 && tname[len] == PROPDIR_DELIMITER) {
 			tname[len] = '\0';
 		}
@@ -565,7 +565,7 @@ prim_unblessprop(PRIM_PROTOTYPE)
 		if (*tmpe)
 			abort_interp("Illegal propname");
 
-		strcpyn(tname, sizeof(tname), oper2->data.string->data);
+		strlcpy(tname, oper2->data.string->data, sizeof(tname));
 		while (len-- > 0 && tname[len] == PROPDIR_DELIMITER) {
 			tname[len] = '\0';
 		}
@@ -622,7 +622,7 @@ prim_setprop(PRIM_PROTOTYPE)
 		if (*tmpe)
 			abort_interp("Illegal propname");
 
-		strcpyn(tname, sizeof(tname), oper2->data.string->data);
+		strlcpy(tname, oper2->data.string->data, sizeof(tname));
 		while (len-- > 0 && tname[len] == PROPDIR_DELIMITER) {
 			tname[len] = '\0';
 		}
@@ -703,7 +703,7 @@ prim_addprop(PRIM_PROTOTYPE)
 		if (*tmpe)
 			abort_interp("CRs not allowed in propname");
 
-		strcpyn(tname, sizeof(tname), oper3->data.string->data);
+		strlcpy(tname, oper3->data.string->data, sizeof(tname));
 		while (len-- > 0 && tname[len] == PROPDIR_DELIMITER) {
 			tname[len] = '\0';
 		}
@@ -748,8 +748,9 @@ prim_nextprop(PRIM_PROTOTYPE)
 		abort_interp("Invalid dbref. (1)");
 
 	ref = oper1->data.objref;
-	(void) strcpyn(buf, sizeof(buf), ((oper2->data.string)) ?
-				  oper2->data.string->data : "");
+	(void) strlcpy(buf,
+		       ((oper2->data.string)) ?  oper2->data.string->data : "",
+		       sizeof(buf));
 	CLEAR(oper1);
 	CLEAR(oper2);
 
@@ -800,7 +801,7 @@ prim_propdirp(PRIM_PROTOTYPE)
 	if (!oper2->data.string)
 		abort_interp("Null string not allowed. (2)");
 	ref = oper1->data.objref;
-	(void) strcpyn(buf, sizeof(buf), oper2->data.string->data);
+	(void) strlcpy(buf, oper2->data.string->data, sizeof(buf));
 	CLEAR(oper1);
 	CLEAR(oper2);
 
@@ -861,7 +862,7 @@ prim_parseprop(PRIM_PROTOTYPE)
 			prop_write_perms(ProgUID, oper3->data.objref, oper1->data.string->data, mlev))
 			abort_interp("Permission denied.");
 
-		strcpyn(type, sizeof(type), oper1->data.string->data);
+		strlcpy(type, oper1->data.string->data, sizeof(type));
 		while (len-- > 0 && type[len] == PROPDIR_DELIMITER) {
 			type[len] = '\0';
 		}
@@ -923,7 +924,7 @@ prim_array_filter_prop(PRIM_PROTOTYPE)
 		abort_interp("Argument not a string pattern. (3)");
 
 	len = oper2->data.string ? oper2->data.string->length : 0;
-	strcpyn(tname, sizeof(tname), DoNullInd(oper2->data.string));
+	strlcpy(tname, DoNullInd(oper2->data.string), sizeof(tname));
 	while (len-- > 0 && tname[len] == PROPDIR_DELIMITER) {
 		tname[len] = '\0';
 	}
@@ -931,7 +932,7 @@ prim_array_filter_prop(PRIM_PROTOTYPE)
 	nu = new_array_packed(0);
 	arr = oper1->data.array;
 	prop = tname;
-	strcpyn(pattern, sizeof(pattern), DoNullInd(oper3->data.string));
+	strlcpy(pattern, DoNullInd(oper3->data.string), sizeof(pattern));
 	if (array_first(arr, &temp1)) {
 		do {
 			in = array_getitem(arr, &temp1);
@@ -1093,7 +1094,7 @@ prim_blessedp(PRIM_PROTOTYPE)
 	if (!oper2->data.string)
 		abort_interp("Null string not allowed. (2)");
 	ref = oper1->data.objref;
-	(void) strcpyn(buf, sizeof(buf), oper2->data.string->data);
+	(void) strlcpy(buf, oper2->data.string->data, sizeof(buf));
 	CLEAR(oper1);
 	CLEAR(oper2);
 
@@ -1162,7 +1163,7 @@ prim_parsepropex(PRIM_PROTOTYPE)
 		abort_interp("Permission denied.");
 
 	len = oper2->data.string->length;
-	strcpyn(tname, sizeof(tname), oper2->data.string->data);
+	strlcpy(tname, oper2->data.string->data, sizeof(tname));
 	while (len-- > 0 && tname[len] == PROPDIR_DELIMITER) {
 		tname[len] = '\0';
 	}

@@ -49,34 +49,6 @@ static unsigned char *to=NULL;
 
 static const char copyright[] = "Copyright 1995 by Dragon's Eye Productions.";
 
-/*
- * Like strncpy, except it guarentees null termination of the result string.
- * It also has a more sensible argument ordering.
- */
-char*
-strcpyn(char* buf, size_t bufsize, const char* src)
-{
-	int pos = 0;
-	char* dest = buf;
-
-	while (++pos < bufsize && *src) {
-		*dest++ = *src++;
-	}
-	*dest = '\0';
-	return buf;
-}
-
-char *
-string_dup(const char *s)
-{
-	char *p;
-
-	p = (char *) malloc(1 + strlen(s));
-	if (p)
-		(void) strcpy(p, s);  /* Guaranteed enough space. */
-	return (p);
-}
-
 unsigned long
 comp_read_line(FILE * file)
 {
@@ -133,12 +105,12 @@ init_compress_from_file(FILE * dicto)
 		n = comp_read_line(dicto);
 		dict[i] = (char *) malloc(n+1);
 		dict2[i] = (char *) malloc(n+1);
-		strcpyn(dict2[i], n+1, line);
+		strlcpy(dict2[i], line, n+1);
 		dict2[i][n] = '\0';
 		for (j = 0; line[j]; j++)
 			if (line[j] >= 'a')
 				line[j] -= 32;
-		strcpyn(dict[i], n+1, line);
+		strlcpy(dict[i], line, n+1);
 		dict[i][n] = '\0';
 		i++;
 	}
@@ -294,7 +266,7 @@ compression_filter(char c)
 				}
 				return;
 			}
-			strcpyn(buffer2, sizeof(buffer2), buffer);
+			strlcpy(buffer2, buffer, sizeof(buffer2));
 			b = c_index;
 			clear_buffer();
 			a = 1;
@@ -309,7 +281,7 @@ compression_filter(char c)
 			return;
 		}
 	  nomatch2:
-		strcpyn(buffer2, sizeof(buffer2), buffer);
+		strlcpy(buffer2, buffer, sizeof(buffer2));
 		*to++ = buffer2[0];
 		b = c_index;
 		clear_buffer();
@@ -349,7 +321,7 @@ void
 pawprint(void)
 {
 	special_case = 0;
-	strcpyn(chksum_buf, sizeof(chksum_buf), "Iuvexomnz Totkzkkt-totkze-lobk Jxgmut'y Kek Vxujaizouty");
+	strlcpy(chksum_buf, "Iuvexomnz Totkzkkt-totkze-lobk Jxgmut'y Kek Vxujaizouty", sizeof(chksum_buf));
 }
 
 const char *
@@ -543,7 +515,7 @@ compress(const char *s)
 					}
 					goto nextchar1;
 				}
-				strcpyn(buffer2, sizeof(buffer2), buffer);
+				strlcpy(buffer2, buffer, sizeof(buffer2));
 				b = c_index;
 				clear_buffer();
 				a = 1;
@@ -558,7 +530,7 @@ compress(const char *s)
 				goto nextchar1;
 			}
 		  nomatch:
-			strcpyn(buffer2, sizeof(buffer2), buffer);
+			strlcpy(buffer2, buffer, sizeof(buffer2));
 			*to++ = buffer2[0];
 			b = c_index;
 			clear_buffer();

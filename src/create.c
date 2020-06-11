@@ -112,7 +112,7 @@ do_open(int descr, dbref player, const char *direction, const char *linkto)
 		notify(player, "That command is restricted to authorized builders.");
 		return;
 	}
-	strcpyn(buf2, sizeof(buf2), linkto);
+	strlcpy(buf2, linkto, sizeof(buf2));
 	for (rname = buf2; (*rname && (*rname != '=')); rname++) ;
 	qname = rname;
 	if (*rname)
@@ -526,7 +526,7 @@ do_dig(int descr, dbref player, const char *name, const char *pname)
 	snprintf(buf, sizeof(buf), "%s created with room number %d.", name, room);
 	notify(player, buf);
 
-	strcpyn(buf, sizeof(buf), pname);
+	strlcpy(buf, pname, sizeof(buf));
 	for (rname = buf; (*rname && (*rname != '=')); rname++) ;
 	qname = rname;
 	if (*rname)
@@ -535,8 +535,10 @@ do_dig(int descr, dbref player, const char *name, const char *pname)
 		*(qname--) = '\0';
 	qname = buf;
 	for (; *rname && isspace(*rname); rname++) ;
-	rname = strcpyn(rbuf, sizeof(rbuf), rname);
-	qname = strcpyn(qbuf, sizeof(qbuf), qname);
+	strlcpy(rbuf, rname, sizeof(rbuf));
+	rname = rbuf;
+	strlcpy(qbuf, qname, sizeof(qbuf));
+	qname = qbuf;
 
 	if (*qname) {
 		notify(player, "Trying to set parent...");
@@ -1122,7 +1124,7 @@ do_create(dbref player, char *name, char *acost)
 
 	NOGUEST("@create",player);
 
-	strcpyn(buf2, sizeof(buf2), acost);
+	strlcpy(buf2, acost, sizeof(buf2));
 	for (rname = buf2; (*rname && (*rname != '=')); rname++) ;
 	qname = rname;
 	if (*rname)
@@ -1326,7 +1328,7 @@ do_action(int descr, dbref player, const char *action_name, const char *source_n
 		notify(player, "That command is restricted to authorized builders.");
 		return;
 	}
-	strcpyn(buf2, sizeof(buf2), source_name);
+	strlcpy(buf2, source_name, sizeof(buf2));
 	for (rname = buf2; (*rname && (*rname != '=')); rname++) ;
 	qname = rname;
 	if (*rname)

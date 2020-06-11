@@ -161,7 +161,7 @@ alloc_propnode(const char *name)
 	AVL_RT(new_node) = NULL;
 	new_node->height = 1;
 
-	strcpyn(PropName(new_node), nlen+1, name);
+	strlcpy(PropName(new_node), name, nlen+1);
 	SetPFlagsRaw(new_node, PROP_DIRTYP);
 	SetPDataVal(new_node, 0);
 	SetPDir(new_node, NULL);

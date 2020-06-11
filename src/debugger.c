@@ -91,18 +91,18 @@ show_line_prims(struct frame *fr, dbref program, struct inst *pc, int maxprims, 
 	}
 
 	if (linestart > code && (linestart - 1)->line == thisline)
-		strcpyn(buf, sizeof(buf), "...");
+		strlcpy(buf, "...", sizeof(buf));
 	maxback = maxprims;
 	while (linestart <= lineend) {
 		if (strlen(buf) < BUFFER_LEN / 2) {
 			if (*buf)
-				strcatn(buf, sizeof(buf), " ");
+				strlcat(buf, " ", sizeof(buf));
 			if (pc == linestart && markpc) {
-				strcatn(buf, sizeof(buf), " {{");
-				strcatn(buf, sizeof(buf), insttotext(NULL, 0, linestart, buf2, sizeof(buf2), 30, program, 1));
-				strcatn(buf, sizeof(buf), "}} ");
+				strlcat(buf, " {{", sizeof(buf));
+				strlcat(buf, insttotext(NULL, 0, linestart, buf2, sizeof(buf2), 30, program, 1), sizeof(buf));
+				strlcat(buf, "}} ", sizeof(buf));
 			} else {
-				strcatn(buf, sizeof(buf), insttotext(NULL, 0, linestart, buf2, sizeof(buf2), 30, program, 1));
+				strlcat(buf, insttotext(NULL, 0, linestart, buf2, sizeof(buf2), 30, program, 1), sizeof(buf));
 			}
 		} else {
 			break;
@@ -110,7 +110,7 @@ show_line_prims(struct frame *fr, dbref program, struct inst *pc, int maxprims, 
 		linestart++;
 	}
 	if (lineend < end && (lineend + 1)->line == thisline)
-		strcatn(buf, sizeof(buf), " ...");
+		strlcat(buf, " ...", sizeof(buf));
 	return buf;
 }
 
@@ -183,28 +183,28 @@ unparse_breakpoint(struct frame *fr, int brk)
 	snprintf(buf, sizeof(buf), "%2d) break", brk + 1);
 	if (fr->brkpt.line[brk] != -1) {
 		snprintf(buf2, sizeof(buf2), " in line %d", fr->brkpt.line[brk]);
-		strcatn(buf, sizeof(buf), buf2);
+		strlcat(buf, buf2, sizeof(buf));
 	}
 	if (fr->brkpt.pc[brk] != NULL) {
 		ref = fr->brkpt.prog[brk];
 		snprintf(buf2, sizeof(buf2), " at %s", unparse_sysreturn(&ref, fr->brkpt.pc[brk] + 1));
-		strcatn(buf, sizeof(buf), buf2);
+		strlcat(buf, buf2, sizeof(buf));
 	}
 	if (fr->brkpt.linecount[brk] != -2) {
 		snprintf(buf2, sizeof(buf2), " after %d line(s)", fr->brkpt.linecount[brk]);
-		strcatn(buf, sizeof(buf), buf2);
+		strlcat(buf, buf2, sizeof(buf));
 	}
 	if (fr->brkpt.pccount[brk] != -2) {
 		snprintf(buf2, sizeof(buf2), " after %d instruction(s)", fr->brkpt.pccount[brk]);
-		strcatn(buf, sizeof(buf), buf2);
+		strlcat(buf, buf2, sizeof(buf));
 	}
 	if (fr->brkpt.prog[brk] != NOTHING) {
 		snprintf(buf2, sizeof(buf2), " in %s(#%d)", NAME(fr->brkpt.prog[brk]), fr->brkpt.prog[brk]);
-		strcatn(buf, sizeof(buf), buf2);
+		strlcat(buf, buf2, sizeof(buf));
 	}
 	if (fr->brkpt.level[brk] != -1) {
 		snprintf(buf2, sizeof(buf2), " on call level %d", fr->brkpt.level[brk]);
-		strcatn(buf, sizeof(buf), buf2);
+		strlcat(buf, buf2, sizeof(buf));
 	}
 	return buf;
 }
@@ -497,7 +497,7 @@ muf_debugger(int descr, dbref player, dbref program, const char *text, struct fr
 
 	while (isspace(*text))
 		text++;
-	strcpyn(cmd, sizeof(cmd), text);
+	strlcpy(cmd, text, sizeof(cmd));
 	ptr = cmd + strlen(cmd);
 	if (ptr > cmd)
 		ptr--;
@@ -507,7 +507,7 @@ muf_debugger(int descr, dbref player, dbref program, const char *text, struct fr
 	if (*arg)
 		*arg++ = '\0';
 	if (!*cmd && fr->brkpt.lastcmd) {
-		strcpyn(cmd, sizeof(cmd), fr->brkpt.lastcmd);
+		strlcpy(cmd, fr->brkpt.lastcmd, sizeof(cmd));
 	} else {
 		if (fr->brkpt.lastcmd)
 			free(fr->brkpt.lastcmd);
@@ -782,7 +782,7 @@ muf_debugger(int descr, dbref player, dbref program, const char *text, struct fr
 		for (j = fr->argument.top; j > 0 && i-- > 0;) {
 			cnt = 0;
 			do {
-				strcpyn(buf, sizeof(buf), ptr);
+				strlcpy(buf, ptr, sizeof(buf));
 				ptr = insttotext(NULL, 0, &fr->argument.st[--j], buf2, sizeof(buf2), 4000, program, 1);
 				cnt++;
 			} while (!strcmp(ptr, buf) && j > 0);

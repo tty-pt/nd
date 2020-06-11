@@ -1782,7 +1782,7 @@ interp_err(dbref player, dbref program, struct inst *pc,
 	err++;
 
 	if (OWNER(origprog) == OWNER(player)) {
-		strcpyn(buf, sizeof(buf), "\033[1;31;40mProgram Error.  Your program just got the following error.\033[0m");
+		strlcpy(buf, "\033[1;31;40mProgram Error.  Your program just got the following error.\033[0m", sizeof(buf));
 	} else {
 		snprintf(buf, sizeof(buf), "\033[1;31;40mProgrammer Error.  Please tell %s what you typed, and the following message.\033[0m",
 				NAME(OWNER(origprog)));

@@ -449,11 +449,11 @@ include_defs(COMPSTATE * cstat, dbref i)
 	const char *tmpptr;
 	PropPtr j, pptr;
 
-	strcpyn(dirname, sizeof(dirname), "/_defs/");
+	strlcpy(dirname, "/_defs/", sizeof(dirname));
 	j = first_prop(i, dirname, &pptr, temp, sizeof(temp));
 	while (j) {
-		strcpyn(dirname, sizeof(dirname), "/_defs/");
-		strcatn(dirname, sizeof(dirname), temp);
+		strlcpy(dirname, "/_defs/", sizeof(dirname));
+		strlcat(dirname, temp, sizeof(dirname));
 		tmpptr = get_property_class(i, dirname);
 		if (tmpptr && *tmpptr)
 			insert_def(cstat, temp, (char *) tmpptr);
@@ -1546,7 +1546,7 @@ next_token(COMPSTATE * cstat)
 			expansion = temp;
 			elen = strlen(expansion);
 			temp = (char *) malloc(elen);
-			strcpyn(temp, elen, (expansion + 1));
+			strlcpy(temp, (expansion + 1), elen);
 			free(expansion);
 		}
 		return (temp);
@@ -1558,8 +1558,8 @@ next_token(COMPSTATE * cstat)
 		} else {
 			int templen = strlen(cstat->next_char) + strlen(expansion) + 21;
 			temp = (char *) malloc(templen);
-			strcpyn(temp, templen, expansion);
-			strcatn(temp, templen, cstat->next_char);
+			strlcpy(temp, expansion, templen);
+			strlcat(temp, cstat->next_char, templen);
 			free((void *) expansion);
 			if (cstat->line_copy) {
 				free((void *) cstat->line_copy);
@@ -1751,7 +1751,7 @@ do_directive(COMPSTATE * cstat, char *direct)
 	int i = 0;
 	int j;
 
-	strcpyn(temp, sizeof(temp), ++direct);
+	strlcpy(temp, ++direct, sizeof(temp));
 
 	if (!(temp[0])) {
 		v_abort_compile(cstat, "I don't understand that compiler directive!");
@@ -1795,7 +1795,7 @@ do_directive(COMPSTATE * cstat, char *direct)
 		include_internal_defs(cstat); /* Always include internal defs. */
 		while(*cstat->next_char && isspace(*cstat->next_char))
 			cstat->next_char++; /* eating leading spaces */
-		strcpyn(nextToken, sizeof(nextToken), cstat->next_char);
+		strlcpy(nextToken, cstat->next_char, sizeof(nextToken));
 		tmpname = nextToken;
 		while (*cstat->next_char)
 			cstat->next_char++;
@@ -1940,15 +1940,15 @@ do_directive(COMPSTATE * cstat, char *direct)
 		{
 			char tempa[BUFFER_LEN], tempb[BUFFER_LEN];
 
-			strcpyn(tempa, sizeof(tempa), match_args);
-			strcpyn(tempb, sizeof(tempb), match_cmdname);
+			strlcpy(tempa, match_args, sizeof(tempa));
+			strlcpy(tempb, match_cmdname, sizeof(tempb));
 			init_match(cstat->descr, cstat->player, tmpname, NOTYPE, &md);
 			match_registered(&md);
 			match_absolute(&md);
 			match_me(&md);
 			i = (int) match_result(&md);
-			strcpyn(match_args, sizeof(match_args), tempa);
-			strcpyn(match_cmdname, sizeof(match_cmdname), tempb);
+			strlcpy(match_args, tempa, sizeof(match_args));
+			strlcpy(match_cmdname, tempb, sizeof(match_cmdname));
 		}
 		free(tmpname);
 		if (((dbref) i == NOTHING) || (i < 0) || (i >= db_top)
@@ -2024,9 +2024,9 @@ do_directive(COMPSTATE * cstat, char *direct)
 			v_abort_compile(cstat, "Unexpected end of file looking for $ifdef condition.");
 		}
 		if (*tmpname == '"') {
-			strcpyn(temp, sizeof(temp), tmpname+1);
+			strlcpy(temp, tmpname+1, sizeof(temp));
 		} else {
-			strcpyn(temp, sizeof(temp), tmpname);
+			strlcpy(temp, tmpname, sizeof(temp));
 		}
 		free(tmpname);
 		for (i = 1; temp[i] && (temp[i] != '=') && (temp[i] != '>') && (temp[i] != '<'); i++) ;
@@ -2078,15 +2078,15 @@ do_directive(COMPSTATE * cstat, char *direct)
 		{
 			char tempa[BUFFER_LEN], tempb[BUFFER_LEN];
 
-			strcpyn(tempa, sizeof(tempa), match_args);
-			strcpyn(tempb, sizeof(tempb), match_cmdname);
+			strlcpy(tempa, match_args, sizeof(tempa));
+			strlcpy(tempb, match_cmdname, sizeof(tempb));
 			init_match(cstat->descr, cstat->player, tmpname, NOTYPE, &md);
 			match_registered(&md);
 			match_absolute(&md);
 			match_me(&md);
 			i = (int) match_result(&md);
-			strcpyn(match_args, sizeof(match_args), tempa);
-			strcpyn(match_cmdname, sizeof(match_cmdname), tempb);
+			strlcpy(match_args, tempa, sizeof(match_args));
+			strlcpy(match_cmdname, tempb, sizeof(match_cmdname));
 		} else {
 			i = cstat->program;
 		}
@@ -2163,15 +2163,15 @@ do_directive(COMPSTATE * cstat, char *direct)
 		{
 			char tempa[BUFFER_LEN], tempb[BUFFER_LEN];
 
-			strcpyn(tempa, sizeof(tempa), match_args);
-			strcpyn(tempb, sizeof(tempb), match_cmdname);
+			strlcpy(tempa, match_args, sizeof(tempa));
+			strlcpy(tempb, match_cmdname, sizeof(tempb));
 			init_match(cstat->descr, cstat->player, tmpname, NOTYPE, &md);
 			match_registered(&md);
 			match_absolute(&md);
 			match_me(&md);
 			i = (int) match_result(&md);
-			strcpyn(match_args, sizeof(match_args), tempa);
-			strcpyn(match_cmdname, sizeof(match_cmdname), tempb);
+			strlcpy(match_args, tempa, sizeof(match_args));
+			strlcpy(match_cmdname, tempb, sizeof(match_cmdname));
 		} else {
 			i = cstat->program;
 		}
@@ -2185,7 +2185,7 @@ do_directive(COMPSTATE * cstat, char *direct)
 		}
 		if (!tmpptr || !*tmpptr) {
 			tmpptr = (char*)malloc(4 * sizeof(char));
-			strcpyn(tmpptr, 4*sizeof(char), "0.0");
+			strlcpy(tmpptr, "0.0", 4*sizeof(char));
 			needFree = 1;
 		}
 		tmpname = (char *) next_token_raw(cstat);
@@ -2239,15 +2239,15 @@ do_directive(COMPSTATE * cstat, char *direct)
 		if (!tmpname)
 			v_abort_compile(cstat, "Unexpected end of file in $iflib/$ifnlib clause.");
 
-		strcpyn(tempa, sizeof(tempa), match_args);
-		strcpyn(tempb, sizeof(tempb), match_cmdname);
+		strlcpy(tempa, match_args, sizeof(tempa));
+		strlcpy(tempb, match_cmdname, sizeof(tempb));
 		init_match(cstat->descr, cstat->player, tmpname, NOTYPE, &md);
 		match_registered(&md);
 		match_absolute(&md);
 		match_me(&md);
 		i = (int) match_result(&md);
-		strcpyn(match_args, sizeof(match_args), tempa);
-		strcpyn(match_cmdname, sizeof(match_cmdname), tempb);
+		strlcpy(match_args, tempa, sizeof(match_args));
+		strlcpy(match_cmdname, tempb, sizeof(match_cmdname));
 
 		free(tmpname);
 		if ((((dbref) i == NOTHING) || (i < 0) || (i >= db_top)
@@ -2396,7 +2396,7 @@ process_special(COMPSTATE * cstat, const char *token)
 		if (!proc_name)
 			abort_compile(cstat, "Unexpected end of file within procedure.");
 
-		strcpyn(buf, sizeof(buf), proc_name);
+		strlcpy(buf, proc_name, sizeof(buf));
 		if (proc_name)
 			free((void *) proc_name);
 		proc_name = buf;

@@ -746,13 +746,13 @@ mcp_frame_output_mesg(McpFrame * mfr, McpMesg * msg)
 		snprintf(mesgname, sizeof(mesgname), "%s", msg->package);
 	}
 
-	strcpyn(outbuf, sizeof(outbuf), MCP_MESG_PREFIX);
-	strcatn(outbuf, sizeof(outbuf), mesgname);
+	strlcpy(outbuf, MCP_MESG_PREFIX, sizeof(outbuf));
+	strlcat(outbuf, mesgname, sizeof(outbuf));
 	if (strcmp_nocase(mesgname, MCP_INIT_PKG)) {
 		McpVer nullver = { 0, 0 };
 
-		strcatn(outbuf, sizeof(outbuf), " ");
-		strcatn(outbuf, sizeof(outbuf), mfr->authkey);
+		strlcat(outbuf, " ", sizeof(outbuf));
+		strlcat(outbuf, mfr->authkey, sizeof(outbuf));
 		if (strcmp_nocase(msg->package, MCP_NEGOTIATE_PKG)) {
 			McpVer ver = mcp_frame_package_supported(mfr, msg->package);
 
@@ -1080,7 +1080,7 @@ mcp_mesg_arg_append(McpMesg * msg, const char *argname, const char *argval)
 		}
 		ptr = (McpArg *) malloc(sizeof(McpArg));
 		ptr->name = (char *) malloc(namelen + 1);
-		strcpyn(ptr->name, namelen+1, argname);
+		strlcpy(ptr->name, argname, namelen+1);
 		ptr->value = NULL;
 		ptr->last = NULL;
 		ptr->next = NULL;
@@ -1107,7 +1107,7 @@ mcp_mesg_arg_append(McpMesg * msg, const char *argname, const char *argval)
 		McpArgPart *nu = (McpArgPart *) malloc(sizeof(McpArgPart));
 
 		nu->value = (char *) malloc(vallen + 1);
-		strcpyn(nu->value, vallen+1, argval);
+		strlcpy(nu->value, argval, vallen+1);
 		nu->next = NULL;
 
 		if (!ptr->last) {

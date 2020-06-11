@@ -30,46 +30,9 @@
 //"do not include netinet6/in6.h directly, include netinet/in.h.  see RFC2553"
 
 extern char **environ;
-#ifdef HAVE_ERRNO_H
 #include <errno.h>
-#else
-#ifdef HAVE_SYS_ERRNO_H
-#include <sys/errno.h>
-#else
-extern int errno;
-#endif
-#endif
 char *Name;						/* name of this program for error messages */
 char msg[32768];
-
-
-char*
-strcpyn(char* buf, size_t bufsize, const char* src)
-{
-	int pos = 0;
-	char* dest = buf;
-
-	while (++pos < bufsize && *src) {
-		*dest++ = *src++;
-	}
-	*dest = '\0';
-	return buf;
-}
-
-char*
-strcatn(char* buf, size_t bufsize, const char* src)
-{
-	int pos = strlen(buf);
-	char* dest = &buf[pos];
-
-	while (++pos < bufsize && *src) {
-		*dest++ = *src++;
-	}
-	if (pos < bufsize + 1) {
-		*dest = '\0';
-	}
-	return buf;
-}
 
 int
 notify(int player, const char *msg)
@@ -111,13 +74,13 @@ main(int argc, char *argv[])
 	}
 #endif
 
-	strcpyn(msg, sizeof(msg), "");
-	strcpyn(tmp, sizeof(tmp), "");
+	strlcpy(msg, "", sizeof(msg));
+	strlcpy(tmp, "", sizeof(tmp));
 	while (1) {
 		if (fgets(tmp,32766,stdin) == NULL)
 			break;
-		strcatn(tmp, sizeof(tmp), "\r\n");
-		strcatn(msg, sizeof(msg), tmp);
+		strlcat(tmp, "\r\n", sizeof(tmp));
+		strlcat(msg, tmp, sizeof(msg));
 	}
 	msg[4095] = '\0';
 	signal(SIGHUP, SIG_IGN);	/* get socket, bind port to it      */

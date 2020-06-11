@@ -58,35 +58,6 @@ string_prefix(register const char *string, register const char *prefix)
 		return *prefix == '\0';
 }
 
-
-char*
-strcpyn(char* buf, size_t bufsize, const char* src)
-{
-	int pos = 0;
-	char* dest = buf;
-
-	while (++pos < bufsize && *src) {
-		*dest++ = *src++;
-	}
-	*dest = '\0';
-	return buf;
-}
-
-char*
-strcatn(char* buf, size_t bufsize, const char* src)
-{
-	int pos = strlen(buf);
-	char* dest = &buf[pos];
-
-	while (++pos < bufsize && *src) {
-		*dest++ = *src++;
-	}
-	if (pos <= bufsize) {
-		*dest = '\0';
-	}
-	return buf;
-}
-
 #endif
 
 void
@@ -100,7 +71,7 @@ spit_file_segment(dbref player, const char *filename, const char *seg)
 
 	startline = endline = currline = 0;
 	if (seg && *seg) {
-		strcpyn(segbuf, sizeof(segbuf), seg);
+		strlcpy(segbuf, seg, sizeof(segbuf));
 		for (p = segbuf; isdigit(*p); p++) ;
 		if (*p) {
 			*p++ = '\0';
@@ -156,9 +127,9 @@ index_file(dbref player, const char *onwhat, const char *file)
 	int arglen, found;
 
 	*topic = '\0';
-	strcpyn(topic, sizeof(topic), onwhat);
+	strlcpy(topic, onwhat, sizeof(topic));
 	if (*onwhat) {
-		strcatn(topic, sizeof(topic), "|");
+		strlcat(topic, "|", sizeof(topic));
 	}
 
 	if ((f = fopen(file, "rb")) == NULL) {
@@ -246,9 +217,9 @@ mcppkg_help_request(McpFrame * mfr, McpMesg * msg, McpVer ver, void *context)
 		valtype = mcp_mesg_arg_getline(msg, "type", 0);
 
 		*topic = '\0';
-		strcpyn(topic, sizeof(topic), onwhat);
+		strlcpy(topic, onwhat, sizeof(topic));
 		if (*onwhat) {
-			strcatn(topic, sizeof(topic), "|");
+			strlcat(topic, "|", sizeof(topic));
 		}
 
 		if (!strcmp(valtype, "man")) {
@@ -332,7 +303,7 @@ mcppkg_help_request(McpFrame * mfr, McpMesg * msg, McpVer ver, void *context)
 					}
 				}
 				if (!*buf) {
-					strcpyn(buf, sizeof(buf), "  ");
+					strlcpy(buf, "  ", sizeof(buf));
 				}
 				mcp_mesg_arg_append(&omsg, "text", buf);
 			}
@@ -455,7 +426,7 @@ do_info(dbref player, const char *topic, const char *seg)
 	} else {
 #ifdef DIR_AVALIBLE
 		buf = (char *) calloc(1, buflen);
-		(void) strcpyn(buf, buflen, "    ");
+		(void) strlcpy(buf, "    ", buflen);
 		f = 0;
 		cols = 0;
 		if ((df = (DIR *) opendir(INFO_DIR))) {
@@ -466,11 +437,11 @@ do_info(dbref player, const char *topic, const char *seg)
 						notify(player, "Available information files are:");
 					if ((cols++ > 2) || ((strlen(buf) + strlen(dp->d_name)) > 63)) {
 						notify(player, buf);
-						strcpyn(buf, buflen, "    ");
+						strlcpy(buf, "    ", buflen);
 						cols = 0;
 					}
-					strcatn(buf, buflen, dp->d_name);
-					strcatn(buf, buflen, " ");
+					strlcat(buf, dp->d_name, buflen);
+					strlcat(buf, " ", buflen);
 					f = strlen(buf);
 					while ((f % 20) != 4)
 						buf[f++] = ' ';

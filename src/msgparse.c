@@ -123,7 +123,7 @@ safegetprop_strict(dbref player, dbref what, dbref perms, const char *inbuf, int
 		notify_nolisten(player, "PropFetch: Propname required.", 1);
 		return NULL;
 	}
-	strcpyn(bbuf, sizeof(bbuf), inbuf);
+	strlcpy(bbuf, inbuf, sizeof(bbuf));
 
 	if (Prop_System(bbuf))
 	{
@@ -215,7 +215,7 @@ stripspaces(char *buf, int buflen, char *in)
 	char *ptr;
 
 	for (ptr = in; *ptr == ' '; ptr++) ;
-	strcpyn(buf, buflen, ptr);
+	strlcpy(buf, ptr, buflen);
 	ptr = strlen(buf) + buf - 1;
 	while (*ptr == ' ' && ptr > buf)
 		*(ptr--) = '\0';
@@ -234,7 +234,7 @@ string_substitute(const char *str, const char *oldstr, const char *newstr,
 	int clen = 0;
 
 	if (len == 0) {
-		strcpyn(buf, maxlen, str);
+		strlcpy(buf, str, maxlen);
 		return buf;
 	}
 	while (*ptr && clen < (maxlen+2)) {
@@ -545,7 +545,7 @@ new_mvar(const char *varname, char *buf)
 		return 1;
 	if (varc >= MPI_MAX_VARIABLES)
 		return 2;
-	strcpyn(varv[varc].name, sizeof(varv[varc].name), varname);
+	strlcpy(varv[varc].name, varname, sizeof(varv[varc].name));
 	varv[varc++].buf = buf;
 	return 0;
 }
@@ -589,7 +589,7 @@ new_mfunc(const char *funcname, const char *buf)
 		return 1;
 	if (funcc > MPI_MAX_FUNCTIONS)
 		return 2;
-	strcpyn(funcv[funcc].name, sizeof(funcv[funcc].name), funcname);
+	strlcpy(funcv[funcc].name, funcname, sizeof(funcv[funcc].name));
 	funcv[funcc++].buf = (char *) strdup(buf);
 	return 0;
 }
@@ -658,7 +658,7 @@ msg_unparse_macro(dbref player, dbref what, dbref perms, char *name, int argc, a
 	int i, p = 0;
 	int blessed;
 
-	strcpyn(buf, sizeof(buf), rest);
+	strlcpy(buf, rest, sizeof(buf));
 	snprintf(buf2, sizeof(buf2), "_msgmacs/%s", name);
 	obj = what;
 	ptr = get_mfunc(name);
@@ -774,7 +774,7 @@ mesg_args(char *wbuf, int maxlen, argv_typ argv, char ulv, char sep, char dlv, c
 	int litflag = 0;
 
 	/* for (ptr = wbuf; ptr && isspace(*ptr); ptr++); */
-	strcpyn(buf, sizeof(buf), wbuf);
+	strlcpy(buf, wbuf, sizeof(buf));
 	ptr = buf;
 	for (lev = r = 0; (r < (BUFFER_LEN - 2)); r++) {
 		if (buf[r] == '\0') {
@@ -796,7 +796,7 @@ mesg_args(char *wbuf, int maxlen, argv_typ argv, char ulv, char sep, char dlv, c
 					argv[argc] = NULL;
 				}
 				argv[argc] = (char*)malloc(((buf + r) - ptr) + 1);
-				strcpyn(argv[argc++], ((buf + r) - ptr) + 1, ptr);
+				strlcpy(argv[argc++], ptr, ((buf + r) - ptr) + 1);
 				ptr = buf + r + 1;
 				break;
 			}
@@ -809,13 +809,13 @@ mesg_args(char *wbuf, int maxlen, argv_typ argv, char ulv, char sep, char dlv, c
 					argv[argc] = NULL;
 				}
 				argv[argc] = (char*)malloc(((buf + r) - ptr) + 1);
-				strcpyn(argv[argc++], ((buf + r) - ptr) + 1, ptr);
+				strlcpy(argv[argc++], ptr, ((buf + r) - ptr) + 1);
 				ptr = buf + r + 1;
 			}
 		}
 	}
 	buf[BUFFER_LEN - 1] = '\0';
-	strcpyn(wbuf, maxlen, ptr);
+	strlcpy(wbuf, ptr, maxlen);
 	return argc;
 }
 
@@ -892,7 +892,7 @@ mesg_parse(int descr, dbref player, dbref what, dbref perms,
 		outbuf[0] = '\0';
 		return NULL;
 	}
-	strcpyn(wbuf, sizeof(wbuf), inbuf);
+	strlcpy(wbuf, inbuf, sizeof(wbuf));
 	for (p = q = 0; wbuf[p] && (p < maxchars - 1) && q < (maxchars - 1); p++) {
 		if (wbuf[p] == '\\') {
 			p++;
@@ -1017,19 +1017,19 @@ mesg_parse(int descr, dbref player, dbref what, dbref perms,
 							for (i = (varflag ? 1 : 0); i < argc; i++) {
 								if (i) {
 									const char tbuf[] = { MFUN_ARGSEP, '\0' };
-									strcatn(dbuf, sizeof(dbuf), tbuf);
+									strlcat(dbuf, tbuf, sizeof(dbuf));
 								}
 								cr2slash(ebuf, sizeof(ebuf)/8, argv[i]);
-								strcatn(dbuf, sizeof(dbuf), "`");
-								strcatn(dbuf, sizeof(dbuf), ebuf);
+								strlcat(dbuf, "`", sizeof(dbuf));
+								strlcat(dbuf, ebuf, sizeof(dbuf));
 								if (strlen(ebuf) >= (sizeof(ebuf)/8)-2) {
-									strcatn(dbuf, sizeof(dbuf), "...");
+									strlcat(dbuf, "...", sizeof(dbuf));
 								}
-								strcatn(dbuf, sizeof(dbuf), "`");
+								strlcat(dbuf, "`", sizeof(dbuf));
 							}
 							{
 								const char tbuf[] = { MFUN_ARGEND, '\0' };
-								strcatn(dbuf, sizeof(dbuf), tbuf);
+								strlcat(dbuf, tbuf, sizeof(dbuf));
 							}
 							notify_nolisten(player, dbuf, 1);
 						}
@@ -1041,7 +1041,7 @@ mesg_parse(int descr, dbref player, dbref what, dbref perms,
 								 * The argv[i] buffer will therefore always
 								 * be large enough.
 								 */
-								strcpyn(argv[i], strlen(buf)+1, buf);
+								strlcpy(argv[i], buf, strlen(buf)+1);
 							}
 						}
 						if (mfun_list[s].parsep) {
@@ -1063,7 +1063,7 @@ mesg_parse(int descr, dbref player, dbref what, dbref perms,
 									return NULL;
 								}
 								argv[i] = (char*)realloc(argv[i], strlen(buf) + 1);
-								strcpyn(argv[i], strlen(buf)+1, buf);
+								strlcpy(argv[i], buf, strlen(buf)+1);
 							}
 						}
 						if (mesgtyp & MPI_ISDEBUG) {
@@ -1075,19 +1075,19 @@ mesg_parse(int descr, dbref player, dbref what, dbref perms,
 							for (i = (varflag ? 1 : 0); i < argc; i++) {
 								if (i) {
 									const char tbuf[] = { MFUN_ARGSEP, '\0' };
-									strcatn(dbuf, sizeof(dbuf), tbuf);
+									strlcat(dbuf, tbuf, sizeof(dbuf));
 								}
 								cr2slash(ebuf, sizeof(ebuf)/8, argv[i]);
-								strcatn(dbuf, sizeof(dbuf), "`");
-								strcatn(dbuf, sizeof(dbuf), ebuf);
+								strlcat(dbuf, "`", sizeof(dbuf));
+								strlcat(dbuf, ebuf, sizeof(dbuf));
 								if (strlen(ebuf) >= (sizeof(ebuf)/8)-2) {
-									strcatn(dbuf, sizeof(dbuf), "...");
+									strlcat(dbuf, "...", sizeof(dbuf));
 								}
-								strcatn(dbuf, sizeof(dbuf), "`");
+								strlcat(dbuf, "`", sizeof(dbuf));
 							}
 							{
 								const char tbuf[] = { MFUN_ARGEND, '\0' };
-								strcatn(dbuf, sizeof(dbuf), tbuf);
+								strlcat(dbuf, tbuf, sizeof(dbuf));
 							}
 						}
 						if (argc < mfun_list[s].minargs) {
@@ -1149,13 +1149,13 @@ mesg_parse(int descr, dbref player, dbref what, dbref perms,
 							}
 						}
 						if (mesgtyp & MPI_ISDEBUG) {
-							strcatn(dbuf, sizeof(dbuf), " = `");
+							strlcat(dbuf, " = `", sizeof(dbuf));
 							cr2slash(ebuf, sizeof(ebuf)/8, ptr);
-							strcatn(dbuf, sizeof(dbuf), ebuf);
+							strlcat(dbuf, ebuf, sizeof(dbuf));
 							if (strlen(ebuf) >= (sizeof(ebuf)/8)-2) {
-								strcatn(dbuf, sizeof(dbuf), "...");
+								strlcat(dbuf, "...", sizeof(dbuf));
 							}
-							strcatn(dbuf, sizeof(dbuf), "`");
+							strlcat(dbuf, "`", sizeof(dbuf));
 							notify_nolisten(player, dbuf, 1);
 						}
 					} else if (msg_is_macro(player, what, perms, cmdbuf, mesgtyp)) {
@@ -1268,7 +1268,7 @@ do_parse_mesg_2(int descr, dbref player, dbref what, dbref perms,
 			varc = mvarcnt;
 			return outbuf;
 		}
-		strcpyn(howvar, sizeof(howvar), abuf);
+		strlcpy(howvar, abuf, sizeof(howvar));
 	}
 
 	if (new_mvar("cmd", cmdvar))
@@ -1278,8 +1278,8 @@ do_parse_mesg_2(int descr, dbref player, dbref what, dbref perms,
 		varc = mvarcnt;
 		return outbuf;
 	}
-	strcpyn(cmdvar, sizeof(cmdvar), match_cmdname);
-	strcpyn(tmpcmd, sizeof(tmpcmd), match_cmdname);
+	strlcpy(cmdvar, match_cmdname, sizeof(cmdvar));
+	strlcpy(tmpcmd, match_cmdname, sizeof(tmpcmd));
 
 	if (new_mvar("arg", argvar))
 	{
@@ -1288,8 +1288,8 @@ do_parse_mesg_2(int descr, dbref player, dbref what, dbref perms,
 		varc = mvarcnt;
 		return outbuf;
 	}
-	strcpyn(argvar, sizeof(argvar), match_args);
-	strcpyn(tmparg, sizeof(tmparg), match_args);
+	strlcpy(argvar, match_args, sizeof(argvar));
+	strlcpy(tmparg, match_args, sizeof(tmparg));
 
 	dptr = MesgParse(inbuf, outbuf, outbuflen);
 	if (!dptr) {
@@ -1301,8 +1301,8 @@ do_parse_mesg_2(int descr, dbref player, dbref what, dbref perms,
 	mesg_rec_cnt = tmprec_cnt;
 	mesg_instr_cnt = tmpinst_cnt;
 
-	strcpyn(match_cmdname, sizeof(match_cmdname), tmpcmd);
-	strcpyn(match_args, sizeof(match_args), tmparg);
+	strlcpy(match_cmdname, tmpcmd, sizeof(match_cmdname));
+	strlcpy(match_args, tmparg, sizeof(match_args));
 
 
 	return outbuf;
@@ -1337,7 +1337,7 @@ do_parse_mesg(int descr, dbref player, dbref what, const char *inbuf, const char
 	}
 	return(tmp);
 #else
-	strcpyn(outbuf, outbuflen, inbuf);
+	strlcpy(outbuf, inbuf, outbuflen);
 	return outbuf;
 #endif
 }

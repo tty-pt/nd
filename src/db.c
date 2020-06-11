@@ -238,10 +238,10 @@ putproperties_rec(FILE * f, const char *dir, dbref obj)
 	while (pref) {
 		p = pref;
 		db_putprop(f, dir, p);
-		strcpyn(buf, sizeof(buf), dir);
-		strcatn(buf, sizeof(buf), name);
+		strlcpy(buf, dir, sizeof(buf));
+		strlcat(buf, name, sizeof(buf));
 		if (PropDir(p)) {
-			strcatn(buf, sizeof(buf), "/");
+			strlcat(buf, "/", sizeof(buf));
 			putproperties_rec(f, buf, obj);
 		}
 		pref = next_prop(pptr, pref, name, sizeof(name));
@@ -733,7 +733,7 @@ read_program(dbref i)
 			len--;
 		}
 		if (!*buf)
-			strcpyn(buf, sizeof(buf), " ");
+			strlcpy(buf, " ", sizeof(buf));
 		nu->this_line = alloc_string(buf);
 		if (!first) {
 			prev = nu;

@@ -51,7 +51,7 @@ prim_fmtstring(PRIM_PROTOTYPE)
 	slen = strlen(oper1->data.string->data);
 	scnt = 0;
 	tstop = 0;
-	strcpyn(sstr, sizeof(sstr), oper1->data.string->data);
+	strlcpy(sstr, oper1->data.string->data, sizeof(sstr));
 	CLEAR(oper1);
 	while ((scnt < slen) && (result < BUFFER_LEN)) {
 		CHECKOP(0);
@@ -159,22 +159,22 @@ prim_fmtstring(PRIM_PROTOTYPE)
 				sfmt[0] = '%';
 				sfmt[1] = '\0';
 				if (slrj == 1)
-					strcatn(sfmt, sizeof(sfmt), "-");
+					strlcat(sfmt, "-", sizeof(sfmt));
 				if (spad1) {
 					if (spad1 == 1)
-						strcatn(sfmt, sizeof(sfmt), "+");
+						strlcat(sfmt, "+", sizeof(sfmt));
 					else
-						strcatn(sfmt, sizeof(sfmt), " ");
+						strlcat(sfmt, " ", sizeof(sfmt));
 				}
 				if (spad2)
-					strcatn(sfmt, sizeof(sfmt), "0");
+					strlcat(sfmt, "0", sizeof(sfmt));
 				if (slen1 != 0) {
 					snprintf(tbuf, sizeof(tbuf), "%d", slen1);
-					strcatn(sfmt, sizeof(sfmt), tbuf);
+					strlcat(sfmt, tbuf, sizeof(sfmt));
 				}
 				if (slen2 != -1) {
 					snprintf(tbuf, sizeof(tbuf), ".%d", slen2);
-					strcatn(sfmt, sizeof(sfmt), tbuf);
+					strlcat(sfmt, tbuf, sizeof(sfmt));
 				}
 
 				if (sstr[scnt] == '~') {
@@ -201,7 +201,7 @@ prim_fmtstring(PRIM_PROTOTYPE)
 				}
 				switch (sstr[scnt]) {
 				case 'i':
-					strcatn(sfmt, sizeof(sfmt), "d");
+					strlcat(sfmt, "d", sizeof(sfmt));
 					if (oper2->type != PROG_INTEGER)
 						abort_interp("Format specified integer argument not found.");
 					snprintf(tbuf, sizeof(tbuf), sfmt, oper2->data.number);
@@ -221,13 +221,13 @@ prim_fmtstring(PRIM_PROTOTYPE)
 					if (tlen + result > BUFFER_LEN)
 						abort_interp("Resultant string would overflow buffer.");
 					buf[result] = '\0';
-					strcatn(buf, sizeof(buf), tbuf);
+					strlcat(buf, tbuf, sizeof(buf));
 					result += tlen;
 					CLEAR(oper2);
 					break;
 				case 'S':
 				case 's':
-					strcatn(sfmt, sizeof(sfmt), "s");
+					strlcat(sfmt, "s", sizeof(sfmt));
 					if (oper2->type != PROG_STRING)
 						abort_interp("Format specified string argument not found.");
 					snprintf(tbuf, sizeof(tbuf), sfmt,
@@ -248,60 +248,60 @@ prim_fmtstring(PRIM_PROTOTYPE)
 					if (strlen(tbuf) + result > BUFFER_LEN)
 						abort_interp("Resultant string would overflow buffer.");
 					buf[result] = '\0';
-					strcatn(buf, sizeof(buf), tbuf);
+					strlcat(buf, tbuf, sizeof(buf));
 					result += strlen(tbuf);
 					CLEAR(oper2);
 					break;
 				case '?':
-					strcatn(sfmt, sizeof(sfmt), "s");
+					strlcat(sfmt, "s", sizeof(sfmt));
 					switch (oper2->type) {
 					case PROG_OBJECT:
-						strcpyn(hold, sizeof(hold), "OBJECT");
+						strlcpy(hold, "OBJECT", sizeof(hold));
 						break;
 					case PROG_FLOAT:
-						strcpyn(hold, sizeof(hold), "FLOAT");
+						strlcpy(hold, "FLOAT", sizeof(hold));
 						break;
 					case PROG_INTEGER:
-						strcpyn(hold, sizeof(hold), "INTEGER");
+						strlcpy(hold, "INTEGER", sizeof(hold));
 						break;
 					case PROG_LOCK:
-						strcpyn(hold, sizeof(hold), "LOCK");
+						strlcpy(hold, "LOCK", sizeof(hold));
 						break;
 					case PROG_STRING:
-						strcpyn(hold, sizeof(hold), "STRING");
+						strlcpy(hold, "STRING", sizeof(hold));
 						break;
 					case PROG_VAR:
-						strcpyn(hold, sizeof(hold), "VARIABLE");
+						strlcpy(hold, "VARIABLE", sizeof(hold));
 						break;
 					case PROG_LVAR:
-						strcpyn(hold, sizeof(hold), "LOCAL-VARIABLE");
+						strlcpy(hold, "LOCAL-VARIABLE", sizeof(hold));
 						break;
 					case PROG_SVAR:
-						strcpyn(hold, sizeof(hold), "SCOPED-VARIABLE");
+						strlcpy(hold, "SCOPED-VARIABLE", sizeof(hold));
 						break;
 					case PROG_ADD:
-						strcpyn(hold, sizeof(hold), "ADDRESS");
+						strlcpy(hold, "ADDRESS", sizeof(hold));
 						break;
 					case PROG_ARRAY:
-						strcpyn(hold, sizeof(hold), "ARRAY");
+						strlcpy(hold, "ARRAY", sizeof(hold));
 						break;
 					case PROG_FUNCTION:
-						strcpyn(hold, sizeof(hold), "FUNCTION-NAME");
+						strlcpy(hold, "FUNCTION-NAME", sizeof(hold));
 						break;
 					case PROG_IF:
-						strcpyn(hold, sizeof(hold), "IF-STATEMENT");
+						strlcpy(hold, "IF-STATEMENT", sizeof(hold));
 						break;
 					case PROG_EXEC:
-						strcpyn(hold, sizeof(hold), "EXECUTE");
+						strlcpy(hold, "EXECUTE", sizeof(hold));
 						break;
 					case PROG_JMP:
-						strcpyn(hold, sizeof(hold), "JUMP");
+						strlcpy(hold, "JUMP", sizeof(hold));
 						break;
 					case PROG_PRIMITIVE:
-						strcpyn(hold, sizeof(hold), "PRIMITIVE");
+						strlcpy(hold, "PRIMITIVE", sizeof(hold));
 						break;
 					default:
-						strcpyn(hold, sizeof(hold), "UNKNOWN");
+						strlcpy(hold, "UNKNOWN", sizeof(hold));
 					}
 					snprintf(tbuf, sizeof(tbuf), sfmt, hold);
 					tlen = strlen(tbuf);
@@ -320,12 +320,12 @@ prim_fmtstring(PRIM_PROTOTYPE)
 					if (strlen(tbuf) + result > BUFFER_LEN)
 						abort_interp("Resultant string would overflow buffer.");
 					buf[result] = '\0';
-					strcatn(buf, sizeof(buf), tbuf);
+					strlcat(buf, tbuf, sizeof(buf));
 					result += strlen(tbuf);
 					CLEAR(oper2);
 					break;
 				case 'd':
-					strcatn(sfmt, sizeof(sfmt), "s");
+					strlcat(sfmt, "s", sizeof(sfmt));
 					if (oper2->type != PROG_OBJECT)
 						abort_interp("Format specified object not found.");
 					snprintf(hold, sizeof(hold), "#%d", oper2->data.objref);
@@ -346,12 +346,12 @@ prim_fmtstring(PRIM_PROTOTYPE)
 					if (strlen(tbuf) + result > BUFFER_LEN)
 						abort_interp("Resultant string would overflow buffer.");
 					buf[result] = '\0';
-					strcatn(buf, sizeof(buf), tbuf);
+					strlcat(buf, tbuf, sizeof(buf));
 					result += strlen(tbuf);
 					CLEAR(oper2);
 					break;
 				case 'D':
-					strcatn(sfmt, sizeof(sfmt), "s");
+					strlcat(sfmt, "s", sizeof(sfmt));
 					if (oper2->type != PROG_OBJECT)
 						abort_interp("Format specified object not found.");
 					if (!valid_object(oper2))
@@ -361,7 +361,7 @@ prim_fmtstring(PRIM_PROTOTYPE)
 					/* if ((Typeof(ref) != TYPE_PLAYER) && (Typeof(ref) != TYPE_PROGRAM))
 					   ts_lastuseobject(ref); */
 					if (NAME(ref)) {
-						strcpyn(hold, sizeof(hold), NAME(ref));
+						strlcpy(hold, NAME(ref), sizeof(hold));
 					} else {
 						hold[0] = '\0';
 					}
@@ -382,15 +382,15 @@ prim_fmtstring(PRIM_PROTOTYPE)
 					if (strlen(tbuf) + result > BUFFER_LEN)
 						abort_interp("Resultant string would overflow buffer.");
 					buf[result] = '\0';
-					strcatn(buf, sizeof(buf), tbuf);
+					strlcat(buf, tbuf, sizeof(buf));
 					result += strlen(tbuf);
 					CLEAR(oper2);
 					break;
 				case 'l':
-					strcatn(sfmt, sizeof(sfmt), "s");
+					strlcat(sfmt, "s", sizeof(sfmt));
 					if (oper2->type != PROG_LOCK)
 						abort_interp("Format specified lock not found.");
-					strcpyn(hold, sizeof(hold), unparse_boolexp(ProgUID, oper2->data.lock, 1));
+					strlcpy(hold, unparse_boolexp(ProgUID, oper2->data.lock, 1), sizeof(hold));
 					snprintf(tbuf, sizeof(tbuf), sfmt, hold);
 					tlen = strlen(tbuf);
 					if (slrj == 2) {
@@ -408,16 +408,16 @@ prim_fmtstring(PRIM_PROTOTYPE)
 					if (strlen(tbuf) + result > BUFFER_LEN)
 						abort_interp("Resultant string would overflow buffer.");
 					buf[result] = '\0';
-					strcatn(buf, sizeof(buf), tbuf);
+					strlcat(buf, tbuf, sizeof(buf));
 					result += strlen(tbuf);
 					CLEAR(oper2);
 					break;
 				case 'f':
 				case 'e':
 				case 'g':
-					strcatn(sfmt, sizeof(sfmt), "l");
+					strlcat(sfmt, "l", sizeof(sfmt));
 					snprintf(hold, sizeof(hold), "%c", sstr[scnt]);
-					strcatn(sfmt, sizeof(sfmt), hold);
+					strlcat(sfmt, hold, sizeof(sfmt));
 					if (oper2->type != PROG_FLOAT)
 						abort_interp("Format specified float not found.");
 					snprintf(tbuf, sizeof(tbuf), sfmt, oper2->data.fnumber);
@@ -437,7 +437,7 @@ prim_fmtstring(PRIM_PROTOTYPE)
 					if (strlen(tbuf) + result > BUFFER_LEN)
 						abort_interp("Resultant string would overflow buffer.");
 					buf[result] = '\0';
-					strcatn(buf, sizeof(buf), tbuf);
+					strlcat(buf, tbuf, sizeof(buf));
 					result += strlen(tbuf);
 					CLEAR(oper2);
 					break;
@@ -517,7 +517,7 @@ prim_array_fmtstrings(PRIM_PROTOTYPE)
 	nu = new_array_packed(0);
 	if (array_first(arr, &temp1)) {
 		do {
-			strcpyn(sstr, sizeof(sstr), fmtstr);
+			strlcpy(sstr, fmtstr, sizeof(sstr));
 			result = 0;		/* End of current string, must be smaller than BUFFER_LEN */
 			tmp = 0;		/* Number of props to search for/found */
 			scnt = 0;
@@ -640,22 +640,22 @@ prim_array_fmtstrings(PRIM_PROTOTYPE)
 						sfmt[0] = '%';
 						sfmt[1] = '\0';
 						if (slrj == 1)
-							strcatn(sfmt, sizeof(sfmt), "-");
+							strlcat(sfmt, "-", sizeof(sfmt));
 						if (spad1) {
 							if (spad1 == 1)
-								strcatn(sfmt, sizeof(sfmt), "+");
+								strlcat(sfmt, "+", sizeof(sfmt));
 							else
-								strcatn(sfmt, sizeof(sfmt), " ");
+								strlcat(sfmt, " ", sizeof(sfmt));
 						}
 						if (spad2)
-							strcatn(sfmt, sizeof(sfmt), "0");
+							strlcat(sfmt, "0", sizeof(sfmt));
 						if (slen1 != -1) {
 							snprintf(tbuf, sizeof(tbuf), "%d", slen1);
-							strcatn(sfmt, sizeof(sfmt), tbuf);
+							strlcat(sfmt, tbuf, sizeof(sfmt));
 						}
 						if (slen2 != -1) {
 							snprintf(tbuf, sizeof(tbuf), ".%d", slen2);
-							strcatn(sfmt, sizeof(sfmt), tbuf);
+							strlcat(sfmt, tbuf, sizeof(sfmt));
 						}
 						if (sstr[scnt] == '~') {
 							switch (oper3->type) {
@@ -682,7 +682,7 @@ prim_array_fmtstrings(PRIM_PROTOTYPE)
 						}
 						switch (sstr[scnt]) {
 						case 'i':
-							strcatn(sfmt, sizeof(sfmt), "d");
+							strlcat(sfmt, "d", sizeof(sfmt));
 							if (oper3->type != PROG_INTEGER)
 								abort_interp("Format specified integer argument not found.");
 							snprintf(tbuf, sizeof(tbuf), sfmt, oper3->data.number);
@@ -702,12 +702,12 @@ prim_array_fmtstrings(PRIM_PROTOTYPE)
 							if (tlen + result > BUFFER_LEN)
 								abort_interp("Resultant string would overflow buffer.");
 							buf[result] = '\0';
-							strcatn(buf, sizeof(buf), tbuf);
+							strlcat(buf, tbuf, sizeof(buf));
 							result += tlen;
 							break;
 						case 'S':
 						case 's':
-							strcatn(sfmt, sizeof(sfmt), "s");
+							strlcat(sfmt, "s", sizeof(sfmt));
 							if (oper3->type != PROG_STRING)
 								abort_interp("Format specified string argument not found.");
 							snprintf(tbuf, sizeof(tbuf), sfmt, DoNullInd(oper3->data.string));
@@ -727,59 +727,59 @@ prim_array_fmtstrings(PRIM_PROTOTYPE)
 							if (strlen(tbuf) + result > BUFFER_LEN)
 								abort_interp("Resultant string would overflow buffer.");
 							buf[result] = '\0';
-							strcatn(buf, sizeof(buf), tbuf);
+							strlcat(buf, tbuf, sizeof(buf));
 							result += strlen(tbuf);
 							break;
 						case '?':
-							strcatn(sfmt, sizeof(sfmt), "s");
+							strlcat(sfmt, "s", sizeof(sfmt));
 							switch (oper3->type) {
 							case PROG_OBJECT:
-								strcpyn(hold, sizeof(hold), "OBJECT");
+								strlcpy(hold, "OBJECT", sizeof(hold));
 								break;
 							case PROG_FLOAT:
-								strcpyn(hold, sizeof(hold), "FLOAT");
+								strlcpy(hold, "FLOAT", sizeof(hold));
 								break;
 							case PROG_INTEGER:
-								strcpyn(hold, sizeof(hold), "INTEGER");
+								strlcpy(hold, "INTEGER", sizeof(hold));
 								break;
 							case PROG_LOCK:
-								strcpyn(hold, sizeof(hold), "LOCK");
+								strlcpy(hold, "LOCK", sizeof(hold));
 								break;
 							case PROG_STRING:
-								strcpyn(hold, sizeof(hold), "STRING");
+								strlcpy(hold, "STRING", sizeof(hold));
 								break;
 							case PROG_VAR:
-								strcpyn(hold, sizeof(hold), "VARIABLE");
+								strlcpy(hold, "VARIABLE", sizeof(hold));
 								break;
 							case PROG_LVAR:
-								strcpyn(hold, sizeof(hold), "LOCAL-VARIABLE");
+								strlcpy(hold, "LOCAL-VARIABLE", sizeof(hold));
 								break;
 							case PROG_SVAR:
-								strcpyn(hold, sizeof(hold), "SCOPED-VARIABLE");
+								strlcpy(hold, "SCOPED-VARIABLE", sizeof(hold));
 								break;
 							case PROG_ADD:
-								strcpyn(hold, sizeof(hold), "ADDRESS");
+								strlcpy(hold, "ADDRESS", sizeof(hold));
 								break;
 							case PROG_ARRAY:
-								strcpyn(hold, sizeof(hold), "ARRAY");
+								strlcpy(hold, "ARRAY", sizeof(hold));
 								break;
 							case PROG_FUNCTION:
-								strcpyn(hold, sizeof(hold), "FUNCTION-NAME");
+								strlcpy(hold, "FUNCTION-NAME", sizeof(hold));
 								break;
 							case PROG_IF:
-								strcpyn(hold, sizeof(hold), "IF-STATEMENT");
+								strlcpy(hold, "IF-STATEMENT", sizeof(hold));
 								break;
 							case PROG_EXEC:
-								strcpyn(hold, sizeof(hold), "EXECUTE");
+								strlcpy(hold, "EXECUTE", sizeof(hold));
 								break;
 							case PROG_JMP:
-								strcpyn(hold, sizeof(hold), "JUMP");
+								strlcpy(hold, "JUMP", sizeof(hold));
 								break;
 							case PROG_PRIMITIVE:
-								strcpyn(hold, sizeof(hold), "PRIMITIVE");
+								strlcpy(hold, "PRIMITIVE", sizeof(hold));
 								break;
 							default:
-								strcpyn(hold, sizeof(hold), "UNKNOWN");
+								strlcpy(hold, "UNKNOWN", sizeof(hold));
 							}
 							snprintf(tbuf, sizeof(tbuf), sfmt, hold);
 							tlen = strlen(tbuf);
@@ -798,11 +798,11 @@ prim_array_fmtstrings(PRIM_PROTOTYPE)
 							if (strlen(tbuf) + result > BUFFER_LEN)
 								abort_interp("Resultant string would overflow buffer.");
 							buf[result] = '\0';
-							strcatn(buf, sizeof(buf), tbuf);
+							strlcat(buf, tbuf, sizeof(buf));
 							result += strlen(tbuf);
 							break;
 						case 'd':
-							strcatn(sfmt, sizeof(sfmt), "s");
+							strlcat(sfmt, "s", sizeof(sfmt));
 							if (oper3->type != PROG_OBJECT)
 								abort_interp("Format specified object not found.");
 							snprintf(hold, sizeof(hold), "#%d", oper3->data.objref);
@@ -823,11 +823,11 @@ prim_array_fmtstrings(PRIM_PROTOTYPE)
 							if (strlen(tbuf) + result > BUFFER_LEN)
 								abort_interp("Resultant string would overflow buffer.");
 							buf[result] = '\0';
-							strcatn(buf, sizeof(buf), tbuf);
+							strlcat(buf, tbuf, sizeof(buf));
 							result += strlen(tbuf);
 							break;
 						case 'D':
-							strcatn(sfmt, sizeof(sfmt), "s");
+							strlcat(sfmt, "s", sizeof(sfmt));
 							if (oper3->type != PROG_OBJECT)
 								abort_interp("Format specified object not found.");
 							if (!valid_object(oper3))
@@ -835,7 +835,7 @@ prim_array_fmtstrings(PRIM_PROTOTYPE)
 							ref = oper3->data.objref;
 							CHECKREMOTE(ref);
 							if (NAME(ref)) {
-								strcpyn(hold, sizeof(hold), NAME(ref));
+								strlcpy(hold, NAME(ref), sizeof(hold));
 							} else {
 								hold[0] = '\0';
 							}
@@ -856,14 +856,14 @@ prim_array_fmtstrings(PRIM_PROTOTYPE)
 							if (strlen(tbuf) + result > BUFFER_LEN)
 								abort_interp("Resultant string would overflow buffer.");
 							buf[result] = '\0';
-							strcatn(buf, sizeof(buf), tbuf);
+							strlcat(buf, tbuf, sizeof(buf));
 							result += strlen(tbuf);
 							break;
 						case 'l':
-							strcatn(sfmt, sizeof(sfmt), "s");
+							strlcat(sfmt, "s", sizeof(sfmt));
 							if (oper3->type != PROG_LOCK)
 								abort_interp("Format specified lock not found.");
-							strcpyn(hold, sizeof(hold), unparse_boolexp(ProgUID, oper3->data.lock, 1));
+							strlcpy(hold, unparse_boolexp(ProgUID, oper3->data.lock, 1), sizeof(hold));
 							snprintf(tbuf, sizeof(tbuf), sfmt, hold);
 							tlen = strlen(tbuf);
 							if (slrj == 2) {
@@ -881,15 +881,15 @@ prim_array_fmtstrings(PRIM_PROTOTYPE)
 							if (strlen(tbuf) + result > BUFFER_LEN)
 								abort_interp("Resultant string would overflow buffer.");
 							buf[result] = '\0';
-							strcatn(buf, sizeof(buf), tbuf);
+							strlcat(buf, tbuf, sizeof(buf));
 							result += strlen(tbuf);
 							break;
 						case 'f':
 						case 'e':
 						case 'g':
-							strcatn(sfmt, sizeof(sfmt), "l");
+							strlcat(sfmt, "l", sizeof(sfmt));
 							snprintf(hold, sizeof(hold), "%c", sstr[scnt]);
-							strcatn(sfmt, sizeof(sfmt), hold);
+							strlcat(sfmt, hold, sizeof(sfmt));
 							if (oper3->type != PROG_FLOAT)
 								abort_interp("Format specified float not found.");
 							snprintf(tbuf, sizeof(tbuf), sfmt, oper3->data.fnumber);
@@ -909,7 +909,7 @@ prim_array_fmtstrings(PRIM_PROTOTYPE)
 							if (strlen(tbuf) + result > BUFFER_LEN)
 								abort_interp("Resultant string would overflow buffer.");
 							buf[result] = '\0';
-							strcatn(buf, sizeof(buf), tbuf);
+							strlcat(buf, tbuf, sizeof(buf));
 							result += strlen(tbuf);
 							break;
 						default:
@@ -983,7 +983,7 @@ prim_split(PRIM_PROTOTYPE)
 	if (!oper2->data.string) {
 		result = 0;
 	} else {
-		strcpyn(buf, sizeof(buf), oper2->data.string->data);
+		strlcpy(buf, oper2->data.string->data, sizeof(buf));
 		pname = strstr(buf, oper1->data.string->data);
 		if (!pname) {
 			result = -1;
@@ -1039,7 +1039,7 @@ prim_rsplit(PRIM_PROTOTYPE)
 		if (oper1->data.string->length > oper2->data.string->length) {
 			result = -1;
 		} else {
-			strcpyn(buf, sizeof(buf), oper2->data.string->data);
+			strlcpy(buf, oper2->data.string->data, sizeof(buf));
 			temp = buf + (oper2->data.string->length - oper1->data.string->length);
 			hold = NULL;
 			while ((temp != (buf - 1)) && (!hold)) {
@@ -1396,7 +1396,7 @@ prim_notify(PRIM_PROTOTYPE)
 		else
 		{
 			/* TODO: The original code made this copy, is it really necessary? */
-			strcpyn(buf, sizeof(buf), oper1->data.string->data);
+			strlcpy(buf, oper1->data.string->data, sizeof(buf));
 		}
 
 		notify_listeners(player, program, oper2->data.objref,
@@ -1426,7 +1426,7 @@ prim_notify_exclude(PRIM_PROTOTYPE)
 		prefix_message(buf, DoNullInd(oper1->data.string), NAME(player), BUFFER_LEN, 1);
 	}
 	else
-		strcpyn(buf, sizeof(buf), DoNullInd(oper1->data.string));
+		strlcpy(buf, DoNullInd(oper1->data.string), sizeof(buf));
 
 	result = oper2->data.number;
 	CLEAR(oper1);
@@ -1504,7 +1504,7 @@ prim_intostr(PRIM_PROTOTYPE)
 	if (oper1->type == PROG_FLOAT) {
 		snprintf(buf, sizeof(buf), "%.15g", oper1->data.fnumber);
 		if (!strchr(buf, '.') && !strchr(buf, 'n') && !strchr(buf, 'e')) {
-			strcatn(buf, sizeof(buf), ".0");
+			strlcat(buf, ".0", sizeof(buf));
 		}
 		ptr=buf;
 	} else {
@@ -1606,7 +1606,7 @@ prim_explode_array(PRIM_PROTOTYPE)
 		if (!temp2.data.string) {
 			lastPtr = "";
 		} else {
-			strcpyn(buf, sizeof(buf), temp2.data.string->data);
+			strlcpy(buf, temp2.data.string->data, sizeof(buf));
 			tempPtr = lastPtr = buf;
 			while (*tempPtr) {
 				if (!strncmp(tempPtr, delimit, delimlen)) {
@@ -1669,7 +1669,7 @@ prim_subst(PRIM_PROTOTYPE)
 				if (!strncmp(xbuf + i, match, oper1->data.string->length)) {
 					if ((j + k + 1) > BUFFER_LEN)
 						abort_interp("Operation would result in overflow.");
-					strcatn(buf, sizeof(buf), replacement);
+					strlcat(buf, replacement, sizeof(buf));
 					i += oper1->data.string->length;
 					j += k;
 				} else {
@@ -1768,8 +1768,7 @@ prim_pronoun_sub(PRIM_PROTOTYPE)
 	if (oper1->type != PROG_STRING)
 		abort_interp("Invalid argument (2)");
 	if (oper1->data.string) {
-		strcpyn(buf, sizeof(buf), pronoun_substitute(fr->descr, oper2->data.objref,
-									   oper1->data.string->data));
+		strlcpy(buf, pronoun_substitute(fr->descr, oper2->data.objref, oper1->data.string->data), sizeof(buf));
 	} else {
 		buf[0] = '\0';
 	}
@@ -1786,7 +1785,7 @@ prim_toupper(PRIM_PROTOTYPE)
 	if (oper1->type != PROG_STRING)
 		abort_interp("Non-string argument.");
 	if (oper1->data.string) {
-		strcpyn(buf, sizeof(buf), oper1->data.string->data);
+		strlcpy(buf, oper1->data.string->data, sizeof(buf));
 	} else {
 		buf[0] = '\0';
 	}
@@ -1804,7 +1803,7 @@ prim_tolower(PRIM_PROTOTYPE)
 	if (oper1->type != PROG_STRING)
 		abort_interp("Non-string argument.");
 	if (oper1->data.string) {
-		strcpyn(buf, sizeof(buf), oper1->data.string->data);
+		strlcpy(buf, oper1->data.string->data, sizeof(buf));
 	} else {
 		buf[0] = '\0';
 	}
@@ -1851,8 +1850,8 @@ prim_smatch(PRIM_PROTOTYPE)
 	oper2 = POP();
 	if (oper1->type != PROG_STRING || oper2->type != PROG_STRING)
 		abort_interp("Non-string argument.");
-	strcpyn(buf, sizeof(buf), DoNullInd(oper1->data.string));
-	strcpyn(xbuf, sizeof(xbuf), DoNullInd(oper2->data.string));
+	strlcpy(buf, DoNullInd(oper1->data.string), sizeof(buf));
+	strlcpy(xbuf, DoNullInd(oper2->data.string), sizeof(xbuf));
 	result = equalstr(buf, xbuf);
 	CLEAR(oper1);
 	CLEAR(oper2);
@@ -1866,7 +1865,7 @@ prim_striplead(PRIM_PROTOTYPE)
 	oper1 = POP();
 	if (oper1->type != PROG_STRING)
 		abort_interp("Not a string argument.");
-	strcpyn(buf, sizeof(buf), DoNullInd(oper1->data.string));
+	strlcpy(buf, DoNullInd(oper1->data.string), sizeof(buf));
 	for (pname = buf; *pname && isspace(*pname); pname++) ;
 	CLEAR(oper1);
 	PushString(pname);
@@ -1879,7 +1878,7 @@ prim_striptail(PRIM_PROTOTYPE)
 	oper1 = POP();
 	if (oper1->type != PROG_STRING)
 		abort_interp("Not a string argument.");
-	strcpyn(buf, sizeof(buf), DoNullInd(oper1->data.string));
+	strlcpy(buf, DoNullInd(oper1->data.string), sizeof(buf));
 	result = strlen(buf);
 	while ((result-- > 0) && isspace(buf[result]))
 		buf[result] = '\0';
@@ -1969,7 +1968,7 @@ prim_textattr(PRIM_PROTOTYPE)
 	}
 
 	if (!oper1->data.string || !oper2->data.string) {
-		strcpyn(buf, sizeof(buf), DoNullInd(oper1->data.string));
+		strlcpy(buf, DoNullInd(oper1->data.string), sizeof(buf));
 	} else {
 		*buf = '\0';
 		ptr = oper2->data.string->data;
@@ -1985,60 +1984,60 @@ prim_textattr(PRIM_PROTOTYPE)
 			case ',':{
 					*ptr2++ = '\0';
 					if (!strcmp(attr, "reset")) {
-						strcatn(buf, sizeof(buf), ANSI_RESET);
+						strlcat(buf, ANSI_RESET, sizeof(buf));
 					} else if (!strcmp(attr, "normal")) {
-						strcatn(buf, sizeof(buf), ANSI_RESET);
+						strlcat(buf, ANSI_RESET, sizeof(buf));
 					} else if (!strcmp(attr, "bold")) {
-						strcatn(buf, sizeof(buf), ANSI_BOLD);
+						strlcat(buf, ANSI_BOLD, sizeof(buf));
 					} else if (!strcmp(attr, "dim")) {
-						strcatn(buf, sizeof(buf), ANSI_DIM);
+						strlcat(buf, ANSI_DIM, sizeof(buf));
 					} else if (!strcmp(attr, "italic")) {
-						strcatn(buf, sizeof(buf), ANSI_ITALIC);
+						strlcat(buf, ANSI_ITALIC, sizeof(buf));
 					} else if (!strcmp(attr, "uline") ||
 							   !strcmp(attr, "underline")) {
-						strcatn(buf, sizeof(buf), ANSI_UNDERLINE);
+						strlcat(buf, ANSI_UNDERLINE, sizeof(buf));
 					} else if (!strcmp(attr, "flash")) {
-						strcatn(buf, sizeof(buf), ANSI_FLASH);
+						strlcat(buf, ANSI_FLASH, sizeof(buf));
 					} else if (!strcmp(attr, "reverse")) {
-						strcatn(buf, sizeof(buf), ANSI_REVERSE);
+						strlcat(buf, ANSI_REVERSE, sizeof(buf));
 					} else if (!strcmp(attr, "ostrike")) {
-						strcatn(buf, sizeof(buf), ANSI_OSTRIKE);
+						strlcat(buf, ANSI_OSTRIKE, sizeof(buf));
 					} else if (!strcmp(attr, "overstrike")) {
-						strcatn(buf, sizeof(buf), ANSI_OSTRIKE);
+						strlcat(buf, ANSI_OSTRIKE, sizeof(buf));
 
 					} else if (!strcmp(attr, "black")) {
-						strcatn(buf, sizeof(buf), ANSI_FG_BLACK);
+						strlcat(buf, ANSI_FG_BLACK, sizeof(buf));
 					} else if (!strcmp(attr, "red")) {
-						strcatn(buf, sizeof(buf), ANSI_FG_RED);
+						strlcat(buf, ANSI_FG_RED, sizeof(buf));
 					} else if (!strcmp(attr, "yellow")) {
-						strcatn(buf, sizeof(buf), ANSI_FG_YELLOW);
+						strlcat(buf, ANSI_FG_YELLOW, sizeof(buf));
 					} else if (!strcmp(attr, "green")) {
-						strcatn(buf, sizeof(buf), ANSI_FG_GREEN);
+						strlcat(buf, ANSI_FG_GREEN, sizeof(buf));
 					} else if (!strcmp(attr, "cyan")) {
-						strcatn(buf, sizeof(buf), ANSI_FG_CYAN);
+						strlcat(buf, ANSI_FG_CYAN, sizeof(buf));
 					} else if (!strcmp(attr, "blue")) {
-						strcatn(buf, sizeof(buf), ANSI_FG_BLUE);
+						strlcat(buf, ANSI_FG_BLUE, sizeof(buf));
 					} else if (!strcmp(attr, "magenta")) {
-						strcatn(buf, sizeof(buf), ANSI_FG_MAGENTA);
+						strlcat(buf, ANSI_FG_MAGENTA, sizeof(buf));
 					} else if (!strcmp(attr, "white")) {
-						strcatn(buf, sizeof(buf), ANSI_FG_WHITE);
+						strlcat(buf, ANSI_FG_WHITE, sizeof(buf));
 
 					} else if (!strcmp(attr, "bg_black")) {
-						strcatn(buf, sizeof(buf), ANSI_BG_BLACK);
+						strlcat(buf, ANSI_BG_BLACK, sizeof(buf));
 					} else if (!strcmp(attr, "bg_red")) {
-						strcatn(buf, sizeof(buf), ANSI_BG_RED);
+						strlcat(buf, ANSI_BG_RED, sizeof(buf));
 					} else if (!strcmp(attr, "bg_yellow")) {
-						strcatn(buf, sizeof(buf), ANSI_BG_YELLOW);
+						strlcat(buf, ANSI_BG_YELLOW, sizeof(buf));
 					} else if (!strcmp(attr, "bg_green")) {
-						strcatn(buf, sizeof(buf), ANSI_BG_GREEN);
+						strlcat(buf, ANSI_BG_GREEN, sizeof(buf));
 					} else if (!strcmp(attr, "bg_cyan")) {
-						strcatn(buf, sizeof(buf), ANSI_BG_CYAN);
+						strlcat(buf, ANSI_BG_CYAN, sizeof(buf));
 					} else if (!strcmp(attr, "bg_blue")) {
-						strcatn(buf, sizeof(buf), ANSI_BG_BLUE);
+						strlcat(buf, ANSI_BG_BLUE, sizeof(buf));
 					} else if (!strcmp(attr, "bg_magenta")) {
-						strcatn(buf, sizeof(buf), ANSI_BG_MAGENTA);
+						strlcat(buf, ANSI_BG_MAGENTA, sizeof(buf));
 					} else if (!strcmp(attr, "bg_white")) {
-						strcatn(buf, sizeof(buf), ANSI_BG_WHITE);
+						strlcat(buf, ANSI_BG_WHITE, sizeof(buf));
 					} else {
 						abort_interp
 								("Unrecognized attribute tag.  Try one of reset, bold, dim, underline, reverse, black, red, yellow, green, cyan, blue, magenta, white, bg_black, bg_red, bg_yellow, bg_green, bg_cyan, bg_blue, bg_magenta, or bg_white.");
@@ -2064,9 +2063,9 @@ prim_textattr(PRIM_PROTOTYPE)
 		if (totallen >= BUFFER_LEN) {
 			abort_interp("Operation would result in too long of a string.");
 		}
-		strcatn(buf, sizeof(buf), oper1->data.string->data);
+		strlcat(buf, oper1->data.string->data, sizeof(buf));
 	}
-	strcatn(buf, sizeof(buf), ANSI_RESET);
+	strlcat(buf, ANSI_RESET, sizeof(buf));
 
 	CLEAR(oper1);
 	CLEAR(oper2);
@@ -2099,7 +2098,7 @@ prim_tokensplit(PRIM_PROTOTYPE)
 		esc = '\0';
 	}
 	escisdel = index(oper2->data.string->data, esc) != 0;
-	strcpyn(buf, sizeof(buf), DoNullInd(oper1->data.string));
+	strlcpy(buf, DoNullInd(oper1->data.string), sizeof(buf));
 	ptr = buf;
 	out = outbuf;
 	while (*ptr) {
@@ -2209,14 +2208,14 @@ prim_ansi_strcut(PRIM_PROTOTYPE)
 	loc = 0;
 
 	if (oper2->data.number >= oper1->data.string->length) {
-		strcpyn(buf, sizeof(buf), oper1->data.string->data);
+		strlcpy(buf, oper1->data.string->data, sizeof(buf));
 		CLEAR(oper1);
 		CLEAR(oper2);
 		PushString(buf);
 		PushNullStr;
 		return;
 	} else if (oper2->data.number <= 0) {
-		strcpyn(buf, sizeof(buf), oper1->data.string->data);
+		strlcpy(buf, oper1->data.string->data, sizeof(buf));
 		CLEAR(oper1);
 		CLEAR(oper2);
 		PushNullStr;

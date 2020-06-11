@@ -566,8 +566,8 @@ next_timequeue_event(void)
 			char cbuf[BUFFER_LEN];
 			int ival;
 
-			strcpyn(match_args, sizeof(match_args), event->str3 ? event->str3 : "");
-			strcpyn(match_cmdname, sizeof(match_cmdname), event->command ? event->command : "");
+			strlcpy(match_args, event->str3 ? event->str3 : "", sizeof(match_args));
+			strlcpy(match_cmdname, event->command ? event->command : "", sizeof(match_cmdname));
 			ival = (event->subtyp & TQ_MPI_OMESG) ? MPI_ISPUBLIC : MPI_ISPRIVATE;
 			if (event->subtyp & TQ_MPI_BLESSED) {
 				ival |= MPI_ISBLESSED;
@@ -621,8 +621,8 @@ next_timequeue_event(void)
 				} else if (event->subtyp == TQ_MUF_TREAD) {
 					handle_read_event(event->descr, event->uid, NULL);
 				} else {
-					strcpyn(match_args, sizeof(match_args), event->called_data ? event->called_data : "");
-					strcpyn(match_cmdname, sizeof(match_cmdname), event->command ? event->command : "");
+					strlcpy(match_args, event->called_data ? event->called_data : "", sizeof(match_args));
+					strlcpy(match_cmdname, event->command ? event->command : "", sizeof(match_cmdname));
 					tmpfr = interp(event->descr, event->uid, event->loc, event->called_prog,
 								   event->trig, BACKGROUND, STD_HARDUID, forced_pid);
 					if (tmpfr) {
@@ -748,10 +748,10 @@ list_events(dbref player)
 		/* pid */
 		snprintf(pidstr, sizeof(pidstr), "%d", ptr->eventnum);
 		/* next due */
-		strcpyn(duestr, sizeof(duestr), ((ptr->when - rtime) > 0) ?
+		strlcpy(duestr, ((ptr->when - rtime) > 0), sizeof(duestr) ?
 				time_format_2((long) (ptr->when - rtime)) : "Due");
 		/* Run length */
-		strcpyn(runstr, sizeof(runstr), ptr->fr ?
+		strlcpy(runstr, ptr->fr, sizeof(runstr) ?
 				time_format_2((long) (rtime - ptr->fr->started)): "0s");
 		/* Thousand Instructions executed */
 		snprintf(inststr, sizeof(inststr), "%d", ptr->fr? (ptr->fr->instcnt / 1000) : 0);
@@ -791,16 +791,16 @@ list_events(dbref player)
 
 		/* Now, the next due is based on if it's waiting on a READ */
 		if (ptr->typ == TQ_MUF_TYP && ptr->subtyp == TQ_MUF_READ) {
-			strcpyn(duestr, sizeof(duestr), "--");
+			strlcpy(duestr, "--", sizeof(duestr));
 		} else if (ptr->typ == TQ_MUF_TYP && ptr->subtyp == TQ_MUF_TIMER) {
 			/* if it's a timer event, it gives the eventnum */
 			snprintf(pidstr, sizeof(pidstr), "(%d)", ptr->eventnum);
 		} else if (ptr->typ == TQ_MPI_TYP) {
 			/* and if it's MPI, undo most of the stuff we did
 			 * before, and set it up for mostly MPI stuff */
-			strcpyn(runstr, sizeof(runstr), "--");
-			strcpyn(inststr, sizeof(inststr), "MPI");
-			strcpyn(cpustr, sizeof(cpustr), "--");
+			strlcpy(runstr, "--", sizeof(runstr));
+			strlcpy(inststr, "MPI", sizeof(inststr));
+			strlcpy(cpustr, "--", sizeof(cpustr));
 		}
 		(void) snprintf(buf, sizeof(buf), strfmt, pidstr, duestr, runstr,
 						inststr, cpustr, progstr, prognamestr, NAME(ptr->uid), 
@@ -1317,8 +1317,8 @@ propqueue(int descr, dbref player, dbref where, dbref trigger, dbref what, dbref
 					char cbuf[BUFFER_LEN];
 					int ival;
 
-					strcpyn(match_args, sizeof(match_args), "");
-					strcpyn(match_cmdname, sizeof(match_cmdname), toparg);
+					strlcpy(match_args, "", sizeof(match_args));
+					strlcpy(match_cmdname, toparg, sizeof(match_cmdname));
 					ival = (mt == 0) ? MPI_ISPUBLIC : MPI_ISPRIVATE;
 					if (Prop_Blessed(what, propname))
 						ival |= MPI_ISBLESSED;
@@ -1343,8 +1343,8 @@ propqueue(int descr, dbref player, dbref where, dbref trigger, dbref what, dbref
 				} else if (the_prog != NOTHING) {
 					struct frame *tmpfr;
 
-					strcpyn(match_args, sizeof(match_args), toparg ? toparg : "");
-					strcpyn(match_cmdname, sizeof(match_cmdname), "Queued event.");
+					strlcpy(match_args, toparg ? toparg : "", sizeof(match_args));
+					strlcpy(match_cmdname, "Queued event.", sizeof(match_cmdname));
 					tmpfr = interp(descr, player, where, the_prog, trigger,
 								   BACKGROUND, STD_HARDUID, 0);
 					if (tmpfr) {
@@ -1357,11 +1357,11 @@ propqueue(int descr, dbref player, dbref where, dbref trigger, dbref what, dbref
 			}
 		}
 	}
-	strcpyn(buf, sizeof(buf), propname);
+	strlcpy(buf, propname, sizeof(buf));
 	if (is_propdir(what, buf)) {
-		strcatn(buf, sizeof(buf), "/");
+		strlcat(buf, "/", sizeof(buf));
 		while ((pname = next_prop_name(what, exbuf, sizeof(exbuf), buf))) {
-			strcpyn(buf, sizeof(buf), pname);
+			strlcpy(buf, pname, sizeof(buf));
 			propqueue(descr, player, where, trigger, what, xclude, buf, toparg, mlev, mt);
 		}
 	}
@@ -1414,7 +1414,7 @@ listenqueue(int descr, dbref player, dbref where, dbref trigger, dbref what, dbr
 			if (*sep == '=') {
 				for (ptr = tmpchar, ptr2 = buf; ptr < sep; *ptr2++ = *ptr++) ;
 				*ptr2 = '\0';
-				strcpyn(exbuf, sizeof(exbuf), toparg);
+				strlcpy(exbuf, toparg, sizeof(exbuf));
 				if (!equalstr(buf, exbuf)) {
 					tmpchar = NULL;
 				} else {
@@ -1467,12 +1467,12 @@ listenqueue(int descr, dbref player, dbref where, dbref trigger, dbref what, dbr
 			}
 		}
 	}
-	strcpyn(buf, sizeof(buf), propname);
+	strlcpy(buf, propname, sizeof(buf));
 	if (is_propdir(what, buf)) {
-		strcatn(buf, sizeof(buf), "/");
+		strlcat(buf, "/", sizeof(buf));
 		while ((pname = next_prop_name(what, exbuf, sizeof(exbuf), buf))) {
 			*buf = '\0';
-			strcatn(buf, sizeof(buf), pname);
+			strlcat(buf, pname, sizeof(buf));
 			listenqueue(descr, player, where, trigger, what, xclude, buf,
 						toparg, mlev, mt, mpi_p);
 		}

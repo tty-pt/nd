@@ -439,7 +439,7 @@ prim_checkargs(PRIM_PROTOTYPE)
 		CLEAR(oper1);
 		return;
 	}
-	strcpyn(buf, sizeof(buf), oper1->data.string->data);	/* copy into local buffer */
+	strlcpy(buf, oper1->data.string->data, sizeof(buf));	/* copy into local buffer */
 	currpos = strlen(buf) - 1;
 	stackpos = *top - 1;
 
@@ -762,14 +762,14 @@ prim_interp(PRIM_PROTOTYPE)
 		abort_interp("Interp call loops not allowed.");
 	CHECKREMOTE(oper2->data.objref);
 
-	strcpyn(buf, sizeof(buf), match_args);
-	strcpyn(match_args, sizeof(match_args), oper3->data.string ? oper3->data.string->data : "");
+	strlcpy(buf, match_args, sizeof(buf));
+	strlcpy(match_args, oper3->data.string ? oper3->data.string->data : "", sizeof(match_args));
 	tmpfr = interp(fr->descr, player, DBFETCH(player)->location, oper1->data.objref,
 				   oper2->data.objref, PREEMPT, STD_HARDUID, 0);
 	if (tmpfr) {
 		rv = interp_loop(player, oper1->data.objref, tmpfr, 1);
 	}
-	strcpyn(match_args, sizeof(match_args), buf);
+	strlcpy(match_args, buf, sizeof(match_args));
 
 	CLEAR(oper3);
 	CLEAR(oper2);

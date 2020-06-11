@@ -243,7 +243,6 @@ struct descriptor_data* lookup_descriptor(int);
 int online(dbref player);
 int online_init(void);
 dbref online_next(int *ptr);
-long max_open_files(void);
 #ifdef USE_SSL /* SSL for NIX and WinFuzz */
 ssize_t socket_read(struct descriptor_data *d, void *buf, size_t count);
 ssize_t socket_write(struct descriptor_data *d, const void *buf, size_t count);
@@ -756,67 +755,6 @@ update_quotas(struct timeval last, struct timeval current)
 	return msec_add(last, nslices * COMMAND_TIME_MSEC);
 }
 
-/*
- * long max_open_files()
- *
- * This returns the max number of files you may have open
- * as a long, and if it can use setrlimit() to increase it,
- * it will do so.
- *
- * Becuse there is no way to just "know" if get/setrlimit is
- * around, since its defs are in <sys/resource.h>, you need to
- * define USE_RLIMIT in config.h to attempt it.
- *
- * Otherwise it trys to use sysconf() (POSIX.1) or getdtablesize()
- * to get what is avalible to you.
- */
-#ifdef HAVE_RESOURCE_H
-# include <sys/resource.h>
-#endif
-
-#if defined(RLIMIT_NOFILE) || defined(RLIMIT_OFILE)
-# define USE_RLIMIT
-#endif
-
-long
-max_open_files(void)
-{
-#if defined(_SC_OPEN_MAX) && !defined(USE_RLIMIT)	/* Use POSIX.1 method, sysconf() */
-/*
- * POSIX.1 code.
- */
-	return sysconf(_SC_OPEN_MAX);
-#else							/* !POSIX */
-# if defined(USE_RLIMIT) && (defined(RLIMIT_NOFILE) || defined(RLIMIT_OFILE))
-#  ifndef RLIMIT_NOFILE
-#   define RLIMIT_NOFILE RLIMIT_OFILE	/* We Be BSD! */
-#  endif						/* !RLIMIT_NOFILE */
-/*
- * get/setrlimit() code.
- */
-	struct rlimit file_limit;
-
-	getrlimit(RLIMIT_NOFILE, &file_limit);	/* Whats the limit? */
-
-	if (file_limit.rlim_cur < file_limit.rlim_max) {	/* if not at max... */
-		file_limit.rlim_cur = file_limit.rlim_max;	/* ...set to max. */
-		setrlimit(RLIMIT_NOFILE, &file_limit);
-
-		getrlimit(RLIMIT_NOFILE, &file_limit);	/* See what we got. */
-	}
-
-	return (long) file_limit.rlim_cur;
-
-# else							/* !RLIMIT */
-/*
- * Don't know what else to do, try getdtablesize().
- * email other bright ideas to me. :) (whitefire)
- */
-	return (long) getdtablesize();
-# endif							/* !RLIMIT */
-#endif							/* !POSIX */
-}
-
 int
 queue_immediate(struct descriptor_data *d, const char *msg)
 {
@@ -981,7 +919,7 @@ shovechars()
 #endif
 	gettimeofday(&last_slice, (struct timezone *) 0);
 
-	avail_descriptors = max_open_files() - 5;
+	avail_descriptors = sysconf(_SC_OPEN_MAX) - 5;
 
 	(void) time(&now);
 
@@ -1247,8 +1185,8 @@ wall_and_flush(const char *msg)
 
 	if (!msg || !*msg)
 		return;
-	strcpyn(buf, sizeof(buf), msg);
-	strcatn(buf, sizeof(buf), "\r\n");
+	strlcpy(buf, msg, sizeof(buf));
+	strlcat(buf, "\r\n", sizeof(buf));
 
 	for (d = descriptor_list; d; d = dnext) {
 		dnext = d->next;
@@ -1283,8 +1221,8 @@ wall_wizards(const char *msg)
 	struct descriptor_data *d, *dnext;
 	char buf[BUFFER_LEN + 2];
 
-	strcpyn(buf, sizeof(buf), msg);
-	strcatn(buf, sizeof(buf), "\r\n");
+	strlcpy(buf, msg, sizeof(buf));
+	strlcat(buf, "\r\n", sizeof(buf));
 
 	for (d = descriptor_list; d; d = dnext) {
 		dnext = d->next;
@@ -1315,7 +1253,7 @@ new_connection_v6(int port, int sock, int is_ssl)
 # ifdef F_SETFD
 		fcntl(newsock, F_SETFD, 1);
 # endif
-		strcpyn(hostname, sizeof(hostname), addrout_v6(port, &(addr.sin6_addr), addr.sin6_port));
+		strlcpy(hostname, addrout_v6(port, &(addr.sin6_addr), addr.sin6_port), sizeof(hostname));
 		warn("ACCEPT: %s(%d) on descriptor %d", hostname,
 				   ntohs(addr.sin6_port), newsock);
 		warn("CONCOUNT: There are now %d open connections.", ++ndescriptors);
@@ -1340,7 +1278,7 @@ new_connection(int port, int sock, int is_ssl)
 #ifdef F_SETFD
 		fcntl(newsock, F_SETFD, 1);
 #endif
-		strcpyn(hostname, sizeof(hostname), addrout(port, addr.sin_addr.s_addr, addr.sin_port));
+		strlcpy(hostname, addrout(port, addr.sin_addr.s_addr, addr.sin_port), sizeof(hostname));
 		warn("ACCEPT: %s(%d) on descriptor %d", hostname,
 				   ntohs(addr.sin_port), newsock);
 		warn("CONCOUNT: There are now %d open connections.", ++ndescriptors);
@@ -1496,7 +1434,7 @@ initializesock(int s, const char *hostname, int is_ssl)
 	d->last_time = d->connected_at;
 	d->last_pinged_at = d->connected_at;
 	mcp_frame_init(&d->mcpframe, d);
-	strcpyn(buf, sizeof(buf), hostname);
+	strlcpy(buf, hostname, sizeof(buf));
 	ptr = index(buf, ')');
 	if (ptr)
 		*ptr = '\0';
@@ -1786,16 +1724,6 @@ process_output(struct descriptor_data *d)
 	}
 	return 1;
 }
-
-#if !defined(O_NONBLOCK) || defined(ULTRIX)	/* POSIX ME HARDER */
-# ifdef FNDELAY					/* SUN OS */
-#  define O_NONBLOCK FNDELAY
-# else
-#  ifdef O_NDELAY				/* SyseVil */
-#   define O_NONBLOCK O_NDELAY
-#  endif
-# endif
-#endif
 
 void
 make_nonblocking(int s)
@@ -2171,10 +2099,10 @@ do_command(struct descriptor_data *d, char *command)
 			queue_ansi(d, d->output_prefix);
 			queue_write(d, "\r\n", 2);
 		}
-		strcpyn(buf, sizeof(buf), "@");
-		strcatn(buf, sizeof(buf), WHO_COMMAND);
-		strcatn(buf, sizeof(buf), " ");
-		strcatn(buf, sizeof(buf), command + sizeof(WHO_COMMAND) - 1);
+		strlcpy(buf, "@", sizeof(buf));
+		strlcat(buf, WHO_COMMAND, sizeof(buf));
+		strlcat(buf, " ", sizeof(buf));
+		strlcat(buf, command + sizeof(WHO_COMMAND) - 1, sizeof(buf));
 		if (!d->connected || (FLAGS(d->player) & INTERACTIVE)) {
 #if SECURE_WHO
 			queue_ansi(d, "Sorry, WHO is unavailable at this point.\r\n");
@@ -2455,7 +2383,7 @@ do_armageddon(dbref player, const char *msg)
 	}
 	snprintf(buf, sizeof(buf), "\r\nImmediate shutdown initiated by %s.\r\n", NAME(player));
 	if (msg || *msg)
-		strcatn(buf, sizeof(buf), msg);
+		strlcat(buf, msg, sizeof(buf));
 	warn("ARMAGEDDON initiated by %s(%d): %s", NAME(player), player, msg);
 	fprintf(stderr, "ARMAGEDDON initiated by %s(%d): %s\n", NAME(player), player, msg);
 	close_sockets(buf);

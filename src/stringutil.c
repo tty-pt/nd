@@ -16,66 +16,6 @@
 #include <string.h>
 #include "externs.h"
 
-#define DOWNCASE(x) (tolower(x))
-
-/*
- * routine to be used instead of strcasecmp() in a sorting routine
- * Sorts alphabetically or numerically as appropriate.
- * This would compare "network100" as greater than "network23"
- * Will compare "network007" as less than "network07"
- * Will compare "network23a" as less than "network23b"
- * Takes same params and returns same comparitive values as strcasecmp.
- * This ignores minus signs and is case insensitive.
- */
-int
-alphanum_compare(const char *t1, const char *s2)
-{
-	int n1, n2, cnt1, cnt2;
-	const char *u1, *u2;
-	register const char *s1 = t1;
-
-	while (*s1 && DOWNCASE(*s1) == DOWNCASE(*s2))
-		s1++, s2++;
-
-	/* if at a digit, compare number values instead of letters. */
-	if (isdigit(*s1) && isdigit(*s2)) {
-		u1 = s1;
-		u2 = s2;
-		n1 = n2 = 0;			/* clear number values */
-		cnt1 = cnt2 = 0;
-
-		/* back up before zeros */
-		if (s1 > t1 && *s2 == '0')
-			s1--, s2--;			/* curr chars are diff */
-		while (s1 > t1 && *s1 == '0')
-			s1--, s2--;			/* prev chars are same */
-		if (!isdigit(*s1))
-			s1++, s2++;
-
-		/* calculate number values */
-		while (isdigit(*s1))
-			cnt1++, n1 = (n1 * 10) + (*s1++ - '0');
-		while (isdigit(*s2))
-			cnt2++, n2 = (n2 * 10) + (*s2++ - '0');
-
-		/* if more digits than int can handle... */
-		if (cnt1 > 8 || cnt2 > 8) {
-			if (cnt1 == cnt2)
-				return (*u1 - *u2);	/* cmp chars if mag same */
-			return (cnt1 - cnt2);	/* compare magnitudes */
-		}
-
-		/* if number not same, return count difference */
-		if (n1 && n2 && n1 != n2)
-			return (n1 - n2);
-
-		/* else, return difference of characters */
-		return (*u1 - *u2);
-	}
-	/* if characters not digits, and not the same, return difference */
-	return (DOWNCASE(*s1) - DOWNCASE(*s2));
-}
-
 const char *
 exit_prefix(register const char *string, register const char *prefix)
 {
@@ -85,7 +25,7 @@ exit_prefix(register const char *string, register const char *prefix)
 	while (*s) {
 		p = prefix;
 		string = s;
-		while (*s && *p && DOWNCASE(*s) == DOWNCASE(*p)) {
+		while (*s && *p && tolower(*s) == tolower(*p)) {
 			s++;
 			p++;
 		}
@@ -107,7 +47,7 @@ exit_prefix(register const char *string, register const char *prefix)
 int
 string_prefix(register const char *string, register const char *prefix)
 {
-	while (*string && *prefix && DOWNCASE(*string) == DOWNCASE(*prefix))
+	while (*string && *prefix && tolower(*string) == tolower(*prefix))
 		string++, prefix++;
 	return *prefix == '\0';
 }
@@ -175,7 +115,7 @@ pronoun_substitute(int descr, dbref player, const char *str)
 	prn[0] = '%';
 	prn[2] = '\0';
 
-	strcpyn(orig, sizeof(orig), str);
+	strlcpy(orig, str, sizeof(orig));
 	str = orig;
 
 	sexstr = get_property_class(player, "sex");
@@ -257,7 +197,7 @@ pronoun_substitute(int descr, dbref player, const char *str)
 					}
 					if (((result - buf) + strlen(self_sub)) > (BUFFER_LEN - 2))
 						return buf;
-					strcatn(result, sizeof(buf) - (result - buf), self_sub);
+					strlcat(result, self_sub, sizeof(buf) - (result - buf));
 					if (isupper(prn[1]) && islower(*result))
 						*result = toupper(*result);
 					result += strlen(result);
@@ -265,7 +205,7 @@ pronoun_substitute(int descr, dbref player, const char *str)
 					if (temp_sub) {
 						if (((result - buf) + strlen(temp_sub+2)) > (BUFFER_LEN - 2))
 							return buf;
-						strcatn(result, sizeof(buf) - (result - buf), temp_sub+2);
+						strlcat(result, temp_sub+2, sizeof(buf) - (result - buf));
 						if (isupper(temp_sub[1]) && islower(*result))
 							*result = toupper(*result);
 						result += strlen(result);
@@ -281,14 +221,14 @@ pronoun_substitute(int descr, dbref player, const char *str)
 					case 'S':
 					case 'r':
 					case 'R':
-						strcatn(result, sizeof(buf) - (result - buf), NAME(player));
+						strlcat(result, NAME(player), sizeof(buf) - (result - buf));
 						break;
 					case 'a':
 					case 'A':
 					case 'p':
 					case 'P':
-						strcatn(result, sizeof(buf) - (result - buf), NAME(player));
-						strcatn(result, sizeof(buf) - (result - buf), "'s");
+						strlcat(result, NAME(player), sizeof(buf) - (result - buf));
+						strlcat(result, "'s", sizeof(buf) - (result - buf));
 						break;
 					default:
 						result[0] = *str;
@@ -305,27 +245,27 @@ pronoun_substitute(int descr, dbref player, const char *str)
 					switch (c) {
 					case 'a':
 					case 'A':
-						strcatn(result, sizeof(buf) - (result - buf), absolute[sex]);
+						strlcat(result, absolute[sex], sizeof(buf) - (result - buf));
 						break;
 					case 's':
 					case 'S':
-						strcatn(result, sizeof(buf) - (result - buf), subjective[sex]);
+						strlcat(result, subjective[sex], sizeof(buf) - (result - buf));
 						break;
 					case 'p':
 					case 'P':
-						strcatn(result, sizeof(buf) - (result - buf), possessive[sex]);
+						strlcat(result, possessive[sex], sizeof(buf) - (result - buf));
 						break;
 					case 'o':
 					case 'O':
-						strcatn(result, sizeof(buf) - (result - buf), objective[sex]);
+						strlcat(result, objective[sex], sizeof(buf) - (result - buf));
 						break;
 					case 'r':
 					case 'R':
-						strcatn(result, sizeof(buf) - (result - buf), reflexive[sex]);
+						strlcat(result, reflexive[sex], sizeof(buf) - (result - buf));
 						break;
 					case 'n':
 					case 'N':
-						strcatn(result, sizeof(buf) - (result - buf), NAME(player));
+						strlcat(result, NAME(player), sizeof(buf) - (result - buf));
 						break;
 					default:
 						*result = *str;
@@ -533,7 +473,7 @@ strdecrypt(const char *data, const char *key)
 	chrcnt = charset_count[(data[0] - ' ') - 1];
 	seed2 = (data[1] - ' ');
 
-	strcpyn(linebuf, sizeof(linebuf), data + 2);
+	strlcpy(linebuf, data + 2, sizeof(linebuf));
 
 	seed = 0;
 	for (cp = key; *cp; cp++) {
@@ -700,7 +640,7 @@ prefix_message(char* Dest, const char* Src, const char* Prefix, int BufferLength
 				(Src[PrefixLength] != '\0')
 			))
 		{
-			strcpyn(Dest, BufferLength, Prefix);
+			strlcpy(Dest, Prefix, BufferLength);
 
 			Dest			+= PrefixLength;
 			BufferLength	-= PrefixLength;
@@ -778,42 +718,5 @@ has_suffix_char(const char* text, char suffix)
 	return text[tlen - 1] == suffix;
 }
 
-
-/*
- * Like strncpy, except it guarentees null termination of the result string.
- * It also has a more sensible argument ordering.
- */
-char*
-strcpyn(char* buf, size_t bufsize, const char* src)
-{
-	int pos = 0;
-	char* dest = buf;
-
-	while (++pos < bufsize && *src) {
-		*dest++ = *src++;
-	}
-	*dest = '\0';
-	return buf;
-}
-
-
-/*
- * Like strncat, except it takes the buffer size instead of the number
- * of characters to catenate.  It also has a more sensible argument order.
- */
-char*
-strcatn(char* buf, size_t bufsize, const char* src)
-{
-	int pos = strlen(buf);
-	char* dest = &buf[pos];
-
-	while (++pos < bufsize && *src) {
-		*dest++ = *src++;
-	}
-	if (pos <= bufsize) {
-		*dest = '\0';
-	}
-	return buf;
-}
 static const char *stringutil_c_version = "$RCSfile$ $Revision: 1.29 $";
 const char *get_stringutil_c_version(void) { return stringutil_c_version; }

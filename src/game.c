@@ -355,8 +355,6 @@ process_command(int descr, dbref player, char *command)
 	char *arg2;
 	char *full_command;
 	char *p;					/* utility */
-	char xbuf[BUFFER_LEN];
-	char ybuf[BUFFER_LEN];
 	struct timeval starttime;
 	struct timeval endtime;
 	pos_t pos;
@@ -446,21 +444,21 @@ process_command(int descr, dbref player, char *command)
 
 		if (TrueWizard(OWNER(player)) && (*command == OVERIDE_TOKEN))
 			command++;
-		full_command = strcpyn(xbuf, sizeof(xbuf), command);
-		for (; *full_command && !isspace(*full_command); full_command++) ;
+		for (full_command = command;
+		     *full_command && !isspace(*full_command);
+		     full_command++) ;
 		if (*full_command)
 			full_command++;
 
 		/* find arg1 -- move over command word */
-		command = strcpyn(ybuf, sizeof(ybuf), command);
 		for (arg1 = command; *arg1 && !isspace(*arg1); arg1++) ;
 		/* truncate command */
 		if (*arg1)
 			*arg1++ = '\0';
 
 		/* remember command for programs */
-		strcpyn(match_args, sizeof(match_args), full_command);
-		strcpyn(match_cmdname, sizeof(match_cmdname), command);
+		strlcpy(match_args, full_command, sizeof(match_args));
+		strlcpy(match_cmdname, command, sizeof(match_cmdname));
 
 		/* move over spaces */
 		while (*arg1 && isspace(*arg1))
@@ -749,11 +747,6 @@ process_command(int descr, dbref player, char *command)
 						do_mcpprogram(descr, player, arg1);
 						break;
 					}
-				case 'e':
-				case 'E':
-					Matched("@memory");
-					do_memory(player);
-					break;
 				case 'p':
 			    case 'P':
 			        Matched("@mpitops");

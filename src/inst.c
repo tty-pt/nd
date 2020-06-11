@@ -61,10 +61,10 @@ insttotext(struct frame *fr, int lev, struct inst *theinst, char *buffer, int bu
 			if (strlen(ptr) >= buflen)
 				*buffer = '\0';
 			else
-				strcpyn(buffer, buflen, ptr);
+				strlcpy(buffer, ptr, buflen);
 		} else {
 			if (buflen > 3)
-				strcpyn(buffer, buflen, "???");
+				strlcpy(buffer, "???", buflen);
 			else
 				*buffer = '\0';
 		}
@@ -72,7 +72,7 @@ insttotext(struct frame *fr, int lev, struct inst *theinst, char *buffer, int bu
 	case PROG_STRING:
 		if (!theinst->data.string) {
 			if (buflen > 2)
-				strcpyn(buffer, buflen, "\"\"");
+				strlcpy(buffer, "\"\"", buflen);
 			else
 				*buffer = '\0';
 			break;
@@ -84,18 +84,18 @@ insttotext(struct frame *fr, int lev, struct inst *theinst, char *buffer, int bu
 		/* we know we won't overflow, so don't set length */
 		snprintf(buffer, buflen, "\"%1.*s\"", (strmax - 1), theinst->data.string->data);
 		if (theinst->data.string->length > strmax)
-			strcatn(buffer, buflen, "_");
+			strlcat(buffer, "_", buflen);
 		break;
 	case PROG_MARK:
 		if (buflen > 4)
-			strcpyn(buffer, buflen, "MARK");
+			strlcpy(buffer, "MARK", buflen);
 		else
 			*buffer = '\0';
 		break;
 	case PROG_ARRAY:
 		if (!theinst->data.array) {
 			if (buflen > 3)
-				strcpyn(buffer, buflen, "0{}");
+				strlcpy(buffer, "0{}", buflen);
 			else
 				*buffer = '\0';
 			break;
@@ -122,19 +122,19 @@ insttotext(struct frame *fr, int lev, struct inst *theinst, char *buffer, int bu
 					char *inststr;
 
 					if (arrcount++ >= 8) {
-					    strcatn(buffer, buflen, "_");
+					    strlcat(buffer, "_", buflen);
 					    break;
 					}
 
 					if (!firstflag) {
-						strcatn(buffer, buflen, " ");
+						strlcat(buffer, " ", buflen);
 						length--;
 					}
 					firstflag = 0;
 					oper2 = array_getitem(theinst->data.array, &temp1);
 
 					if (length <= 2) { /* no space left, let's not pass a buflen of 0 */
-					    strcatn(buffer, buflen, "_");
+					    strlcat(buffer, "_", buflen);
 					    break;
 					}
 
@@ -142,15 +142,15 @@ insttotext(struct frame *fr, int lev, struct inst *theinst, char *buffer, int bu
 					inststr = insttotext(fr, lev, &temp1, buf2, length - 2, strmax, program, 0);
 					if (!*inststr) {
 					    /* overflow problem. */
-					    strcatn(buffer, buflen, "_");
+					    strlcat(buffer, "_", buflen);
 					    break;
 					}
 					length -= strlen(inststr) + 1;
-					strcatn(buffer, buflen, inststr);
-					strcatn(buffer, buflen, ":");
+					strlcat(buffer, inststr, buflen);
+					strlcat(buffer, ":", buflen);
 
 					if (length <= 2) { /* no space left, let's not pass a buflen of 0 */
-					    strcatn(buffer, buflen, "_");
+					    strlcat(buffer, "_", buflen);
 					    break;
 					}
 
@@ -158,23 +158,23 @@ insttotext(struct frame *fr, int lev, struct inst *theinst, char *buffer, int bu
 					if (!*inststr) {
 					    /* we'd overflow if we did that */
 					    /* as before add a "_" and let it be. */
-					    strcatn(buffer, buflen, "_");
+					    strlcat(buffer, "_", buflen);
 					    break;
 					}
 					length -= strlen(inststr);
-					strcatn(buffer, buflen, inststr);
+					strlcat(buffer, inststr, buflen);
 
 					if (length < 2) {
 						/* we should have a length of exactly 1, if we get here.
 						 * So we just have enough room for a '_' now.
 						 * Just append the "_" and stop this madness. */
-						strcatn(buffer, buflen, "_");
+						strlcat(buffer, "_", buflen);
 						length--;
 						break;
 					}
 				} while (array_next(theinst->data.array, &temp1));
 			}
-			strcatn(buffer, buflen, "}");
+			strlcat(buffer, "}", buflen);
 		} else
 #endif
 			length = snprintf(buffer, buflen, "%d{...}", theinst->data.array->items);
@@ -185,7 +185,7 @@ insttotext(struct frame *fr, int lev, struct inst *theinst, char *buffer, int bu
 	case PROG_FLOAT:
 		length = snprintf(buffer, buflen, "%.16g", theinst->data.fnumber);
 		if (!strchr(buffer, '.') && !strchr(buffer, 'n') && !strchr(buffer, 'e')) {
-			strcatn(buffer, buflen, ".0");
+			strlcat(buffer, ".0", buflen);
 		}
 		break;
 	case PROG_ADD:
@@ -283,7 +283,7 @@ insttotext(struct frame *fr, int lev, struct inst *theinst, char *buffer, int bu
 			/*                  12345678901234 */
 			/* 14 */
 			if (buflen > 14)
-				strcpyn(buffer, buflen, "[TRUE_BOOLEXP]");
+				strlcpy(buffer, "[TRUE_BOOLEXP]", buflen);
 			else
 				*buffer = '\0';
 			break;
@@ -298,7 +298,7 @@ insttotext(struct frame *fr, int lev, struct inst *theinst, char *buffer, int bu
 		break;
 	default:
 		if (buflen > 3)
-			strcpyn(buffer, buflen, "?");
+			strlcpy(buffer, "?", buflen);
 		else
 			*buffer = '\0';
 		break;
@@ -359,8 +359,8 @@ debug_inst(struct frame *fr, int lev, struct inst *pc, int pid, struct inst *sta
 	if (*ptr) {
 	    length -= prepend_string(&bend, bstart, ptr);
 	} else {
-		strcpyn(buffer, buflen, buf3);
-		strcatn(buffer, buflen, " ... ) ...");
+		strlcpy(buffer, buf3, buflen);
+		strlcat(buffer, " ... ) ...", buflen);
 		return buffer;
 	}
 	

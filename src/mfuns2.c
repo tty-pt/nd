@@ -98,8 +98,8 @@ mfn_links(MFUNARGS)
 				ref2str(obj2, buf2, sizeof(buf2));
 				if (strlen(buf) + strlen(buf2) + 2 < BUFFER_LEN) {
 					if (*buf)
-						strcatn(buf, BUFFER_LEN, "\r");
-					strcatn(buf, BUFFER_LEN, buf2);
+						strlcat(buf, "\r", BUFFER_LEN);
+					strlcat(buf, buf2, BUFFER_LEN);
 				}
 			}
 			return buf;
@@ -199,7 +199,7 @@ mfn_contents(MFUNARGS)
 					  "Type must be 'player', 'room', 'thing', 'program', or 'exit'. (arg2).");
 		}
 	}
-	strcpyn(buf, buflen, "");
+	strlcpy(buf, "", buflen);
 	outlen = 0;
 	ownroom = controls(perms, obj);
 	obj = DBFETCH(obj)->contents;
@@ -214,10 +214,10 @@ mfn_contents(MFUNARGS)
 			if ((outlen + nextlen) >= (BUFFER_LEN - 3))
 				break;
 			if (outlen) {
-				strcatn(buf + outlen, BUFFER_LEN - outlen, "\r");
+				strlcat(buf + outlen, "\r", BUFFER_LEN - outlen);
 				outlen++;
 			}
-			strcatn((buf + outlen), BUFFER_LEN - outlen, buf2);
+			strlcat((buf + outlen), buf2, BUFFER_LEN - outlen);
 			outlen += nextlen;
 			list_limit--;
 		}
@@ -257,10 +257,10 @@ mfn_exits(MFUNARGS)
 		if ((outlen + nextlen) >= (BUFFER_LEN - 3))
 			break;
 		if (outlen) {
-			strcatn(buf + outlen, BUFFER_LEN - outlen, "\r");
+			strlcat(buf + outlen, "\r", BUFFER_LEN - outlen);
 			outlen++;
 		}
-		strcatn((buf + outlen), BUFFER_LEN - outlen, buf2);
+		strlcat((buf + outlen), buf2, BUFFER_LEN - outlen);
 		outlen += nextlen;
 		list_limit--;
 		obj = DBFETCH(obj)->next;
@@ -285,7 +285,7 @@ mfn_set(MFUNARGS)
 
 	if (!ptr)
 		ABORT_MPI("SET", "No such variable currently defined.");
-	strcpyn(ptr, BUFFER_LEN, argv[1]);
+	strlcpy(ptr, argv[1], BUFFER_LEN);
 	return ptr;
 }
 
@@ -320,18 +320,18 @@ mfn_name(MFUNARGS)
 	if (obj == PERMDENIED)
 		ABORT_MPI("NAME", "Permission denied.");
 	if (obj == NOTHING) {
-		strcpyn(buf, buflen, "#NOTHING#");
+		strlcpy(buf, "#NOTHING#", buflen);
 		return buf;
 	}
 	if (obj == AMBIGUOUS) {
-		strcpyn(buf, buflen, "#AMBIGUOUS#");
+		strlcpy(buf, "#AMBIGUOUS#", buflen);
 		return buf;
 	}
 	if (obj == HOME) {
-		strcpyn(buf, buflen, "#HOME#");
+		strlcpy(buf, "#HOME#", buflen);
 		return buf;
 	}
-	strcpyn(buf, buflen, NAME(obj));
+	strlcpy(buf, NAME(obj), buflen);
 	if (Typeof(obj) == TYPE_EXIT) {
 		ptr = strchr(buf, ';');
 		if (ptr)
@@ -350,18 +350,18 @@ mfn_fullname(MFUNARGS)
 	if (obj == PERMDENIED)
 		ABORT_MPI("NAME", "Permission denied.");
 	if (obj == NOTHING) {
-		strcpyn(buf, buflen, "#NOTHING#");
+		strlcpy(buf, "#NOTHING#", buflen);
 		return buf;
 	}
 	if (obj == AMBIGUOUS) {
-		strcpyn(buf, buflen, "#AMBIGUOUS#");
+		strlcpy(buf, "#AMBIGUOUS#", buflen);
 		return buf;
 	}
 	if (obj == HOME) {
-		strcpyn(buf, buflen, "#HOME#");
+		strlcpy(buf, "#HOME#", buflen);
 		return buf;
 	}
-	strcpyn(buf, buflen, NAME(obj));
+	strlcpy(buf, NAME(obj), buflen);
 	return buf;
 }
 
@@ -410,7 +410,7 @@ getlitem(char *buf, int buflen, char *list, char *sep, int line)
 	}
 	tmpchr = *ptr2;
 	*ptr2 = '\0';
-	strcpyn(buf, buflen, ptr);
+	strlcpy(buf, ptr, buflen);
 	*ptr2 = tmpchr;
 	return buf;
 }
@@ -431,15 +431,15 @@ mfn_sublist(MFUNARGS)
 	if (argc > 1) {
 		which = atoi(argv[1]);
 	} else {
-		strcpyn(buf, buflen, argv[0]);
+		strlcpy(buf, argv[0], buflen);
 		return buf;
 	}
 
-	strcpyn(sepbuf, sizeof(sepbuf), "\r");
+	strlcpy(sepbuf, "\r", sizeof(sepbuf));
 	if (argc > 3) {
 		if (!*argv[3])
 			ABORT_MPI("SUBLIST", "Can't use null seperator string.");
-		strcpyn(sepbuf, sizeof(sepbuf), argv[3]);
+		strlcpy(sepbuf, argv[3], sizeof(sepbuf));
 	}
 
 	count = countlitems(argv[0], sepbuf);	/* count of items in list */
@@ -476,12 +476,12 @@ mfn_sublist(MFUNARGS)
 	pflag = 0;
 	for (i = which; ((i <= end) && (incr == 1)) || ((i >= end) && (incr == -1)); i += incr) {
 		if (pflag) {
-			strcatn(buf, BUFFER_LEN, sepbuf);
+			strlcat(buf, sepbuf, BUFFER_LEN);
 		} else {
 			pflag++;
 		}
 		ptr = getlitem(buf2, sizeof(buf2), argv[0], sepbuf, i);
-		strcatn(buf, BUFFER_LEN, ptr);
+		strlcat(buf, ptr, BUFFER_LEN);
 	}
 	return buf;
 }
@@ -494,11 +494,11 @@ mfn_lrand(MFUNARGS)
 	int count = 1;
 	int which = 0;
 
-	strcpyn(sepbuf, sizeof(sepbuf), "\r");
+	strlcpy(sepbuf, "\r", sizeof(sepbuf));
 	if (argc > 1) {
 		if (!*argv[1])
 			ABORT_MPI("LRAND", "Can't use null seperator string.");
-		strcpyn(sepbuf, sizeof(sepbuf), argv[1]);
+		strlcpy(sepbuf, argv[1], sizeof(sepbuf));
 	}
 
 	count = countlitems(argv[0], sepbuf);
@@ -514,11 +514,11 @@ mfn_lrand(MFUNARGS)
 const char *
 mfn_count(MFUNARGS)
 {
-	strcpyn(buf, buflen, "\r");
+	strlcpy(buf, "\r", buflen);
 	if (argc > 1) {
 		if (!*argv[1])
 			ABORT_MPI("COUNT", "Can't use null seperator string.");
-		strcpyn(buf, buflen, argv[1]);
+		strlcpy(buf, argv[1], buflen);
 	}
 	snprintf(buf, BUFFER_LEN, "%d", countlitems(argv[0], buf));
 	return buf;
@@ -593,7 +593,7 @@ mfn_fold(MFUNARGS)
 		sepin = sepinbuf;
 	} else {
 		sepin = sepinbuf;
-		strcpyn(sepin, sizeof(sepin), "\r");
+		strlcpy(sepin, "\r", sizeof(sepin));
 	}
 	seplen = strlen(sepin);
 	ptr = MesgParse(argv[2], listbuf, sizeof(listbuf));
@@ -603,7 +603,7 @@ mfn_fold(MFUNARGS)
 		*ptr2 = '\0';
 		ptr2 += seplen;
 	}
-	strcpyn(buf, buflen, ptr);
+	strlcpy(buf, ptr, buflen);
 	ptr = ptr2;
 	while (*ptr) {
 		for (ptr2 = ptr; *ptr2 && strncmp(ptr2, sepin, seplen); ptr2++) ;
@@ -611,8 +611,8 @@ mfn_fold(MFUNARGS)
 			*ptr2 = '\0';
 			ptr2 += seplen;
 		}
-		strcpyn(tmp2, sizeof(tmp2), ptr);
-		strcpyn(tmp, sizeof(tmp), buf);
+		strlcpy(tmp2, ptr, sizeof(tmp2));
+		strlcpy(tmp, buf, sizeof(tmp));
 		MesgParse(argv[3], buf, buflen);
 		CHECKRETURN(ptr, "FOLD", "arg 4");
 		ptr = ptr2;
@@ -695,7 +695,7 @@ mfn_foreach(MFUNARGS)
 		sepin = ptr;
 	} else {
 		sepin = scratch;
-		strcpyn(sepin, sizeof(scratch), "\r");
+		strlcpy(sepin, "\r", sizeof(scratch));
 	}
 	seplen = strlen(sepin);
 	ptr = dptr;
@@ -706,7 +706,7 @@ mfn_foreach(MFUNARGS)
 			*ptr2 = '\0';
 			ptr2 += seplen;
 		}
-		strcpyn(tmp, sizeof(tmp), ptr);
+		strlcpy(tmp, ptr, sizeof(tmp));
 		dptr = MesgParse(argv[2], buf, buflen);
 		CHECKRETURN(dptr, "FOREACH", "arg 3");
 		ptr = ptr2;
@@ -751,7 +751,7 @@ mfn_filter(MFUNARGS)
 		sepin = sepinbuf;
 	} else {
 		sepin = sepinbuf;
-		strcpyn(sepin, sizeof(sepinbuf), "\r");
+		strlcpy(sepin, "\r", sizeof(sepinbuf));
 	}
 	if (argc > 4) {
 		ptr = MesgParse(sepbuf, sepoutbuf, sizeof(sepoutbuf));
@@ -759,7 +759,7 @@ mfn_filter(MFUNARGS)
 		sepbuf = sepoutbuf;
 	} else {
 		sepbuf = sepoutbuf;
-		strcpyn(sepbuf, sizeof(sepoutbuf), sepin);
+		strlcpy(sepbuf, sepin, sizeof(sepoutbuf));
 	}
 	seplen = strlen(sepin);
 	*buf = '\0';
@@ -770,13 +770,13 @@ mfn_filter(MFUNARGS)
 			*ptr2 = '\0';
 			ptr2 += seplen;
 		}
-		strcpyn(tmp, sizeof(tmp), ptr);
+		strlcpy(tmp, ptr, sizeof(tmp));
 		dptr = MesgParse(argv[2], buf2, sizeof(buf2));
 		CHECKRETURN(dptr, "FILTER", "arg 3");
 		if (truestr(buf2)) {
 			if (outcount++)
-				strcatn(buf, BUFFER_LEN, sepbuf);
-			strcatn(buf, BUFFER_LEN, ptr);
+				strlcat(buf, sepbuf, BUFFER_LEN);
+			strlcat(buf, ptr, BUFFER_LEN);
 		}
 		ptr = ptr2;
 		if (!(--iter_limit))
@@ -879,8 +879,8 @@ mfn_lcommon(MFUNARGS)
 		} while (*q);
 		if (*p && !*q) {
 			if (outcount++)
-				strcatn(buf, BUFFER_LEN, "\r");
-			strcatn(buf, BUFFER_LEN, ptr);
+				strlcat(buf, "\r", BUFFER_LEN);
+			strlcat(buf, ptr, BUFFER_LEN);
 		}
 		ptr = ptr2;
 		if (!(--iter_limit))
@@ -920,10 +920,10 @@ mfn_lunion(MFUNARGS)
 			if (outlen + nextlen > BUFFER_LEN - 3)
 				break;
 			if (outcount++) {
-				strcatn(buf + outlen, BUFFER_LEN - outlen, "\r");
+				strlcat(buf + outlen, "\r", BUFFER_LEN - outlen);
 				outlen++;
 			}
-			strcatn((buf + outlen), BUFFER_LEN - outlen, ptr);
+			strlcat((buf + outlen), ptr, BUFFER_LEN - outlen);
 			outlen += nextlen;
 		}
 		ptr = ptr2;
@@ -950,10 +950,10 @@ mfn_lunion(MFUNARGS)
 			if (outlen + nextlen > BUFFER_LEN - 3)
 				break;
 			if (outcount++) {
-				strcatn(buf + outlen, BUFFER_LEN - outlen, "\r");
+				strlcat(buf + outlen, "\r", BUFFER_LEN - outlen);
 				outlen++;
 			}
-			strcatn((buf + outlen), BUFFER_LEN - outlen, ptr);
+			strlcat((buf + outlen), ptr, BUFFER_LEN - outlen);
 			outlen += nextlen;
 		}
 		ptr = ptr2;
@@ -1010,8 +1010,8 @@ mfn_lsort(MFUNARGS)
 	for (i = 0; i < count; i++) {
 		for (j = i + 1; j < count; j++) {
 			if (argc > 1) {
-				strcpyn(vbuf, sizeof(vbuf), litem[i]);
-				strcpyn(vbuf2, sizeof(vbuf2), litem[j]);
+				strlcpy(vbuf, litem[i], sizeof(vbuf));
+				strlcpy(vbuf2, litem[j], sizeof(vbuf2));
 				ptr = MesgParse(argv[3], buf, buflen);
 				CHECKRETURN(ptr, "LSORT", "arg 4");
 				if (truestr(buf)) {
@@ -1020,7 +1020,7 @@ mfn_lsort(MFUNARGS)
 					litem[j] = tmp;
 				}
 			} else {
-				if (alphanum_compare(litem[i], litem[j]) > 0) {
+				if (strcasecmp(litem[i], litem[j]) > 0) {
 					tmp = litem[i];
 					litem[i] = litem[j];
 					litem[j] = tmp;
@@ -1031,8 +1031,8 @@ mfn_lsort(MFUNARGS)
 	*buf = '\0';
 	for (i = 0; i < count; i++) {
 		if (outcount++)
-			strcatn(buf, BUFFER_LEN, "\r");
-		strcatn(buf, BUFFER_LEN, litem[i]);
+			strlcat(buf, "\r", BUFFER_LEN);
+		strlcat(buf, litem[i], BUFFER_LEN);
 	}
 	if (argc > 1) {
 		free_top_mvar();
@@ -1070,10 +1070,10 @@ mfn_lunique(MFUNARGS)
 		if (!*p) {
 			nextlen = strlen(ptr);
 			if (outcount++) {
-				strcatn(buf + outlen,  BUFFER_LEN - outlen,"\r");
+				strlcat(buf + outlen,"\r",  BUFFER_LEN - outlen);
 				outlen++;
 			}
-			strcatn((buf + outlen), BUFFER_LEN - outlen, ptr);
+			strlcat((buf + outlen), ptr, BUFFER_LEN - outlen);
 			outlen += nextlen;
 		}
 		ptr = ptr2;
@@ -1118,7 +1118,7 @@ mfn_parse(MFUNARGS)
 		sepin = sepinbuf;
 	} else {
 		sepin = sepinbuf;
-		strcpyn(sepin, sizeof(sepinbuf), "\r");
+		strlcpy(sepin, "\r", sizeof(sepinbuf));
 	}
 
 	if (argc > 4) {
@@ -1127,7 +1127,7 @@ mfn_parse(MFUNARGS)
 		sepbuf = sepoutbuf;
 	} else {
 		sepbuf = sepoutbuf;
-		strcpyn(sepbuf, sizeof(sepoutbuf), sepin);
+		strlcpy(sepbuf, sepin, sizeof(sepoutbuf));
 	}
 	seplen = strlen(sepin);
 	oseplen = strlen(sepbuf);
@@ -1141,17 +1141,17 @@ mfn_parse(MFUNARGS)
 			*ptr2 = '\0';
 			ptr2 += seplen;
 		}
-		strcpyn(tmp, sizeof(tmp), ptr);
+		strlcpy(tmp, ptr, sizeof(tmp));
 		dptr = MesgParse(argv[2], buf2, sizeof(buf2));
 		CHECKRETURN(dptr, "PARSE", "arg 3");
 		nextlen = strlen(buf2);
 		if (outlen + nextlen + oseplen > BUFFER_LEN - 3)
 			break;
 		if (outcount++) {
-			strcatn(buf + outlen, BUFFER_LEN - outlen, sepbuf);
+			strlcat(buf + outlen, sepbuf, BUFFER_LEN - outlen);
 			outlen += oseplen;
 		}
-		strcatn((buf + outlen), BUFFER_LEN - outlen, buf2);
+		strlcat((buf + outlen), buf2, BUFFER_LEN - outlen);
 		outlen += nextlen;
 		ptr = ptr2;
 		if (!(--iter_limit))
@@ -1420,7 +1420,7 @@ mfn_muf(MFUNARGS)
 	if (++mpi_muf_call_levels > 18)
 		ABORT_MPI("MUF", "Too many call levels.");
 
-	strcpyn(match_args, sizeof(match_args), argv[1]);
+	strlcpy(match_args, argv[1], sizeof(match_args));
 	ptr = get_mvar("how");
 	snprintf(match_cmdname, sizeof(match_cmdname), "%s(MPI)", ptr);
 	tmpfr = interp(descr, player, DBFETCH(player)->location, obj, perms, PREEMPT, STD_HARDUID, 0);
@@ -1435,7 +1435,7 @@ mfn_muf(MFUNARGS)
 	switch (rv->type) {
 	case PROG_STRING:
 		if (rv->data.string) {
-			strcpyn(buf, buflen, rv->data.string->data);
+			strlcpy(buf, rv->data.string->data, buflen);
 			CLEAR(rv);
 			return buf;
 		} else {
@@ -1515,7 +1515,7 @@ mfn_force(MFUNARGS)
 
 	if (force_level)
 		ABORT_MPI("FORCE", "Permission denied: You can't force recursively.");
-	strcpyn(buf, buflen, argv[1]);
+	strlcpy(buf, argv[1], buflen);
 	ptr = buf;
 	do {
 		const char *ptr2=NAME(obj);
@@ -1690,7 +1690,7 @@ mfn_commas(MFUNARGS)
 		ptr = MesgParse(argv[1], sepbuf, sizeof(sepbuf));
 		CHECKRETURN(ptr, "COMMAS", "arg 2");
 	} else {
-		strcpyn(sepbuf, sizeof(sepbuf), " and ");
+		strlcpy(sepbuf, " and ", sizeof(sepbuf));
 	}
 
 	if (argc > 2) {
@@ -1708,7 +1708,7 @@ mfn_commas(MFUNARGS)
 	for (i = 1; i <= count; i++) {
 		ptr = getlitem(buf2, sizeof(buf2), listbuf, "\r", i);
 		if (argc > 2) {
-			strcpyn(tmp, BUFFER_LEN, ptr);
+			strlcpy(tmp, ptr, BUFFER_LEN);
 			ptr = MesgParse(argv[3], buf2, sizeof(buf2));
 			CHECKRETURN(ptr, "COMMAS", "arg 3");
 		}
@@ -1718,7 +1718,7 @@ mfn_commas(MFUNARGS)
 				free_top_mvar();
 			return buf;
 		}
-		strcatn(out, BUFFER_LEN - (out - buf), ptr);
+		strlcat(out, ptr, BUFFER_LEN - (out - buf));
 		out += itemlen;
 		switch (count - i) {
 		case 0:
@@ -1733,7 +1733,7 @@ mfn_commas(MFUNARGS)
 					free_top_mvar();
 				return buf;
 			}
-			strcatn(out, BUFFER_LEN - (out - buf), sepbuf);
+			strlcat(out, sepbuf, BUFFER_LEN - (out - buf));
 			out += itemlen;
 			break;
 		default:
@@ -1742,7 +1742,7 @@ mfn_commas(MFUNARGS)
 					free_top_mvar();
 				return buf;
 			}
-			strcatn(out, BUFFER_LEN - (out - buf), ", ");
+			strlcat(out, ", ", BUFFER_LEN - (out - buf));
 			out += strlen(out);
 			break;
 		}
@@ -1761,63 +1761,63 @@ mfn_attr(MFUNARGS)
 	buf[0] = '\0';
 	for (i = 0; i < argc - 1; i++) {
 		if (!strcmp(argv[i], "reset") || !strcmp(argv[i], "normal")) {
-			strcatn(buf, BUFFER_LEN, ANSI_RESET);
+			strlcat(buf, ANSI_RESET, BUFFER_LEN);
 		} else if (!strcmp(argv[i], "bold")) {
-			strcatn(buf, BUFFER_LEN, ANSI_BOLD);
+			strlcat(buf, ANSI_BOLD, BUFFER_LEN);
 		} else if (!strcmp(argv[i], "dim")) {
-			strcatn(buf, BUFFER_LEN, ANSI_DIM);
+			strlcat(buf, ANSI_DIM, BUFFER_LEN);
 		} else if (!strcmp(argv[i], "italic")) {
-			strcatn(buf, BUFFER_LEN, ANSI_ITALIC);
+			strlcat(buf, ANSI_ITALIC, BUFFER_LEN);
 		} else if (!strcmp(argv[i], "uline") || !strcmp(argv[i], "underline")) {
-			strcatn(buf, BUFFER_LEN, ANSI_UNDERLINE);
+			strlcat(buf, ANSI_UNDERLINE, BUFFER_LEN);
 		} else if (!strcmp(argv[i], "flash")) {
-			strcatn(buf, BUFFER_LEN, ANSI_FLASH);
+			strlcat(buf, ANSI_FLASH, BUFFER_LEN);
 		} else if (!strcmp(argv[i], "reverse")) {
-			strcatn(buf, BUFFER_LEN, ANSI_REVERSE);
+			strlcat(buf, ANSI_REVERSE, BUFFER_LEN);
 		} else if (!strcmp(argv[i], "ostrike") || !strcmp(argv[i], "overstrike")) {
-			strcatn(buf, BUFFER_LEN, ANSI_OSTRIKE);
+			strlcat(buf, ANSI_OSTRIKE, BUFFER_LEN);
 
 		} else if (!strcmp(argv[i], "black")) {
-			strcatn(buf, BUFFER_LEN, ANSI_FG_BLACK);
+			strlcat(buf, ANSI_FG_BLACK, BUFFER_LEN);
 		} else if (!strcmp(argv[i], "red")) {
-			strcatn(buf, BUFFER_LEN, ANSI_FG_RED);
+			strlcat(buf, ANSI_FG_RED, BUFFER_LEN);
 		} else if (!strcmp(argv[i], "yellow")) {
-			strcatn(buf, BUFFER_LEN, ANSI_FG_YELLOW);
+			strlcat(buf, ANSI_FG_YELLOW, BUFFER_LEN);
 		} else if (!strcmp(argv[i], "green")) {
-			strcatn(buf, BUFFER_LEN, ANSI_FG_GREEN);
+			strlcat(buf, ANSI_FG_GREEN, BUFFER_LEN);
 		} else if (!strcmp(argv[i], "cyan")) {
-			strcatn(buf, BUFFER_LEN, ANSI_FG_CYAN);
+			strlcat(buf, ANSI_FG_CYAN, BUFFER_LEN);
 		} else if (!strcmp(argv[i], "blue")) {
-			strcatn(buf, BUFFER_LEN, ANSI_FG_BLUE);
+			strlcat(buf, ANSI_FG_BLUE, BUFFER_LEN);
 		} else if (!strcmp(argv[i], "magenta")) {
-			strcatn(buf, BUFFER_LEN, ANSI_FG_MAGENTA);
+			strlcat(buf, ANSI_FG_MAGENTA, BUFFER_LEN);
 		} else if (!strcmp(argv[i], "white")) {
-			strcatn(buf, BUFFER_LEN, ANSI_FG_WHITE);
+			strlcat(buf, ANSI_FG_WHITE, BUFFER_LEN);
 
 		} else if (!strcmp(argv[i], "bg_black")) {
-			strcatn(buf, BUFFER_LEN, ANSI_BG_BLACK);
+			strlcat(buf, ANSI_BG_BLACK, BUFFER_LEN);
 		} else if (!strcmp(argv[i], "bg_red")) {
-			strcatn(buf, BUFFER_LEN, ANSI_BG_RED);
+			strlcat(buf, ANSI_BG_RED, BUFFER_LEN);
 		} else if (!strcmp(argv[i], "bg_yellow")) {
-			strcatn(buf, BUFFER_LEN, ANSI_BG_YELLOW);
+			strlcat(buf, ANSI_BG_YELLOW, BUFFER_LEN);
 		} else if (!strcmp(argv[i], "bg_green")) {
-			strcatn(buf, BUFFER_LEN, ANSI_BG_GREEN);
+			strlcat(buf, ANSI_BG_GREEN, BUFFER_LEN);
 		} else if (!strcmp(argv[i], "bg_cyan")) {
-			strcatn(buf, BUFFER_LEN, ANSI_BG_CYAN);
+			strlcat(buf, ANSI_BG_CYAN, BUFFER_LEN);
 		} else if (!strcmp(argv[i], "bg_blue")) {
-			strcatn(buf, BUFFER_LEN, ANSI_BG_BLUE);
+			strlcat(buf, ANSI_BG_BLUE, BUFFER_LEN);
 		} else if (!strcmp(argv[i], "bg_magenta")) {
-			strcatn(buf, BUFFER_LEN, ANSI_BG_MAGENTA);
+			strlcat(buf, ANSI_BG_MAGENTA, BUFFER_LEN);
 		} else if (!strcmp(argv[i], "bg_white")) {
-			strcatn(buf, BUFFER_LEN, ANSI_BG_WHITE);
+			strlcat(buf, ANSI_BG_WHITE, BUFFER_LEN);
 		} else if (!strcmp(argv[i], "")) {
 		} else {
 			ABORT_MPI("ATTR", "Unrecognized ansi tag.  Try one of reset, bold, dim, italic, underline, reverse, overstrike, black, red, yellow, green, cyan, blue, magenta, white, bg_black, bg_red, bg_yellow, bg_green, bg_cyan, bg_blue, bg_magenta, or bg_white.");
 		}
 	}
 	exlen = strlen(buf) + strlen(ANSI_RESET) + 1;
-	strncat(buf, argv[argc - 1], (BUFFER_LEN - exlen));
-	strcatn(buf, BUFFER_LEN, ANSI_RESET);
+	strlcat(buf, argv[argc - 1], (BUFFER_LEN - exlen));
+	strlcat(buf, ANSI_RESET, BUFFER_LEN);
 	return buf;
 }
 
