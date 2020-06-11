@@ -190,9 +190,6 @@
 /* The value of the uname -a command. */
 #define UNAME_VALUE "OpenBSD qnixsoft.com 6.5 GENERIC.MP#2 amd64"
 
-/* Use IPv6 instead of IPv4 sockets. */
-/* #undef USE_IPV6 */
-
 /* Makefile is configured to run lint on sources. */
 /* #undef WITH_LINT */
 

@@ -189,9 +189,6 @@
 /* The value of the uname -a command. */
 #undef UNAME_VALUE
 
-/* Use IPv6 instead of IPv4 sockets. */
-#undef USE_IPV6
-
 /* Makefile is configured to run lint on sources. */
 #undef WITH_LINT
 

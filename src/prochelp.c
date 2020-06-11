@@ -655,6 +655,7 @@ process_lines(FILE * infile, FILE * outfile, FILE * htmlfile, int cols)
 	fclose(docsfile);
 }
 
+#define warn(...) fprintf(stderr, ## __VA_ARGS__)
 
 int
 main(int argc, char **argv)
@@ -663,22 +664,22 @@ main(int argc, char **argv)
 	int cols;
 
 	if (argc != 4) {
-		fprintf(stderr, "Usage: %s inputrawfile outputhelpfile outputhtmlfile\n", argv[0]);
+		warn("Usage: %s inputrawfile outputhelpfile outputhtmlfile", argv[0]);
 		return 1;
 	}
 
 	if (!strcmp(argv[1], argv[2])) {
-		fprintf(stderr, "%s: cannot use same file for input rawfile and output helpfile\n");
+		warn("Cannot use same file for input rawfile and output helpfile");
 		return 1;
 	}
 
 	if (!strcmp(argv[1], argv[3])) {
-		fprintf(stderr, "%s: cannot use same file for input rawfile and output htmlfile\n");
+		warn("Cannot use same file for input rawfile and output htmlfile");
 		return 1;
 	}
 
 	if (!strcmp(argv[3], argv[2])) {
-		fprintf(stderr, "%s: cannot use same file for htmlfile and helpfile\n");
+		warn("cannot use same file for htmlfile and helpfile");
 		return 1;
 	}
 
@@ -686,18 +687,18 @@ main(int argc, char **argv)
 		infile = stdin;
 	} else {
 		if (!(infile = fopen(argv[1], "rb"))) {
-			fprintf(stderr, "%s: cannot read %s\n", argv[0], argv[1]);
+			warn("cannot read %s\n", argv[1]);
 			return 1;
 		}
 	}
 
 	if (!(outfile = fopen(argv[2], "wb"))) {
-		fprintf(stderr, "%s: cannot write to %s\n", argv[0], argv[2]);
+		warn("Cannot write to %s\n", argv[2]);
 		return 1;
 	}
 
 	if (!(htmlfile = fopen(argv[3], "wb"))) {
-		fprintf(stderr, "%s: cannot write to %s\n", argv[0], argv[3]);
+		warn("Cannot write to %s\n", argv[3]);
 		return 1;
 	}
 

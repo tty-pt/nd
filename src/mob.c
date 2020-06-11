@@ -534,7 +534,6 @@ mobi_update(mobi_t *n)
 
 	dbref who = n->who;
 
-	debug("mobi_update %d resp %d\n", who, n->respawn_in);
 	if (n->respawn_in > 0) {
 		if (!--n->respawn_in)
 			respawn(who);

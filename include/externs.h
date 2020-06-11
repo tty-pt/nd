@@ -17,7 +17,7 @@
 /* Auto-generated list of extern functions */
 #include "externs-auto.h"
 
-#define warn(...) fprintf(stderr, __VA_ARGS__)
+#define warn(...) fprintf(stderr, ## __VA_ARGS__)
 
 /* Prototypes for externs not defined elsewhere */
 

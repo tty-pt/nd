@@ -20,40 +20,18 @@
 #include <sys/wait.h>
 
 #include <fcntl.h>
-#if defined (HAVE_ERRNO_H)
-# include <errno.h>
-#else
-#if defined (HAVE_SYS_ERRNO_H)
-# include <sys/errno.h>
-#else
-  extern int errno;
-#endif
-#endif
+#include <errno.h>
 #include <ctype.h>
 
 # define NEED_SOCKLEN_T
 //"do not include netinet6/in6.h directly, include netinet/in.h.  see RFC2553"
-# include <sys/socket.h>
-# include <netinet/in.h>
-# include <netinet/tcp.h>
-# include <netdb.h>
-# include <arpa/inet.h>
-
-#ifdef AIX
-# include <sys/select.h>
-#endif
-
-#ifdef HAVE_LIBSSL
-# define USE_SSL
-#endif
-
-#ifdef USE_SSL
-# ifdef HAVE_OPENSSL
-#  include <openssl/ssl.h>
-# else
-#  include <ssl.h>
-# endif
-#endif
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <netinet/tcp.h>
+#include <netdb.h>
+#include <arpa/inet.h>
+#include <sys/select.h>
+#include <openssl/ssl.h>
 
 #include "db.h"
 #include "interface.h"
@@ -170,26 +148,15 @@ struct descriptor_data *descriptor_list = NULL;
 
 // Yes, both of these should start defaulted to disabled.
 // If both are still disabled after arg parsing, we'll enable one or both.
-static int ipv4_enabled = 0;
-static int ipv6_enabled = 0;
-
 static int numports = 0;
 static int numsocks = 0;
 static int listener_port[MAX_LISTEN_SOCKS];
 static int sock[MAX_LISTEN_SOCKS];
-#ifdef USE_IPV6
-static int numsocks_v6 = 0;
-static int sock_v6[MAX_LISTEN_SOCKS];
-#endif
 #ifdef USE_SSL
 static int ssl_numports = 0;
 static int ssl_numsocks = 0;
 static int ssl_listener_port[MAX_LISTEN_SOCKS];
 static int ssl_sock[MAX_LISTEN_SOCKS];
-# ifdef USE_IPV6
-static int ssl_numsocks_v6 = 0;
-static int ssl_sock_v6[MAX_LISTEN_SOCKS];
-# endif
 SSL_CTX *ssl_ctx;
 #endif
 
@@ -208,11 +175,6 @@ void close_sockets(const char *msg);
 int boot_off(dbref player);
 void boot_player_off(dbref player);
 
-#ifdef USE_IPV6
-const char *addrout_v6(int, struct in6_addr *, unsigned short);
-int make_socket_v6(int);
-struct descriptor_data *new_connection_v6(int port, int sock, int is_ssl);
-#endif
 const char *addrout(int, long, unsigned short);
 int make_socket(int);
 struct descriptor_data *new_connection(int port, int sock, int is_ssl);
@@ -301,7 +263,6 @@ show_program_usage(char *prog)
 	fprintf(stderr, "        -sanfix          attempt to auto-fix a corrupt db after loading.\n");
 	fprintf(stderr, "        -wizonly         only allow wizards to login.\n");
 	fprintf(stderr, "        -godpasswd PASS  reset God(#1)'s password to PASS.  Implies -convert\n");
-	fprintf(stderr, "        -ipv6            enable listening on ipv6 sockets.\n");
 	fprintf(stderr, "        -version         display this server's version.\n");
 	fprintf(stderr, "        -help            display this message.\n");
 	exit(1);
@@ -364,17 +325,6 @@ main(int argc, char **argv)
 					show_program_usage(*argv);
 				}
 				outfile_name = argv[++i];
-
-			} else if (!strcmp(argv[i], "-ipv4")) {
-				ipv4_enabled = 1;
-
-			} else if (!strcmp(argv[i], "-ipv6")) {
-#ifdef USE_IPV6
-				ipv6_enabled = 1;
-#else
-				fprintf(stderr, "-ipv6: This server isn't configured to enable IPv6.  Sorry.\n");
-				exit(1);
-#endif
 
 			} else if (!strcmp(argv[i], "-godpasswd")) {
 				if (i + 1 >= argc) {
@@ -452,18 +402,6 @@ main(int argc, char **argv)
 	if (!infile_name || !outfile_name) {
 		show_program_usage(*argv);
 	}
-
-#ifdef USE_IPV6
-	if (!ipv4_enabled && !ipv6_enabled) {
-	    // No -ipv4 or -ipv6 flags given.  Default to enabling both.
-	    ipv4_enabled = 1;
-	    ipv6_enabled = 1;
-	}
-#else
-	// If IPv6 isn't available always enable IPv4.
-	ipv4_enabled = 1;
-	ipv6_enabled = 0;
-#endif
 
 	/* if (!sanity_interactive) { */
 
@@ -845,23 +783,11 @@ shovechars()
 	int ssl_status_ok = 1;
 #endif
 
-	if (ipv4_enabled) {
-		for (i = 0; i < numports; i++) {
-			sock[i] = make_socket(listener_port[i]);
-			maxd = sock[i] + 1;
-			numsocks++;
-		}
+	for (i = 0; i < numports; i++) {
+		sock[i] = make_socket(listener_port[i]);
+		maxd = sock[i] + 1;
+		numsocks++;
 	}
-#ifdef USE_IPV6
-	if (ipv6_enabled) {
-		for (i = 0; i < numports; i++) {
-			sock_v6[i] = make_socket_v6(listener_port[i]);
-			maxd = sock_v6[i] + 1;
-			numsocks_v6++;
-		}
-	}
-#endif
-
 #ifdef USE_SSL
 	SSL_load_error_strings ();
  	OpenSSL_add_ssl_algorithms (); 
@@ -897,22 +823,11 @@ shovechars()
 	}
  
 	if (ssl_status_ok) {
-		if (ipv4_enabled) {
-			for (i = 0; i < ssl_numports; i++) {
-				ssl_sock[i] = make_socket(ssl_listener_port[i]);
-				maxd = ssl_sock[i] + 1;
-				ssl_numsocks++;
-			}
+		for (i = 0; i < ssl_numports; i++) {
+			ssl_sock[i] = make_socket(ssl_listener_port[i]);
+			maxd = ssl_sock[i] + 1;
+			ssl_numsocks++;
 		}
-# ifdef USE_IPV6
-		if (ipv6_enabled) {
-			for (i = 0; i < ssl_numports; i++) {
-				ssl_sock_v6[i] = make_socket_v6(ssl_listener_port[i]);
-				maxd = ssl_sock_v6[i] + 1;
-				ssl_numsocks_v6++;
-			}
-		}
-# endif
 	} else {
 		ssl_numsocks = 0;
 	}
@@ -972,21 +887,11 @@ shovechars()
 			for (i = 0; i < numsocks; i++) {
 				FD_SET(sock[i], &input_set);
 			}
-#ifdef USE_IPV6
-			for (i = 0; i < numsocks_v6; i++) {
-				FD_SET(sock_v6[i], &input_set);
-			}
-#endif
 
 #ifdef USE_SSL
 			for (i = 0; i < ssl_numsocks; i++) {
 				FD_SET(ssl_sock[i], &input_set);
 			}
-# ifdef USE_IPV6
-			for (i = 0; i < ssl_numsocks_v6; i++) {
-				FD_SET(ssl_sock_v6[i], &input_set);
-			}
-# endif
 #endif
 		}
 		for (d = descriptor_list; d; d = d->next) {
@@ -1076,21 +981,6 @@ shovechars()
 					}
 				}
 			}
-#ifdef USE_IPV6
-			for (i = 0; i < numsocks_v6; i++) {
-				if (FD_ISSET(sock_v6[i], &input_set)) {
-					if (!(newd = new_connection_v6(listener_port[i], sock_v6[i], 0))) {
-						if (errno && errno != EINTR && errno != EMFILE && errno != ENFILE) {
-							perror("new_connection");
-							/* return; */
-						}
-					} else {
-						if (newd->descriptor >= maxd)
-							maxd = newd->descriptor + 1;
-					}
-				}
-			}
-#endif
 #ifdef USE_SSL
 			for (i = 0; i < ssl_numsocks; i++) {
 				if (FD_ISSET(ssl_sock[i], &input_set)) {
@@ -1108,24 +998,6 @@ shovechars()
 					}
 				}
 			}
-# ifdef USE_IPV6
-			for (i = 0; i < ssl_numsocks_v6; i++) {
-				if (FD_ISSET(ssl_sock_v6[i], &input_set)) {
-					if (!(newd = new_connection_v6(ssl_listener_port[i], ssl_sock_v6[i], 1))) {
-						if (errno && errno != EINTR && errno != EMFILE && errno != ENFILE) {
-							perror("new_connection");
-							/* return; */
-						}
-					} else {
-						if (newd->descriptor >= maxd)
-							maxd = newd->descriptor + 1;
-						newd->ssl_session = SSL_new(ssl_ctx);
-						SSL_set_fd(newd->ssl_session, newd->descriptor);
-						cnt = SSL_accept(newd->ssl_session);
-					}
-				}
-			}
-# endif
 #endif
 			for (cnt = 0, d = descriptor_list; d; d = dnext) {
 				dnext = d->next;
@@ -1235,33 +1107,6 @@ wall_wizards(const char *msg)
 	}
 }
 
-#ifdef USE_IPV6
-struct descriptor_data *
-new_connection_v6(int port, int sock, int is_ssl)
-{
-	int newsock;
-
-	struct sockaddr_in6 addr;
-	socklen_t addr_len;
-	char hostname[128];
-
-	addr_len = (socklen_t)sizeof(addr);
-	newsock = accept(sock, (struct sockaddr *) &addr, &addr_len);
-	if (newsock < 0) {
-		return 0;
-	} else {
-# ifdef F_SETFD
-		fcntl(newsock, F_SETFD, 1);
-# endif
-		strlcpy(hostname, addrout_v6(port, &(addr.sin6_addr), addr.sin6_port), sizeof(hostname));
-		warn("ACCEPT: %s(%d) on descriptor %d", hostname,
-				   ntohs(addr.sin6_port), newsock);
-		warn("CONCOUNT: There are now %d open connections.", ++ndescriptors);
-		return initializesock(newsock, hostname, is_ssl);
-	}
-}
-#endif
-
 struct descriptor_data *
 new_connection(int port, int sock, int is_ssl)
 {
@@ -1285,27 +1130,6 @@ new_connection(int port, int sock, int is_ssl)
 		return initializesock(newsock, hostname, is_ssl);
 	}
 }
-
-/*  addrout_v6 -- Translate IPV6 address 'a' from addr struct to text.		*/
-
-#ifdef USE_IPV6
-const char *
-addrout_v6(int lport, struct in6_addr *a, unsigned short prt)
-{
-	static char buf[128];
-	char ip6addr[128];
-
-	struct in6_addr addr;
-	memcpy(&addr.s6_addr, a, sizeof(struct in6_addr));
-
-	prt = ntohs(prt);
-
-	inet_ntop(AF_INET6, a, ip6addr, 128);
-	snprintf(buf, sizeof(buf), "%s(%u)\n", ip6addr, prt);
-
-	return buf;
-}
-#endif
 
 /*  addrout -- Translate address 'a' from addr struct to text.		*/
 
@@ -1462,63 +1286,6 @@ initializesock(int s, const char *hostname, int is_ssl)
 	mcp_negotiation_start(&d->mcpframe);
 	return d;
 }
-
-#ifdef USE_IPV6
-int
-make_socket_v6(int port)
-{
-	int s;
-	int opt;
-	struct sockaddr_in6 server;
-
-	s = socket(AF_INET6, SOCK_STREAM, 0);
-
-	if (s < 0) {
-		perror("creating stream socket");
-		exit(3);
-	}
-
-	opt = 1;
-	if (setsockopt(s, SOL_SOCKET, SO_REUSEADDR, (char *) &opt, sizeof(opt)) < 0) {
-		perror("setsockopt(SO_REUSEADDR)");
-		exit(1);
-	}
-
-	opt = 1;
-	if (setsockopt(s, SOL_SOCKET, SO_KEEPALIVE, (char *) &opt, sizeof(opt)) < 0) {
-		perror("setsockopt(SO_KEEPALIVE)");
-		exit(1);
-	}
-
-	opt = 1;
-	if (setsockopt(s, IPPROTO_IPV6, IPV6_V6ONLY, (char *) &opt, sizeof(opt)) < 0) {
-		perror("setsockopt(IPV6_V6ONLY");
-		exit(1);
-	}
-
-	/*
-	opt = 240;
-	if (setsockopt(s, SOL_TCP, TCP_KEEPIDLE, (char *) &opt, sizeof(opt)) < 0) {
-		perror("setsockopt");
-		exit(1);
-	}
-	*/
-
-	memset((char*)&server, 0, sizeof(server));
-	//server.sin6_len = sizeof(server);
-	server.sin6_family = AF_INET6;
-	server.sin6_addr = in6addr_any;
-	server.sin6_port = htons(port);
-
-	if (bind(s, (struct sockaddr *)&server, sizeof(server))) {
-		perror("binding stream socket");
-		close(s);
-		exit(4);
-	}
-	listen(s, 5);
-	return s;
-}
-#endif
 
 int
 make_socket(int port)
@@ -2354,20 +2121,10 @@ close_sockets(const char *msg) {
 	for (i = 0; i < numsocks; i++) {
 		close(sock[i]);
 	}
-#ifdef USE_IPV6
-	for (i = 0; i < numsocks_v6; i++) {
-		close(sock_v6[i]);
-	}
-#endif
 #ifdef USE_SSL
 	for (i = 0; i < ssl_numsocks; i++) {
 		close(ssl_sock[i]);
 	}
-# ifdef USE_IPV6
-	for (i = 0; i < ssl_numsocks_v6; i++) {
-		close(ssl_sock_v6[i]);
-	}
-# endif
 #endif
 }
 

@@ -800,7 +800,7 @@ do_relink(int descr, dbref player, const char *thing_name, const char *dest_name
 			return;
 		default:
 			notify(player, "Internal error: weird object type.");
-			warn("PANIC: weird object: Typeof(%d) = %d", thing, Typeof(thing));
+			warn("PANIC: weird object: Typeof(%d) = %ld", thing, Typeof(thing));
 			return;
 	}
 

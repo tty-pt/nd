@@ -748,11 +748,13 @@ list_events(dbref player)
 		/* pid */
 		snprintf(pidstr, sizeof(pidstr), "%d", ptr->eventnum);
 		/* next due */
-		strlcpy(duestr, ((ptr->when - rtime) > 0), sizeof(duestr) ?
-				time_format_2((long) (ptr->when - rtime)) : "Due");
+		strlcpy(duestr, ((ptr->when - rtime) > 0)
+			? time_format_2((long) (ptr->when - rtime))
+			: "Due", sizeof(duestr));
 		/* Run length */
-		strlcpy(runstr, ptr->fr, sizeof(runstr) ?
-				time_format_2((long) (rtime - ptr->fr->started)): "0s");
+		strlcpy(runstr, ptr->fr
+			? time_format_2((long) (rtime - ptr->fr->started))
+			: "0s", sizeof(runstr));
 		/* Thousand Instructions executed */
 		snprintf(inststr, sizeof(inststr), "%d", ptr->fr? (ptr->fr->instcnt / 1000) : 0);
 
@@ -997,11 +999,11 @@ dequeue_prog_real(dbref program, int killmode, const char *file, const int line)
 	int count = 0;
 	timequeue tmp, ptr;
 
-	debug("dequeue_prog: tqhead = %p\n",tqhead,0);
+	debug("dequeue_prog: tqhead = %p\n", (void *) tqhead);
 	while (tqhead) {
 		debug("dequeue_prog: tqhead->called_prog = #%d, has_refs = %d ",
 						tqhead->called_prog, has_refs(program,tqhead));
-		debug("tqhead->uid = #%d\n", tqhead->uid,0);
+		debug("tqhead->uid = #%d\n", tqhead->uid);
 		if (tqhead->called_prog != program && !has_refs(program, tqhead) && tqhead->uid != program) {
 			break;
 		}
@@ -1011,7 +1013,7 @@ dequeue_prog_real(dbref program, int killmode, const char *file, const int line)
 			}
 		} else if (killmode == 1) {
 			if (!tqhead->fr) {
-				debug("dequeue_prog: killmode 1, no frame\n",0,0);
+				debug("dequeue_prog: killmode 1, no frame\n");
 				break;
 			}
 		}
@@ -1026,7 +1028,7 @@ dequeue_prog_real(dbref program, int killmode, const char *file, const int line)
 		for (tmp = tqhead, ptr = tqhead->next; ptr; tmp = ptr, ptr = ptr->next) {
 			debug("dequeue_prog(2): ptr->called_prog=#%d, has_refs()=%d ",
 							ptr->called_prog, has_refs(program, ptr));
-			debug("ptr->uid=#%d.\n",ptr->uid,0);
+			debug("ptr->uid=#%d.\n",ptr->uid);
 			if (ptr->called_prog != program && !has_refs(program, ptr) && ptr->uid != program) {
 				continue;
 			}
@@ -1036,7 +1038,7 @@ dequeue_prog_real(dbref program, int killmode, const char *file, const int line)
 				}
 			} else if (killmode == 1) {
 				if (!ptr->fr) {
-					debug("dequeue_prog(2): killmode 1, no frame.\n",0,0);
+					debug("dequeue_prog(2): killmode 1, no frame.\n");
 					continue;
 				}
 			}

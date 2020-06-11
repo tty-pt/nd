@@ -23,23 +23,11 @@
  are compiled in.
  ************************************************************************/
 
-/* Detaches the process as a daemon so that it don't cause problems
- * keeping a terminal line open and such. Logs normal output to a file
- * and writes out a netmuck.pid file 
- */
-#define DETACH
-
 #define GAME_DIR "/var/db/neverdark"
 
 /* Makes God (#1) immune to @force, @newpassword, and being set !Wizard.  
  */
 #define GOD_PRIV
-
-/* To make the server save using fast delta dumps that only write out the
- * changed objects, except when @dump or @shutdown are used, or when too
- * many deltas have already been saved to disk, #define this. 
- */
-/* #define DELTADUMPS */
 
 /*
  * Port where tinymuck lives -- Note: If you use a port lower than
@@ -49,14 +37,6 @@
  * Aspnes, who wrote TinyMUD from which TinyMUCK eventually was derived.
  */
 #define TINYPORT 4201			/* Port that players connect to */
-
-/*
- * Some systems can hang for up to 30 seconds while trying to resolve
- * hostnames.  Define this to use a non-blocking second process to resolve
- * hostnames for you.  NOTE:  You need to compile the 'fb-resolver' program
- * (make resolver) and put it in the directory that the fbmuck program is
- * run from.
- */
 
 /*
  * There's a set of MUF prims that are considered dangerous.
@@ -70,8 +50,8 @@
 #undef SCARY_MUF_PRIMS
 
 /*
- * This is a fairly interesting one -- if there's no DISKBASING, and thus
- * the saves are fork()ed off into the background, then then the child
+ * This is a fairly interesting one --
+ * the saves are fork()ed off into the background, and the child
  * may cause I/O contention with the parent (the interactive, player-
  * connected process).  If this occurs, you can set this to a number
  * greater than 0 to make it be slightly nicer to the rest of the

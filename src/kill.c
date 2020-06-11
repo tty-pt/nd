@@ -11,8 +11,6 @@
 #include "spell.h"
 #include "mob.h"
 
-#include "debug.h"
-
 #define MESGPROP_CXP	"_/cxp"
 #define GETCXP(x)	get_property_value(x, MESGPROP_CXP)
 #define SETCXP(x, y)	set_property_value(x, MESGPROP_CXP, y)
@@ -325,8 +323,6 @@ kill_update(mobi_t *liv)
 {
 	mobi_t *livt = liv->target;
 
-	debug("kill_update %p %p\n", (void *) liv, (void *) livt);
-
 	if (!livt
             || livt == liv
             || livt->who < 0
@@ -470,7 +466,6 @@ kill_v(int descr, dbref player, char const *opcs)
 	} else if (*opcs == 'c' && isdigit(opcs[1])) {
 		mobi_t *p = MOBI(player);
 		unsigned slot = strtol(opcs + 1, &end, 0);
-		CBUG(!p);
 
 		if (!p->target)
 			p->target = p;
