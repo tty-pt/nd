@@ -184,15 +184,15 @@ mfn_contents(MFUNARGS)
 
 	typchk = NOTYPE;
 	if (argc > 1) {
-		if (!string_compare(argv[1], "Room")) {
+		if (!strcmp(argv[1], "Room")) {
 			typchk = TYPE_ROOM;
-		} else if (!string_compare(argv[1], "Exit")) {
+		} else if (!strcmp(argv[1], "Exit")) {
 			typchk = TYPE_EXIT;	/* won't find any, though */
-		} else if (!string_compare(argv[1], "Player")) {
+		} else if (!strcmp(argv[1], "Player")) {
 			typchk = TYPE_PLAYER;
-		} else if (!string_compare(argv[1], "Program")) {
+		} else if (!strcmp(argv[1], "Program")) {
 			typchk = TYPE_PROGRAM;
-		} else if (!string_compare(argv[1], "Thing")) {
+		} else if (!strcmp(argv[1], "Thing")) {
 			typchk = TYPE_THING;
 		} else {
 			ABORT_MPI("CONTENTS",
@@ -1247,37 +1247,37 @@ mfn_istype(MFUNARGS)
 	obj = mesg_dbref_local(descr, player, what, perms, argv[0], mesgtyp);
 #endif
 	if (obj == NOTHING || obj == AMBIGUOUS || obj == UNKNOWN)
-		return (string_compare(argv[1], "Bad") ? "0" : "1");
-	if ((string_compare(argv[1], "Bad") == 0) && 
+		return (strcmp(argv[1], "Bad") ? "0" : "1");
+	if ((strcmp(argv[1], "Bad") == 0) && 
 		(obj == NOTHING || obj == AMBIGUOUS || obj == UNKNOWN ||
 		 obj == PERMDENIED ))
 		return "1";
 	if (obj == PERMDENIED)
 		ABORT_MPI("TYPE", "Permission Denied.");
 	if (obj == HOME)
-		return (string_compare(argv[1], "Room") ? "0" : "1");
+		return (strcmp(argv[1], "Room") ? "0" : "1");
 
 	switch (Typeof(obj)) {
 	case TYPE_PLAYER:
-		return (string_compare(argv[1], "Player") ? "0" : "1");
+		return (strcmp(argv[1], "Player") ? "0" : "1");
 		break;
 	case TYPE_ROOM:
-		return (string_compare(argv[1], "Room") ? "0" : "1");
+		return (strcmp(argv[1], "Room") ? "0" : "1");
 		break;
 	case TYPE_EXIT:
-		return (string_compare(argv[1], "Exit") ? "0" : "1");
+		return (strcmp(argv[1], "Exit") ? "0" : "1");
 		break;
 	case TYPE_THING:
-		return (string_compare(argv[1], "Thing") ? "0" : "1");
+		return (strcmp(argv[1], "Thing") ? "0" : "1");
 		break;
 	case TYPE_PROGRAM:
-		return (string_compare(argv[1], "Program") ? "0" : "1");
+		return (strcmp(argv[1], "Program") ? "0" : "1");
 		break;
 	default:
-		return (string_compare(argv[1], "Bad") ? "0" : "1");
+		return (strcmp(argv[1], "Bad") ? "0" : "1");
 		break;
 	}
-	return (string_compare(argv[1], "Bad") ? "0" : "1");
+	return (strcmp(argv[1], "Bad") ? "0" : "1");
 }
 
 const char *
@@ -1760,57 +1760,57 @@ mfn_attr(MFUNARGS)
 
 	buf[0] = '\0';
 	for (i = 0; i < argc - 1; i++) {
-		if (!string_compare(argv[i], "reset") || !string_compare(argv[i], "normal")) {
+		if (!strcmp(argv[i], "reset") || !strcmp(argv[i], "normal")) {
 			strcatn(buf, BUFFER_LEN, ANSI_RESET);
-		} else if (!string_compare(argv[i], "bold")) {
+		} else if (!strcmp(argv[i], "bold")) {
 			strcatn(buf, BUFFER_LEN, ANSI_BOLD);
-		} else if (!string_compare(argv[i], "dim")) {
+		} else if (!strcmp(argv[i], "dim")) {
 			strcatn(buf, BUFFER_LEN, ANSI_DIM);
-		} else if (!string_compare(argv[i], "italic")) {
+		} else if (!strcmp(argv[i], "italic")) {
 			strcatn(buf, BUFFER_LEN, ANSI_ITALIC);
-		} else if (!string_compare(argv[i], "uline") || !string_compare(argv[i], "underline")) {
+		} else if (!strcmp(argv[i], "uline") || !strcmp(argv[i], "underline")) {
 			strcatn(buf, BUFFER_LEN, ANSI_UNDERLINE);
-		} else if (!string_compare(argv[i], "flash")) {
+		} else if (!strcmp(argv[i], "flash")) {
 			strcatn(buf, BUFFER_LEN, ANSI_FLASH);
-		} else if (!string_compare(argv[i], "reverse")) {
+		} else if (!strcmp(argv[i], "reverse")) {
 			strcatn(buf, BUFFER_LEN, ANSI_REVERSE);
-		} else if (!string_compare(argv[i], "ostrike") || !string_compare(argv[i], "overstrike")) {
+		} else if (!strcmp(argv[i], "ostrike") || !strcmp(argv[i], "overstrike")) {
 			strcatn(buf, BUFFER_LEN, ANSI_OSTRIKE);
 
-		} else if (!string_compare(argv[i], "black")) {
+		} else if (!strcmp(argv[i], "black")) {
 			strcatn(buf, BUFFER_LEN, ANSI_FG_BLACK);
-		} else if (!string_compare(argv[i], "red")) {
+		} else if (!strcmp(argv[i], "red")) {
 			strcatn(buf, BUFFER_LEN, ANSI_FG_RED);
-		} else if (!string_compare(argv[i], "yellow")) {
+		} else if (!strcmp(argv[i], "yellow")) {
 			strcatn(buf, BUFFER_LEN, ANSI_FG_YELLOW);
-		} else if (!string_compare(argv[i], "green")) {
+		} else if (!strcmp(argv[i], "green")) {
 			strcatn(buf, BUFFER_LEN, ANSI_FG_GREEN);
-		} else if (!string_compare(argv[i], "cyan")) {
+		} else if (!strcmp(argv[i], "cyan")) {
 			strcatn(buf, BUFFER_LEN, ANSI_FG_CYAN);
-		} else if (!string_compare(argv[i], "blue")) {
+		} else if (!strcmp(argv[i], "blue")) {
 			strcatn(buf, BUFFER_LEN, ANSI_FG_BLUE);
-		} else if (!string_compare(argv[i], "magenta")) {
+		} else if (!strcmp(argv[i], "magenta")) {
 			strcatn(buf, BUFFER_LEN, ANSI_FG_MAGENTA);
-		} else if (!string_compare(argv[i], "white")) {
+		} else if (!strcmp(argv[i], "white")) {
 			strcatn(buf, BUFFER_LEN, ANSI_FG_WHITE);
 
-		} else if (!string_compare(argv[i], "bg_black")) {
+		} else if (!strcmp(argv[i], "bg_black")) {
 			strcatn(buf, BUFFER_LEN, ANSI_BG_BLACK);
-		} else if (!string_compare(argv[i], "bg_red")) {
+		} else if (!strcmp(argv[i], "bg_red")) {
 			strcatn(buf, BUFFER_LEN, ANSI_BG_RED);
-		} else if (!string_compare(argv[i], "bg_yellow")) {
+		} else if (!strcmp(argv[i], "bg_yellow")) {
 			strcatn(buf, BUFFER_LEN, ANSI_BG_YELLOW);
-		} else if (!string_compare(argv[i], "bg_green")) {
+		} else if (!strcmp(argv[i], "bg_green")) {
 			strcatn(buf, BUFFER_LEN, ANSI_BG_GREEN);
-		} else if (!string_compare(argv[i], "bg_cyan")) {
+		} else if (!strcmp(argv[i], "bg_cyan")) {
 			strcatn(buf, BUFFER_LEN, ANSI_BG_CYAN);
-		} else if (!string_compare(argv[i], "bg_blue")) {
+		} else if (!strcmp(argv[i], "bg_blue")) {
 			strcatn(buf, BUFFER_LEN, ANSI_BG_BLUE);
-		} else if (!string_compare(argv[i], "bg_magenta")) {
+		} else if (!strcmp(argv[i], "bg_magenta")) {
 			strcatn(buf, BUFFER_LEN, ANSI_BG_MAGENTA);
-		} else if (!string_compare(argv[i], "bg_white")) {
+		} else if (!strcmp(argv[i], "bg_white")) {
 			strcatn(buf, BUFFER_LEN, ANSI_BG_WHITE);
-		} else if (!string_compare(argv[i], "")) {
+		} else if (!strcmp(argv[i], "")) {
 		} else {
 			ABORT_MPI("ATTR", "Unrecognized ansi tag.  Try one of reset, bold, dim, italic, underline, reverse, overstrike, black, red, yellow, green, cyan, blue, magenta, white, bg_black, bg_red, bg_yellow, bg_green, bg_cyan, bg_blue, bg_magenta, or bg_white.");
 		}

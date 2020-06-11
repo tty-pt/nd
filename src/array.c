@@ -141,11 +141,7 @@ array_tree_compare(array_iter * a, array_iter * b, int case_sens)
 		char *astr = (a->data.string) ? a->data.string->data : "";
 		char *bstr = (b->data.string) ? b->data.string->data : "";
 
-		if (0 != case_sens) {
-			return strcmp(astr, bstr);
-		} else {
-			return string_compare(astr, bstr);
-		}
+		return strcmp(astr, bstr);
 	} else if (a->type == PROG_ARRAY) {
 		return array_tree_compare_arrays(a, b, case_sens);
 	} else if (a->type == PROG_LOCK) {
@@ -157,7 +153,7 @@ array_tree_compare(array_iter * a, array_iter * b, int case_sens)
 		const char* lb;
 		int retval = 0;
 
-		la = string_dup(unparse_boolexp((dbref)1, a->data.lock, 0));
+		la = strdup(unparse_boolexp((dbref)1, a->data.lock, 0));
 		lb = unparse_boolexp((dbref)1, b->data.lock, 0);
 		retval = strcmp(la, lb);
 		free(la);

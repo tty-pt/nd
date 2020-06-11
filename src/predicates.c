@@ -683,9 +683,9 @@ ok_name(const char *name)
 			&& !strchr(name, '\r')
 			&& !strchr(name, ESCAPE_CHAR)
 			&& !word_start(name, NOT_TOKEN)
-			&& string_compare(name, "me")
-			&& string_compare(name, "home")
-			&& string_compare(name, "here")
+			&& strcmp(name, "me")
+			&& strcmp(name, "home")
+			&& strcmp(name, "here")
 			&& (
 				!*RESERVED_NAMES ||
 				!equalstr((char*)RESERVED_NAMES, (char*)name)

@@ -35,13 +35,6 @@
  */
 #define GOD_PRIV
 
-/* To use a simple disk basing scheme where properties aren't loaded
- * from the input file until they are needed, define this. (Note: if
- * this is not defined, the MUCK will fork into the background to dump
- * the database, eliminating save delays.)
- */
-#undef DISKBASE
-
 /* To make the server save using fast delta dumps that only write out the
  * changed objects, except when @dump or @shutdown are used, or when too
  * many deltas have already been saved to disk, #define this. 
@@ -140,8 +133,6 @@
 #define INFO_DIR  "data/info/"
 #define EDITOR_HELP_FILE "data/edit-help.txt"	/* editor help file   */
 
-#define DELTAFILE_NAME "data/deltas-file"	/* The file for deltas */
-#define PARMFILE_NAME "data/parmfile.cfg"	/* The file for config parms */
 #define WORDLIST_FILE "data/wordlist.txt"	/* File for compression dict. */
 
 #define MACRO_FILE  "muf/macros"
@@ -151,13 +142,8 @@
  * for historical reasons.
  */
 #define PID_FILE    "netmuck.pid"
-
-#define RESOLVER_PID_FILE "hostfind.pid"	/* Write the resolver pid to ... */
-
-#ifdef DETACH
-# define LOG_FILE     "fbmuck"     /* Log stdout to ... */
-# define LOG_ERR_FILE "fbmuck.err" /* Log stderr to ... */
-#endif							/* DETACH */
+#define LOG_FILE     "fbmuck"     /* Log stdout to ... */
+#define LOG_ERR_FILE "fbmuck.err" /* Log stderr to ... */
 
 /************************************************************************
   System Dependency Defines. 
@@ -165,9 +151,6 @@
   You probably will not have to monkey with this unless the muck fails
  to compile for some reason.
  ************************************************************************/
-
-/* If you get problems compiling strftime.c, define this. */
-#undef USE_STRFTIME
 
 /* Use this only if your realloc does not allocate in powers of 2
  * (if your realloc is clever, this option will cause you to waste space).
@@ -228,23 +211,9 @@
 #include <stdio.h>
 #include <ctype.h>
 #include <sys/types.h>
-
-#ifdef DEBUG
-# undef NDEBUG
 #include <assert.h>
-#define DEBUGPRINT(x,y,z) fprintf(stderr,x,y,z)
-#else
-# define NDEBUG
-#include <assert.h>
-#define DEBUGPRINT(x,y,z) ;
-#endif /* DEBUG */
-
-#ifdef STDC_HEADERS
-# include <stdlib.h>
-#endif
-#ifdef HAVE_UNISTD_H
-# include <unistd.h>
-#endif
+#include <stdlib.h>
+#include <unistd.h>
 
 #ifdef HAVE_RANDOM
 # define SRANDOM(seed)	srandom((seed))
@@ -266,13 +235,6 @@
 # else
 #  include <time.h>
 # endif
-#endif
-
-/*
- * Include some of the useful local headers here.
- */
-#ifdef MALLOC_PROFILING
-# include "crt_malloc.h"
 #endif
 
 /******************************************************************/

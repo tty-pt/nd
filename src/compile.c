@@ -397,7 +397,7 @@ expand_def(COMPSTATE * cstat, const char *defname)
 			return (NULL);
 		}
 	}
-	return (string_dup((char *) exp->pval));
+	return (strdup((char *) exp->pval));
 }
 
 
@@ -419,7 +419,7 @@ insert_def(COMPSTATE * cstat, const char *defname, const char *deff)
 	hash_data hd;
 
 	(void) kill_def(cstat, defname);
-	hd.pval = (void *) string_dup(deff);
+	hd.pval = (void *) strdup(deff);
 	(void) add_hash(defname, hd, cstat->defhash, DEFHASHSIZE);
 }
 
@@ -1716,25 +1716,25 @@ do_comment(COMPSTATE * cstat, int depth)
 int
 is_preprocessor_conditional(const char* tmpptr)
 {
-	if (!string_compare(tmpptr, "$ifdef"))
+	if (!strcmp(tmpptr, "$ifdef"))
 		return 1;
-	else if (!string_compare(tmpptr, "$ifndef"))
+	else if (!strcmp(tmpptr, "$ifndef"))
 		return 1;
-	else if (!string_compare(tmpptr, "$iflib"))
+	else if (!strcmp(tmpptr, "$iflib"))
 		return 1;
-	else if (!string_compare(tmpptr, "$ifnlib"))
+	else if (!strcmp(tmpptr, "$ifnlib"))
 		return 1;
-	else if (!string_compare(tmpptr, "$ifver"))
+	else if (!strcmp(tmpptr, "$ifver"))
 		return 1;
-	else if (!string_compare(tmpptr, "$iflibver"))
+	else if (!strcmp(tmpptr, "$iflibver"))
 		return 1;
-	else if (!string_compare(tmpptr, "$ifnver"))
+	else if (!strcmp(tmpptr, "$ifnver"))
 		return 1;
-	else if (!string_compare(tmpptr, "$ifnlibver"))
+	else if (!strcmp(tmpptr, "$ifnlibver"))
 		return 1;
-	else if (!string_compare(tmpptr, "$ifcancall"))
+	else if (!strcmp(tmpptr, "$ifcancall"))
 		return 1;
-	else if (!string_compare(tmpptr, "$ifncancall"))
+	else if (!strcmp(tmpptr, "$ifncancall"))
 		return 1;
 
 	return 0;
@@ -1756,13 +1756,13 @@ do_directive(COMPSTATE * cstat, char *direct)
 	if (!(temp[0])) {
 		v_abort_compile(cstat, "I don't understand that compiler directive!");
 	}
-	if (!string_compare(temp, "define")) {
+	if (!strcmp(temp, "define")) {
 		tmpname = (char *) next_token_raw(cstat);
 		if (!tmpname)
 			v_abort_compile(cstat, "Unexpected end of file looking for $define name.");
 		i = 0;
 		while ((tmpptr = (char *) next_token_raw(cstat)) &&
-			   (string_compare(tmpptr, "$enddef"))) {
+			   (strcmp(tmpptr, "$enddef"))) {
 			char *cp;
 
 			for (cp = tmpptr; i < (BUFFER_LEN / 2) && *cp;) {
@@ -1788,7 +1788,7 @@ do_directive(COMPSTATE * cstat, char *direct)
 		(void) insert_def(cstat, tmpname, temp);
 		free(tmpname);
 
-	} else if (!string_compare(temp, "cleardefs")) {
+	} else if (!strcmp(temp, "cleardefs")) {
 		char nextToken[BUFFER_LEN];
 
 		purge_defs(cstat); /* Get rid of all defs first. */
@@ -1806,10 +1806,10 @@ do_directive(COMPSTATE * cstat, char *direct)
 			include_defs(cstat, (dbref) 0);
 		}
 
-	} else if (!string_compare(temp, "enddef")) {
+	} else if (!strcmp(temp, "enddef")) {
 		v_abort_compile(cstat, "$enddef without a previous matching $define.");
 
-	} else if (!string_compare(temp, "def")) {
+	} else if (!strcmp(temp, "def")) {
 		tmpname = (char *) next_token_raw(cstat);
 		if (!tmpname)
 			v_abort_compile(cstat, "Unexpected end of file looking for $def name.");
@@ -1819,7 +1819,7 @@ do_directive(COMPSTATE * cstat, char *direct)
 		advance_line(cstat);
 		free(tmpname);
 
-	} else if (!string_compare(temp, "pubdef")) {
+	} else if (!strcmp(temp, "pubdef")) {
 		char *holder = NULL;
 
 		tmpname = (char *) next_token_raw(cstat);
@@ -1827,7 +1827,7 @@ do_directive(COMPSTATE * cstat, char *direct)
 		if (!tmpname)
 			v_abort_compile(cstat, "Unexpected end of file looking for $pubdef name.");
 
-		if (string_compare(tmpname, ":") &&
+		if (strcmp(tmpname, ":") &&
 			(index(tmpname, '/') ||
 			index(tmpname, ':') ||
 			Prop_SeeOnly(tmpname) ||
@@ -1837,7 +1837,7 @@ do_directive(COMPSTATE * cstat, char *direct)
 			free(tmpname);
 			v_abort_compile(cstat, "Invalid $pubdef name.  No /, :, @ nor ~ are allowed.");
 		} else {
-			if (!string_compare(tmpname, ":")) {
+			if (!strcmp(tmpname, ":")) {
 				remove_property(cstat->program, "/_defs");
 			} else {
 				const char *defstr = NULL;
@@ -1876,7 +1876,7 @@ do_directive(COMPSTATE * cstat, char *direct)
 		advance_line(cstat);
 		free(holder);
 
-    } else if (!string_compare(temp, "libdef")) {
+    } else if (!strcmp(temp, "libdef")) {
 		char *holder = NULL;
 
 		tmpname = (char *) next_token_raw(cstat);
@@ -1931,7 +1931,7 @@ do_directive(COMPSTATE * cstat, char *direct)
 		advance_line(cstat);
 
 		free(holder);
-	} else if (!string_compare(temp, "include")) {
+	} else if (!strcmp(temp, "include")) {
 		struct match_data md;
 
 		tmpname = (char *) next_token_raw(cstat);
@@ -1956,20 +1956,20 @@ do_directive(COMPSTATE * cstat, char *direct)
 			v_abort_compile(cstat, "I don't understand what object you want to $include.");
 		include_defs(cstat, (dbref) i);
 
-	} else if (!string_compare(temp, "undef")) {
+	} else if (!strcmp(temp, "undef")) {
 		tmpname = (char *) next_token_raw(cstat);
 		if (!tmpname)
 			v_abort_compile(cstat, "Unexpected end of file looking for name to $undef.");
 		kill_def(cstat, tmpname);
 		free(tmpname);
 
-	} else if (!string_compare(temp, "echo")) {
+	} else if (!strcmp(temp, "echo")) {
 		notify_nolisten(cstat->player, cstat->next_char, 1);
 		while (*cstat->next_char)
 			cstat->next_char++;
 		advance_line(cstat);
 
-	} else if (!string_compare(temp, "abort")) {
+	} else if (!strcmp(temp, "abort")) {
 		while(*cstat->next_char && isspace(*cstat->next_char))
 			cstat->next_char++; /* eating leading spaces */
 		tmpname = (char *) cstat->next_char;
@@ -1979,7 +1979,7 @@ do_directive(COMPSTATE * cstat, char *direct)
 			v_abort_compile(cstat, "Forced abort for the compile.");
 		}
 
-	} else if (!string_compare(temp, "version")) {
+	} else if (!strcmp(temp, "version")) {
 		tmpname = (char *) next_token_raw(cstat); 
 		if (!ifloat(tmpname))
 			v_abort_compile(cstat, "Expected a floating point number for the version.");
@@ -1989,7 +1989,7 @@ do_directive(COMPSTATE * cstat, char *direct)
 		advance_line(cstat);
 		free(tmpname);
 
-	} else if (!string_compare(temp, "lib-version")) {
+	} else if (!strcmp(temp, "lib-version")) {
 		tmpname = (char *) next_token_raw(cstat);
 		if (!ifloat(tmpname))
 			v_abort_compile(cstat, "Expected a floating point number for the version.");
@@ -1999,7 +1999,7 @@ do_directive(COMPSTATE * cstat, char *direct)
 		advance_line(cstat);
 		free(tmpname);
 
-	} else if (!string_compare(temp, "author")) {
+	} else if (!strcmp(temp, "author")) {
 		while(*cstat->next_char && isspace(*cstat->next_char))
 			cstat->next_char++; /* eating leading spaces */
 		tmpname = (char *) cstat->next_char;
@@ -2008,7 +2008,7 @@ do_directive(COMPSTATE * cstat, char *direct)
 		add_property(cstat->program, "_author", tmpname, 0);
 		advance_line(cstat);
 
-	} else if (!string_compare(temp, "note")) {
+	} else if (!strcmp(temp, "note")) {
 		while(*cstat->next_char && isspace(*cstat->next_char))
 			cstat->next_char++; /* eating leading spaces */
 		tmpname = (char *) cstat->next_char;
@@ -2017,8 +2017,8 @@ do_directive(COMPSTATE * cstat, char *direct)
 		add_property(cstat->program, "_note", tmpname, 0);
 		advance_line(cstat);
 
-	} else if (!string_compare(temp, "ifdef") || !string_compare(temp, "ifndef")) {
-		int invert_flag = !string_compare(temp, "ifndef");
+	} else if (!strcmp(temp, "ifdef") || !strcmp(temp, "ifndef")) {
+		int invert_flag = !strcmp(temp, "ifndef");
 		tmpname = (char *) next_token_raw(cstat);
 		if (!tmpname) {
 			v_abort_compile(cstat, "Unexpected end of file looking for $ifdef condition.");
@@ -2043,7 +2043,7 @@ do_directive(COMPSTATE * cstat, char *direct)
 			if (!tmpptr) {
 				j = 1;
 			} else {
-				j = string_compare(tmpptr, tmpname);
+				j = strcmp(tmpptr, tmpname);
 				j = !((!i && !j) || ((i * j) > 0));
 				free(tmpptr);
 			}
@@ -2054,11 +2054,11 @@ do_directive(COMPSTATE * cstat, char *direct)
 		if (j) {
 			i = 0;
 			while ((tmpptr = (char *) next_token_raw(cstat)) &&
-				   (i || ((string_compare(tmpptr, "$else"))
-						  && (string_compare(tmpptr, "$endif"))))) {
+				   (i || ((strcmp(tmpptr, "$else"))
+						  && (strcmp(tmpptr, "$endif"))))) {
 				if (is_preprocessor_conditional(tmpptr))
 					i++;
-				else if (!string_compare(tmpptr, "$endif"))
+				else if (!strcmp(tmpptr, "$endif"))
 					i--;
 				free(tmpptr);
 			}
@@ -2068,13 +2068,13 @@ do_directive(COMPSTATE * cstat, char *direct)
 			free(tmpptr);
 		}
 
-	} else if (!string_compare(temp, "ifcancall") || !string_compare(temp, "ifncancall")) {
+	} else if (!strcmp(temp, "ifcancall") || !strcmp(temp, "ifncancall")) {
 		struct match_data md;
 
 		tmpname = (char *) next_token_raw(cstat);
 		if (!tmpname)
 			v_abort_compile(cstat, "Unexpected end of file for ifcancall.");
-		if (string_compare(tmpname, "this"))
+		if (strcmp(tmpname, "this"))
 		{
 			char tempa[BUFFER_LEN], tempb[BUFFER_LEN];
 
@@ -2121,7 +2121,7 @@ do_directive(COMPSTATE * cstat, char *direct)
 	
 			pbs = PROGRAM_PUBS(i);
 			while (pbs) {
-				if (!string_compare(tmpname, pbs->subname))
+				if (!strcmp(tmpname, pbs->subname))
 					break;
 				pbs = pbs->next;
 			}
@@ -2129,17 +2129,17 @@ do_directive(COMPSTATE * cstat, char *direct)
 				j = 1;
 		}
 		free(tmpname);
-		if (!string_compare(temp, "ifncancall")) {
+		if (!strcmp(temp, "ifncancall")) {
 			j = !j;
 		}
 		if (!j) {
 			i = 0;
 			while ((tmpptr = (char *) next_token_raw(cstat)) &&
-				   (i || ((string_compare(tmpptr, "$else"))
-						  && (string_compare(tmpptr, "$endif"))))) {
+				   (i || ((strcmp(tmpptr, "$else"))
+						  && (strcmp(tmpptr, "$endif"))))) {
 				if (is_preprocessor_conditional(tmpptr))
 					i++;
-				else if (!string_compare(tmpptr, "$endif"))
+				else if (!strcmp(tmpptr, "$endif"))
 					i--;
 				free(tmpptr);
 			}
@@ -2149,8 +2149,8 @@ do_directive(COMPSTATE * cstat, char *direct)
 			free(tmpptr);
 		}
 
-	} else if (!string_compare(temp, "ifver")  || !string_compare(temp, "iflibver") ||
-			   !string_compare(temp, "ifnver") || !string_compare(temp, "ifnlibver")) {
+	} else if (!strcmp(temp, "ifver")  || !strcmp(temp, "iflibver") ||
+			   !strcmp(temp, "ifnver") || !strcmp(temp, "ifnlibver")) {
 		struct match_data md;
 		double verflt = 0;
 		double checkflt = 0;
@@ -2159,7 +2159,7 @@ do_directive(COMPSTATE * cstat, char *direct)
 		tmpname = (char *) next_token_raw(cstat);
 		if (!tmpname)
 			v_abort_compile(cstat, "Unexpected end of file while doing $ifver.");
-		if (string_compare(tmpname, "this"))
+		if (strcmp(tmpname, "this"))
 		{
 			char tempa[BUFFER_LEN], tempb[BUFFER_LEN];
 
@@ -2178,7 +2178,7 @@ do_directive(COMPSTATE * cstat, char *direct)
 		free(tmpname);
 		if (((dbref) i == NOTHING) || (i < 0) || (i >= db_top) || (Typeof(i) == TYPE_GARBAGE))
 			v_abort_compile(cstat, "I don't understand what object you want to check with $ifver.");
-		if (!string_compare(temp, "ifver") || !string_compare(temp, "ifnver")) {
+		if (!strcmp(temp, "ifver") || !strcmp(temp, "ifnver")) {
 			tmpptr = (char *) get_property_class(i, "_version");
 		} else {
 			tmpptr = (char *) get_property_class(i, "_lib-version");
@@ -2211,17 +2211,17 @@ do_directive(COMPSTATE * cstat, char *direct)
 			cstat->next_char++;
 		advance_line(cstat);
 		j = checkflt <= verflt;
-		if (!string_compare(temp, "ifnver") || !string_compare(temp, "ifnlibver")) {
+		if (!strcmp(temp, "ifnver") || !strcmp(temp, "ifnlibver")) {
 			j = !j;
 		}
 		if (!j) {
 			i = 0;
 			while ((tmpptr = (char *) next_token_raw(cstat)) &&
-				   (i || ((string_compare(tmpptr, "$else"))
-						  && (string_compare(tmpptr, "$endif"))))) {
+				   (i || ((strcmp(tmpptr, "$else"))
+						  && (strcmp(tmpptr, "$endif"))))) {
 				if (is_preprocessor_conditional(tmpptr))
 					i++;
-				else if (!string_compare(tmpptr, "$endif"))
+				else if (!strcmp(tmpptr, "$endif"))
 					i--;
 				free(tmpptr);
 			}
@@ -2231,7 +2231,7 @@ do_directive(COMPSTATE * cstat, char *direct)
 			free(tmpptr);
 		}
 
-	} else if (!string_compare(temp, "iflib") || !string_compare(temp, "ifnlib")) {
+	} else if (!strcmp(temp, "iflib") || !strcmp(temp, "ifnlib")) {
 		struct match_data md;
 		char tempa[BUFFER_LEN], tempb[BUFFER_LEN];
 
@@ -2257,17 +2257,17 @@ do_directive(COMPSTATE * cstat, char *direct)
 		} else {
 			j = 0;
 		}
-		if (!string_compare(temp, "ifnlib")) {
+		if (!strcmp(temp, "ifnlib")) {
 			j = !j;
 		}
 		if (!j) {
 			i = 0;
 			while ((tmpptr = (char *) next_token_raw(cstat)) &&
-				   (i || ((string_compare(tmpptr, "$else"))
-						  && (string_compare(tmpptr, "$endif"))))) {
+				   (i || ((strcmp(tmpptr, "$else"))
+						  && (strcmp(tmpptr, "$endif"))))) {
 				if (is_preprocessor_conditional(tmpptr))
 					i++;
-				else if (!string_compare(tmpptr, "$endif"))
+				else if (!strcmp(tmpptr, "$endif"))
 					i--;
 				free(tmpptr);
 			}
@@ -2277,13 +2277,13 @@ do_directive(COMPSTATE * cstat, char *direct)
 			free(tmpptr);
 		}
 
-	} else if (!string_compare(temp, "else")) {
+	} else if (!strcmp(temp, "else")) {
 		i = 0;
 		while ((tmpptr = (char *) next_token_raw(cstat)) &&
-			   (i || (string_compare(tmpptr, "$endif")))) {
+			   (i || (strcmp(tmpptr, "$endif")))) {
 			if (is_preprocessor_conditional(tmpptr))
 				i++;
-			else if (!string_compare(tmpptr, "$endif"))
+			else if (!strcmp(tmpptr, "$endif"))
 				i--;
 			free(tmpptr);
 		}
@@ -2292,21 +2292,21 @@ do_directive(COMPSTATE * cstat, char *direct)
 		}
 		free(tmpptr);
 
-	} else if (!string_compare(temp, "endif")) {
+	} else if (!strcmp(temp, "endif")) {
 
-	} else if (!string_compare(temp, "pragma")) {
+	} else if (!strcmp(temp, "pragma")) {
 		/* TODO - move pragmas to its own section for easy expansion. */
 		while (*cstat->next_char && isspace(*cstat->next_char))
 			cstat->next_char++;
 		if (!*cstat->next_char || !(tmpptr = (char *)next_token_raw(cstat)))
 			v_abort_compile(cstat, "Pragma requires at least one argument.");
-		if (!string_compare(tmpptr, "comment_strict")) {
+		if (!strcmp(tmpptr, "comment_strict")) {
 			/* Do non-recursive comments (old style) */
 			cstat->force_comment = 1;
-		} else if (!string_compare(tmpptr, "comment_recurse")) {
+		} else if (!strcmp(tmpptr, "comment_recurse")) {
 			/* Do recursive comments ((new) style) */
 			cstat->force_comment = 2;
-		} else if (!string_compare(tmpptr, "comment_loose")) {
+		} else if (!strcmp(tmpptr, "comment_loose")) {
 			/* Try to compile with recursive and non-recursive comments
 			doing recursive first, then strict on a comment-based
 			compile error.  Only throw an error if both fail.  This is
@@ -2386,7 +2386,7 @@ process_special(COMPSTATE * cstat, const char *token)
 	const char *tok;
 	struct INTERMEDIATE *nu;
 
-	if (!string_compare(token, ":")) {
+	if (!strcmp(token, ":")) {
 		const char *proc_name;
 		int argsflag = 0;
 
@@ -2413,7 +2413,7 @@ process_special(COMPSTATE * cstat, const char *token)
 		nu->in.type = PROG_FUNCTION;
 		nu->in.line = cstat->lineno;
 		nu->in.data.mufproc = (struct muf_proc_data*)malloc(sizeof(struct muf_proc_data));
-		nu->in.data.mufproc->procname = string_dup(proc_name);
+		nu->in.data.mufproc->procname = strdup(proc_name);
 		nu->in.data.mufproc->vars = 0;
 		nu->in.data.mufproc->args = 0;
 		nu->in.data.mufproc->varnames = NULL;
@@ -2459,7 +2459,7 @@ process_special(COMPSTATE * cstat, const char *token)
 		add_proc(cstat, proc_name, nu, PROG_UNTYPED);
 
 		return nu;
-	} else if (!string_compare(token, ";")) {
+	} else if (!strcmp(token, ";")) {
 		int i, varcnt;
 
 		if (cstat->control_stack)
@@ -2484,7 +2484,7 @@ process_special(COMPSTATE * cstat, const char *token)
 		}
 		cstat->curr_proc = 0;
 		return nu;
-	} else if (!string_compare(token, "IF")) {
+	} else if (!strcmp(token, "IF")) {
 		nu = new_inst(cstat);
 		nu->no = cstat->nowords++;
 		nu->in.type = PROG_IF;
@@ -2492,7 +2492,7 @@ process_special(COMPSTATE * cstat, const char *token)
 		nu->in.data.call = 0;
 		add_control_structure(cstat, CTYPE_IF, nu);
 		return nu;
-	} else if (!string_compare(token, "ELSE")) {
+	} else if (!strcmp(token, "ELSE")) {
 		struct INTERMEDIATE *eef;
 		int ctrltype = innermost_control_type(cstat);
 
@@ -2524,7 +2524,7 @@ process_special(COMPSTATE * cstat, const char *token)
 		add_control_structure(cstat, CTYPE_ELSE, nu);
 		eef->in.data.number = get_address(cstat, nu, 1);
 		return nu;
-	} else if (!string_compare(token, "THEN")) {
+	} else if (!strcmp(token, "THEN")) {
 		/* can't use 'if' because it's a reserved word */
 		struct INTERMEDIATE *eef;
 		int ctrltype = innermost_control_type(cstat);
@@ -2552,11 +2552,11 @@ process_special(COMPSTATE * cstat, const char *token)
 		eef = pop_control_structure(cstat, CTYPE_IF, CTYPE_ELSE);
 		eef->in.data.number = get_address(cstat, cstat->nextinst, 0);
 		return NULL;
-	} else if (!string_compare(token, "BEGIN")) {
+	} else if (!strcmp(token, "BEGIN")) {
 		prealloc_inst(cstat);
 		add_control_structure(cstat, CTYPE_BEGIN, cstat->nextinst);
 		return NULL;
-	} else if (!string_compare(token, "FOR")) {
+	} else if (!strcmp(token, "FOR")) {
 		struct INTERMEDIATE *new2, *new3;
 
 		nu = new_inst(cstat);
@@ -2578,7 +2578,7 @@ process_special(COMPSTATE * cstat, const char *token)
 		add_control_structure(cstat, CTYPE_FOR, new2);
 		cstat->nested_fors++;
 		return nu;
-	} else if (!string_compare(token, "FOREACH")) {
+	} else if (!strcmp(token, "FOREACH")) {
 		struct INTERMEDIATE *new2, *new3;
 
 		nu = new_inst(cstat);
@@ -2600,7 +2600,7 @@ process_special(COMPSTATE * cstat, const char *token)
 		add_control_structure(cstat, CTYPE_FOR, new2);
 		cstat->nested_fors++;
 		return nu;
-	} else if (!string_compare(token, "UNTIL")) {
+	} else if (!strcmp(token, "UNTIL")) {
 		/* can't use 'if' because it's a reserved word */
 		struct INTERMEDIATE *eef;
 		struct INTERMEDIATE *curr;
@@ -2644,7 +2644,7 @@ process_special(COMPSTATE * cstat, const char *token)
 			curr->in.data.number = IN_FORPOP;
 		}
 		return nu;
-	} else if (!string_compare(token, "WHILE")) {
+	} else if (!strcmp(token, "WHILE")) {
 		struct INTERMEDIATE *curr;
 		int trycount;
 		if (!in_loop(cstat))
@@ -2675,7 +2675,7 @@ process_special(COMPSTATE * cstat, const char *token)
 
 		add_loop_exit(cstat, nu);
 		return curr;
-	} else if (!string_compare(token, "BREAK")) {
+	} else if (!strcmp(token, "BREAK")) {
 		int trycount;
 		struct INTERMEDIATE *curr;
 		if (!in_loop(cstat))
@@ -2706,7 +2706,7 @@ process_special(COMPSTATE * cstat, const char *token)
 
 		add_loop_exit(cstat, nu);
 		return curr;
-	} else if (!string_compare(token, "CONTINUE")) {
+	} else if (!strcmp(token, "CONTINUE")) {
 		/* can't use 'if' because it's a reserved word */
 		struct INTERMEDIATE *beef;
 		struct INTERMEDIATE *curr;
@@ -2740,7 +2740,7 @@ process_special(COMPSTATE * cstat, const char *token)
 		nu->in.data.number = get_address(cstat, beef, 0);
 
 		return curr;
-	} else if (!string_compare(token, "REPEAT")) {
+	} else if (!strcmp(token, "REPEAT")) {
 		/* can't use 'if' because it's a reserved word */
 		struct INTERMEDIATE *eef;
 		struct INTERMEDIATE *curr;
@@ -2785,7 +2785,7 @@ process_special(COMPSTATE * cstat, const char *token)
 		}
 
 		return nu;
-	} else if (!string_compare(token, "TRY")) {
+	} else if (!strcmp(token, "TRY")) {
 		nu = new_inst(cstat);
 		nu->no = cstat->nowords++;
 		nu->in.type = PROG_TRY;
@@ -2796,7 +2796,7 @@ process_special(COMPSTATE * cstat, const char *token)
 		cstat->nested_trys++;
 
 		return nu;
-	} else if (!string_compare(token, "CATCH") || !string_compare(token, "CATCH_DETAILED")) {
+	} else if (!strcmp(token, "CATCH") || !strcmp(token, "CATCH_DETAILED")) {
 		/* can't use 'if' because it's a reserved word */
 		struct INTERMEDIATE *eef;
 		struct INTERMEDIATE *curr;
@@ -2837,7 +2837,7 @@ process_special(COMPSTATE * cstat, const char *token)
 		curr->in.type = PROG_PRIMITIVE;
 		curr->in.line = cstat->lineno;
 		curr->in.data.number = IN_CATCH;
-		if (!string_compare(token, "CATCH_DETAILED")) {
+		if (!strcmp(token, "CATCH_DETAILED")) {
 			curr->in.data.number = IN_CATCH_DETAILED;
 		}
 
@@ -2847,7 +2847,7 @@ process_special(COMPSTATE * cstat, const char *token)
 		add_control_structure(cstat, CTYPE_CATCH, jump);
 
 		return nu;
-	} else if (!string_compare(token, "ENDCATCH")) {
+	} else if (!strcmp(token, "ENDCATCH")) {
 		/* can't use 'if' because it's a reserved word */
 		struct INTERMEDIATE *eef;
 		int ctrltype = innermost_control_type(cstat);
@@ -2873,19 +2873,19 @@ process_special(COMPSTATE * cstat, const char *token)
 		eef = pop_control_structure(cstat, CTYPE_CATCH, 0);
 		eef->in.data.number = get_address(cstat, cstat->nextinst, 0);
 		return NULL;
-	} else if (!string_compare(token, "CALL")) {
+	} else if (!strcmp(token, "CALL")) {
 		nu = new_inst(cstat);
 		nu->no = cstat->nowords++;
 		nu->in.type = PROG_PRIMITIVE;
 		nu->in.line = cstat->lineno;
 		nu->in.data.number = IN_CALL;
 		return nu;
-	} else if (!string_compare(token, "WIZCALL") || !string_compare(token, "PUBLIC")) {
+	} else if (!strcmp(token, "WIZCALL") || !strcmp(token, "PUBLIC")) {
 		struct PROC_LIST *p;
 		struct publics *pub;
 		int wizflag = 0;
 
-		if (!string_compare(token, "WIZCALL"))
+		if (!strcmp(token, "WIZCALL"))
 			wizflag = 1;
 		if (cstat->curr_proc)
 			abort_compile(cstat, "PUBLIC  or WIZCALL declaration within procedure.");
@@ -2893,7 +2893,7 @@ process_special(COMPSTATE * cstat, const char *token)
 		if ((!tok) || !call(cstat, tok))
 			abort_compile(cstat, "Subroutine unknown in PUBLIC or WIZCALL declaration.");
 		for (p = cstat->procs; p; p = p->next)
-			if (!string_compare(p->name, tok))
+			if (!strcmp(p->name, tok))
 				break;
 		if (!p)
 			abort_compile(cstat, "Subroutine unknown in PUBLIC or WIZCALL declaration.");
@@ -2901,7 +2901,7 @@ process_special(COMPSTATE * cstat, const char *token)
 			cstat->currpubs = (struct publics *) malloc(sizeof(struct publics));
 
 			cstat->currpubs->next = NULL;
-			cstat->currpubs->subname = (char *) string_dup(tok);
+			cstat->currpubs->subname = (char *) strdup(tok);
 			if (tok)
 				free((void *) tok);
 			cstat->currpubs->addr.no = get_address(cstat, p->code, 0);
@@ -2909,7 +2909,7 @@ process_special(COMPSTATE * cstat, const char *token)
 			return 0;
 		}
 		for (pub = cstat->currpubs; pub;) {
-			if (!string_compare(tok, pub->subname)) {
+			if (!strcmp(tok, pub->subname)) {
 				abort_compile(cstat, "Function already declared public.");
 			} else {
 				if (pub->next) {
@@ -2919,7 +2919,7 @@ process_special(COMPSTATE * cstat, const char *token)
 
 					pub = pub->next;
 					pub->next = NULL;
-					pub->subname = (char *) string_dup(tok);
+					pub->subname = (char *) strdup(tok);
 					if (tok)
 						free((void *) tok);
 					pub->addr.no = get_address(cstat, p->code, 0);
@@ -2929,7 +2929,7 @@ process_special(COMPSTATE * cstat, const char *token)
 			}
 		}
 		return 0;
-	} else if (!string_compare(token, "VAR")) {
+	} else if (!strcmp(token, "VAR")) {
 		if (cstat->curr_proc) {
 			tok = next_token(cstat);
 			if (!tok)
@@ -2949,7 +2949,7 @@ process_special(COMPSTATE * cstat, const char *token)
 				free((void *) tok);
 		}
 		return 0;
-	} else if (!string_compare(token, "VAR!")) {
+	} else if (!strcmp(token, "VAR!")) {
 		if (cstat->curr_proc) {
 			struct INTERMEDIATE *nu;
 
@@ -2973,7 +2973,7 @@ process_special(COMPSTATE * cstat, const char *token)
 		}
 		/* NOTREACHED */
 		return 0;
-	} else if (!string_compare(token, "LVAR")) {
+	} else if (!strcmp(token, "LVAR")) {
 		if (cstat->curr_proc)
 			abort_compile(cstat, "Local variable declared within procedure.");
 		tok = next_token(cstat);
@@ -3080,7 +3080,7 @@ call_word(COMPSTATE * cstat, const char *token)
 	nu->in.type = PROG_EXEC;
 	nu->in.line = cstat->lineno;
 	for (p = cstat->procs; p; p = p->next)
-		if (!string_compare(p->name, token))
+		if (!strcmp(p->name, token))
 			break;
 
 	nu->in.data.number = get_address(cstat, p->code, 0);
@@ -3098,7 +3098,7 @@ quoted_word(COMPSTATE * cstat, const char *token)
 	nu->in.type = PROG_ADD;
 	nu->in.line = cstat->lineno;
 	for (p = cstat->procs; p; p = p->next)
-		if (!string_compare(p->name, token))
+		if (!strcmp(p->name, token))
 			break;
 
 	nu->in.data.number = get_address(cstat, p->code, 0);
@@ -3120,7 +3120,7 @@ var_word(COMPSTATE * cstat, const char *token)
 	for (var_no = i = 0; i < MAX_VAR; i++) {
 		if (!cstat->variables[i])
 			break;
-		if (!string_compare(token, cstat->variables[i]))
+		if (!strcmp(token, cstat->variables[i]))
 			var_no = i;
 	}
 	nu->in.data.number = var_no;
@@ -3141,7 +3141,7 @@ svar_word(COMPSTATE * cstat, const char *token)
 	for (i = var_no = 0; i < MAX_VAR; i++) {
 		if (!cstat->scopedvars[i])
 			break;
-		if (!string_compare(token, cstat->scopedvars[i]))
+		if (!strcmp(token, cstat->scopedvars[i]))
 			var_no = i;
 	}
 	nu->in.data.number = var_no;
@@ -3162,7 +3162,7 @@ lvar_word(COMPSTATE * cstat, const char *token)
 	for (i = var_no = 0; i < MAX_VAR; i++) {
 		if (!cstat->localvars[i])
 			break;
-		if (!string_compare(token, cstat->localvars[i]))
+		if (!strcmp(token, cstat->localvars[i]))
 			var_no = i;
 	}
 	nu->in.data.number = var_no;
@@ -3446,29 +3446,29 @@ add_localvar(COMPSTATE * cstat, const char *varname, int valtype)
 int
 special(const char *token)
 {
-	return (token && !(string_compare(token, ":")
-					   && string_compare(token, ";")
-					   && string_compare(token, "IF")
-					   && string_compare(token, "ELSE")
-					   && string_compare(token, "THEN")
-					   && string_compare(token, "BEGIN")
-					   && string_compare(token, "FOR")
-					   && string_compare(token, "FOREACH")
-					   && string_compare(token, "UNTIL")
-					   && string_compare(token, "WHILE")
-					   && string_compare(token, "BREAK")
-					   && string_compare(token, "CONTINUE")
-					   && string_compare(token, "REPEAT")
-					   && string_compare(token, "TRY")
-					   && string_compare(token, "CATCH")
-					   && string_compare(token, "CATCH_DETAILED")
-					   && string_compare(token, "ENDCATCH")
-					   && string_compare(token, "CALL")
-					   && string_compare(token, "PUBLIC")
-					   && string_compare(token, "WIZCALL")
-					   && string_compare(token, "LVAR")
-					   && string_compare(token, "VAR!")
-					   && string_compare(token, "VAR")));
+	return (token && !(strcmp(token, ":")
+					   && strcmp(token, ";")
+					   && strcmp(token, "IF")
+					   && strcmp(token, "ELSE")
+					   && strcmp(token, "THEN")
+					   && strcmp(token, "BEGIN")
+					   && strcmp(token, "FOR")
+					   && strcmp(token, "FOREACH")
+					   && strcmp(token, "UNTIL")
+					   && strcmp(token, "WHILE")
+					   && strcmp(token, "BREAK")
+					   && strcmp(token, "CONTINUE")
+					   && strcmp(token, "REPEAT")
+					   && strcmp(token, "TRY")
+					   && strcmp(token, "CATCH")
+					   && strcmp(token, "CATCH_DETAILED")
+					   && strcmp(token, "ENDCATCH")
+					   && strcmp(token, "CALL")
+					   && strcmp(token, "PUBLIC")
+					   && strcmp(token, "WIZCALL")
+					   && strcmp(token, "LVAR")
+					   && strcmp(token, "VAR!")
+					   && strcmp(token, "VAR")));
 }
 
 /* see if procedure call */
@@ -3478,7 +3478,7 @@ call(COMPSTATE * cstat, const char *token)
 	struct PROC_LIST *i;
 
 	for (i = cstat->procs; i; i = i->next)
-		if (!string_compare(i->name, token))
+		if (!strcmp(i->name, token))
 			return 1;
 
 	return 0;
@@ -3514,7 +3514,7 @@ variable(COMPSTATE * cstat, const char *token)
 	int i;
 
 	for (i = 0; i < MAX_VAR && cstat->variables[i]; i++)
-		if (!string_compare(token, cstat->variables[i]))
+		if (!strcmp(token, cstat->variables[i]))
 			return 1;
 
 	return 0;
@@ -3526,7 +3526,7 @@ scopedvar(COMPSTATE * cstat, const char *token)
 	int i;
 
 	for (i = 0; i < MAX_VAR && cstat->scopedvars[i]; i++)
-		if (!string_compare(token, cstat->scopedvars[i]))
+		if (!strcmp(token, cstat->scopedvars[i]))
 			return 1;
 
 	return 0;
@@ -3538,7 +3538,7 @@ localvar(COMPSTATE * cstat, const char *token)
 	int i;
 
 	for (i = 0; i < MAX_VAR && cstat->localvars[i]; i++)
-		if (!string_compare(token, cstat->localvars[i]))
+		if (!strcmp(token, cstat->localvars[i]))
 			return 1;
 
 	return 0;
@@ -3730,14 +3730,14 @@ copy_program(COMPSTATE * cstat)
 			break;
 		case PROG_FUNCTION:
 			code[i].data.mufproc = (struct muf_proc_data*)malloc(sizeof(struct muf_proc_data));
-			code[i].data.mufproc->procname = string_dup(curr->in.data.mufproc->procname);
+			code[i].data.mufproc->procname = strdup(curr->in.data.mufproc->procname);
 			code[i].data.mufproc->vars = varcnt = curr->in.data.mufproc->vars;
 			code[i].data.mufproc->args = curr->in.data.mufproc->args;
 			if (varcnt) {
 			    if (curr->in.data.mufproc->varnames) {
 				code[i].data.mufproc->varnames = (const char**)calloc(varcnt, sizeof(char*));
 				for (j = 0; j < varcnt; j++) {
-				    code[i].data.mufproc->varnames[j] = string_dup(curr->in.data.mufproc->varnames[j]);
+				    code[i].data.mufproc->varnames[j] = strdup(curr->in.data.mufproc->varnames[j]);
 				}
 			    } else {
 				code[i].data.mufproc->varnames = NULL;

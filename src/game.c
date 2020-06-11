@@ -32,8 +32,6 @@ static int epoch = 0;
 time_t last_monolithic_time = 0;
 static int forked_dump_process_flag = 0;
 FILE *input_file;
-FILE *delta_infile;
-FILE *delta_outfile;
 char *in_filename = NULL;
 
 extern void do_showextver(dbref player);
@@ -70,21 +68,6 @@ do_dump(dbref player, const char *newfile)
 }
 
 void
-do_delta(dbref player)
-{
-	if (Wizard(player)) {
-#ifdef DELTADUMPS
-		notify(player, "Dumping deltas...");
-		delta_dump_now();
-#else
-		notify(player, "Sorry, this server was compiled without DELTADUMPS.");
-#endif
-	} else {
-		notify(player, "Sorry, you are in a no dumping zone.");
-	}
-}
-
-void
 do_shutdown(dbref player)
 {
 	if (Wizard(player)) {
@@ -111,21 +94,8 @@ dump_database_internal(void)
 		db_write(f);
 		fclose(f);
 
-#ifdef DELTADUMPS
-		fclose(delta_outfile);
-		fclose(delta_infile);
-#endif
-
 		if (rename(tmpfile, dumpfile) < 0)
 			perror(tmpfile);
-
-#ifdef DELTADUMPS
-		if ((delta_outfile = fopen(DELTAFILE_NAME, "wb")) == NULL)
-			perror(DELTAFILE_NAME);
-
-		if ((delta_infile = fopen(DELTAFILE_NAME, "rb")) == NULL)
-			perror(DELTAFILE_NAME);
-#endif
 
 	} else {
 		perror(tmpfile);
@@ -184,7 +154,6 @@ panic(const char *message)
 		fclose(f);
 		warn("DUMPING: %s (done)", panicfile);
 		fprintf(stderr, "DUMPING: %s (done)\n", panicfile);
-		(void) unlink(DELTAFILE_NAME);
 	}
 
 	/* Write out the macros */
@@ -259,81 +228,13 @@ fork_and_dump(void)
 	}
 }
 
-#ifdef DELTADUMPS
-extern int deltas_count;
-
-int
-time_for_monolithic(void)
-{
-	dbref i;
-	int count = 0;
-	long a, b;
-
-	if (!last_monolithic_time)
-		last_monolithic_time = time(NULL);
-	if (time(NULL) - last_monolithic_time >= (MONOLITHIC_INTERVAL - DUMP_WARNTIME)
-			) {
-		return 1;
-	}
-
-	for (i = 0; i < db_top; i++)
-		if (FLAGS(i) & (SAVED_DELTA | OBJECT_CHANGED))
-			count++;
-	if (((count * 100) / db_top) > MAX_DELTA_OBJS) {
-		return 1;
-	}
-
-	fseek(delta_infile, 0L, 2);
-	a = ftell(delta_infile);
-	fseek(input_file, 0L, 2);
-	b = ftell(input_file);
-	if (a >= b) {
-		return 1;
-	}
-	return 0;
-}
-#endif
-
 void
 dump_warning(void)
 {
 #if DBDUMP_WARNING
-#ifdef DELTADUMPS
-	if (time_for_monolithic())
-		wall_and_flush(DUMPWARN_MESG);
-	else
-		DELTADUMP_WARN();
-#else
 	wall_and_flush(DUMPWARN_MESG);
 #endif
-#endif
 }
-
-#ifdef DELTADUMPS
-void
-dump_deltas(void)
-{
-	if (time_for_monolithic()) {
-		fork_and_dump();
-		deltas_count = 0;
-		return;
-	}
-
-	epoch++;
-	warn("DELTADUMP: %s.#%d#", dumpfile, epoch);
-
-#if DBDUMP_WARNING
-	DELTADUMP_WARN();
-#endif
-
-	db_write_deltas(delta_outfile);
-
-#if DELTADUMP_WARNING
-	DUMPDONE_WARN();
-#endif
-
-}
-#endif
 
 extern short db_conversion_flag;
 
@@ -349,17 +250,9 @@ init_game(const char *infile, const char *outfile)
 		fclose(f);
 	}
 
-	in_filename = (char *) string_dup(infile);
+	in_filename = (char *) strdup(infile);
 	if ((input_file = fopen(infile, "rb")) == NULL)
 		return -1;
-
-#ifdef DELTADUMPS
-	if ((delta_outfile = fopen(DELTAFILE_NAME, "wb")) == NULL)
-		return -1;
-
-	if ((delta_infile = fopen(DELTAFILE_NAME, "rb")) == NULL)
-		return -1;
-#endif
 
 	db_free();
 	init_primitives();			/* init muf compiler */
@@ -687,7 +580,7 @@ process_command(int descr, dbref player, char *command)
 					break;
 				case 'r':
 				case 'R':
-					if (string_compare(command, "@credits")) {
+					if (strcmp(command, "@credits")) {
 						Matched("@create");
 						do_create(player, arg1, arg2);
 					} else {
@@ -700,7 +593,7 @@ process_command(int descr, dbref player, char *command)
 				break;
 			case 'd':
 			case 'D':
-				/* @dbginfo, @delta, @describe, @dig, @dlt,
+				/* @dbginfo, @describe, @dig, @dlt,
 				   @doing, @drop, @dump */
 				switch (command[2]) {
 				case 'b':
@@ -710,31 +603,19 @@ process_command(int descr, dbref player, char *command)
 					break;
 				case 'e':
 				case 'E':
-					if(command[3] == 'l' || command[3] == 'L') {
-						Matched("@delta");
-						do_delta(player);
-					} else {
-						Matched("@describe");
-						do_describe(descr, player, arg1, arg2);
-					}
+					Matched("@describe");
+					do_describe(descr, player, arg1, arg2);
 					break;
 				case 'i':
 				case 'I':
 					Matched("@dig");
 					do_dig(descr, player, arg1, arg2);
 					break;
-				case 'l':
-				case 'L':
-					Matched("@dlt");
-					do_delta(player);
-					break;
-#if WHO_DOING
 				case 'o':
 				case 'O':
 					Matched("@doing");
 					do_doing(descr, player, arg1, arg2);
 					break;
-#endif
 				case 'r':
 				case 'R':
 					Matched("@drop");
@@ -1217,7 +1098,7 @@ process_command(int descr, dbref player, char *command)
 				break;
 			case 'r':
 			case 'R':
-				if (string_compare(command, "gripe"))
+				if (strcmp(command, "gripe"))
 					goto bad;
 				do_gripe(player, full_command);
 				break;
@@ -1234,7 +1115,7 @@ process_command(int descr, dbref player, char *command)
 		case 'i':
 		case 'I':
 			/* inventory, info */
-			if (string_compare(command, "info")) {
+			if (strcmp(command, "info")) {
 				Matched("inventory");
 				do_inventory(player);
 			} else {
@@ -1266,21 +1147,21 @@ process_command(int descr, dbref player, char *command)
 			if (string_prefix(command, "move")) {
 				do_move(descr, player, arg1, 0);
 				break;
-			} else if (!string_compare(command, "motd")) {
+			} else if (!strcmp(command, "motd")) {
 				/* FIXME */
 				/* do_motd(player, full_command); */
 				break;
-			} else if (!string_compare(command, "mpi")) {
+			} else if (!strcmp(command, "mpi")) {
 				do_mpihelp(player, arg1, arg2);
 				break;
-			} else if (!string_compare(command, "map")) {
+			} else if (!strcmp(command, "map")) {
 				do_view(descr, player);
 				break;
-			} else if (!string_compare(command, "meme")) {
+			} else if (!strcmp(command, "meme")) {
                                 Matched("meme");
                                 do_meme(descr, player, arg1);
 			} else {
-				if (string_compare(command, "man"))
+				if (strcmp(command, "man"))
 					goto bad;
 				do_man(player, (!*arg1 && !*arg2 && arg1 != arg2) ? "=" : arg1, arg2);
 			}

@@ -419,13 +419,13 @@ mesg_dbref_raw(int descr, dbref player, dbref what, dbref perms, const char *buf
 	dbref obj = UNKNOWN;
 
 	if (buf && *buf) {
-		if (!string_compare(buf, "this")) {
+		if (!strcmp(buf, "this")) {
 			obj = what;
-		} else if (!string_compare(buf, "me")) {
+		} else if (!strcmp(buf, "me")) {
 			obj = player;
-		} else if (!string_compare(buf, "here")) {
+		} else if (!strcmp(buf, "here")) {
 			obj = getloc(player);
-		} else if (!string_compare(buf, "home")) {
+		} else if (!strcmp(buf, "home")) {
 			obj = HOME;
 		} else {
 			init_match(descr, player, buf, NOTYPE, &md);
@@ -555,7 +555,7 @@ get_mvar(const char *varname)
 {
 	int i = 0;
 
-	for (i = varc - 1; i >= 0 && string_compare(varname, varv[i].name); i--) ;
+	for (i = varc - 1; i >= 0 && strcmp(varname, varv[i].name); i--) ;
 	if (i < 0)
 		return NULL;
 	return varv[i].buf;
@@ -590,7 +590,7 @@ new_mfunc(const char *funcname, const char *buf)
 	if (funcc > MPI_MAX_FUNCTIONS)
 		return 2;
 	strcpyn(funcv[funcc].name, sizeof(funcv[funcc].name), funcname);
-	funcv[funcc++].buf = (char *) string_dup(buf);
+	funcv[funcc++].buf = (char *) strdup(buf);
 	return 0;
 }
 
@@ -599,7 +599,7 @@ get_mfunc(const char *funcname)
 {
 	int i = 0;
 
-	for (i = funcc - 1; i >= 0 && string_compare(funcname, funcv[i].name); i--) ;
+	for (i = funcc - 1; i >= 0 && strcmp(funcname, funcv[i].name); i--) ;
 	if (i < 0)
 		return NULL;
 	return funcv[i].buf;
@@ -1005,7 +1005,7 @@ mesg_parse(int descr, dbref player, dbref what, dbref perms,
 								free(argv[0]);
 								argv[0] = NULL;
 							}
-							argv[0] = string_dup(zptr);
+							argv[0] = strdup(zptr);
 							argc++;
 						}
 						if (mesgtyp & MPI_ISDEBUG) {

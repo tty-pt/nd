@@ -415,7 +415,7 @@ can_move(int descr, dbref player, const char *direction, int lev)
 	struct match_data md;
 
 #if ALLOW_HOME
-	if (!string_compare(direction, "home"))
+	if (!strcmp(direction, "home"))
 		return 1;
 #endif
 
@@ -608,7 +608,7 @@ do_move(int descr, dbref player, const char *direction, int lev)
 	dbref loc;
 
 #if ALLOW_HOME
-	if (!string_compare(direction, "home")) {
+	if (!strcmp(direction, "home")) {
 		char buf[BUFFER_LEN];
 
 		/* send him home */
@@ -1191,7 +1191,7 @@ recycle(int descr, dbref player, dbref thing)
 
 	db_free_object(thing);
 	db_clear_object(thing);
-	NAME(thing) = (char*) string_dup("<garbage>");
+	NAME(thing) = (char*) strdup("<garbage>");
 	SETDESC(thing, "<recyclable>");
 	FLAGS(thing) = TYPE_GARBAGE;
 

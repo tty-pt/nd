@@ -1112,37 +1112,37 @@ sanechange(dbref player, const char *command)
 		return;
 	}
 
-	if (!string_compare(field, "next")) {
+	if (!strcmp(field, "next")) {
 		strcpyn(buf2, sizeof(buf2), unparse(NEXTOBJ(d)));
 		NEXTOBJ(d) = v;
 		DBDIRTY(d);
 		SanPrint(player, "## Setting #%d's next field to %s", d, unparse(v));
 
-	} else if (!string_compare(field, "exits")) {
+	} else if (!strcmp(field, "exits")) {
 		strcpyn(buf2, sizeof(buf2), unparse(EXITS(d)));
 		EXITS(d) = v;
 		DBDIRTY(d);
 		SanPrint(player, "## Setting #%d's Exits list start to %s", d, unparse(v));
 
-	} else if (!string_compare(field, "contents")) {
+	} else if (!strcmp(field, "contents")) {
 		strcpyn(buf2, sizeof(buf2), unparse(CONTENTS(d)));
 		CONTENTS(d) = v;
 		DBDIRTY(d);
 		SanPrint(player, "## Setting #%d's Contents list start to %s", d, unparse(v));
 
-	} else if (!string_compare(field, "location")) {
+	} else if (!strcmp(field, "location")) {
 		strcpyn(buf2, sizeof(buf2), unparse(LOCATION(d)));
 		LOCATION(d) = v;
 		DBDIRTY(d);
 		SanPrint(player, "## Setting #%d's location to %s", d, unparse(v));
 
-	} else if (!string_compare(field, "owner")) {
+	} else if (!strcmp(field, "owner")) {
 		strcpyn(buf2, sizeof(buf2), unparse(OWNER(d)));
 		OWNER(d) = v;
 		DBDIRTY(d);
 		SanPrint(player, "## Setting #%d's owner to %s", d, unparse(v));
 
-	} else if (!string_compare(field, "home")) {
+	} else if (!strcmp(field, "home")) {
 		switch (TYPEOF(d)) {
 		case TYPE_PLAYER:
 			ip = &(PLAYER_HOME(d));

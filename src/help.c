@@ -59,15 +59,6 @@ string_prefix(register const char *string, register const char *prefix)
 }
 
 
-int
-string_compare(register const char *s1, register const char *s2)
-{
-	while (*s1 && tolower(*s1) == tolower(*s2))
-		s1++, s2++;
-
-	return (tolower(*s1) - tolower(*s2));
-}
-
 char*
 strcpyn(char* buf, size_t bufsize, const char* src)
 {
@@ -247,7 +238,7 @@ mcppkg_help_request(McpFrame * mfr, McpMesg * msg, McpVer ver, void *context)
 		return;
 	}
 
-	if (!string_compare(msg->mesgname, "request")) {
+	if (!strcmp(msg->mesgname, "request")) {
 		char *onwhat;
 		char *valtype;
 
@@ -260,13 +251,13 @@ mcppkg_help_request(McpFrame * mfr, McpMesg * msg, McpVer ver, void *context)
 			strcatn(topic, sizeof(topic), "|");
 		}
 
-		if (!string_compare(valtype, "man")) {
+		if (!strcmp(valtype, "man")) {
 			file = MAN_FILE;
-		} else if (!string_compare(valtype, "mpi")) {
+		} else if (!strcmp(valtype, "mpi")) {
 			file = MPI_FILE;
-		} else if (!string_compare(valtype, "help")) {
+		} else if (!strcmp(valtype, "help")) {
 			file = HELP_FILE;
-		} else if (!string_compare(valtype, "news")) {
+		} else if (!strcmp(valtype, "news")) {
 			file = NEWS_FILE;
 		} else {
 			snprintf(buf, sizeof(buf), "Sorry, %s is not a valid help type.", valtype);
@@ -382,7 +373,7 @@ show_subfile(dbref player, const char *dir, const char *topic, const char *seg, 
 	if ((df = (DIR *) opendir(dir))) {
 		while ((dp = readdir(df))) {
 			if ((partial && string_prefix(dp->d_name, topic)) ||
-				(!partial && !string_compare(dp->d_name, topic))
+				(!partial && !strcmp(dp->d_name, topic))
 					) {
 				snprintf(buf, sizeof(buf), "%s/%s", dir, dp->d_name);
 				break;
@@ -443,54 +434,6 @@ do_news(dbref player, char *topic, char *seg)
 		return;
 	index_file(player, topic, NEWS_FILE);
 }
-
-
-/* void */
-/* add_motd_text_fmt(const char *text) */
-/* { */
-/* 	char buf[80]; */
-/* 	const char *p = text; */
-/* 	int count = 4; */
-
-/* 	buf[0] = buf[1] = buf[2] = buf[3] = ' '; */
-/* 	while (*p) { */
-/* 		while (*p && (count < 68)) */
-/* 			buf[count++] = *p++; */
-/* 		while (*p && !isspace(*p) && (count < 76)) */
-/* 			buf[count++] = *p++; */
-/* 		buf[count] = '\0'; */
-/* 		log2file(MOTD_FILE, "%s", buf); */
-/* 		while (*p && isspace(*p)) */
-/* 			p++; */
-/* 		count = 0; */
-/* 	} */
-/* } */
-
-
-/* void */
-/* do_motd(dbref player, char *text) */
-/* { */
-/* 	time_t lt; */
-
-/* 	if (!*text || !Wizard(OWNER(player))) { */
-/* 		spit_file(player, MOTD_FILE); */
-/* 		return; */
-/* 	} */
-/* 	if (!string_compare(text, "clear")) { */
-/* 		unlink(MOTD_FILE); */
-/* 		log2file(MOTD_FILE, "%s %s", "- - - - - - - - - - - - - - - - - - -", */
-/* 				 "- - - - - - - - - - - - - - - - - - -"); */
-/* 		notify(player, "MOTD cleared."); */
-/* 		return; */
-/* 	} */
-/* 	lt = time(NULL); */
-/* 	log2file(MOTD_FILE, "%.16s", ctime(&lt)); */
-/* 	add_motd_text_fmt(text); */
-/* 	log2file(MOTD_FILE, "%s %s", "- - - - - - - - - - - - - - - - - - -", */
-/* 			 "- - - - - - - - - - - - - - - - - - -"); */
-/* 	notify(player, "MOTD updated."); */
-/* } */
-
 
 void
 do_info(dbref player, const char *topic, const char *seg)

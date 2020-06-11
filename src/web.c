@@ -21,7 +21,7 @@ mcppkg_web(McpFrame * mfr, McpMesg * msg, McpVer ver, void *context)
 		return;
 	}
 
-        if (!string_compare(msg->mesgname, "auth")) {
+        if (!strcmp(msg->mesgname, "auth")) {
                 char *username, *password;
                 username = mcp_mesg_arg_getline(msg, "username", 0);
                 password = mcp_mesg_arg_getline(msg, "password", 0);
@@ -31,7 +31,7 @@ mcppkg_web(McpFrame * mfr, McpMesg * msg, McpVer ver, void *context)
                         mcp_mesg_init(&omsg, MCP_WEB_PKG, "auth-ok");
                 mcp_frame_output_mesg(mfr, &omsg);
                 mcp_mesg_clear(&omsg);
-        } else if (!string_compare(msg->mesgname, "identify")) {
+        } else if (!strcmp(msg->mesgname, "identify")) {
                 char *ips = mcp_mesg_arg_getline(msg, "ip", 0);
                 char *olds = mcp_mesg_arg_getline(msg, "old", 0);
                 unsigned ip = strtoul(ips, NULL, 0);

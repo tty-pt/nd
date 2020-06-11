@@ -70,7 +70,7 @@ prim_gmtoffset(PRIM_PROTOTYPE)
 {
 	CHECKOP(0);
 	CHECKOFLOW(1);
-	result = get_tz_offset();
+	result = 0;
 	PushInt(result);
 }
 
@@ -146,7 +146,7 @@ prim_timefmt(PRIM_PROTOTYPE)
 		abort_interp("Invalid argument (2)");
 	lt = (time_t) oper2->data.number;
 	time_tm = localtime(&lt);
-	if (!format_time(buf, BUFFER_LEN, oper1->data.string->data, time_tm))
+	if (!strftime(buf, BUFFER_LEN, oper1->data.string->data, time_tm))
 		abort_interp("Operation would result in overflow.");
 	CHECKOFLOW(1);
 	CLEAR(oper1);
@@ -647,7 +647,7 @@ prim_cancallp(PRIM_PROTOTYPE)
 
 		pbs = PROGRAM_PUBS(oper1->data.objref);
 		while (pbs) {
-			if (!string_compare(oper2->data.string->data, pbs->subname))
+			if (!strcmp(oper2->data.string->data, pbs->subname))
 				break;
 			pbs = pbs->next;
 		}

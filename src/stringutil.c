@@ -76,27 +76,6 @@ alphanum_compare(const char *t1, const char *s2)
 	return (DOWNCASE(*s1) - DOWNCASE(*s2));
 }
 
-int
-string_compare(register const char *s1, register const char *s2)
-{
-#if 0
-	while (*s1 && DOWNCASE(*s1) == DOWNCASE(*s2))
-		s1++, s2++;
-
-	return (DOWNCASE(*s1) - DOWNCASE(*s2));
-#else
-	/* accepting patch #906013 */
-	unsigned char c1, c2;
-
-	do {
-	    c1 = tolower (*(const unsigned char *)s1++);
-    	c2 = tolower (*(const unsigned char *)s2++);
-    } while (c1 && c1 == c2);
-
-    return (c1 - c2);
-#endif
-}
-
 const char *
 exit_prefix(register const char *string, register const char *prefix)
 {
@@ -224,15 +203,15 @@ pronoun_substitute(int descr, dbref player, const char *str)
 		if (*last_non_space)
 			*(last_non_space + 1) = '\0';
 
-		if (string_compare(sexstr, "male") == 0)
+		if (strcmp(sexstr, "male") == 0)
 			sex = GENDER_MALE;
-		else if (string_compare(sexstr, "female") == 0)
+		else if (strcmp(sexstr, "female") == 0)
 			sex = GENDER_FEMALE;
-		else if (string_compare(sexstr, "hermaphrodite") == 0)
+		else if (strcmp(sexstr, "hermaphrodite") == 0)
 			sex = GENDER_HERM;
-		else if (string_compare(sexstr, "herm") == 0)
+		else if (strcmp(sexstr, "herm") == 0)
 			sex = GENDER_HERM;
-		else if (string_compare(sexstr, "neuter") == 0)
+		else if (strcmp(sexstr, "neuter") == 0)
 			sex = GENDER_NEUTER;
 	}
 
@@ -376,8 +355,6 @@ pronoun_substitute(int descr, dbref player, const char *str)
 	return buf;
 }
 
-#ifndef MALLOC_PROFILING
-
 char *
 alloc_string(const char *string)
 {
@@ -413,21 +390,6 @@ alloc_prog_string(const char *s)
 	bcopy(s, ss->data, ss->length + 1);
 	return (ss);
 }
-
-
-char *
-string_dup(const char *s)
-{
-	char *p;
-
-	p = (char *) malloc(1 + strlen(s));
-	if (p)
-		(void) strcpy(p, s);  /* Guaranteed enough space. */
-	return (p);
-}
-#endif
-
-
 
 char *
 intostr(int i)
@@ -802,7 +764,7 @@ has_suffix(const char* text, const char* suffix)
 	if (!tlen || !slen || (tlen < slen))
 		return 0;
 
-	return !string_compare(text + tlen - slen, suffix);
+	return !strcmp(text + tlen - slen, suffix);
 }
 
 int

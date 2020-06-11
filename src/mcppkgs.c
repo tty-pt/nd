@@ -53,7 +53,7 @@ show_mcp_error(McpFrame * mfr, char *topic, char *text)
 void
 mcppkg_simpleedit(McpFrame * mfr, McpMesg * msg, McpVer ver, void *context)
 {
-	if (!string_compare(msg->mesgname, "set")) {
+	if (!strcmp(msg->mesgname, "set")) {
 		dbref obj = NOTHING;
 		char *reference;
 		char *valtype;
@@ -102,7 +102,7 @@ mcppkg_simpleedit(McpFrame * mfr, McpMesg * msg, McpVer ver, void *context)
 		reference++;
 
 		/* the rest is category specific data. */
-		if (!string_compare(category, "prop")) {
+		if (!strcmp(category, "prop")) {
 			if (obj < 0 || obj >= db_top || Typeof(obj) == TYPE_GARBAGE) {
 				show_mcp_error(mfr, "simpleedit-set", "Bad reference object.");
 				return;
@@ -121,7 +121,7 @@ mcppkg_simpleedit(McpFrame * mfr, McpMesg * msg, McpVer ver, void *context)
 				show_mcp_error(mfr, "simpleedit-set", "Permission denied.");
 				return;
 			}
-			if (!string_compare(valtype, "string-list") || !string_compare(valtype, "string")) {
+			if (!strcmp(valtype, "string-list") || !strcmp(valtype, "string")) {
 				int left = BUFFER_LEN - 1;
 				int len;
 
@@ -149,7 +149,7 @@ mcppkg_simpleedit(McpFrame * mfr, McpMesg * msg, McpVer ver, void *context)
 				buf[BUFFER_LEN - 1] = '\0';
 				add_property(obj, reference, buf, 0);
 
-			} else if (!string_compare(valtype, "integer")) {
+			} else if (!strcmp(valtype, "integer")) {
 				if (lines != 1) {
 					show_mcp_error(mfr, "simpleedit-set", "Bad integer value.");
 					return;
@@ -158,7 +158,7 @@ mcppkg_simpleedit(McpFrame * mfr, McpMesg * msg, McpVer ver, void *context)
 				add_property(obj, reference, NULL, atoi(content));
 			}
 
-		} else if (!string_compare(category, "proplist")) {
+		} else if (!strcmp(category, "proplist")) {
 			if (obj < 0 || obj >= db_top || Typeof(obj) == TYPE_GARBAGE) {
 				show_mcp_error(mfr, "simpleedit-set", "Bad reference object.");
 				return;
@@ -177,7 +177,7 @@ mcppkg_simpleedit(McpFrame * mfr, McpMesg * msg, McpVer ver, void *context)
 				show_mcp_error(mfr, "simpleedit-set", "Permission denied.");
 				return;
 			}
-			if (!string_compare(valtype, "string-list")) {
+			if (!strcmp(valtype, "string-list")) {
 
 				if (lines == 0) {
 					snprintf(buf, sizeof(buf), "%s#", reference);
@@ -195,13 +195,13 @@ mcppkg_simpleedit(McpFrame * mfr, McpMesg * msg, McpVer ver, void *context)
 						add_property(obj, buf, content, 0);
 					}
 				}
-			} else if (!string_compare(valtype, "string") ||
-					   !string_compare(valtype, "integer")) {
+			} else if (!strcmp(valtype, "string") ||
+					   !strcmp(valtype, "integer")) {
 				show_mcp_error(mfr, "simpleedit-set", "Bad value type for proplist.");
 				return;
 			}
 
-		} else if (!string_compare(category, "prog")) {
+		} else if (!strcmp(category, "prog")) {
 			struct line *tmpline;
 			struct line *curr = NULL;
 			struct line *new_line;
@@ -259,7 +259,7 @@ mcppkg_simpleedit(McpFrame * mfr, McpMesg * msg, McpVer ver, void *context)
 			DBDIRTY(player);
 			DBDIRTY(obj);
 
-		} else if (!string_compare(category, "user")) {
+		} else if (!strcmp(category, "user")) {
 		} else {
 			show_mcp_error(mfr, "simpleedit-set", "Unknown reference category.");
 			return;

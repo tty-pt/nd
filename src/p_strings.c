@@ -1230,7 +1230,7 @@ prim_stringcmp(PRIM_PROTOTYPE)
 	else if (!(oper2->data.string && oper1->data.string))
 		result = oper1->data.string ? -1 : 1;
 	else
-		result = string_compare(oper2->data.string->data, oper1->data.string->data);
+		result = strcmp(oper2->data.string->data, oper1->data.string->data);
 	CLEAR(oper1);
 	CLEAR(oper2);
 	PushInt(result);
@@ -1984,60 +1984,60 @@ prim_textattr(PRIM_PROTOTYPE)
 			case '\0':
 			case ',':{
 					*ptr2++ = '\0';
-					if (!string_compare(attr, "reset")) {
+					if (!strcmp(attr, "reset")) {
 						strcatn(buf, sizeof(buf), ANSI_RESET);
-					} else if (!string_compare(attr, "normal")) {
+					} else if (!strcmp(attr, "normal")) {
 						strcatn(buf, sizeof(buf), ANSI_RESET);
-					} else if (!string_compare(attr, "bold")) {
+					} else if (!strcmp(attr, "bold")) {
 						strcatn(buf, sizeof(buf), ANSI_BOLD);
-					} else if (!string_compare(attr, "dim")) {
+					} else if (!strcmp(attr, "dim")) {
 						strcatn(buf, sizeof(buf), ANSI_DIM);
-					} else if (!string_compare(attr, "italic")) {
+					} else if (!strcmp(attr, "italic")) {
 						strcatn(buf, sizeof(buf), ANSI_ITALIC);
-					} else if (!string_compare(attr, "uline") ||
-							   !string_compare(attr, "underline")) {
+					} else if (!strcmp(attr, "uline") ||
+							   !strcmp(attr, "underline")) {
 						strcatn(buf, sizeof(buf), ANSI_UNDERLINE);
-					} else if (!string_compare(attr, "flash")) {
+					} else if (!strcmp(attr, "flash")) {
 						strcatn(buf, sizeof(buf), ANSI_FLASH);
-					} else if (!string_compare(attr, "reverse")) {
+					} else if (!strcmp(attr, "reverse")) {
 						strcatn(buf, sizeof(buf), ANSI_REVERSE);
-					} else if (!string_compare(attr, "ostrike")) {
+					} else if (!strcmp(attr, "ostrike")) {
 						strcatn(buf, sizeof(buf), ANSI_OSTRIKE);
-					} else if (!string_compare(attr, "overstrike")) {
+					} else if (!strcmp(attr, "overstrike")) {
 						strcatn(buf, sizeof(buf), ANSI_OSTRIKE);
 
-					} else if (!string_compare(attr, "black")) {
+					} else if (!strcmp(attr, "black")) {
 						strcatn(buf, sizeof(buf), ANSI_FG_BLACK);
-					} else if (!string_compare(attr, "red")) {
+					} else if (!strcmp(attr, "red")) {
 						strcatn(buf, sizeof(buf), ANSI_FG_RED);
-					} else if (!string_compare(attr, "yellow")) {
+					} else if (!strcmp(attr, "yellow")) {
 						strcatn(buf, sizeof(buf), ANSI_FG_YELLOW);
-					} else if (!string_compare(attr, "green")) {
+					} else if (!strcmp(attr, "green")) {
 						strcatn(buf, sizeof(buf), ANSI_FG_GREEN);
-					} else if (!string_compare(attr, "cyan")) {
+					} else if (!strcmp(attr, "cyan")) {
 						strcatn(buf, sizeof(buf), ANSI_FG_CYAN);
-					} else if (!string_compare(attr, "blue")) {
+					} else if (!strcmp(attr, "blue")) {
 						strcatn(buf, sizeof(buf), ANSI_FG_BLUE);
-					} else if (!string_compare(attr, "magenta")) {
+					} else if (!strcmp(attr, "magenta")) {
 						strcatn(buf, sizeof(buf), ANSI_FG_MAGENTA);
-					} else if (!string_compare(attr, "white")) {
+					} else if (!strcmp(attr, "white")) {
 						strcatn(buf, sizeof(buf), ANSI_FG_WHITE);
 
-					} else if (!string_compare(attr, "bg_black")) {
+					} else if (!strcmp(attr, "bg_black")) {
 						strcatn(buf, sizeof(buf), ANSI_BG_BLACK);
-					} else if (!string_compare(attr, "bg_red")) {
+					} else if (!strcmp(attr, "bg_red")) {
 						strcatn(buf, sizeof(buf), ANSI_BG_RED);
-					} else if (!string_compare(attr, "bg_yellow")) {
+					} else if (!strcmp(attr, "bg_yellow")) {
 						strcatn(buf, sizeof(buf), ANSI_BG_YELLOW);
-					} else if (!string_compare(attr, "bg_green")) {
+					} else if (!strcmp(attr, "bg_green")) {
 						strcatn(buf, sizeof(buf), ANSI_BG_GREEN);
-					} else if (!string_compare(attr, "bg_cyan")) {
+					} else if (!strcmp(attr, "bg_cyan")) {
 						strcatn(buf, sizeof(buf), ANSI_BG_CYAN);
-					} else if (!string_compare(attr, "bg_blue")) {
+					} else if (!strcmp(attr, "bg_blue")) {
 						strcatn(buf, sizeof(buf), ANSI_BG_BLUE);
-					} else if (!string_compare(attr, "bg_magenta")) {
+					} else if (!strcmp(attr, "bg_magenta")) {
 						strcatn(buf, sizeof(buf), ANSI_BG_MAGENTA);
-					} else if (!string_compare(attr, "bg_white")) {
+					} else if (!strcmp(attr, "bg_white")) {
 						strcatn(buf, sizeof(buf), ANSI_BG_WHITE);
 					} else {
 						abort_interp

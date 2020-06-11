@@ -39,7 +39,6 @@ const char * exit_prefix(register const char *string, register const char *prefi
 int fetch_propvals(dbref obj, const char *dir);
 dbref find_mlev(dbref prog, struct frame * fr, int st);
 void flush_user_output(dbref player);
-int format_time(char *buf, int max_len, const char *fmt, struct tm *tmval);
 long get_tz_offset(void);
 dbref getparent(dbref obj);
 int gui_dlog_freeall_descr(int descr);

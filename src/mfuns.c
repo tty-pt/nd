@@ -946,7 +946,7 @@ msg_compare(const char *s1, const char *s2)
 	if (*s1 && *s2 && number(s1) && number(s2)) {
 		return (atoi(s1) - atoi(s2));
 	} else {
-		return string_compare(s1, s2);
+		return strcmp(s1, s2);
 	}
 }
 
@@ -1481,7 +1481,6 @@ mfn_null(MFUNARGS)
 const char *
 mfn_tzoffset(MFUNARGS)
 {
-	snprintf(buf, BUFFER_LEN, "%ld", get_tz_offset());
 	return buf;
 }
 
@@ -1495,10 +1494,9 @@ mfn_time(MFUNARGS)
 	lt = time((time_t*) NULL);
 	if (argc == 1) {
 		lt += (3600 * atoi(argv[0]));
-		lt += get_tz_offset();
 	}
 	tm = localtime(&lt);
-	format_time(buf, BUFFER_LEN - 1, "%T", tm);
+	strftime(buf, BUFFER_LEN - 1, "%T", tm);
 	return buf;
 }
 
@@ -1512,10 +1510,9 @@ mfn_date(MFUNARGS)
 	lt = time((time_t*) NULL);
 	if (argc == 1) {
 		lt += (3600 * atoi(argv[0]));
-		lt += get_tz_offset();
 	}
 	tm = localtime(&lt);
-	format_time(buf, BUFFER_LEN - 1, "%D", tm);
+	strftime(buf, BUFFER_LEN - 1, "%D", tm);
 	return buf;
 }
 
@@ -1538,10 +1535,9 @@ mfn_ftime(MFUNARGS)
 		} else {
 			lt -= offval;
 		}
-		lt += get_tz_offset();
 	}
 	tm = localtime(&lt);
-	format_time(buf, BUFFER_LEN - 1, argv[0], tm);
+	strftime(buf, BUFFER_LEN - 1, argv[0], tm);
 	return buf;
 }
 

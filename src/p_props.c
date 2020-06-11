@@ -48,7 +48,7 @@ prop_write_perms(dbref player, dbref obj, const char *name, int mlev)
 				return 0;
 			if (Prop_ReadOnly(name))
 				return 0;
-			if (!string_compare(name, "sex"))
+			if (!strcmp(name, "sex"))
 				return 0;
 		}
 		if (string_prefix(name, "_msgmacs/"))
@@ -1213,7 +1213,7 @@ prim_parsepropex(PRIM_PROTOTYPE)
 				break;
 			}
 
-			if (string_compare(idx.data.string->data, "how") == 0)
+			if (strcmp(idx.data.string->data, "how") == 0)
 				hashow = 1;
 		}
 		while(array_next(vars, &idx));

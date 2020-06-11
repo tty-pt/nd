@@ -228,7 +228,7 @@ do_look_at(int descr, dbref player, const char *name, const char *detail)
 	char obj_num[20];
 #endif
 
-	if (*name == '\0' || !string_compare(name, "here")) {
+	if (*name == '\0' || !strcmp(name, "here")) {
 		if ((thing = getloc(player)) != NOTHING) {
 			look_room(descr, player, thing, 1);
 		}
@@ -659,13 +659,13 @@ do_examine(int descr, dbref player, const char *name, const char *dir)
 	/* Timestamps */
 	/* ex: time_tm = localtime((time_t *)(&(DBFETCH(thing)->ts.created))); */
 	time_tm = localtime((&(DBFETCH(thing)->ts.created)));
-	(void) format_time(buf, BUFFER_LEN, (char *) "Created:  %a %b %e %T %Z %Y", time_tm);
+	(void) strftime(buf, BUFFER_LEN, (char *) "Created:  %a %b %e %T %Z %Y", time_tm);
 	notify(player, buf);
 	time_tm = localtime((&(DBFETCH(thing)->ts.modified)));
-	(void) format_time(buf, BUFFER_LEN, (char *) "Modified: %a %b %e %T %Z %Y", time_tm);
+	(void) strftime(buf, BUFFER_LEN, (char *) "Modified: %a %b %e %T %Z %Y", time_tm);
 	notify(player, buf);
 	time_tm = localtime((&(DBFETCH(thing)->ts.lastused)));
-	(void) format_time(buf, BUFFER_LEN, (char *) "Lastused: %a %b %e %T %Z %Y", time_tm);
+	(void) strftime(buf, BUFFER_LEN, (char *) "Lastused: %a %b %e %T %Z %Y", time_tm);
 	notify(player, buf);
 	if (Typeof(thing) == TYPE_PROGRAM) {
 		snprintf(buf, sizeof(buf), "Usecount: %d     Instances: %d",

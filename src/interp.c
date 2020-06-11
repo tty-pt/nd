@@ -16,6 +16,7 @@
 #include "defaults.h"
 #include "fbstrings.h"
 #include "interp.h"
+#include "debug.h"
 
 /* This package performs the interpretation of mud forth programs.
    It is a basically push pop kinda thing, but I'm making some stuff
@@ -291,7 +292,7 @@ scopedvar_getnum(struct frame *fr, int level, const char* varname)
 	}
 	for (varnum = 0; varnum < svinfo->count; varnum++) {
 		assert(svinfo->varnames[varnum] != NULL);
-		if (!string_compare(svinfo->varnames[varnum], varname)) {
+		if (!strcmp(svinfo->varnames[varnum], varname)) {
 			return varnum;
 		}
 	}
@@ -313,7 +314,7 @@ RCLEAR(struct inst *oper, char *file, int line)
 		char buf[40];
 
 		lt = time(NULL);
-		format_time(buf, 32, "%c", localtime(&lt));
+		strftime(buf, 32, "%c", localtime(&lt));
 		fprintf(stderr, "%.32s: ", buf);
 		fprintf(stderr, "Attempt to re-CLEAR() instruction from %s:%d "
 				"previously CLEAR()ed at %s:%d\n", file, line, (char *) oper->data.addr,
@@ -769,7 +770,7 @@ prog_clean(struct frame *fr)
 			char buf[40];
 
 			lt = time(NULL);
-			format_time(buf, 32, "%c", localtime(&lt));
+			strftime(buf, 32, "%c", localtime(&lt));
 			fprintf(stderr, "%.32s: ", buf);
 			fprintf(stderr, "prog_clean(): Tried to free an already freed program frame!\n");
 			abort();
@@ -783,9 +784,9 @@ prog_clean(struct frame *fr)
 		CLEAR(&fr->argument.st[i]);
 	}
 
-	DEBUGPRINT("prog_clean: fr->caller.top=%d\n",fr->caller.top,0);
+	debug("prog_clean: fr->caller.top=%d\n",fr->caller.top,0);
 	for (i = 1; i <= fr->caller.top; i++) {
-		DEBUGPRINT("Decreasing instances of fr->caller.st[%d](#%d)\n",
+		debug("Decreasing instances of fr->caller.st[%d](#%d)\n",
 						i, fr->caller.st[i]);
 		PROGRAM_DEC_INSTANCES(fr->caller.st[i]);
 	}
@@ -881,12 +882,12 @@ copyinst(struct inst *from, struct inst *to)
 	case PROG_FUNCTION:
 	    if (from->data.mufproc) {
 			to->data.mufproc = (struct muf_proc_data*)malloc(sizeof(struct muf_proc_data));
-			to->data.mufproc->procname = string_dup(from->data.mufproc->procname);
+			to->data.mufproc->procname = strdup(from->data.mufproc->procname);
 			to->data.mufproc->vars = varcnt = from->data.mufproc->vars;
 			to->data.mufproc->args = from->data.mufproc->args;
 			to->data.mufproc->varnames = (const char**)calloc(varcnt, sizeof(const char*));
 			for (j = 0; j < varcnt; j++) {
-				to->data.mufproc->varnames[j] = string_dup(from->data.mufproc->varnames[j]);
+				to->data.mufproc->varnames[j] = strdup(from->data.mufproc->varnames[j]);
 			}
 		}
 		break;
@@ -965,8 +966,8 @@ do_abort_loop(dbref player, dbref program, const char *msg,
 	char buffer[128];
 
 	if (fr->trys.top) {
-		fr->errorstr = string_dup(msg);
-		fr->errorinst = string_dup(insttotext(fr, 0, pc, buffer, sizeof(buffer), 30, program, 1));
+		fr->errorstr = strdup(msg);
+		fr->errorinst = strdup(insttotext(fr, 0, pc, buffer, sizeof(buffer), 30, program, 1));
 		fr->errorline = pc->line;
 		fr->errorprog = program;
 		err++;
@@ -1496,7 +1497,7 @@ interp_loop(dbref player, dbref program, struct frame *fr, int rettyp)
 
 					pbs = PROGRAM_PUBS(temp1->data.objref);
 					while (pbs) {
-						tmpint = string_compare(temp2->data.string->data, pbs->subname);
+						tmpint = strcmp(temp2->data.string->data, pbs->subname);
 						if (!tmpint)
 							break;
 						pbs = pbs->next;
@@ -1792,7 +1793,7 @@ interp_err(dbref player, dbref program, struct inst *pc,
 	notify_nolisten(player, buf, 1);
 
 	lt = time(NULL);
-	format_time(tbuf, 32, "%c", localtime(&lt));
+	strftime(tbuf, 32, "%c", localtime(&lt));
 
 	strip_ansi(buf2, buf);
 	errcount = get_property_value(origprog, ".debug/errcount");
@@ -1920,8 +1921,8 @@ do_abort_interp(dbref player, const char *msg, struct inst *pc,
 	char buffer[128];
 
 	if (fr->trys.top) {
-		fr->errorstr = string_dup(msg);
-		fr->errorinst = string_dup(insttotext(fr, 0, pc, buffer, sizeof(buffer), 30, program, 1));
+		fr->errorstr = strdup(msg);
+		fr->errorinst = strdup(insttotext(fr, 0, pc, buffer, sizeof(buffer), 30, program, 1));
 		fr->errorline = pc->line;
 		fr->errorprog = program;
 		err++;

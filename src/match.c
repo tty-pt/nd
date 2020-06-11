@@ -158,7 +158,7 @@ match_absolute(struct match_data *md)
 void
 match_me(struct match_data *md)
 {
-	if (!string_compare(md->match_name, "me")) {
+	if (!strcmp(md->match_name, "me")) {
 		md->exact_match = md->match_who;
 	}
 }
@@ -166,7 +166,7 @@ match_me(struct match_data *md)
 void
 match_here(struct match_data *md)
 {
-	if (!string_compare(md->match_name, "here")
+	if (!strcmp(md->match_name, "here")
 		&& DBFETCH(md->match_who)->location != NOTHING) {
 		md->exact_match = DBFETCH(md->match_who)->location;
 	}
@@ -175,7 +175,7 @@ match_here(struct match_data *md)
 void
 match_home(struct match_data *md)
 {
-	if (!string_compare(md->match_name, "home"))
+	if (!strcmp(md->match_name, "home"))
 		md->exact_match = HOME;
 }
 

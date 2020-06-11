@@ -9,13 +9,7 @@
 
 #include <sys/resource.h>
 
-#ifndef MALLOC_PROFILING
-#  ifndef HAVE_MALLOC_H
-#    include <stdlib.h>
-#  else
-#    include <malloc.h>
-#  endif
-#endif
+#include <stdlib.h>
 
 #include "db.h"
 #include "props.h"
@@ -567,7 +561,7 @@ do_stats(dbref player, const char *name)
 			time_t lasttime = (time_t) get_property_value(0, "_sys/lastdumptime");
 
 			time_tm = localtime(&lasttime);
-			(void) format_time(buf, 40, "%a %b %e %T %Z", time_tm);
+			(void) strftime(buf, 40, "%a %b %e %T %Z", time_tm);
 			notify_fmt(player, "%7d unsaved object%s     Last dump: %s",
 					   altered, (altered == 1) ? "" : "s", buf);
 		}
@@ -889,7 +883,7 @@ do_muf_topprofs(dbref player, char *arg1)
 		notify(player, "Permission denied. (MUF profiling stats are wiz-only)");
 		return;
 	}
-	if (!string_compare(arg1, "reset")) {
+	if (!strcmp(arg1, "reset")) {
 		for (i = db_top; i-->0; ) {
 			if (Typeof(i) == TYPE_PROGRAM) {
 				PROGRAM_SET_PROFTIME(i, 0, 0);
@@ -1000,7 +994,7 @@ do_mpi_topprofs(dbref player, char *arg1)
 		notify(player, "Permission denied. (MPI statistics are wizard-only)");
 		return;
 	}
-	if (!string_compare(arg1, "reset")) {
+	if (!strcmp(arg1, "reset")) {
 		for (i = db_top; i-->0; ) {
 			if (DBFETCH(i)->mpi_prof_use) {
 				DBFETCH(i)->mpi_prof_use = 0;
@@ -1111,7 +1105,7 @@ do_all_topprofs(dbref player, char *arg1)
 		notify(player, "Permission denied. (server profiling statistics are wizard-only)");
 		return;
 	}
-	if (!string_compare(arg1, "reset")) {
+	if (!strcmp(arg1, "reset")) {
 		for (i = db_top; i-->0; ) {
 			if (DBFETCH(i)->mpi_prof_use) {
 				DBFETCH(i)->mpi_prof_use = 0;

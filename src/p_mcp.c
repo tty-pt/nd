@@ -6,6 +6,7 @@
 #include <sys/types.h>
 #include <stdio.h>
 #include <time.h>
+#include <string.h>
 #include "db.h"
 #include "mcp.h"
 #include "inst.h"
@@ -54,8 +55,8 @@ muf_mcp_callback(McpFrame * mfr, McpMesg * mesg, McpVer version, void *context)
 
 	for (ptr = PROGRAM_MCPBINDS(obj); ptr; ptr = ptr->next) {
 		if (ptr->pkgname && ptr->msgname) {
-			if (!string_compare(ptr->pkgname, pkgname)) {
-				if (!string_compare(ptr->msgname, msgname)) {
+			if (!strcmp(ptr->pkgname, pkgname)) {
+				if (!strcmp(ptr->msgname, msgname)) {
 					break;
 				}
 			}
@@ -445,8 +446,8 @@ prim_mcp_bind(PRIM_PROTOTYPE)
 
 	for (ptr = PROGRAM_MCPBINDS(program); ptr; ptr = ptr->next) {
 		if (ptr->pkgname && ptr->msgname) {
-			if (!string_compare(ptr->pkgname, pkgname)) {
-				if (!string_compare(ptr->msgname, msgname)) {
+			if (!strcmp(ptr->pkgname, pkgname)) {
+				if (!strcmp(ptr->msgname, msgname)) {
 					break;
 				}
 			}
@@ -455,8 +456,8 @@ prim_mcp_bind(PRIM_PROTOTYPE)
 	if (!ptr) {
 		ptr = (struct mcp_binding *) malloc(sizeof(struct mcp_binding));
 
-		ptr->pkgname = string_dup(pkgname);
-		ptr->msgname = string_dup(msgname);
+		ptr->pkgname = strdup(pkgname);
+		ptr->msgname = strdup(msgname);
 		ptr->next = PROGRAM_MCPBINDS(program);
 		PROGRAM_SET_MCPBINDS(program, ptr);
 	}
@@ -1049,7 +1050,7 @@ prim_gui_value_set(PRIM_PROTOTYPE)
 		valarray = (char **) malloc(sizeof(char *) * count);
 
 		value = oper3->data.string ? oper3->data.string->data : "";
-		valarray[0] = string_dup(value);
+		valarray[0] = strdup(value);
 	} else {
 		count = array_count(oper3->data.array);
 		valarray = (char **) malloc(sizeof(char *) * count);
@@ -1085,7 +1086,7 @@ prim_gui_value_set(PRIM_PROTOTYPE)
 				free(valarray);
 				abort_interp("Unsupported value type in list value. (3)");
 			}
-			valarray[i] = string_dup(value);
+			valarray[i] = strdup(value);
 		}
 	}
 

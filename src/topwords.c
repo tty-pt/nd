@@ -55,25 +55,6 @@ notify(int player, const char *msg)
 }
 
 
-int
-string_compare(const char *s1, const char *s2)
-{
-	return strcmp(s1, s2);
-}
-
-#ifndef MALLOC_PROFILING
-char *
-string_dup(const char *s)
-{
-	char *p = (char *) malloc(strlen(s) + 1);
-
-	if (p)
-	    strcpy(p, s);  /* Guaranteed enough space. */
-	return p;
-}
-#endif
-
-
 void
 queue_remove_node(struct queue_node *node)
 {

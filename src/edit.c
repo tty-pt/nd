@@ -64,7 +64,7 @@ macro_expansion(struct macrotable *node, const char *match)
 	if (!node)
 		return NULL;
 	else {
-		register int value = string_compare(match, node->name);
+		register int value = strcmp(match, node->name);
 
 		if (value < 0)
 			return macro_expansion(node->left, match);
@@ -232,7 +232,7 @@ kill_macro(const char *macroname, dbref player, struct macrotable **mtop)
 {
 	if (!(*mtop)) {
 		return (0);
-	} else if (!string_compare(macroname, (*mtop)->name)) {
+	} else if (!strcmp(macroname, (*mtop)->name)) {
 		struct macrotable *macrotemp = (*mtop);
 		int whichway = ((*mtop)->left) ? 1 : 0;
 
@@ -291,7 +291,7 @@ editor(int descr, dbref player, const char *command)
 
 		buf[j] = '\0';
 		word[i] = alloc_string(buf);
-		if ((i == 1) && !string_compare(word[0], "def")) {
+		if ((i == 1) && !strcmp(word[0], "def")) {
 			while (*command && isspace(*command))
 				command++;
 			word[2] = alloc_string(command);
@@ -714,7 +714,7 @@ insert(dbref player, const char *line)
 	struct line *new_line;
 
 	program = PLAYER_CURR_PROG(player);
-	if (!string_compare(line, EXIT_INSERT)) {
+	if (!strcmp(line, EXIT_INSERT)) {
 		PLAYER_SET_INSERT_MODE(player, 0);	/* turn off insert mode */
 		notify_nolisten(player, "Exiting insert mode.", 1);
 		return;

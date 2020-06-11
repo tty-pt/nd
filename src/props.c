@@ -14,7 +14,7 @@
 #include "externs.h"
 
 
-#define Comparator(x,y) string_compare(x,y)
+#define Comparator(x,y) strcmp(x,y)
 
 static PropPtr
 find(char *key, PropPtr avl)

@@ -250,7 +250,7 @@ gui_pkg_callback(McpFrame * mfr, McpMesg * msg, McpVer ver, void *context)
 		show_mcp_error(mfr, msg->mesgname, "Invalid dialog ID.");
 		return;
 	}
-	if (!string_compare(msg->mesgname, "ctrl-value")) {
+	if (!strcmp(msg->mesgname, "ctrl-value")) {
 		int valcount = mcp_mesg_arg_linecount(msg, "value");
 		int i;
 		const char **value = (const char **) malloc(sizeof(const char *) * valcount);
@@ -265,7 +265,7 @@ gui_pkg_callback(McpFrame * mfr, McpMesg * msg, McpVer ver, void *context)
 		gui_value_set_local(dlogid, id, valcount, value);
 		free(value);
 
-	} else if (!string_compare(msg->mesgname, "ctrl-event")) {
+	} else if (!strcmp(msg->mesgname, "ctrl-event")) {
 		const char *evt = mcp_mesg_arg_getline(msg, "event", 0);
 		const char *dismissed = mcp_mesg_arg_getline(msg, "dismissed", 0);
 		int did_dismiss = 1;
@@ -278,9 +278,9 @@ gui_pkg_callback(McpFrame * mfr, McpMesg * msg, McpVer ver, void *context)
 			evt = "buttonpress";
 		}
 		if (NULL != dismissed) {
-			if (!string_compare(dismissed, "false")) {
+			if (!strcmp(dismissed, "false")) {
 				did_dismiss = 0;
-			} else if (!string_compare(dismissed, "0")) {
+			} else if (!strcmp(dismissed, "0")) {
 				did_dismiss = 0;
 			}
 		}
@@ -290,7 +290,7 @@ gui_pkg_callback(McpFrame * mfr, McpMesg * msg, McpVer ver, void *context)
 		if (dat->callback) {
 			dat->callback(dat->descr, dlogid, id, evt, msg, did_dismiss, dat->context);
 		}
-	} else if (!string_compare(msg->mesgname, "error")) {
+	} else if (!strcmp(msg->mesgname, "error")) {
 		const char *err  = mcp_mesg_arg_getline(msg, "errcode", 0);
 		const char *text = mcp_mesg_arg_getline(msg, "errtext", 0);
 		const char *id   = mcp_mesg_arg_getline(msg, "id", 0);
@@ -879,7 +879,7 @@ gui_ctrl_make_v(const char *dlogid, const char *type, const char *pane,
 			const char *arg = args[i];
 			const char *val = args[i + 1];
 
-			if (id && !string_compare(arg, "value")) {
+			if (id && !strcmp(arg, "value")) {
 				gui_value_set_local(dlogid, id, 1, &val);
 			}
 			mcp_mesg_arg_append(&msg, arg, val);
@@ -1092,7 +1092,7 @@ muf_dlog_remove(struct frame *fr, const char *dlogid)
 	struct dlogidlist **prev = &fr->dlogids;
 
 	while (*prev) {
-		if (!string_compare(dlogid, (*prev)->dlogid)) {
+		if (!strcmp(dlogid, (*prev)->dlogid)) {
 			struct dlogidlist *tmp = *prev;
 
 			*prev = (*prev)->next;
@@ -1127,7 +1127,7 @@ muf_dlog_purge(struct frame *fr)
 void
 post_dlog_cb(GUI_EVENT_CB_ARGS)
 {
-	if (!string_compare(id, "post")) {
+	if (!strcmp(id, "post")) {
 		char buf[BUFFER_LEN];
 		const char *subject = gui_value_get(dlogid, "subj", 0);
 		const char *keywords = gui_value_get(dlogid, "keywd", 0);
@@ -1137,7 +1137,7 @@ post_dlog_cb(GUI_EVENT_CB_ARGS)
 		pnotify(pdescrcon(descr), buf);
 		snprintf(buf, sizeof(buf), "Keywords: %s", keywords);
 		pnotify(pdescrcon(descr), buf);
-	} else if (!string_compare(id, "cancel")) {
+	} else if (!strcmp(id, "cancel")) {
 		pnotify(pdescrcon(descr), "Posting cancelled.");
 	} else {
 		pnotify(pdescrcon(descr), "Invalid event!");

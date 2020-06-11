@@ -317,7 +317,6 @@ int time_since_combat = 0;
 int
 main(int argc, char **argv)
 {
-	FILE *ffd;
 	char *infile_name;
 	char *outfile_name;
 	char *num_one_new_passwd = NULL;
@@ -2050,7 +2049,7 @@ set_userstring(char **userstring, const char *command)
 	while (*command && isinput(*command) && isspace(*command))
 		command++;
 	if (*command)
-		*userstring = string_dup(command);
+		*userstring = strdup(command);
 }
 
 void
@@ -2116,7 +2115,7 @@ is_interface_command(const char* cmd)
 	}
 	if (!strncmp(cmd, "#$#", 3)) /* MCP mesg. */
 		return 1;
-	if (!string_compare(tmp, BREAK_COMMAND))
+	if (!strcmp(tmp, BREAK_COMMAND))
 		return 1;
 	if (!strcmp(tmp, QUIT_COMMAND))
 		return 1;
@@ -2143,7 +2142,7 @@ do_command(struct descriptor_data *d, char *command)
 	if (d->connected)
 		ts_lastuseobject(d->player);
 
-	if (!string_compare(command, BREAK_COMMAND)) {
+	if (!strcmp(command, BREAK_COMMAND)) {
 	        if (!d->connected)
 		        return 0;
 		if (dequeue_prog(d->player, 2)) {

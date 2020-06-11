@@ -110,7 +110,6 @@ do_showextver(dbref player) {
 	notify_nolisten(player, get_compile_c_version(), 1);
 	notify_nolisten(player, get_copyright_c_version(), 1);
 	notify_nolisten(player, get_create_c_version(), 1);
-	notify_nolisten(player, get_crt_malloc_c_version(), 1);
 	notify_nolisten(player, get_db_c_version(), 1);
 	notify_nolisten(player, get_debugger_c_version(), 1);
 	notify_nolisten(player, get_disassem_c_version(), 1);
@@ -158,7 +157,6 @@ do_showextver(dbref player) {
 	notify_nolisten(player, get_smatch_c_version(), 1);
 	notify_nolisten(player, get_snprintf_c_version(), 1);
 	notify_nolisten(player, get_speech_c_version(), 1);
-	notify_nolisten(player, get_strftime_c_version(), 1);
 	notify_nolisten(player, get_stringutil_c_version(), 1);
 	notify_nolisten(player, get_timequeue_c_version(), 1);
 	notify_nolisten(player, get_timestamp_c_version(), 1);
@@ -168,11 +166,6 @@ do_showextver(dbref player) {
 	notify_nolisten(player, array_h_version, 1);
 	notify_nolisten(player, config_h_version, 1);
 	notify_nolisten(player, copyright_h_version, 1);
-#ifdef MALLOC_PROFILING
-	notify_nolisten(player, crt_malloc_h_version, 1);
-#else
-	notify_nolisten(player, "crt_malloc.h not used", 1);
-#endif
 	notify_nolisten(player, db_h_version, 1);
 	notify_nolisten(player, dbsearch_h_version, 1);
 	notify_nolisten(player, defaults_h_version, 1);

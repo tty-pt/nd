@@ -39,13 +39,8 @@ dbref db_size = DB_INITIAL_SIZE;
 #endif							/* DB_DOUBLING */
 
 struct macrotable *macrotop;
-
-#ifndef MALLOC_PROFILING
 extern char *alloc_string(const char *);
-#endif
-
 extern short db_conversion_flag;
-
 int number(const char *s);
 int ifloat(const char *s);
 void putproperties(FILE * f, int obj);
