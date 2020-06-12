@@ -53,8 +53,6 @@
 typedef enum {
 	TELNET_STATE_NORMAL,
 	TELNET_STATE_IAC,
-	TELNET_STATE_WILL,
-	TELNET_STATE_DO,
 	TELNET_STATE_WONT,
 	TELNET_STATE_DONT,
 	TELNET_STATE_SB
@@ -66,26 +64,12 @@ typedef enum {
 #define TELNET_WONT       252
 #define TELNET_WILL       251
 #define TELNET_SB         250
-#define TELNET_GA         249
 #define TELNET_EL         248
 #define TELNET_EC         247
 #define TELNET_AYT        246
-#define TELNET_AO         245
 #define TELNET_IP         244
 #define TELNET_BRK        243
-#define TELNET_DM         242
 #define TELNET_NOP        241
-#define TELNET_SE         240
-
-int shutdown_flag = 0;
-
-static const char *create_fail =
-		"Either there is already a player with that name, or that name is illegal.\r\n";
-
-static const char *flushed_message = "<Output Flushed>\r\n";
-static const char *shutdown_message = "\r\nGoing down - Bye\r\n";
-
-int resolver_sock[2];
 
 struct text_block {
 	int nchars;
@@ -133,33 +117,39 @@ struct descriptor_data *descriptor_list = NULL;
 
 #define MAX_LISTEN_SOCKS 16
 
-// Yes, both of these should start defaulted to disabled.
-// If both are still disabled after arg parsing, we'll enable one or both.
+int shutdown_flag = 0;
+
+static const char *create_fail =
+		"Either there is already a player with that name, or that name is illegal.\r\n";
+
+static const char *flushed_message = "<Output Flushed>\r\n";
+static const char *shutdown_message = "\r\nGoing down - Bye\r\n";
+
+int resolver_sock[2];
+
 static int numsocks = 0;
 static int listener_port[MAX_LISTEN_SOCKS];
 static int sock[MAX_LISTEN_SOCKS];
 static int ndescriptors = 0;
-extern void fork_and_dump(void);
+struct descriptor_data *descr_lookup_table[FD_SETSIZE];
+struct descriptor_data *descr_count_table[FD_SETSIZE];
+int current_descr_count = 0;
 
+extern void fork_and_dump(void);
 void process_commands(void);
 int shovechars();
 void shutdownsock(struct descriptor_data *d);
-struct descriptor_data *initializesock(int s, const char *hostname, int is_ssl);
-void make_nonblocking(int s);
+struct descriptor_data *initializesock(int s, const char *hostname);
 void freeqs(struct descriptor_data *d);
 void welcome_user(struct descriptor_data *d);
-void check_connect(struct descriptor_data *d, const char *msg);
 void close_sockets(const char *msg);
 int boot_off(dbref player);
 void boot_player_off(dbref player);
-
 const char *addrout(int, long, unsigned short);
 int make_socket(int);
-struct descriptor_data *new_connection(int port, int sock, int is_ssl);
-
+struct descriptor_data *new_connection(int port, int sock);
 void dump_users(struct descriptor_data *d, char *user);
 void parse_connect(const char *msg, char *command, char *user, char *pass);
-void set_userstring(char **userstring, const char *command);
 int do_command(struct descriptor_data *d, char *command);
 int is_interface_command(const char* cmd);
 int queue_string(struct descriptor_data *, const char *);
@@ -170,31 +160,22 @@ void announce_connect(struct descriptor_data *, dbref);
 void announce_disconnect(struct descriptor_data *);
 char *time_format_1(long);
 char *time_format_2(long);
-void    init_descriptor_lookup();
-void    init_descr_count_lookup();
-void    remember_descriptor(struct descriptor_data *);
 void    remember_player_descr(dbref player, int);
 void    update_desc_count_table();
 int*    get_player_descrs(dbref player, int* count);
 void    forget_player_descr(dbref player, int);
-void    forget_descriptor(struct descriptor_data *);
 struct descriptor_data* descrdata_by_descr(int i);
-struct descriptor_data* lookup_descriptor(int);
 int online(dbref player);
 int online_init(void);
 dbref online_next(int *ptr);
 # define socket_write(d, buf, count) write(d->descriptor, buf, count)
 # define socket_read(d, buf, count) read(d->descriptor, buf, count)
- 
-
 void spawn_resolver(void);
 void resolve_hostnames(void);
-
 #define MALLOC(result, type, number) do {   \
                                        if (!((result) = (type *) malloc ((number) * sizeof (type)))) \
                                        panic("Out of memory");                             \
                                      } while (0)
-
 #define FREE(x) (free((void *) x))
 
 extern FILE *input_file;
@@ -239,8 +220,11 @@ main(int argc, char **argv)
 
 	listener_port[0] = TINYPORT;
 
-	init_descriptor_lookup();
-	init_descr_count_lookup();
+	int i;
+	for (i = 0; i < FD_SETSIZE; i++)
+		descr_lookup_table[i] = NULL;
+	for (i = 0; i < FD_SETSIZE; i++)
+		descr_count_table[i] = NULL;
 
 	while ((c = getopt(argc, argv, "dsyvSC:")) != -1) {
 		switch (c) {
@@ -735,7 +719,7 @@ shovechars()
 			(void) time(&now);
 			for (i = 0; i < numsocks; i++) {
 				if (FD_ISSET(sock[i], &input_set)) {
-					if (!(newd = new_connection(listener_port[i], sock[i], 0))) {
+					if (!(newd = new_connection(listener_port[i], sock[i]))) {
 						if (errno && errno != EINTR && errno != EMFILE && errno != ENFILE) {
 							perror("new_connection");
 							/* return; */
@@ -856,7 +840,7 @@ wall_wizards(const char *msg)
 }
 
 struct descriptor_data *
-new_connection(int port, int sock, int is_ssl)
+new_connection(int port, int sock)
 {
 	int newsock;
 	struct sockaddr_in addr;
@@ -875,7 +859,7 @@ new_connection(int port, int sock, int is_ssl)
 		warn("ACCEPT: %s(%d) on descriptor %d", hostname,
 				   ntohs(addr.sin_port), newsock);
 		warn("CONCOUNT: There are now %d open connections.", ++ndescriptors);
-		return initializesock(newsock, hostname, is_ssl);
+		return initializesock(newsock, hostname);
 	}
 }
 
@@ -911,7 +895,8 @@ shutdownsock(struct descriptor_data *d)
 	}
 	shutdown(d->descriptor, 2);
 	close(d->descriptor);
-    forget_descriptor(d);
+	if (d)
+		descr_lookup_table[d->descriptor] = NULL;
 	freeqs(d);
 	*d->prev = d->next;
 	if (d->next)
@@ -954,7 +939,7 @@ mcpframe_to_user(McpFrame * ptr)
 }
 
 struct descriptor_data *
-initializesock(int s, const char *hostname, int is_ssl)
+initializesock(int s, const char *hostname)
 {
 	struct descriptor_data *d;
 	char buf[128], *ptr;
@@ -968,7 +953,10 @@ initializesock(int s, const char *hostname, int is_ssl)
 	d->player = -1;
 	d->con_number = 0;
 	d->connected_at = time(NULL);
-	make_nonblocking(s);
+	if (fcntl(s, F_SETFL, O_NONBLOCK) == -1) {
+		perror("make_nonblocking: fcntl");
+		panic("O_NONBLOCK fcntl failed");
+	}
 	d->output_size = 0;
 	d->output.lines = 0;
 	d->output.head = 0;
@@ -998,8 +986,8 @@ initializesock(int s, const char *hostname, int is_ssl)
 	d->next = descriptor_list;
 	d->prev = &descriptor_list;
 	descriptor_list = d;
-	remember_descriptor(d);
-
+	if (d)
+		descr_lookup_table[d->descriptor] = d;
 	mcp_negotiation_start(&d->mcpframe);
 	return d;
 }
@@ -1206,15 +1194,6 @@ process_output(struct descriptor_data *d)
 }
 
 void
-make_nonblocking(int s)
-{
-	if (fcntl(s, F_SETFL, O_NONBLOCK) == -1) {
-		perror("make_nonblocking: fcntl");
-		panic("O_NONBLOCK fcntl failed");
-	}
-}
-
-void
 freeqs(struct descriptor_data *d)
 {
 	struct text_block *cur, *next;
@@ -1278,16 +1257,9 @@ process_input(struct descriptor_data *d)
 			p = d->raw_input;
 		} else if (d->telnet_state == TELNET_STATE_IAC) {
 			switch (*((unsigned char *)q)) {
-				case TELNET_NOP: /* NOP */
-					d->telnet_state = TELNET_STATE_NORMAL;
-					break;
 				case TELNET_BRK: /* Break */
 				case TELNET_IP: /* Interrupt Process */
 					save_command(d, BREAK_COMMAND);
-					d->telnet_state = TELNET_STATE_NORMAL;
-					break;
-				case TELNET_AO: /* Abort Output */
-					/* could be handy, but for now leave unimplemented */
 					d->telnet_state = TELNET_STATE_NORMAL;
 					break;
 				case TELNET_AYT: /* AYT */
@@ -1306,58 +1278,32 @@ process_input(struct descriptor_data *d)
 					p = d->raw_input;
 					d->telnet_state = TELNET_STATE_NORMAL;
 					break;
-				case TELNET_GA: /* Go Ahead */
-					/* treat as a NOP (?) */
-					d->telnet_state = TELNET_STATE_NORMAL;
-					break;
-				case TELNET_WILL: /* WILL (option offer) */
-					d->telnet_state = TELNET_STATE_WILL;
-					break;
-				case TELNET_WONT: /* WONT (option offer) */
+				case TELNET_WONT:
 					d->telnet_state = TELNET_STATE_WONT;
 					break;
-				case TELNET_DO: /* DO (option request) */
-					d->telnet_state = TELNET_STATE_DO;
-					break;
-				case TELNET_DONT: /* DONT (option request) */
+				case TELNET_WILL:
+				case TELNET_DO:
+				case TELNET_DONT:
 					d->telnet_state = TELNET_STATE_DONT;
 					break;
 				case TELNET_SB: /* SB (option subnegotiation) */
 					d->telnet_state = TELNET_STATE_SB;
-					break;
-				case TELNET_SE: /* Go Ahead */
-					d->telnet_state = TELNET_STATE_NORMAL;
 					break;
 				case TELNET_IAC: /* IAC a second time */
 #if 0
 					/* If we were 8 bit clean, we'd pass this along */
 					*p++ = *q;
 #endif
-					d->telnet_state = TELNET_STATE_NORMAL;
-					break;
 				default:
 					/* just ignore */
 					d->telnet_state = TELNET_STATE_NORMAL;
 					break;
 			}
-		} else if (d->telnet_state == TELNET_STATE_WILL) {
+		} else if (d->telnet_state == TELNET_STATE_DONT) {
 			/* We don't negotiate: send back DONT option */
-			unsigned char sendbuf[8];
-			/* Otherwise, we don't negotiate: send back DONT option */
-			{
-				sendbuf[0] = TELNET_IAC;
-				sendbuf[1] = TELNET_DONT;
-				sendbuf[2] = *q;
-				sendbuf[3] = '\0';
-				socket_write(d, sendbuf, 3);
-			}
-			d->telnet_state = TELNET_STATE_NORMAL;
-			d->telnet_enabled = 1;
-		} else if (d->telnet_state == TELNET_STATE_DO) {
-			/* We don't negotiate: send back WONT option */
 			unsigned char sendbuf[4];
 			sendbuf[0] = TELNET_IAC;
-			sendbuf[1] = TELNET_WONT;
+			sendbuf[1] = TELNET_DONT;
 			sendbuf[2] = *q;
 			sendbuf[3] = '\0';
 			socket_write(d, sendbuf, 3);
@@ -1365,16 +1311,6 @@ process_input(struct descriptor_data *d)
 			d->telnet_enabled = 1;
 		} else if (d->telnet_state == TELNET_STATE_WONT) {
 			/* Ignore WONT option. */
-			d->telnet_state = TELNET_STATE_NORMAL;
-			d->telnet_enabled = 1;
-		} else if (d->telnet_state == TELNET_STATE_DONT) {
-			/* We don't negotiate: send back WONT option */
-			unsigned char sendbuf[4];
-			sendbuf[0] = TELNET_IAC;
-			sendbuf[1] = TELNET_WONT;
-			sendbuf[2] = *q;
-			sendbuf[3] = '\0';
-			socket_write(d, sendbuf, 3);
 			d->telnet_state = TELNET_STATE_NORMAL;
 			d->telnet_enabled = 1;
 		} else if (d->telnet_state == TELNET_STATE_SB) {
@@ -1406,19 +1342,6 @@ process_input(struct descriptor_data *d)
 		d->raw_input_at = 0;
 	}
 	return 1;
-}
-
-void
-set_userstring(char **userstring, const char *command)
-{
-	if (*userstring) {
-		FREE(*userstring);
-		*userstring = 0;
-	}
-	while (*command && isinput(*command) && isspace(*command))
-		command++;
-	if (*command)
-		*userstring = strdup(command);
 }
 
 void
@@ -1548,7 +1471,16 @@ do_command(struct descriptor_data *d, char *command)
 		if (d->connected) {
 			process_command(d->descriptor, d->player, command);
 		} else {
-			check_connect(d, command);
+			char commandb[MAX_COMMAND_LEN];
+			char user[MAX_COMMAND_LEN];
+			char password[MAX_COMMAND_LEN];
+
+			parse_connect(command, commandb, user, password);
+
+			if (*commandb == 'c')
+				auth(d->descriptor, user, password);
+			else
+				welcome_user(d);
 		}
 	}
 	return 1;
@@ -1641,21 +1573,6 @@ identify(int descr, unsigned ip, unsigned old)
 	struct descriptor_data *d = descrdata_by_descr(descr);
         d->web.ip = ip;
         d->web.old = old;
-}
-
-void
-check_connect(struct descriptor_data *d, const char *msg)
-{
-	char command[MAX_COMMAND_LEN];
-	char user[MAX_COMMAND_LEN];
-	char password[MAX_COMMAND_LEN];
-
-	parse_connect(msg, command, user, password);
-
-	if (*command == 'c')
-                auth(d->descriptor, user, password);
-        else
-		welcome_user(d);
 }
 
 void
@@ -2067,17 +1984,6 @@ announce_disconnect(struct descriptor_data *d)
 }
 
 /***** O(1) Connection Optimizations *****/
-struct descriptor_data *descr_count_table[FD_SETSIZE];
-int current_descr_count = 0;
-
-void
-init_descr_count_lookup()
-{
-	int i;
-	for (i = 0; i < FD_SETSIZE; i++) {
-		descr_count_table[i] = NULL;
-	}
-}
 
 void
 update_desc_count_table()
@@ -2105,17 +2011,6 @@ descrdata_by_count(int c)
 		return NULL;
 	}
 	return descr_count_table[c];
-}
-
-struct descriptor_data *descr_lookup_table[FD_SETSIZE];
-
-void
-init_descriptor_lookup()
-{
-	int i;
-	for (i = 0; i < FD_SETSIZE; i++) {
-		descr_lookup_table[i] = NULL;
-	}
 }
 
 int
@@ -2208,34 +2103,13 @@ forget_player_descr(dbref player, int descr)
 	PLAYER_SET_DESCRS(player, arr);
 }
 
-void
-remember_descriptor(struct descriptor_data *d)
-{
-	if (d) {
-		descr_lookup_table[d->descriptor] = d;
-	}
-}
-
-void
-forget_descriptor(struct descriptor_data *d)
-{
-	if (d)
-		descr_lookup_table[d->descriptor] = NULL;
-}
-
 struct descriptor_data *
-lookup_descriptor(int c)
+descrdata_by_descr(int c)
 {
 	if (c >= FD_SETSIZE || c < 0)
 		return NULL;
 	else
 		return descr_lookup_table[c];
-}
-
-struct descriptor_data *
-descrdata_by_descr(int i)
-{
-	return lookup_descriptor(i);
 }
 
 /*** JME ***/
