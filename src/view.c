@@ -328,10 +328,10 @@ view_build_exit_s(view_tile_t *t, int descr, dbref player, dbref loc, pos_t p, e
 	tmp = map_get(pa);
 
 	// FIXME not returning correct room (at least for E_SOUTH)
-	debug("here 0x%llx -> 0x%llx (%d)\n",
-			* (morton_t *) p,
-			* (morton_t *) pa,
-			tmp);
+	/* debug("here 0x%llx -> 0x%llx (%d)\n", */
+	/* 		* (morton_t *) p, */
+	/* 		* (morton_t *) pa, */
+	/* 		tmp); */
 
 	if (tmp > 0) {
 		tmp = e_exit_where(descr, player, tmp, e_simm(e));

@@ -264,7 +264,6 @@ main(int argc, char **argv)
 	warn("%s PID is: %d", argv[0], getpid());
 
 	mcp_initialize();
-	gui_initialize();
 
 	sel_prof_start_time = time(NULL); /* Set useful starting time */
 	sel_prof_idle_sec = 0;
@@ -1965,7 +1964,6 @@ announce_disconnect(struct descriptor_data *d)
 		}
 		announce_puppets(player, "falls asleep.", "_/pdcon");
 	}
-	gui_dlog_closeall_descr(d->descriptor);
 
 	d->connected = 0;
 	d->player = NOTHING;

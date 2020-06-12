@@ -18,7 +18,6 @@
 #include "interp.h"
 #include "match.h"
 #include "mcp.h"
-#include "mcpgui.h"
 #include "mcppkg.h"
 #include "mfun.h"
 #include "mfunlist.h"

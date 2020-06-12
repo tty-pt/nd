@@ -101,7 +101,7 @@ pos_morton(pos_t p)
 		POOP3D res |= ((morton_t) ((up[I] >> i) & 1)) << (I + (3 * i));
 	}
 
-	debug("encoded point %d %d %d %d -> x%llx", p[0], p[1], p[2], p[3], res);
+	/* debug("encoded point %d %d %d %d -> x%llx", p[0], p[1], p[2], p[3], res); */
 	return res;
 }
 
@@ -123,7 +123,7 @@ morton_pos(pos_t p, morton_t code)
 
 	POOP3D p[I] = sign(up[I]);
 	p[3] = OBITS(code);
-	debug("decoded point x%llx -> %d %d %d %d", code, p[0], p[1], p[2], p[3]);
+	/* debug("decoded point x%llx -> %d %d %d %d", code, p[0], p[1], p[2], p[3]); */
 }
 
 #ifndef CLIENT

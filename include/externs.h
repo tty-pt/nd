@@ -409,9 +409,6 @@ int add_mpi_event(int delay, int descr, dbref player, dbref loc, dbref trig, con
 stk_array *get_pids(dbref ref);
 stk_array *get_pidinfo(int pid);
 
-/* from mcpgui.c */
-int gui_dlog_closeall_descr(int descr);
-
 /* version-getting functions */
 
 const char *get_announce_c_version(void);
@@ -437,7 +434,6 @@ const char *get_log_c_version(void);
 const char *get_look_c_version(void);
 const char *get_match_c_version(void);
 const char *get_mcp_c_version(void);
-const char *get_mcpgui_c_version(void);
 const char *get_mcppkgs_c_version(void);
 const char *get_mfuns_c_version(void);
 const char *get_mfuns2_c_version(void);

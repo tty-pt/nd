@@ -41,8 +41,6 @@ dbref find_mlev(dbref prog, struct frame * fr, int st);
 void flush_user_output(dbref player);
 long get_tz_offset(void);
 dbref getparent(dbref obj);
-int gui_dlog_freeall_descr(int descr);
-void gui_initialize(void);
 void init_match_remote(int descr, dbref player, dbref what, const char *name, int type, struct match_data *md);
 void kill_resolver(void);
 void list_proglines(dbref player, dbref program, struct frame *fr, int start, int end);

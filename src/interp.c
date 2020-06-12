@@ -841,8 +841,6 @@ prog_clean(struct frame *fr)
 	if (fr->rndbuf)
 		delete_seed(fr->rndbuf);
 
-	muf_dlog_purge(fr);
-
 	dequeue_timers(fr->pid, NULL);
 
 	muf_event_purge(fr);

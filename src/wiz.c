@@ -785,10 +785,6 @@ do_serverdebug(int descr, dbref player, const char *arg1, const char *arg2)
 		notify(player, "Usage: @dbginfo [cache|guitest|misc]");
 		return;
 	}
-	if (string_prefix(arg1, "guitest")) {
-		do_post_dlog(descr, arg2);
-	}
-
 	notify(player, "Done.");
 }
 
