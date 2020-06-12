@@ -77,12 +77,7 @@ typedef enum {
 #define TELNET_NOP        241
 #define TELNET_SE         240
 
-#define TELOPT_STARTTLS   46
-
 int shutdown_flag = 0;
-
-static const char *connect_fail =
-		"Either that player does not exist, or has a different password.\r\n";
 
 static const char *create_fail =
 		"Either there is already a player with that name, or that name is illegal.\r\n";
@@ -110,14 +105,7 @@ struct descriptor_data {
 	int connected;
 	int con_number;
 	int booted;
-	int block_writes;
-	int is_starttls;
-#ifdef USE_SSL
-	SSL *ssl_session;
-#endif
 	dbref player;
-	char *output_prefix;
-	char *output_suffix;
 	int output_size;
 	struct text_queue output;
 	struct text_queue input;
@@ -126,7 +114,6 @@ struct descriptor_data {
 	int telnet_enabled;
 	telnet_states_t telnet_state;
 	int telnet_sb_opt;
-	int short_reads;
 	long last_time;
 	long connected_at;
 	long last_pinged_at;
@@ -151,13 +138,6 @@ struct descriptor_data *descriptor_list = NULL;
 static int numsocks = 0;
 static int listener_port[MAX_LISTEN_SOCKS];
 static int sock[MAX_LISTEN_SOCKS];
-#ifdef USE_SSL
-static int ssl_numsocks = 0;
-static int ssl_listener_port[MAX_LISTEN_SOCKS];
-static int ssl_sock[MAX_LISTEN_SOCKS];
-SSL_CTX *ssl_ctx;
-#endif
-
 static int ndescriptors = 0;
 extern void fork_and_dump(void);
 
@@ -203,13 +183,8 @@ struct descriptor_data* lookup_descriptor(int);
 int online(dbref player);
 int online_init(void);
 dbref online_next(int *ptr);
-#ifdef USE_SSL /* SSL for NIX and WinFuzz */
-ssize_t socket_read(struct descriptor_data *d, void *buf, size_t count);
-ssize_t socket_write(struct descriptor_data *d, const void *buf, size_t count);
-#else /* NOT SSL */
 # define socket_write(d, buf, count) write(d->descriptor, buf, count)
 # define socket_read(d, buf, count) read(d->descriptor, buf, count)
-#endif
  
 
 void spawn_resolver(void);
@@ -267,7 +242,7 @@ main(int argc, char **argv)
 	init_descriptor_lookup();
 	init_descr_count_lookup();
 
-	while ((c = getopt(argc, argv, "dsySC:")) != -1) {
+	while ((c = getopt(argc, argv, "dsyvSC:")) != -1) {
 		switch (c) {
 		case 'd':
 			optflags |= OPT_DETACH;
@@ -629,16 +604,6 @@ idleboot_user(struct descriptor_data *d)
 }
 #endif
 
-#ifdef USE_SSL
-int pem_passwd_cb(char *buf, int size, int rwflag, void *userdata)
-{
-	const char *pw = (const char*)userdata;
-	int pwlen = strlen(pw);
-	strncpy(buf, pw, size);
-	return ((pwlen > size)? size : pwlen);
-}
-#endif
-
 int send_keepalive(struct descriptor_data *d);
 static int con_players_max = 0;	/* one of Cynbe's good ideas. */
 static int con_players_curr = 0;	/* for playermax checks. */
@@ -671,45 +636,10 @@ shovechars()
 	int avail_descriptors;
 	int i;
 
-#ifdef USE_SSL
-	int ssl_status_ok = 1;
-#endif
-
 	sock[0] = make_socket(listener_port[0]);
 	maxd = sock[0] + 1;
 	numsocks++;
 
-#ifdef USE_SSL
-	SSL_load_error_strings ();
- 	OpenSSL_add_ssl_algorithms (); 
-	ssl_ctx = SSL_CTX_new (SSLv23_server_method ());
- 
-	if (!SSL_CTX_use_certificate_chain_file (ssl_ctx, SSL_CERT_FILE)) {
-		warn("Could not load certificate file %s", SSL_CERT_FILE);
-		return 1;
-	}
-
-	SSL_CTX_set_default_passwd_cb(ssl_ctx, pem_passwd_cb);
-	SSL_CTX_set_default_passwd_cb_userdata(ssl_ctx, (void*)SSL_KEYFILE_PASSWD);
-
-	if (!SSL_CTX_use_PrivateKey_file (ssl_ctx, SSL_KEY_FILE, SSL_FILETYPE_PEM)) {
-		warn("Could not load private key file %s", SSL_KEY_FILE);
-		return 1;
-	}
-
-	if (!SSL_CTX_check_private_key (ssl_ctx)) {
-		warn("Private key does not check out and appears to be invalid.");
-		return 1;
-	}
-
-	/* Set ssl_ctx to automatically retry conditions that would
-	   otherwise return SSL_ERROR_WANT_(READ|WRITE) */
-	SSL_CTX_set_mode(ssl_ctx,SSL_MODE_AUTO_RETRY);
- 
-	ssl_sock[i] = make_socket(ssl_listener_port[i]);
-	maxd = ssl_sock[i] + 1;
-	ssl_numsocks++;
-#endif
 	gettimeofday(&last_slice, (struct timezone *) 0);
 
 	avail_descriptors = sysconf(_SC_OPEN_MAX) - 5;
@@ -765,12 +695,6 @@ shovechars()
 			for (i = 0; i < numsocks; i++) {
 				FD_SET(sock[i], &input_set);
 			}
-
-#ifdef USE_SSL
-			for (i = 0; i < ssl_numsocks; i++) {
-				FD_SET(ssl_sock[i], &input_set);
-			}
-#endif
 		}
 		for (d = descriptor_list; d; d = d->next) {
 			if (d->input.lines > 100)
@@ -778,45 +702,8 @@ shovechars()
 			else
 				FD_SET(d->descriptor, &input_set);
 
-#ifdef USE_SSL
-			if (d->output.head && !d->block_writes) {
-				/*
-				 * If SSL isn't already in place, give TELNET STARTTLS
-				 * handshaking a couple seconds to respond, to start it.
-				 */
-#if STARTTLS_ALLOW
-				long timeon = now - d->connected_at;
-				const long welcome_pause = 2; /* seconds */
-
-				if (d->ssl_session || timeon >= welcome_pause) {
-					FD_SET(d->descriptor, &output_set);
-				} else {
-					if (timeout.tv_sec > welcome_pause - timeon) {
-						timeout.tv_sec = welcome_pause - timeon;
-						timeout.tv_usec = 10;  /* 10 msecs min.  Arbitrary. */
-					}
-				}
-#else
+			if (d->output.head)
 				FD_SET(d->descriptor, &output_set);
-#endif
-			}
-
-			if (d->ssl_session) {
-				/* SSL may want to write even if the output queue is empty */
-				if ( ! SSL_is_init_finished(d->ssl_session) ) {
-					FD_CLR(d->descriptor, &output_set);
-					FD_SET(d->descriptor, &input_set);
-				} 
-				if ( SSL_want_write(d->ssl_session) ) {
-					FD_SET(d->descriptor, &output_set);
-				}
-			}
-#else
-			if (d->output.head && !d->block_writes) {
-				FD_SET(d->descriptor, &output_set);
-			}
-#endif
-
 		}
 
 		tmptq = next_muckevent_time();
@@ -859,24 +746,6 @@ shovechars()
 					}
 				}
 			}
-#ifdef USE_SSL
-			for (i = 0; i < ssl_numsocks; i++) {
-				if (FD_ISSET(ssl_sock[i], &input_set)) {
-					if (!(newd = new_connection(ssl_listener_port[i], ssl_sock[i], 1))) {
-						if (errno && errno != EINTR && errno != EMFILE && errno != ENFILE) {
-							perror("new_connection");
-							/* return; */
-						}
-					} else {
-						if (newd->descriptor >= maxd)
-							maxd = newd->descriptor + 1;
-						newd->ssl_session = SSL_new(ssl_ctx);
-						SSL_set_fd(newd->ssl_session, newd->descriptor);
-						cnt = SSL_accept(newd->ssl_session);
-					}
-				}
-			}
-#endif
 			for (cnt = 0, d = descriptor_list; d; d = dnext) {
 				dnext = d->next;
 				if (FD_ISSET(d->descriptor, &input_set)) {
@@ -1030,19 +899,6 @@ addrout(int lport, long a, unsigned short prt)
 }
 
 void
-clearstrings(struct descriptor_data *d)
-{
-	if (d->output_prefix) {
-		FREE(d->output_prefix);
-		d->output_prefix = 0;
-	}
-	if (d->output_suffix) {
-		FREE(d->output_suffix);
-		d->output_suffix = 0;
-	}
-}
-
-void
 shutdownsock(struct descriptor_data *d)
 {
 	if (d->connected) {
@@ -1053,7 +909,6 @@ shutdownsock(struct descriptor_data *d)
 		warn("DISCONNECT: descriptor %d from %s(%s) never connected.",
 				   d->descriptor, d->hostname, d->username);
 	}
-	clearstrings(d);
 	shutdown(d->descriptor, 2);
 	close(d->descriptor);
     forget_descriptor(d);
@@ -1106,20 +961,14 @@ initializesock(int s, const char *hostname, int is_ssl)
 
 	MALLOC(d, struct descriptor_data, 1);
 
+	memset(d, 0, sizeof(struct descriptor_data));
 	d->descriptor = s;
-#ifdef USE_SSL
-	d->ssl_session = NULL;
-#endif
 	d->connected = 0;
 	d->booted = 0;
-	d->block_writes = 0;
-	d->is_starttls = 0;
 	d->player = -1;
 	d->con_number = 0;
 	d->connected_at = time(NULL);
 	make_nonblocking(s);
-	d->output_prefix = 0;
-	d->output_suffix = 0;
 	d->output_size = 0;
 	d->output.lines = 0;
 	d->output.head = 0;
@@ -1132,7 +981,6 @@ initializesock(int s, const char *hostname, int is_ssl)
 	d->telnet_enabled = 0;
 	d->telnet_state = TELNET_STATE_NORMAL;
 	d->telnet_sb_opt = 0;
-	d->short_reads = 0;
 	d->quota = COMMAND_BURST_SIZE;
 	d->last_time = d->connected_at;
 	d->last_pinged_at = d->connected_at;
@@ -1151,16 +999,6 @@ initializesock(int s, const char *hostname, int is_ssl)
 	d->prev = &descriptor_list;
 	descriptor_list = d;
 	remember_descriptor(d);
-
-#if defined(USE_SSL) && STARTTLS_ALLOW
-	if (!is_ssl) {
-		unsigned char telnet_do_starttls[] = {
-			TELNET_IAC, TELNET_DO, TELOPT_STARTTLS,'\0'
-		};
-		socket_write(d, telnet_do_starttls, 3);
-		queue_string(d, "\r\n");
-	}
-#endif
 
 	mcp_negotiation_start(&d->mcpframe);
 	return d;
@@ -1341,10 +1179,6 @@ process_output(struct descriptor_data *d)
 		return 1;
 	}
 
-	if (d->block_writes) {
-		return 1;
-	}
-
 	for (qp = &d->output.head; (cur = *qp);) {
 		cnt = socket_write(d, cur->start, cur->nchars);
 
@@ -1421,24 +1255,13 @@ int
 process_input(struct descriptor_data *d)
 {
 	char buf[MAX_COMMAND_LEN * 2];
-	int maxget = sizeof(buf);
 	int got;
 	char *p, *pend, *q, *qend;
 
-	if (d->short_reads) {
-	    maxget = 1;
-	}
-	got = socket_read(d, buf, maxget);
+	got = socket_read(d, buf, sizeof(buf));
 
-#ifdef USE_SSL
-	if (got <= 0 && errno != EWOULDBLOCK) {
+	if (got <= 0)
 		return 0;
-	}
-#else
-	if (got <= 0) {
-		return 0;
-	}
-#endif
 
 	if (!d->raw_input) {
 		MALLOC(d->raw_input, char, MAX_COMMAND_LEN);
@@ -1503,19 +1326,6 @@ process_input(struct descriptor_data *d)
 					d->telnet_state = TELNET_STATE_SB;
 					break;
 				case TELNET_SE: /* Go Ahead */
-#ifdef USE_SSL
-					if (d->telnet_sb_opt == TELOPT_STARTTLS) {
-						d->block_writes = 0;
-						d->short_reads = 0;
-#if STARTTLS_ALLOW
-						d->is_starttls = 1;
-						d->ssl_session = SSL_new(ssl_ctx);
-						SSL_set_fd(d->ssl_session, d->descriptor);
-						SSL_accept(d->ssl_session);
-						warn("STARTTLS: %i", d->descriptor);
-#endif
-					}
-#endif
 					d->telnet_state = TELNET_STATE_NORMAL;
 					break;
 				case TELNET_IAC: /* IAC a second time */
@@ -1533,21 +1343,6 @@ process_input(struct descriptor_data *d)
 		} else if (d->telnet_state == TELNET_STATE_WILL) {
 			/* We don't negotiate: send back DONT option */
 			unsigned char sendbuf[8];
-#if defined(USE_SSL) && STARTTLS_ALLOW
-            /* If we get a STARTTLS reply, negotiate SSL startup */
-			if (*q == TELOPT_STARTTLS && !d->ssl_session) {
-				sendbuf[0] = TELNET_IAC;
-				sendbuf[1] = TELNET_SB;
-				sendbuf[2] = TELOPT_STARTTLS;
-				sendbuf[3] = 1;  /* TLS FOLLOWS */
-				sendbuf[4] = TELNET_IAC;
-				sendbuf[5] = TELNET_SE;
-				sendbuf[6] = '\0';
-				socket_write(d, sendbuf, 6);
-				d->block_writes = 1;
-				d->short_reads = 1;
-			} else
-#endif
 			/* Otherwise, we don't negotiate: send back DONT option */
 			{
 				sendbuf[0] = TELNET_IAC;
@@ -1695,10 +1490,6 @@ is_interface_command(const char* cmd)
 		return 1;
 	if (!strncmp(tmp, WHO_COMMAND, strlen(WHO_COMMAND)))
 		return 1;
-	if (!strncmp(tmp, PREFIX_COMMAND, strlen(PREFIX_COMMAND)))
-		return 1;
-	if (!strncmp(tmp, SUFFIX_COMMAND, strlen(SUFFIX_COMMAND)))
-		return 1;
 	return 0;
 }
 
@@ -1720,18 +1511,10 @@ do_command(struct descriptor_data *d, char *command)
 	        if (!d->connected)
 		        return 0;
 		if (dequeue_prog(d->player, 2)) {
-			if (d->output_prefix) {
-				queue_ansi(d, d->output_prefix);
-				queue_write(d, "\r\n", 2);
-			}
 			queue_ansi(d, "Foreground program aborted.\r\n");
 			if ((FLAGS(d->player) & INTERACTIVE))
 				if ((FLAGS(d->player) & READMODE))
 					process_command(d->descriptor, d->player, command);
-			if (d->output_suffix) {
-				queue_ansi(d, d->output_suffix);
-				queue_write(d, "\r\n", 2);
-			}
 		}
 		PLAYER_SET_BLOCK(d->player, 0);
 		return 1;
@@ -1741,10 +1524,6 @@ do_command(struct descriptor_data *d, char *command)
                    (*command == OVERIDE_TOKEN &&
                     (!strncmp(command+1, WHO_COMMAND, sizeof(WHO_COMMAND) - 1))
                    )) {
-		if (d->output_prefix) {
-			queue_ansi(d, d->output_prefix);
-			queue_write(d, "\r\n", 2);
-		}
 		strlcpy(buf, "@", sizeof(buf));
 		strlcat(buf, WHO_COMMAND, sizeof(buf));
 		strlcat(buf, " ", sizeof(buf));
@@ -1765,25 +1544,9 @@ do_command(struct descriptor_data *d, char *command)
                                            ((*command == OVERIDE_TOKEN)?0:1));
 			}
 		}
-		if (d->output_suffix) {
-			queue_ansi(d, d->output_suffix);
-			queue_write(d, "\r\n", 2);
-		}
-	} else if (!strncmp(command, PREFIX_COMMAND, sizeof(PREFIX_COMMAND) - 1)) {
-		set_userstring(&d->output_prefix, command + sizeof(PREFIX_COMMAND) - 1);
-	} else if (!strncmp(command, SUFFIX_COMMAND, sizeof(SUFFIX_COMMAND) - 1)) {
-		set_userstring(&d->output_suffix, command + sizeof(SUFFIX_COMMAND) - 1);
 	} else {
 		if (d->connected) {
-			if (d->output_prefix) {
-				queue_ansi(d, d->output_prefix);
-				queue_write(d, "\r\n", 2);
-			}
 			process_command(d->descriptor, d->player, command);
-			if (d->output_suffix) {
-				queue_ansi(d, d->output_suffix);
-				queue_write(d, "\r\n", 2);
-			}
 		} else {
 			check_connect(d, command);
 		}
@@ -1825,13 +1588,6 @@ auth(int descr, char *user, char *password)
         }
 
         if (player == NOTHING) {
-#if REGISTRATION
-                queue_ansi(d, connect_fail);
-                /* if (d->web.ip) */
-                /*         web_logout(d->descriptor); */
-                warn("FAILED CONNECT %s on descriptor %d", user, d->descriptor);
-                return 1;
-#else
                 player = create_player(user, password);
 
                 if (player == NOTHING) {
@@ -1846,7 +1602,6 @@ auth(int descr, char *user, char *password)
                 warn("CREATED %s(%d) on descriptor %d",
                            NAME(player), player, d->descriptor);
                 created = 1;
-#endif
         } else
                 warn("CONNECTED: %s(%d) on descriptor %d",
                            NAME(player), player, d->descriptor);
@@ -1980,7 +1735,6 @@ close_sockets(const char *msg) {
 			socket_write(d, msg, strlen(msg));
 			socket_write(d, shutdown_message, strlen(shutdown_message));
 		}
-		clearstrings(d);
 		if (shutdown(d->descriptor, 2) < 0)
 			perror("shutdown");
 		close(d->descriptor);
@@ -2000,11 +1754,6 @@ close_sockets(const char *msg) {
 	for (i = 0; i < numsocks; i++) {
 		close(sock[i]);
 	}
-#ifdef USE_SSL
-	for (i = 0; i < ssl_numsocks; i++) {
-		close(ssl_sock[i]);
-	}
-#endif
 }
 
 void
@@ -2092,11 +1841,7 @@ dump_users(struct descriptor_data *e, char *user)
 			++players && (!user || string_prefix(NAME(d->player), user))
 				) {
 
-#ifdef USE_SSL
-			secchar = (d->ssl_session ? '@' : ' ');
-#else
 			secchar = ' ';
-#endif
 
 			if (wizard) {
 				/* don't print flags, to save space */
@@ -2916,18 +2661,7 @@ pdescrflush(int c)
 int
 pdescrsecure(int c)
 {
-#ifdef USE_SSL
-	struct descriptor_data *d;
-
-	d = descrdata_by_descr(c);
-
-	if (d && d->ssl_session)
-		return 1;
-	else
-		return 0;
-#else
 	return 0;
-#endif
 }
 
 int
@@ -3084,98 +2818,6 @@ dump_status(void)
 		warn(buf, now - d->last_time);
 	}
 }
-
-#ifdef USE_SSL
-void
-log_ssl_error(const char* text, int descr, int errnum)
-{
-	switch (errnum) {
-		case SSL_ERROR_SSL:
-			warn("SSL %s: sock %d, Error SSL_ERROR_SSL", text, descr);
-			break;
-		case SSL_ERROR_WANT_READ:
-			warn("SSL %s: sock %d, Error SSL_ERROR_WANT_READ", text, descr);
-			break;
-		case SSL_ERROR_WANT_WRITE:
-			warn("SSL %s: sock %d, Error SSL_ERROR_WANT_WRITE", text, descr);
-			break;
-		case SSL_ERROR_WANT_X509_LOOKUP:
-			warn("SSL %s: sock %d, Error SSL_ERROR_WANT_X509_LOOKUP", text, descr);
-			break;
-		case SSL_ERROR_SYSCALL:
-			warn("SSL %s: sock %d, Error SSL_ERROR_SYSCALL: %s", text, descr, strerror(errno));
-			break;
-		case SSL_ERROR_ZERO_RETURN:
-			warn("SSL %s: sock %d, Error SSL_ERROR_ZERO_RETURN", text, descr);
-			break;
-		case SSL_ERROR_WANT_CONNECT:
-			warn("SSL %s: sock %d, Error SSL_ERROR_WANT_CONNECT", text, descr);
-			break;
-		case SSL_ERROR_WANT_ACCEPT:
-			warn("SSL %s: sock %d, Error SSL_ERROR_WANT_ACCEPT", text, descr);
-			break;
-	}
-}
-
-ssize_t socket_read(struct descriptor_data *d, void *buf, size_t count) {
-	int i;
- 
-	if (! d->ssl_session) {
-		return read(d->descriptor, buf, count);
-	} else {
-		i = SSL_read(d->ssl_session, buf, count);
-		if (i < 0) {
-			i = SSL_get_error(d->ssl_session, i);
-			if (i == SSL_ERROR_WANT_READ || i == SSL_ERROR_WANT_WRITE) {
-				/* log_ssl_error("read 0", d->descriptor, i); */
- 				errno = EWOULDBLOCK;
-			} else if (d->is_starttls && (i == SSL_ERROR_ZERO_RETURN || i == SSL_ERROR_SSL)) {
-				/* log_ssl_error("read 1", d->descriptor, i); */
-				d->is_starttls = 0;
-				SSL_free(d->ssl_session);
-				d->ssl_session = NULL;
-				errno = EWOULDBLOCK;
-			} else {
-				/* log_ssl_error("read 1", d->descriptor, i); */
-				errno = EBADF;
-			}
-			return -1;
-		}
-		return i;
-	}
-}
- 
-ssize_t socket_write(struct descriptor_data *d, const void *buf, size_t count) {
-	int i;
-
-	d->last_pinged_at = time(NULL);
-	if (! d->ssl_session)
-		return write(d->descriptor, buf, count);
-	else {
-		i = SSL_write(d->ssl_session, buf, count);
-		if (i < 0) {
-			i = SSL_get_error(d->ssl_session, i);
-			if (i == SSL_ERROR_WANT_READ || i == SSL_ERROR_WANT_WRITE) {
-				/* log_ssl_error("write 0", d->descriptor, i); */
- 				errno = EWOULDBLOCK;
-				return -1;
-			} else if (d->is_starttls && (i == SSL_ERROR_ZERO_RETURN || i == SSL_ERROR_SSL)) {
-				/* log_ssl_error("write 1", d->descriptor, i); */
-			    d->is_starttls = 0;
-				SSL_free(d->ssl_session);
-				d->ssl_session = NULL;
- 				errno = EWOULDBLOCK;
-				return -1;
-			} else { 
-				/* log_ssl_error("write 2", d->descriptor, i); */
-				errno = EBADF;
-				return -1;
-			}
-		}
-		return i;
-	}
-}
-#endif
 
 /* Ignore support -- Could do with moving into its own file */
 
