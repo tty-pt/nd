@@ -728,7 +728,7 @@ shovechars()
 	mob_init();
 
 	/* Daemonize */
-	if (optflags & OPT_DETACH) && daemon(1, 1) != 0)
+	if ((optflags & OPT_DETACH) && daemon(1, 1) != 0)
 		_exit(0);
 
 /* And here, we do the actual player-interaction loop */
