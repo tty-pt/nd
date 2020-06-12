@@ -236,8 +236,6 @@ dump_warning(void)
 #endif
 }
 
-extern short db_conversion_flag;
-
 int
 init_game(const char *infile, const char *outfile)
 {
@@ -272,13 +270,11 @@ init_game(const char *infile, const char *outfile)
 		free((void *) dumpfile);
 	dumpfile = alloc_string(outfile);
 
-	if (!db_conversion_flag) {
-		/* initialize the _sys/startuptime property */
-		add_property((dbref) 0, "_sys/startuptime", NULL, (int) time((time_t *) NULL));
-		add_property((dbref) 0, "_sys/maxpennies", NULL, MAX_PENNIES);
-		add_property((dbref) 0, "_sys/dumpinterval", NULL, DUMP_INTERVAL);
-		add_property((dbref) 0, "_sys/max_connects", NULL, 0);
-	}
+	/* initialize the _sys/startuptime property */
+	add_property((dbref) 0, "_sys/startuptime", NULL, (int) time((time_t *) NULL));
+	add_property((dbref) 0, "_sys/maxpennies", NULL, MAX_PENNIES);
+	add_property((dbref) 0, "_sys/dumpinterval", NULL, DUMP_INTERVAL);
+	add_property((dbref) 0, "_sys/max_connects", NULL, 0);
 
 	return 0;
 }

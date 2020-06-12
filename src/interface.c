@@ -164,7 +164,7 @@ static int ndescriptors = 0;
 extern void fork_and_dump(void);
 
 void process_commands(void);
-void shovechars();
+int shovechars();
 void shutdownsock(struct descriptor_data *d);
 struct descriptor_data *initializesock(int s, const char *hostname, int is_ssl);
 void make_nonblocking(int s);
@@ -228,7 +228,6 @@ extern FILE *input_file;
 extern FILE *delta_infile;
 extern FILE *delta_outfile;
 
-short db_conversion_flag = 0;
 short wizonly_mode = 0;
 pid_t global_resolver_pid=0;
 pid_t global_dumper_pid=0;
@@ -257,12 +256,10 @@ show_program_usage(char *prog)
 	fprintf(stderr, "        -sport NUMBER    Ignored.  SSL support isn't compiled in.\n");
 #endif
 	fprintf(stderr, "        -gamedir PATH    changes directory to PATH before starting up.\n");
-	fprintf(stderr, "        -convert         load the db, then save and quit.\n");
 	fprintf(stderr, "        -nosanity        don't do db sanity checks at startup time.\n");
 	fprintf(stderr, "        -insanity        load db, then enter the interactive sanity editor.\n");
 	fprintf(stderr, "        -sanfix          attempt to auto-fix a corrupt db after loading.\n");
 	fprintf(stderr, "        -wizonly         only allow wizards to login.\n");
-	fprintf(stderr, "        -godpasswd PASS  reset God(#1)'s password to PASS.  Implies -convert\n");
 	fprintf(stderr, "        -version         display this server's version.\n");
 	fprintf(stderr, "        -help            display this message.\n");
 	exit(1);
@@ -287,8 +284,8 @@ main(int argc, char **argv)
 	int val;
 	listener_port[0] = TINYPORT;
 
-    init_descriptor_lookup();
-    init_descr_count_lookup();
+	init_descriptor_lookup();
+	init_descr_count_lookup();
 
 	nomore_options = 0;
 	sanity_skip = 0;
@@ -299,11 +296,7 @@ main(int argc, char **argv)
 
 	for (i = 1; i < argc; i++) {
 		if (!nomore_options && argv[i][0] == '-') {
-			if (!strcmp(argv[i], "-convert")) {
-				db_conversion_flag = 1;
-			} else if (!strcmp(argv[i], "-compress")) {
-				printf("** -compress no longer does anything\n");
-			} else if (!strcmp(argv[i], "-nosanity")) {
+			if (!strcmp(argv[i], "-nosanity")) {
 				sanity_skip = 1;
 			} else if (!strcmp(argv[i], "-insanity")) {
 				sanity_interactive = 1;
@@ -313,7 +306,7 @@ main(int argc, char **argv)
 				sanity_autofix = 1;
 			} else if (!strcmp(argv[i], "-version")) {
 				printf("%s\n", VERSION);
-				exit(0);
+				return 0;
 			} else if (!strcmp(argv[i], "-dbin")) {
 				if (i + 1 >= argc) {
 					show_program_usage(*argv);
@@ -325,17 +318,6 @@ main(int argc, char **argv)
 					show_program_usage(*argv);
 				}
 				outfile_name = argv[++i];
-
-			} else if (!strcmp(argv[i], "-godpasswd")) {
-				if (i + 1 >= argc) {
-					show_program_usage(*argv);
-				}
-				num_one_new_passwd = argv[++i];
-				if (!ok_password(num_one_new_passwd)) {
-					fprintf(stderr, "Bad -godpasswd password.\n");
-					exit(1);
-				}
-				db_conversion_flag = 1;
 
 			} else if (!strcmp(argv[i], "-port")) {
 				if (i + 1 >= argc) {
@@ -361,7 +343,7 @@ main(int argc, char **argv)
 #else
 				i++;
 				fprintf(stderr, "-sport: This server isn't configured to enable SSL.  Sorry.\n");
-				exit(1);
+				return 1;
 #endif
 			} else if (!strcmp(argv[i], "-gamedir")) {
 				if (i + 1 >= argc) {
@@ -369,7 +351,7 @@ main(int argc, char **argv)
 				}
 				if (chdir(argv[++i])) {
 					perror("cd to gamedir");
-					exit(4);
+					return 4;
 				}
 
 			} else if (!strcmp(argv[i], "--")) {
@@ -399,26 +381,24 @@ main(int argc, char **argv)
 	if (numports < 1) {
 		numports = 1;
 	}
-	if (!infile_name || !outfile_name) {
+
+	if (!infile_name || !outfile_name)
 		show_program_usage(*argv);
-	}
 
-	/* if (!sanity_interactive) { */
-
-                warn("INIT: TinyMUCK %s starting.", "version");
-		warn("%s PID is: %d", argv[0], getpid());
+	warn("INIT: TinyMUCK %s starting.", "version");
+	warn("%s PID is: %d", argv[0], getpid());
 
 	mcp_initialize();
 	gui_initialize();
 
-    sel_prof_start_time = time(NULL); /* Set useful starting time */
-    sel_prof_idle_sec = 0;
-    sel_prof_idle_usec = 0;
-    sel_prof_idle_use = 0;
+	sel_prof_start_time = time(NULL); /* Set useful starting time */
+	sel_prof_idle_sec = 0;
+	sel_prof_idle_usec = 0;
+	sel_prof_idle_use = 0;
 
 	if (init_game(infile_name, outfile_name) < 0) {
-		fprintf(stderr, "Couldn't load %s!\n", infile_name);
-		exit(2);
+		warn("Couldn't load %s!", infile_name);
+		return 2;
 	}
 
 	if (num_one_new_passwd != NULL) {
@@ -436,7 +416,8 @@ main(int argc, char **argv)
 			sanfix(AMBIGUOUS);
 	}
 
-	shovechars();
+	if (shovechars())
+		return 1;
 
 	map_close();
 	mob_save();
@@ -446,7 +427,6 @@ main(int argc, char **argv)
 	do_dequeue(-1, (dbref) 1, "all");
 	dump_database();
 
-	exit(0);
 	return 0;
 }
 
@@ -763,7 +743,7 @@ do_tick()
 	geo_update();
 }
 
-void
+int
 shovechars()
 {
 	fd_set input_set, output_set;
@@ -795,41 +775,30 @@ shovechars()
  
 	if (!SSL_CTX_use_certificate_chain_file (ssl_ctx, SSL_CERT_FILE)) {
 		warn("Could not load certificate file %s", SSL_CERT_FILE);
-		fprintf(stderr, "Could not load certificate file %s\n", SSL_CERT_FILE);
-		ssl_status_ok = 0;
+		return 1;
 	}
-	if (ssl_status_ok) {
-		SSL_CTX_set_default_passwd_cb(ssl_ctx, pem_passwd_cb);
-		SSL_CTX_set_default_passwd_cb_userdata(ssl_ctx, (void*)SSL_KEYFILE_PASSWD);
 
-		if (!SSL_CTX_use_PrivateKey_file (ssl_ctx, SSL_KEY_FILE, SSL_FILETYPE_PEM)) {
-			warn("Could not load private key file %s", SSL_KEY_FILE);
-			fprintf(stderr, "Could not load private key file %s\n", SSL_KEY_FILE);
-			ssl_status_ok = 0;
-		}
+	SSL_CTX_set_default_passwd_cb(ssl_ctx, pem_passwd_cb);
+	SSL_CTX_set_default_passwd_cb_userdata(ssl_ctx, (void*)SSL_KEYFILE_PASSWD);
+
+	if (!SSL_CTX_use_PrivateKey_file (ssl_ctx, SSL_KEY_FILE, SSL_FILETYPE_PEM)) {
+		warn("Could not load private key file %s", SSL_KEY_FILE);
+		return 1;
 	}
-	if (ssl_status_ok) {
-		if (!SSL_CTX_check_private_key (ssl_ctx)) {
-			warn("Private key does not check out and appears to be invalid.");
-			fprintf(stderr, "Private key does not check out and appears to be invalid.\n");
-			ssl_status_ok = 0;
-		}
+
+	if (!SSL_CTX_check_private_key (ssl_ctx)) {
+		warn("Private key does not check out and appears to be invalid.");
+		return 1;
 	}
 
 	/* Set ssl_ctx to automatically retry conditions that would
 	   otherwise return SSL_ERROR_WANT_(READ|WRITE) */
-	if (ssl_status_ok) {
-		SSL_CTX_set_mode(ssl_ctx,SSL_MODE_AUTO_RETRY);
-	}
+	SSL_CTX_set_mode(ssl_ctx,SSL_MODE_AUTO_RETRY);
  
-	if (ssl_status_ok) {
-		for (i = 0; i < ssl_numports; i++) {
-			ssl_sock[i] = make_socket(ssl_listener_port[i]);
-			maxd = ssl_sock[i] + 1;
-			ssl_numsocks++;
-		}
-	} else {
-		ssl_numsocks = 0;
+	for (i = 0; i < ssl_numports; i++) {
+		ssl_sock[i] = make_socket(ssl_listener_port[i]);
+		maxd = ssl_sock[i] + 1;
+		ssl_numsocks++;
 	}
 #endif
 	gettimeofday(&last_slice, (struct timezone *) 0);
@@ -950,7 +919,7 @@ shovechars()
 		if (select(maxd, &input_set, &output_set, (fd_set *) 0, &timeout) < 0) {
 			if (errno != EINTR) {
 				perror("select");
-				return;
+				return 1;
 			}
 		} else {
 			gettimeofday(&sel_out,NULL);
@@ -1047,6 +1016,7 @@ shovechars()
 	(void) time(&now);
 	add_property((dbref) 0, "_sys/lastdumptime", NULL, (int) now);
 	add_property((dbref) 0, "_sys/shutdowntime", NULL, (int) now);
+	return 0;
 }
 
 void

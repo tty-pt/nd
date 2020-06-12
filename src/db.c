@@ -40,7 +40,6 @@ dbref db_size = DB_INITIAL_SIZE;
 
 struct macrotable *macrotop;
 extern char *alloc_string(const char *);
-extern short db_conversion_flag;
 int number(const char *s);
 int ifloat(const char *s);
 void putproperties(FILE * f, int obj);
@@ -1168,10 +1167,6 @@ autostart_progs(void)
 	dbref i;
 	struct object *o;
 	struct line *tmp;
-
-	if (db_conversion_flag) {
-		return;
-	}
 
 	for (i = 0; i < db_top; i++) {
 		if (Typeof(i) == TYPE_PROGRAM) {

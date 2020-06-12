@@ -14,6 +14,7 @@
 #include "interface.h"
 #include "externs.h"
 #include "interp.h"
+#define NDEBUG
 #include "debug.h"
 
 #include <stdio.h>

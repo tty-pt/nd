@@ -11,7 +11,7 @@ ldlibs-$(CONFIG_SSL) += -lssl -lcrypto
 cflags-y := -g -Wall -Wno-initializer-overrides
 
 exe := fbmuck prochelp ws-server
-src = ChangeLog COPYING ${real-obj-y:%.o=%.c} compress.c
+src = ChangeLog COPYING ${real-obj-y:%.o=%.c}
 
 prochelp-obj-y := prochelp.o
 ws-server-obj-y := ws-server.o
@@ -21,7 +21,7 @@ fbmuck-obj-y := geometry.o plant.o biome.o noise.o search.o \
 fbmuck-obj-y += array.o boolexp.o compile.o create.o db.o db_header.o debugger.o \
 	disassem.o edit.o events.o game.o hashtab.o help.o inst.o \
 	interp.o look.o match.o mcp.o mcpgui.o mcppkgs.o mfuns2.o \
-	mfuns.o move.o msgparse.o mufevent.o oldcompress.o p_array.o \
+	mfuns.o move.o msgparse.o mufevent.o p_array.o \
 	p_connects.o p_db.o p_error.o p_float.o player.o p_math.o p_mcp.o \
 	p_misc.o p_props.o p_regex.o predicates.o propdirs.o property.o \
 	props.o p_stack.o p_strings.o random.o rob.o sanity.o set.o \
