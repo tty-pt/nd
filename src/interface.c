@@ -257,18 +257,9 @@ show_program_usage(char *prog)
 extern int sanity_violated;
 int time_since_combat = 0;
 
-enum opts {
-	OPT_NOSANITY = 1,
-	OPT_SANITY_INTERACTIVE = 2,
-	OPT_SANITY_AUTOFIX = 4,
-	OPT_DETACH = 8,
-	OPT_WIZONLY = 16,
-};
-
 int
 main(int argc, char **argv)
 {
-	int optflags = 0;
 	register char c;
 
 	listener_port[0] = TINYPORT;

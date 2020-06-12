@@ -278,7 +278,7 @@ mobi_init(mobi_t *liv, dbref who)
 			equip_calc(liv->who, eq);
 	}
 
-	debug("mobi_init %d %d\n", who, liv->who);
+	/* debug("mobi_init %d %d\n", who, liv->who); */
 }
 
 mobi_t *
@@ -288,7 +288,7 @@ mob_put(dbref who)
 	register mobi_t *liv;
 	register unsigned i;
 
-	debug("mob_put %d\n", who);
+	/* debug("mob_put %d\n", who); */
 
 	CBUG(who < 0 || Typeof(who) == TYPE_GARBAGE);
 
@@ -300,7 +300,7 @@ mob_put(dbref who)
 			liv = mobi_map;
 
 		if (liv->who <= 0) {
-			debug("will mobi_init %d %d %d", who, i, liv->who);
+			/* debug("will mobi_init %d %d %d", who, i, liv->who); */
 			mobi_init(liv, who);
 			return liv;
 		}
@@ -329,7 +329,7 @@ mob_add(enum mob mid, dbref where, enum biome biome, long long pdn) {
 	mob_add_stats(mob, nu);
 	liv = mob_put(nu);
 
-	debug("%d %s loc %d %s MID %d", nu, NAME(nu), where, NAME(where), mid);
+	/* debug("%d %s loc %d %s MID %d", nu, NAME(nu), where, NAME(where), mid); */
 
 	mob_inventory(liv, (drop_t **) mob->drop);
 

@@ -19,6 +19,16 @@
 
 #define warn(...) fprintf(stderr, ## __VA_ARGS__)
 
+/* interface.c */
+enum opts {
+	OPT_NOSANITY = 1,
+	OPT_SANITY_INTERACTIVE = 2,
+	OPT_SANITY_AUTOFIX = 4,
+	OPT_DETACH = 8,
+	OPT_WIZONLY = 16,
+};
+extern short optflags;
+
 /* Prototypes for externs not defined elsewhere */
 
 extern char match_args[];
