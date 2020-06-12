@@ -27,12 +27,10 @@
 #include "mob.h"
 
 /* declarations */
-static const char *dumpfile = 0;
 static int epoch = 0;
 time_t last_monolithic_time = 0;
 static int forked_dump_process_flag = 0;
 FILE *input_file;
-char *in_filename = NULL;
 
 extern void do_showextver(dbref player);
 void fork_and_dump(void);
@@ -53,10 +51,7 @@ do_dump(dbref player, const char *newfile)
 			&& God(player)
 #endif							/* GOD_PRIV */
 				) {
-			if (dumpfile)
-				free((void *) dumpfile);
-			dumpfile = alloc_string(newfile);
-			snprintf(buf, sizeof(buf), "Dumping to file %s...", dumpfile);
+			snprintf(buf, sizeof(buf), "Dumping to file %s...", STD_DB);
 		} else {
 			snprintf(buf, sizeof(buf), "Dumping...");
 		}
@@ -85,16 +80,16 @@ dump_database_internal(void)
 	char tmpfile[2048];
 	FILE *f;
 
-	snprintf(tmpfile, sizeof(tmpfile), "%s.#%d#", dumpfile, epoch - 1);
+	snprintf(tmpfile, sizeof(tmpfile), "%s.#%d#", STD_DB, epoch - 1);
 	(void) unlink(tmpfile);		/* nuke our predecessor */
 
-	snprintf(tmpfile, sizeof(tmpfile), "%s.#%d#", dumpfile, epoch);
+	snprintf(tmpfile, sizeof(tmpfile), "%s.#%d#", STD_DB, epoch);
 
 	if ((f = fopen(tmpfile, "wb")) != NULL) {
 		db_write(f);
 		fclose(f);
 
-		if (rename(tmpfile, dumpfile) < 0)
+		if (rename(tmpfile, STD_DB) < 0)
 			perror(tmpfile);
 
 	} else {
@@ -134,7 +129,7 @@ panic(const char *message)
 	}
 
 	/* dump panic file */
-	snprintf(panicfile, sizeof(panicfile), "%s.PANIC", dumpfile);
+	snprintf(panicfile, sizeof(panicfile), "%s.PANIC", STD_DB);
 	if ((f = fopen(panicfile, "wb")) == NULL) {
 		perror("CANNOT OPEN PANIC FILE, YOU LOSE");
 		sync();
@@ -191,9 +186,9 @@ dump_database(void)
 {
 	epoch++;
 
-	warn("DUMPING: %s.#%d#", dumpfile, epoch);
+	warn("DUMPING: %s.#%d#", STD_DB, epoch);
 	dump_database_internal();
-	warn("DUMPING: %s.#%d# (done)", dumpfile, epoch);
+	warn("DUMPING: %s.#%d# (done)", STD_DB, epoch);
 }
 
 /*
@@ -205,7 +200,7 @@ fork_and_dump(void)
 	epoch++;
 
 	last_monolithic_time = time(NULL);
-	warn("CHECKPOINTING: %s.#%d#", dumpfile, epoch);
+	warn("CHECKPOINTING: %s.#%d#", STD_DB, epoch);
 
 	DBDUMP_WARN();
 
@@ -237,7 +232,7 @@ dump_warning(void)
 }
 
 int
-init_game(const char *infile, const char *outfile)
+init_game()
 {
 	FILE *f;
 
@@ -248,8 +243,7 @@ init_game(const char *infile, const char *outfile)
 		fclose(f);
 	}
 
-	in_filename = (char *) strdup(infile);
-	if ((input_file = fopen(infile, "rb")) == NULL)
+	if ((input_file = fopen(STD_DB, "rb")) == NULL)
 		return -1;
 
 	db_free();
@@ -258,17 +252,10 @@ init_game(const char *infile, const char *outfile)
 	SRANDOM(getpid());			/* init random number generator */
 
 	/* ok, read the db in */
-	warn("LOADING: %s", infile);
-	fprintf(stderr, "LOADING: %s\n", infile);
+	warn("LOADING: %s", STD_DB);
 	if (db_read(input_file) < 0)
 		return -1;
-	warn("LOADING: %s (done)", infile);
-	fprintf(stderr, "LOADING: %s (done)\n", infile);
-
-	/* set up dumper */
-	if (dumpfile)
-		free((void *) dumpfile);
-	dumpfile = alloc_string(outfile);
+	warn("LOADING: %s (done)", STD_DB);
 
 	/* initialize the _sys/startuptime property */
 	add_property((dbref) 0, "_sys/startuptime", NULL, (int) time((time_t *) NULL));
@@ -279,15 +266,7 @@ init_game(const char *infile, const char *outfile)
 	return 0;
 }
 
-void
-cleanup_game()
-{
-	if (dumpfile)
-		free((void *) dumpfile);
-	free((void *) in_filename);
-}
-
-extern short wizonly_mode;
+#if 0
 void
 do_restrict(dbref player, const char *arg)
 {
@@ -297,17 +276,18 @@ do_restrict(dbref player, const char *arg)
 	}
 
 	if (!strcmp(arg, "on")) {
-		wizonly_mode = 1;
+		optflags |= OPT_WIZONLY;
 		notify(player, "Login access is now restricted to wizards only.");
 	} else if (!strcmp(arg, "off")) {
-		wizonly_mode = 0;
+		optflags &= ~OPT_WIZONLY;
 		notify(player, "Login access is now unrestricted.");
 	} else {
 		notify_fmt(player, "Restricted connection mode is currently %s.",
-			wizonly_mode ? "on" : "off"
+		(optflags & OPT_WIZONLY) ? "on" : "off"
 		);
 	}
 }
+#endif
 
 /* use this only in process_command */
 #define Matched(string) if (!string_prefix(string, command)) \
@@ -869,11 +849,13 @@ process_command(int descr, dbref player, char *command)
 					Matched("@relink");
 					do_relink(descr, player, arg1, arg2);
 					break;
+#if 0
 				case 's':
 				case 'S':
 					Matched("@restrict");
 					do_restrict(player, arg1);
 					break;
+#endif
 				default:
 					goto bad;
 				}

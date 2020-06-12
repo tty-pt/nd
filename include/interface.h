@@ -69,7 +69,7 @@ extern dbref create_player(const char *name, const char *password);
 extern dbref connect_player(const char *name, const char *password);
 extern void do_look_around(int descr, dbref player);
 
-extern int init_game(const char *infile, const char *outfile);
+extern int init_game();
 extern void dump_database(void);
 extern void panic(const char *);
 

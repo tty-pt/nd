@@ -24,6 +24,8 @@
  ************************************************************************/
 
 #define GAME_DIR "/var/db/neverdark"
+#define STD_DB "std.db"
+#define GEO_DB "geo.db"
 
 /* Makes God (#1) immune to @force, @newpassword, and being set !Wizard.  
  */

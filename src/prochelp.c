@@ -242,7 +242,7 @@ print_section_topics(FILE * f, FILE * hf, const char *whichsect)
 					escape_html(buf3, sizeof(buf3), ptr->topic);
 					fprintf(hf, HTML_SECTIDX_ENTRY, (100 / cols), buf3, buf3);
 					if (cnt == cols) {
-						snprintf(buf2, sizeof(buf2), "%-0.*s", width - 1, ptr->topic);
+						snprintf(buf2, sizeof(buf2), "%-.*s", width - 1, ptr->topic);
 					} else {
 						snprintf(buf2, sizeof(buf2), "%-*.*s", width, width - 1, ptr->topic);
 					}
@@ -402,7 +402,7 @@ print_topics(FILE * f, FILE * hf)
 					escape_html(buf3, sizeof(buf3), ptr->topic);
 					fprintf(hf, HTML_IDXGROUP_ENTRY, /*(100 / cols),*/ buf3, buf3);
 					if (cnt == cols) {
-						snprintf(buf2, sizeof(buf2), "%-0.*s", width - 1, ptr->topic);
+						snprintf(buf2, sizeof(buf2), "%-.*s", width - 1, ptr->topic);
 					} else {
 						snprintf(buf2, sizeof(buf2), "%-*.*s", width, width - 1, ptr->topic);
 					}

@@ -104,7 +104,7 @@ endfunc
 autocmd! QuickfixCmdPost make call Restart()
 
 File ./src/fbmuck
-Args -gamedir ./game -dbin ../game/data/std-db.db -dbout ../game/data/std-db.db
+Args -C ./game
 GdbStart
 Gdb handle SIGPIPE noprint nostop
 Run

@@ -148,12 +148,10 @@ struct descriptor_data *descriptor_list = NULL;
 
 // Yes, both of these should start defaulted to disabled.
 // If both are still disabled after arg parsing, we'll enable one or both.
-static int numports = 0;
 static int numsocks = 0;
 static int listener_port[MAX_LISTEN_SOCKS];
 static int sock[MAX_LISTEN_SOCKS];
 #ifdef USE_SSL
-static int ssl_numports = 0;
 static int ssl_numsocks = 0;
 static int ssl_listener_port[MAX_LISTEN_SOCKS];
 static int ssl_sock[MAX_LISTEN_SOCKS];
@@ -228,7 +226,7 @@ extern FILE *input_file;
 extern FILE *delta_infile;
 extern FILE *delta_outfile;
 
-short wizonly_mode = 0;
+short optflags = 0;
 pid_t global_resolver_pid=0;
 pid_t global_dumper_pid=0;
 short global_dumpdone=0;
@@ -241,27 +239,15 @@ unsigned long sel_prof_idle_use;
 void
 show_program_usage(char *prog)
 {
-	fprintf(stderr, "Usage: %s [<options>] [infile [outfile [portnum [portnum ...]]]]\n", prog);
-	fprintf(stderr, "    Arguments:\n");
-	fprintf(stderr, "        infile           db file loaded at startup.  optional with -dbin.\n");
-	fprintf(stderr, "        outfile          output db file to save to.  optional with -dbout.\n");
-	fprintf(stderr, "        portnum          port num to listen for conns on. (16 ports max)\n");
+	fprintf(stderr, "Usage: %s [-sSyWv?] [-C [path]]", prog);
 	fprintf(stderr, "    Options:\n");
-	fprintf(stderr, "        -dbin INFILE     use INFILE as the database to load at startup.\n");
-	fprintf(stderr, "        -dbout OUTFILE   use OUTFILE as the output database to save to.\n");
-	fprintf(stderr, "        -port NUMBER     sets the port number to listen for connections on.\n");
-#ifdef USE_SSL
-	fprintf(stderr, "        -sport NUMBER    sets the port number for secure connections\n");
-#else
-	fprintf(stderr, "        -sport NUMBER    Ignored.  SSL support isn't compiled in.\n");
-#endif
-	fprintf(stderr, "        -gamedir PATH    changes directory to PATH before starting up.\n");
-	fprintf(stderr, "        -nosanity        don't do db sanity checks at startup time.\n");
-	fprintf(stderr, "        -insanity        load db, then enter the interactive sanity editor.\n");
-	fprintf(stderr, "        -sanfix          attempt to auto-fix a corrupt db after loading.\n");
-	fprintf(stderr, "        -wizonly         only allow wizards to login.\n");
-	fprintf(stderr, "        -version         display this server's version.\n");
-	fprintf(stderr, "        -help            display this message.\n");
+	fprintf(stderr, "        -C PATH   changes directory to PATH before starting up.\n");
+	fprintf(stderr, "        -S        don't do db sanity checks at startup time.\n");
+	fprintf(stderr, "        -s        load db, then enter the interactive sanity editor.\n");
+	fprintf(stderr, "        -y        attempt to auto-fix a corrupt db after loading.\n");
+	fprintf(stderr, "        -W        only allow wizards to login.\n");
+	fprintf(stderr, "        -v        display this server's version.\n");
+	fprintf(stderr, "        -?        display this message.\n");
 	exit(1);
 }
 
@@ -271,119 +257,58 @@ show_program_usage(char *prog)
 extern int sanity_violated;
 int time_since_combat = 0;
 
+enum opts {
+	OPT_NOSANITY = 1,
+	OPT_SANITY_INTERACTIVE = 2,
+	OPT_SANITY_AUTOFIX = 4,
+	OPT_DETACH = 8,
+	OPT_WIZONLY = 16,
+};
+
 int
 main(int argc, char **argv)
 {
-	char *infile_name;
-	char *outfile_name;
-	char *num_one_new_passwd = NULL;
-	int i, nomore_options;
-	int sanity_skip;
-	int sanity_interactive;
-	int sanity_autofix;
-	int val;
+	int optflags = 0;
+	register char c;
+
 	listener_port[0] = TINYPORT;
 
 	init_descriptor_lookup();
 	init_descr_count_lookup();
 
-	nomore_options = 0;
-	sanity_skip = 0;
-	sanity_interactive = 0;
-	sanity_autofix = 0;
-	infile_name = NULL;
-	outfile_name = NULL;
-
-	for (i = 1; i < argc; i++) {
-		if (!nomore_options && argv[i][0] == '-') {
-			if (!strcmp(argv[i], "-nosanity")) {
-				sanity_skip = 1;
-			} else if (!strcmp(argv[i], "-insanity")) {
-				sanity_interactive = 1;
-			} else if (!strcmp(argv[i], "-wizonly")) {
-				wizonly_mode = 1;
-			} else if (!strcmp(argv[i], "-sanfix")) {
-				sanity_autofix = 1;
-			} else if (!strcmp(argv[i], "-version")) {
-				printf("%s\n", VERSION);
-				return 0;
-			} else if (!strcmp(argv[i], "-dbin")) {
-				if (i + 1 >= argc) {
-					show_program_usage(*argv);
-				}
-				infile_name = argv[++i];
-
-			} else if (!strcmp(argv[i], "-dbout")) {
-				if (i + 1 >= argc) {
-					show_program_usage(*argv);
-				}
-				outfile_name = argv[++i];
-
-			} else if (!strcmp(argv[i], "-port")) {
-				if (i + 1 >= argc) {
-					show_program_usage(*argv);
-				}
-#ifdef USE_SSL
-				if ( (ssl_numports + numports) < MAX_LISTEN_SOCKS) {
-					listener_port[numports++] = atoi(argv[++i]);
-				}
-#else
-				if (numports < MAX_LISTEN_SOCKS) {
-					listener_port[numports++] = atoi(argv[++i]);
-				}
-#endif
-			} else if (!strcmp(argv[i], "-sport")) {
-				if (i + 1 >= argc) {
-					show_program_usage(*argv);
-				}
-#ifdef USE_SSL
-				if ( (ssl_numports + numports) < MAX_LISTEN_SOCKS) {
-					ssl_listener_port[ssl_numports++] = atoi(argv[++i]);
-				}
-#else
-				i++;
-				fprintf(stderr, "-sport: This server isn't configured to enable SSL.  Sorry.\n");
-				return 1;
-#endif
-			} else if (!strcmp(argv[i], "-gamedir")) {
-				if (i + 1 >= argc) {
-					show_program_usage(*argv);
-				}
-				if (chdir(argv[++i])) {
-					perror("cd to gamedir");
-					return 4;
-				}
-
-			} else if (!strcmp(argv[i], "--")) {
-				nomore_options = 1;
-			} else {
-				show_program_usage(*argv);
+	while ((c = getopt(argc, argv, "dsySC:")) != -1) {
+		switch (c) {
+		case 'd':
+			optflags |= OPT_DETACH;
+			break;
+		case 's':
+			optflags |= OPT_SANITY_INTERACTIVE;
+			break;
+		case 'S':
+			optflags |= OPT_NOSANITY;
+			break;
+		case 'y':
+			optflags |= OPT_SANITY_AUTOFIX;
+			break;
+		case 'v':
+			printf("%s\n", VERSION);
+			break;
+			
+		case 'C':
+			if (chdir(optarg)) {
+				perror("chdir");
+				return 4;
 			}
-		} else {
-			if (!infile_name) {
-				infile_name = argv[i];
-			} else if (!outfile_name) {
-				outfile_name = argv[i];
-			} else {
-				val = atoi(argv[i]);
-				if (val < 1 || val > 65535) {
-					show_program_usage(*argv);
-				}
-				if (MAX_LISTEN_SOCKS >= numports
-#ifdef USE_SSL
-				    + ssl_numports
-#endif
-				   )
-					listener_port[numports++] = val;
-			}
+			break;
+		default:
+			show_program_usage(*argv);
+			return 1;
+
+		case '?':
+			show_program_usage(*argv);
+			return 0;
 		}
 	}
-	if (numports < 1) {
-		numports = 1;
-	}
-
-	if (!infile_name || !outfile_name)
-		show_program_usage(*argv);
 
 	warn("INIT: TinyMUCK %s starting.", "version");
 	warn("%s PID is: %d", argv[0], getpid());
@@ -396,13 +321,9 @@ main(int argc, char **argv)
 	sel_prof_idle_usec = 0;
 	sel_prof_idle_use = 0;
 
-	if (init_game(infile_name, outfile_name) < 0) {
-		warn("Couldn't load %s!", infile_name);
+	if (init_game() < 0) {
+		warn("Couldn't load " STD_DB "!");
 		return 2;
-	}
-
-	if (num_one_new_passwd != NULL) {
-		set_password(GOD, num_one_new_passwd);
 	}
 
 	CBUG(map_init());
@@ -411,8 +332,8 @@ main(int argc, char **argv)
 
 	sanity(AMBIGUOUS);
 	if (sanity_violated) {
-		wizonly_mode = 1;
-		if (sanity_autofix)
+		optflags |= OPT_WIZONLY;
+		if (optflags & OPT_SANITY_AUTOFIX)
 			sanfix(AMBIGUOUS);
 	}
 
@@ -763,11 +684,10 @@ shovechars()
 	int ssl_status_ok = 1;
 #endif
 
-	for (i = 0; i < numports; i++) {
-		sock[i] = make_socket(listener_port[i]);
-		maxd = sock[i] + 1;
-		numsocks++;
-	}
+	sock[0] = make_socket(listener_port[0]);
+	maxd = sock[0] + 1;
+	numsocks++;
+
 #ifdef USE_SSL
 	SSL_load_error_strings ();
  	OpenSSL_add_ssl_algorithms (); 
@@ -795,11 +715,9 @@ shovechars()
 	   otherwise return SSL_ERROR_WANT_(READ|WRITE) */
 	SSL_CTX_set_mode(ssl_ctx,SSL_MODE_AUTO_RETRY);
  
-	for (i = 0; i < ssl_numports; i++) {
-		ssl_sock[i] = make_socket(ssl_listener_port[i]);
-		maxd = ssl_sock[i] + 1;
-		ssl_numsocks++;
-	}
+	ssl_sock[i] = make_socket(ssl_listener_port[i]);
+	maxd = ssl_sock[i] + 1;
+	ssl_numsocks++;
 #endif
 	gettimeofday(&last_slice, (struct timezone *) 0);
 
@@ -810,7 +728,7 @@ shovechars()
 	mob_init();
 
 	/* Daemonize */
-	if (daemon(1, 1) != 0)
+	if (optflags & OPT_DETACH) && daemon(1, 1) != 0)
 		_exit(0);
 
 /* And here, we do the actual player-interaction loop */
@@ -1905,8 +1823,8 @@ auth(int descr, char *user, char *password)
         dbref player = connect_player(user, password);
 	struct descriptor_data *d = descrdata_by_descr(descr);
 
-        if ((wizonly_mode || (PLAYERMAX && con_players_curr >= PLAYERMAX_LIMIT)) && !TrueWizard(player)) {
-                queue_ansi(d, wizonly_mode
+        if (((optflags & OPT_WIZONLY) || (PLAYERMAX && con_players_curr >= PLAYERMAX_LIMIT)) && !TrueWizard(player)) {
+                queue_ansi(d, (optflags & OPT_WIZONLY)
                            ? "Sorry, but the game is in maintenance mode currently, and "
                            "only wizards are allowed to connect.  Try again later."
                            : PLAYERMAX_BOOTMESG);
@@ -3140,7 +3058,7 @@ welcome_user(struct descriptor_data *d)
 
         mob_welcome(d);
 
-	if (wizonly_mode) {
+	if (optflags & OPT_WIZONLY) {
 		queue_ansi(d, "## The game is currently in maintenance mode, and only wizards will be able to connect.\r\n");
 	}
 #if PLAYERMAX
