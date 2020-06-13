@@ -158,7 +158,6 @@ extern dbref find_uid(dbref player, struct frame *fr, int st, dbref program);
 extern int nargs;				/* DO NOT TOUCH THIS VARIABLE */
 
 #include "p_array.h"
-#include "p_connects.h"
 #include "p_db.h"
 #include "p_error.h"
 #include "p_props.h"

@@ -25,7 +25,6 @@
 #include "msgparse.h"
 #include "mufevent.h"
 #include "p_array.h"
-#include "p_connects.h"
 #include "p_db.h"
 #include "p_error.h"
 #include "p_props.h"
