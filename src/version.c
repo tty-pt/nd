@@ -134,7 +134,6 @@ do_showextver(dbref player) {
 	notify_nolisten(player, get_p_error_c_version(), 1);
 	notify_nolisten(player, get_p_regex_c_version(), 1);
 	notify_nolisten(player, get_p_stack_c_version(), 1);
-	notify_nolisten(player, get_p_strings_c_version(), 1);
 	notify_nolisten(player, get_player_c_version(), 1);
 	notify_nolisten(player, get_predicates_c_version(), 1);
 	notify_nolisten(player, get_propdirs_c_version(), 1);
@@ -180,7 +179,6 @@ do_showextver(dbref player) {
 	notify_nolisten(player, p_error_h_version, 1);
 	notify_nolisten(player, p_regex_h_version, 1);
 	notify_nolisten(player, p_stack_h_version, 1);
-	notify_nolisten(player, p_strings_h_version, 1);
 	notify_nolisten(player, params_h_version, 1);
 	notify_nolisten(player, patchlevel_h_version, 1);
 	notify_nolisten(player, props_h_version, 1);
