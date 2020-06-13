@@ -449,7 +449,6 @@ const char *get_p_error_c_version(void);
 const char *get_p_float_c_version(void);
 const char *get_p_math_c_version(void);
 const char *get_p_mcp_c_version(void);
-const char *get_p_misc_c_version(void);
 const char *get_p_props_c_version(void);
 const char *get_p_regex_c_version(void);
 const char *get_p_stack_c_version(void);
