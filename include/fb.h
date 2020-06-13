@@ -24,7 +24,6 @@
 #include "mpi.h"
 #include "msgparse.h"
 #include "mufevent.h"
-#include "p_stack.h"
 #include "params.h"
 #include "patchlevel.h"
 #include "props.h"

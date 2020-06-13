@@ -157,8 +157,6 @@ extern dbref find_uid(dbref player, struct frame *fr, int st, dbref program);
 
 extern int nargs;				/* DO NOT TOUCH THIS VARIABLE */
 
-#include "p_stack.h"
-
 #endif /* _INTERP_H */
 
 #ifdef DEFINE_HEADER_VERSIONS

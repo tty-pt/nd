@@ -17,9 +17,7 @@
 
 /* these arrays MUST agree with what's in inst.h */
 const char *base_inst[] = {
-	"JMP", "READ", "SLEEP", "CALL", "EXECUTE", "EXIT", "EVENT_WAITFOR", "CATCH", "CATCH_DETAILED",
-	PRIMS_STACK_NAMES,
-	PRIMS_INTERNAL_NAMES
+	"JMP", "READ", "SLEEP"
 };
 
 /* converts an instruction into a printable string, stores the string in

@@ -24,7 +24,7 @@ fbmuck-obj-y += array.o boolexp.o compile.o create.o db.o db_header.o \
 	mfuns.o move.o msgparse.o mufevent.o \
 	player.o \
 	predicates.o propdirs.o property.o \
-	props.o p_stack.o random.o rob.o sanity.o set.o \
+	props.o random.o rob.o sanity.o set.o \
 	signal.o smatch.o snprintf.o speech.o stringutil.o \
 	timequeue.o timestamp.o unparse.o utils.o wiz.o \
 	version.o copyright.o interface.o web.o

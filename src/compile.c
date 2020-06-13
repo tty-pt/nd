@@ -3543,10 +3543,7 @@ localvar(COMPSTATE * cstat, const char *token)
 int
 primitive(const char *token)
 {
-	int primnum;
-
-	primnum = get_primitive(token);
-	return (primnum && primnum <= BASE_MAX - PRIMS_INTERNAL_CNT);
+	return 0;
 }
 
 /* return primitive instruction */

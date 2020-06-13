@@ -52,14 +52,9 @@ p_null(PRIM_PROTOTYPE)
 
 /* void    (*prim_func[]) (PRIM_PROTOTYPE) = */
 void (*prim_func[]) (PRIM_PROTOTYPE) = {
-	p_null, p_null, p_null, p_null, p_null,  p_null,
+	p_null, p_null, p_null, p_null,
 	/* JMP, READ,   SLEEP,  CALL,   EXECUTE, RETURN, */
-	p_null,           p_null, p_null,
 	/* EVENT_WAITFOR, CATCH,  CATCH_DETAILED */
-
-	PRIMS_STACK_FUNCS,
-
-	PRIMS_INTERNAL_FUNCS,
 	NULL
 };
 
