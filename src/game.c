@@ -927,9 +927,6 @@ process_command(int descr, dbref player, char *command)
 					} else if (string_prefix(command, "@unlo")) {
 						Matched("@unlock");
 						do_unlock(descr, player, arg1);
-					} else if (string_prefix(command, "@uncom")) {
-						Matched("@uncompile");
-						do_uncompile(player);
 					} else {
 						goto bad;
 					}

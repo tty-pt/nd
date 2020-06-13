@@ -311,8 +311,6 @@ extern void interactive(int descr, dbref player, const char *command);
 
 /* From compile.c */
 extern void uncompile_program(dbref i);
-extern void do_uncompile(dbref player);
-extern void free_unused_programs(void);
 extern int get_primitive(const char *);
 extern void do_compile(int descr, dbref in_player, dbref in_program, int force_err_disp);
 extern void clear_primitives(void);
@@ -323,7 +321,6 @@ extern struct inst *interp_loop(dbref player, dbref program, struct frame *fr, i
 extern struct frame *interp(int descr, dbref player, dbref location, dbref program,
 							dbref source, int nosleeping, int whichperms, int forced_pid);
 extern void purge_for_pool(void);
-extern void purge_try_pool(void);
 
 /* From mufevent.c */
 extern int muf_event_exists(struct frame* fr, const char* eventid);

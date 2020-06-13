@@ -600,37 +600,6 @@ uncompile_program(dbref i)
 }
 
 
-void
-do_uncompile(dbref player)
-{
-	dbref i;
-
-	if (!Wizard(OWNER(player))) {
-		notify_nolisten(player, "Permission denied. (uncompile)", 1);
-		return;
-	}
-	for (i = 0; i < db_top; i++) {
-		if (Typeof(i) == TYPE_PROGRAM) {
-			uncompile_program(i);
-		}
-	}
-	notify_nolisten(player, "All programs decompiled.", 1);
-}
-
-void
-free_unused_programs()
-{
-	dbref i;
-	time_t now = time(NULL);
-
-	for (i = 0; i < db_top; i++) {
-		if ((Typeof(i) == TYPE_PROGRAM) && !(FLAGS(i) & (ABODE | INTERNAL)) &&
-			(now - DBFETCH(i)->ts.lastused > CLEAN_INTERVAL) && (PROGRAM_INSTANCES(i) == 0)) {
-			uncompile_program(i);
-		}
-	}
-}
-
 /* Various flags for the IMMEDIATE instructions */
 
 #define IMMFLAG_REFERENCED	1	/* Referenced by a jump */

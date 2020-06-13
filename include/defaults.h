@@ -196,12 +196,6 @@
 
 /* clear out unused programs every so often */
 
-#if 1 /* PERIODIC_PROGRAM_PURGE */
-#define PERIODIC_PROGRAM_PURGE() free_unused_programs()
-#else
-#define PERIODIC_PROGRAM_PURGE() do {} while (0)
-#endif
-
 /* Makes WHO unavailable before connecting to a player, or when Interactive.
  * This lets you prevent bypassing of a global @who program. */
 #define SECURE_WHO 0

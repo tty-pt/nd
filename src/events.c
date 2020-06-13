@@ -59,9 +59,7 @@ check_dump_time(void)
 		last_dump_time = currtime;
 		add_property((dbref) 0, "_sys/lastdumptime", NULL, (int) currtime);
 
-		PERIODIC_PROGRAM_PURGE();
 		purge_for_pool();
-		purge_try_pool();
 
 		fork_and_dump();
 
@@ -113,7 +111,6 @@ check_clean_time(void)
 	if ((last_clean_time + CLEAN_INTERVAL) < currtime) {
 		last_clean_time = currtime;
 		purge_for_pool();
-		PERIODIC_PROGRAM_PURGE();
 	}
 }
 
