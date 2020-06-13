@@ -112,26 +112,6 @@ eval_boolexp_rec(int descr, dbref player, struct boolexp *b, dbref thing)
 		case BOOLEXP_CONST:
 			if (b->thing == NOTHING)
 				return 0;
-			if (Typeof(b->thing) == TYPE_PROGRAM) {
-				struct inst *rv;
-				struct frame *tmpfr;
-				dbref real_player;
-
-				if (Typeof(player) == TYPE_PLAYER || Typeof(player) == TYPE_THING)
-					real_player = player;
-				else
-					real_player = OWNER(player);
-
-				tmpfr = interp(descr, real_player, DBFETCH(player)->location,
-							   b->thing, thing, PREEMPT, STD_HARDUID, 0);
-
-				if (!tmpfr)
-					return (0);
-
-				rv = interp_loop(real_player, b->thing, tmpfr, 0);
-
-				return (rv != NULL);
-			}
 			return (b->thing == player || b->thing == OWNER(player)
 					|| member(b->thing, DBFETCH(player)->contents)
 					|| b->thing == DBFETCH(player)->location);

@@ -452,20 +452,9 @@ handle_read_event(int descr, dbref player, const char *command)
 
 		if (fr->brkpt.debugging && !fr->brkpt.isread) {
 
-			/* We're in the MUF debugger!  Call it with the input line. */
-			if (command) {
-				if (muf_debugger(descr, player, prog, command, fr)) {
-					/* MUF Debugger exited.  Free up the program frame & exit */
-					prog_clean(fr);
-					return;
-				}
-			} else {
-				if (muf_debugger(descr, player, prog, "", fr)) {
-					/* MUF Debugger exited.  Free up the program frame & exit */
-					prog_clean(fr);
-					return;
-				}
-			}
+			/* We're in the MUF debugger! But it doesn't exist! */
+			prog_clean(fr);
+			return;
 		} else {
 			/* This is a MUF READ event. */
 			if (command && !strcmp(command, BREAK_COMMAND)) {

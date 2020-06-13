@@ -973,8 +973,6 @@ do_abort_loop(dbref player, dbref program, const char *msg,
 		if (pc) {
 			interp_err(player, program, pc, fr->argument.st, fr->argument.top,
 					fr->caller.st[1], insttotext(fr, 0, pc, buffer, sizeof(buffer), 30, program, 1), msg);
-			if (controls(player, program))
-				muf_backtrace(player, program, STACK_SIZE, fr);
 		} else {
 			notify_nolisten(player, msg, 1);
 		}
@@ -1168,9 +1166,9 @@ interp_loop(dbref player, dbref program, struct frame *fr, int rettyp)
 					notify_nolisten(player, m, 1);
 				}
 				if (pc <= PROGRAM_CODE(program) || (pc - 1)->line != pc->line) {
-					list_proglines(player, program, fr, pc->line, 0);
+					/* list_proglines(player, program, fr, pc->line, 0); */
 				} else {
-					m = show_line_prims(fr, program, pc, 15, 1);
+					/* m = show_line_prims(fr, program, pc, 15, 1); */
 					snprintf(buf, sizeof(buf), "     %s", m);
 					notify_nolisten(player, buf, 1);
 				}
@@ -1918,8 +1916,6 @@ do_abort_interp(dbref player, const char *msg, struct inst *pc,
 		calc_profile_timing(program,fr);
 		interp_err(player, program, pc, arg, atop, fr->caller.st[1],
 				insttotext(fr, 0, pc, buffer, sizeof(buffer), 30, program, 1), msg);
-		if (controls(player, program))
-			muf_backtrace(player, program, STACK_SIZE, fr);
 	}
 	switch (nargs) {
 	case 4:

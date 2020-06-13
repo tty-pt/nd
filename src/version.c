@@ -111,7 +111,6 @@ do_showextver(dbref player) {
 	notify_nolisten(player, get_copyright_c_version(), 1);
 	notify_nolisten(player, get_create_c_version(), 1);
 	notify_nolisten(player, get_db_c_version(), 1);
-	notify_nolisten(player, get_debugger_c_version(), 1);
 	notify_nolisten(player, get_edit_c_version(), 1);
 	notify_nolisten(player, get_events_c_version(), 1);
 	notify_nolisten(player, get_game_c_version(), 1);

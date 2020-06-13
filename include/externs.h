@@ -82,7 +82,6 @@ extern void macroload(FILE * f);
 extern void free_prog_text(struct line *l);
 extern struct line *read_program(dbref i);
 extern void write_program(struct line *first, dbref i);
-extern char *show_line_prims(struct frame *fr, dbref program, struct inst *pc, int maxprims, int markpc);
 extern dbref db_write_deltas(FILE * f);
 
 /* From create.c */
@@ -417,7 +416,6 @@ const char *get_copyright_c_version(void);
 const char *get_create_c_version(void);
 const char *get_crt_malloc_c_version(void);
 const char *get_db_c_version(void);
-const char *get_debugger_c_version(void);
 const char *get_disassem_c_version(void);
 const char *get_diskprop_c_version(void);
 const char *get_edit_c_version(void);
