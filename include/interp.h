@@ -159,7 +159,6 @@ extern int nargs;				/* DO NOT TOUCH THIS VARIABLE */
 
 #include "p_array.h"
 #include "p_db.h"
-#include "p_error.h"
 #include "p_stack.h"
 #include "p_regex.h"
 
