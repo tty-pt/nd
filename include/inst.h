@@ -17,7 +17,7 @@
 #define BASE_MAX (9 + PRIMS_DB_CNT + \
     PRIMS_STACK_CNT + \
     PRIMS_ARRAY_CNT + \
-    PRIMS_REGEX_CNT + PRIMS_INTERNAL_CNT)
+    PRIMS_INTERNAL_CNT)
 
 /* now refer to tables to map instruction number to name */
 extern const char *base_inst[];
