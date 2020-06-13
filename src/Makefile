@@ -22,7 +22,7 @@ fbmuck-obj-y += array.o boolexp.o compile.o create.o db.o db_header.o debugger.o
 	edit.o events.o game.o hashtab.o help.o inst.o \
 	interp.o look.o match.o mcp.o mcppkgs.o mfuns2.o \
 	mfuns.o move.o msgparse.o mufevent.o p_array.o \
-	p_connects.o p_db.o p_error.o player.o p_math.o \
+	p_connects.o p_db.o p_error.o player.o \
 	p_props.o p_regex.o predicates.o propdirs.o property.o \
 	props.o p_stack.o p_strings.o random.o rob.o sanity.o set.o \
 	signal.o smatch.o snprintf.o speech.o stringutil.o \
