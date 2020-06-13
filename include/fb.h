@@ -28,7 +28,6 @@
 #include "p_connects.h"
 #include "p_db.h"
 #include "p_error.h"
-#include "p_float.h"
 #include "p_math.h"
 #include "p_props.h"
 #include "p_stack.h"
