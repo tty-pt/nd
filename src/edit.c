@@ -368,9 +368,6 @@ editor(int descr, dbref player, const char *command)
 		case VIEW_COMMAND:
 			val_and_head(player, arg, i);
 			break;
-		case UNASSEMBLE_COMMAND:
-			disassemble(player, program);
-			break;
 		case NUMBER_COMMAND:
 			toggle_numbers(player, arg, i);
 			break;

@@ -358,8 +358,6 @@ extern dbref force_prog;
 extern void do_credits(dbref player);
 extern void do_version(dbref player);
 
-extern void disassemble(dbref player, dbref program);
-
 /* from random.c */
 void *init_seed(char *seed);
 void delete_seed(void *buffer);
