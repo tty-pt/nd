@@ -1040,6 +1040,44 @@ prim_array_sort_indexed(PRIM_PROTOTYPE)
 	PushArrayRaw(nu);
 }
 
+int
+prop_read_perms(dbref player, dbref obj, const char *name, int mlev)
+{
+	if (Prop_System(name))
+		return 0;
+	if ((mlev < 3) && Prop_Private(name) && !permissions(player, obj))
+		return 0;
+	if ((mlev < 4) && Prop_Hidden(name))
+		return 0;
+	return 1;
+}
+
+int
+prop_write_perms(dbref player, dbref obj, const char *name, int mlev)
+{
+	if (Prop_System(name))
+		return 0;
+
+	if (mlev < 3) {
+		if (!permissions(player, obj)) {
+			if (Prop_Private(name))
+				return 0;
+			if (Prop_ReadOnly(name))
+				return 0;
+			if (!strcmp(name, "sex"))
+				return 0;
+		}
+		if (string_prefix(name, "_msgmacs/"))
+			return 0;
+	}
+	if (mlev < 4) {
+		if (Prop_SeeOnly(name))
+			return 0;
+		if (Prop_Hidden(name))
+			return 0;
+	}
+	return 1;
+}
 
 void
 prim_array_get_propdirs(PRIM_PROTOTYPE)
