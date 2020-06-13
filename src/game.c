@@ -608,11 +608,6 @@ process_command(int descr, dbref player, char *command)
 			case 'E':
 				/* @edit, @entrances, @examine */
 				switch (command[2]) {
-				case 'd':
-				case 'D':
-					Matched("@edit");
-					do_edit(descr, player, arg1);
-					break;
 				case 'n':
 				case 'N':
 					Matched("@entrances");
@@ -712,27 +707,11 @@ process_command(int descr, dbref player, char *command)
 				/* @mcpedit, @mcpprogram, @memory, @mpitops,
 				   @muftops */
 				switch (command[2]) {
-				case 'c':
-				case 'C':
-					if (string_prefix("@mcpedit", command)) {
-						Matched("@mcpedit");
-						do_mcpedit(descr, player, arg1);
-						break;
-					} else {
-						Matched("@mcpprogram");
-						do_mcpprogram(descr, player, arg1);
-						break;
-					}
 				case 'p':
-			    case 'P':
-			        Matched("@mpitops");
-			        do_mpi_topprofs(player, arg1);
-			        break;
-			    case 'u':
-			    case 'U':
-			        Matched("@muftops");
-			        do_muf_topprofs(player, arg1);
-			        break;
+				case 'P':
+					Matched("@mpitops");
+					do_mpi_topprofs(player, arg1);
+					break;
 				default:
 					goto bad;
 				}
@@ -817,15 +796,9 @@ process_command(int descr, dbref player, char *command)
 					break;
 				case 'r':
 				case 'R':
-					if (string_prefix("@program", command)) {
-						Matched("@program");
-						do_prog(descr, player, arg1);
-						break;
-					} else {
-						Matched("@propset");
-						do_propset(descr, player, arg1, arg2);
-						break;
-					}
+					Matched("@propset");
+					do_propset(descr, player, arg1, arg2);
+					break;
 				case 's':
 				case 'S':
 					Matched("@ps");

@@ -90,10 +90,6 @@ extern void do_link(int descr, dbref player, const char *name, const char *room_
 extern void do_dig(int descr, dbref player, const char *name, const char *pname);
 extern void do_create(dbref player, char *name, char *cost);
 extern void do_clone(int descr, dbref player, char *name);
-extern void do_prog(int descr, dbref player, const char *name);
-extern void do_mcpedit(int descr, dbref player, const char *name);
-extern void do_mcpprogram(int descr, dbref player, const char* name);
-extern void mcpedit_program(int descr, dbref player, dbref prog, const char* name);
 extern void do_attach(int descr, dbref player, const char *action_name, const char *source_name);
 extern int unset_source(dbref player, dbref loc, dbref action);
 extern int link_exit(int descr, dbref player, dbref exit, char *dest_name, dbref * dest_list);
@@ -371,9 +367,6 @@ void Base64Encode(char* outbuf, const void* inbuf, size_t inlen);
      * the full set of base64 encoded data in the string. */
 size_t Base64Decode(void* outbuf, size_t outbuflen, const char* inbuf);
 
-/* from mcppkgs.c */
-extern void show_mcp_error(McpFrame * mfr, char *topic, char *text);
-
 /* from diskprop.c */
 extern void dispose_all_oldprops(void);
 
@@ -414,7 +407,6 @@ const char *get_boolexp_c_version(void);
 const char *get_compile_c_version(void);
 const char *get_copyright_c_version(void);
 const char *get_create_c_version(void);
-const char *get_crt_malloc_c_version(void);
 const char *get_db_c_version(void);
 const char *get_disassem_c_version(void);
 const char *get_diskprop_c_version(void);
@@ -430,7 +422,6 @@ const char *get_log_c_version(void);
 const char *get_look_c_version(void);
 const char *get_match_c_version(void);
 const char *get_mcp_c_version(void);
-const char *get_mcppkgs_c_version(void);
 const char *get_mfuns_c_version(void);
 const char *get_mfuns2_c_version(void);
 const char *get_move_c_version(void);
@@ -440,11 +431,7 @@ const char *get_oldcompress_c_version(void);
 const char *get_olddecomp_c_version(void);
 const char *get_p_array_c_version(void);
 const char *get_p_db_c_version(void);
-const char *get_p_error_c_version(void);
-const char *get_p_props_c_version(void);
-const char *get_p_regex_c_version(void);
 const char *get_p_stack_c_version(void);
-const char *get_p_strings_c_version(void);
 const char *get_player_c_version(void);
 const char *get_predicates_c_version(void);
 const char *get_prochelp_c_version(void);

@@ -122,7 +122,6 @@ do_showextver(dbref player) {
 	notify_nolisten(player, get_look_c_version(), 1);
 	notify_nolisten(player, get_match_c_version(), 1);
 	notify_nolisten(player, get_mcp_c_version(), 1);
-	notify_nolisten(player, get_mcppkgs_c_version(), 1);
 	notify_nolisten(player, get_mfuns_c_version(), 1);
 	notify_nolisten(player, get_mfuns2_c_version(), 1);
 	notify_nolisten(player, get_move_c_version(), 1);
@@ -163,7 +162,6 @@ do_showextver(dbref player) {
 	notify_nolisten(player, interp_h_version, 1);
 	notify_nolisten(player, match_h_version, 1);
 	notify_nolisten(player, mcp_h_version, 1);
-	notify_nolisten(player, mcppkg_h_version, 1);
 	notify_nolisten(player, mfun_h_version, 1);
 	notify_nolisten(player, mfunlist_h_version, 1);
 	notify_nolisten(player, mpi_h_version, 1);
