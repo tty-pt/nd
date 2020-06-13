@@ -130,7 +130,6 @@ do_showextver(dbref player) {
 	notify_nolisten(player, get_msgparse_c_version(), 1);
 	notify_nolisten(player, get_mufevent_c_version(), 1);
 	notify_nolisten(player, get_p_array_c_version(), 1);
-	notify_nolisten(player, get_p_db_c_version(), 1);
 	notify_nolisten(player, get_p_stack_c_version(), 1);
 	notify_nolisten(player, get_player_c_version(), 1);
 	notify_nolisten(player, get_predicates_c_version(), 1);
@@ -173,7 +172,6 @@ do_showextver(dbref player) {
 	notify_nolisten(player, msgparse_h_version, 1);
 	notify_nolisten(player, mufevent_h_version, 1);
 	notify_nolisten(player, p_array_h_version, 1);
-	notify_nolisten(player, p_db_h_version, 1);
 	notify_nolisten(player, p_stack_h_version, 1);
 	notify_nolisten(player, params_h_version, 1);
 	notify_nolisten(player, patchlevel_h_version, 1);

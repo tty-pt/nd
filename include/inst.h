@@ -14,7 +14,7 @@
 #define IN_CATCH_DETAILED  9
 
 #define BASE_MIN 1
-#define BASE_MAX (9 + PRIMS_DB_CNT + \
+#define BASE_MAX (9 + \
     PRIMS_STACK_CNT + \
     PRIMS_ARRAY_CNT + \
     PRIMS_INTERNAL_CNT)

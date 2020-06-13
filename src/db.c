@@ -1326,5 +1326,27 @@ db_read(FILE * f)
 		c = getc(f);
 	}							/* for */
 }								/* db_read */
+
+void
+copyobj(dbref player, dbref old, dbref nu)
+{
+	struct object *newp = DBFETCH(nu);
+
+	NAME(nu) = alloc_string(NAME(old));
+	if (Typeof(old) == TYPE_THING) {
+		ALLOC_THING_SP(nu);
+		THING_SET_HOME(nu, player);
+		SETVALUE(nu, 1);
+	}
+	newp->properties = copy_prop(old);
+	newp->exits = NOTHING;
+	newp->contents = NOTHING;
+	newp->next = NOTHING;
+	newp->location = NOTHING;
+	moveto(nu, player);
+
+	DBDIRTY(nu);
+}
+
 static const char *db_c_version = "$RCSfile$ $Revision: 1.39 $";
 const char *get_db_c_version(void) { return db_c_version; }

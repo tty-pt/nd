@@ -57,7 +57,6 @@ void (*prim_func[]) (PRIM_PROTOTYPE) = {
 	p_null,           p_null, p_null,
 	/* EVENT_WAITFOR, CATCH,  CATCH_DETAILED */
 
-	PRIMS_DB_FUNCS,
 	PRIMS_STACK_FUNCS,
 
 	PRIMS_ARRAY_FUNCS,
