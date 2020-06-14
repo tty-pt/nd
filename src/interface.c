@@ -607,7 +607,6 @@ shovechars()
 {
 	fd_set input_set, output_set;
 	time_t now;
-	long tmptq;
 	struct timeval last_slice, current_time;
 	struct timeval next_slice;
 	struct timeval timeout, slice_timeout;
@@ -640,7 +639,7 @@ shovechars()
 		gettimeofday(&current_time, (struct timezone *) 0);
 		last_slice = update_quotas(last_slice, current_time);
 
-		next_muckevent();
+		/* next_muckevent(); */
 		process_commands();
 		do_tick();
 
@@ -687,11 +686,6 @@ shovechars()
 				FD_SET(d->descriptor, &output_set);
 		}
 
-		tmptq = next_muckevent_time();
-		if ((tmptq >= 0L) && (timeout.tv_sec > tmptq)) {
-			timeout.tv_sec = tmptq + (PAUSE_MIN / 1000);
-			timeout.tv_usec = (PAUSE_MIN % 1000) * 1000L;
-		}
 		gettimeofday(&sel_in,NULL);
 		if (select(maxd, &input_set, &output_set, (fd_set *) 0, &timeout) < 0) {
 			if (errno != EINTR) {

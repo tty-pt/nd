@@ -143,38 +143,6 @@ free_timenode(timequeue ptr)
 }
 
 int
-control_process(dbref player, int pid)
-{
-	timequeue tmp, ptr = tqhead;
-
-	tmp = ptr;
-	while ((ptr) && (pid != ptr->eventnum)) {
-		tmp = ptr;
-		ptr = ptr->next;
-	}
-
-	/* If the process isn't in the timequeue, that means it's
-		waiting for an event, so let the event code handle
-		it. */
-
-	if (!ptr) {
-		return muf_event_controls(player, pid);
-	}
-
-	/* However, if it is in the timequeue, we have to handle it.
-		Other than a Wizard, there are three people who can kill it:
-		the owner of the program, the owner of the trigger, and the
-		person who is currently running it. */
-
-	if (!controls(player, ptr->called_prog) && !controls(player, ptr->trig)
-			&& (player != ptr->uid)) {
-		return 0;
-	}
-	return 1;
-}
-
-
-int
 add_event(int event_typ, int subtyp, int dtime, int descr, dbref player, dbref loc,
 		  dbref trig, dbref program, struct frame *fr,
 		  const char *strdata, const char *strcmd, const char *str3)
@@ -314,25 +282,6 @@ next_timequeue_event(void)
 }
 
 
-int
-in_timequeue(int pid)
-{
-	timequeue ptr = tqhead;
-
-	if (!pid)
-		return 0;
-	if (muf_event_pid_frame(pid))
-		return 1;
-	if (!tqhead)
-		return 0;
-	while ((ptr) && (ptr->eventnum != pid))
-		ptr = ptr->next;
-	if (ptr)
-		return 1;
-	return 0;
-}
-
-
 long
 next_event_time(void)
 {
@@ -408,12 +357,6 @@ dequeue_prog_real(dbref program, int killmode, const char *file, const int line)
 			ptr = tmp;
 		}
 	}
-	debug("dequeue_prog(3): about to muf_event_dequeue(#%d, %d)\n",program, killmode);
-	if (count < (count += muf_event_dequeue(program, killmode)))
-			prog_clean(tqhead->fr);
-	/* and just to make sure we got them all... otherwise, we need
-	 * to rethink what we're doing here. */
-	/* assert(PROGRAM_INSTANCES(program) == 0);*/
 	return (count);
 }
 

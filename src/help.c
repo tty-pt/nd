@@ -224,8 +224,6 @@ mcppkg_help_request(McpFrame * mfr, McpMesg * msg, McpVer ver, void *context)
 
 		if (!strcmp(valtype, "man")) {
 			file = MAN_FILE;
-		} else if (!strcmp(valtype, "mpi")) {
-			file = MPI_FILE;
 		} else if (!strcmp(valtype, "help")) {
 			file = HELP_FILE;
 		} else if (!strcmp(valtype, "news")) {
@@ -379,16 +377,6 @@ do_man(dbref player, char *topic, char *seg)
 	index_file(player, topic, MAN_FILE);
 }
 
-
-void
-do_mpihelp(dbref player, char *topic, char *seg)
-{
-	if (show_subfile(player, MPI_DIR, topic, seg, FALSE))
-		return;
-	index_file(player, topic, MPI_FILE);
-}
-
-
 void
 do_help(dbref player, char *topic, char *seg)
 {
@@ -468,7 +456,7 @@ main(int argc, char**argv)
 	char* topic = NULL;
 	char buf[BUFFER_LEN];
 	if (argc < 2) {
-			fprintf(stderr, "Usage: %s muf|mpi|help [topic]\n", argv[0]);
+			fprintf(stderr, "Usage: %s muf|help [topic]\n", argv[0]);
 		exit(-1);
 	} else if (argc == 2 || argc == 3) {
 		if (argc == 2) {
@@ -480,12 +468,10 @@ main(int argc, char**argv)
 			helpfile = MAN_FILE;
 		} else if (!strcmp(argv[1], "muf")) {
 			helpfile = MAN_FILE;
-		} else if (!strcmp(argv[1], "mpi")) {
-			helpfile = MPI_FILE;
 		} else if (!strcmp(argv[1], "help")) {
 			helpfile = HELP_FILE;
 		} else {
-			fprintf(stderr, "Usage: %s muf|mpi|help [topic]\n", argv[0]);
+			fprintf(stderr, "Usage: %s muf|help [topic]\n", argv[0]);
 			exit(-2);
 		}
 
@@ -500,7 +486,7 @@ main(int argc, char**argv)
 		index_file(1, topic, buf);
 		exit(0);
 	} else if (argc > 3) {
-		fprintf(stderr, "Usage: %s muf|mpi|help [topic]\n", argv[0]);
+		fprintf(stderr, "Usage: %s muf|help [topic]\n", argv[0]);
 		exit(-1);
 	}
 	return 0;

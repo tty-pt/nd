@@ -43,11 +43,9 @@ extern int add_event(int event_type, int subtyp, int dtime, int descr, dbref pla
 					 dbref loc, dbref trig, dbref program, struct frame *fr,
 					 const char *strdata, const char *strcmd, const char *str3);
 extern void next_timequeue_event(void);
-extern int in_timequeue(int pid);
 extern long next_event_time(void);
 extern int dequeue_prog_real(dbref, int, const char *, const int);
 extern int dequeue_process(int procnum);
-extern int control_process(dbref player, int procnum);
 extern void propqueue(int descr, dbref player, dbref where, dbref trigger, dbref what,
 					  dbref xclude, const char *propname, const char *toparg,
 
@@ -258,13 +256,9 @@ extern void do_boot(dbref player, const char *name);
 extern void do_pcreate(dbref player, const char *arg1, const char *arg2);
 extern void do_usage(dbref player);
 extern void do_serverdebug(int descr, dbref player, const char *arg1, const char *arg2);
-extern void do_muf_topprofs(dbref player, char *arg1);
-extern void do_mpi_topprofs(dbref player, char *arg1);
-extern void do_all_topprofs(dbref player, char *arg1);
 extern void do_bless(int descr, dbref player, const char *target, const char *propname);
 extern void do_unbless(int descr, dbref player, const char *target, const char *propname);
 
-extern time_t mpi_prof_start_time;
 extern time_t sel_prof_start_time;
 extern long sel_prof_idle_sec;
 extern long sel_prof_idle_usec;
@@ -298,9 +292,6 @@ extern struct inst *interp_loop(dbref player, dbref program, struct frame *fr, i
 extern struct frame *interp(int descr, dbref player, dbref location, dbref program,
 							dbref source, int nosleeping, int whichperms, int forced_pid);
 extern void purge_for_pool(void);
-
-/* From mufevent.c */
-extern int muf_event_process_unregister(struct frame *fr);
 
 /* from signal.h */
 extern void set_dumper_signals(void);
@@ -358,9 +349,6 @@ extern void spawn_resolver(void);
 /* from events.c */
 extern void dump_db_now(void);
 extern void delta_dump_now(void);
-
-/* from mesgparse.c */
-extern void mesg_init(void);
 
 /* from tune.c */
 extern void tune_load_parmsfile(dbref player);

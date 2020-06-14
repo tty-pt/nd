@@ -56,7 +56,13 @@ do_dump(dbref player, const char *newfile)
 			snprintf(buf, sizeof(buf), "Dumping...");
 		}
 		notify(player, buf);
-		dump_db_now();
+
+		/* dump_db_now(); */
+		{
+			long currtime = (long) time((time_t *) NULL);
+			add_property((dbref) 0, "_sys/lastdumptime", NULL, (int) currtime);
+			fork_and_dump();
+		}
 	} else {
 		notify(player, "Sorry, you are in a no dumping zone.");
 	}
@@ -238,7 +244,6 @@ init_game()
 		return -1;
 
 	db_free();
-	mesg_init();				/* init mpi interpreter */
 	SRANDOM(getpid());			/* init random number generator */
 
 	/* ok, read the db in */
@@ -670,20 +675,6 @@ process_command(int descr, dbref player, char *command)
 					goto bad;
 				}
 				break;
-			case 'm':
-			case 'M':
-				/* @mcpedit, @mcpprogram, @memory, @mpitops,
-				   @muftops */
-				switch (command[2]) {
-				case 'p':
-				case 'P':
-					Matched("@mpitops");
-					do_mpi_topprofs(player, arg1);
-					break;
-				default:
-					goto bad;
-				}
-				break;
 			case 'n':
 			case 'N':
 				/* @name, @newpassword */
@@ -859,12 +850,9 @@ process_command(int descr, dbref player, char *command)
 				case 'O':
 					if (!strcmp(command, "@toad")) {
 						do_toad(descr, player, arg1, arg2);
-					} else if (!strcmp(command, "@tops")) {
-						do_all_topprofs(player, arg1);
-					} else {
-						goto bad;
+						break;
 					}
-					break;
+					goto bad;
 				case 'r':
 				case 'R':
 					Matched("@trace");
@@ -1047,16 +1035,13 @@ process_command(int descr, dbref player, char *command)
 			}
 		case 'm':
 		case 'M':
-			/* man, motd, move, mpi */
+			/* man, motd, move */
 			if (string_prefix(command, "move")) {
 				do_move(descr, player, arg1, 0);
 				break;
 			} else if (!strcmp(command, "motd")) {
 				/* FIXME */
 				/* do_motd(player, full_command); */
-				break;
-			} else if (!strcmp(command, "mpi")) {
-				do_mpihelp(player, arg1, arg2);
 				break;
 			} else if (!strcmp(command, "map")) {
 				do_view(descr, player);

@@ -10,7 +10,6 @@
 #include <float.h>
 #include <string.h>
 #include "db.h"
-#include "inst.h"
 #include "externs.h"
 #include "match.h"
 #include "interface.h"
