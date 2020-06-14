@@ -498,8 +498,6 @@ size_object(dbref i, int load)
 		byts += sizeof(dbref) * DBFETCH(i)->sp.exit.ndest;
 	} else if (Typeof(i) == TYPE_PLAYER && PLAYER_PASSWORD(i)) {
 		byts += strlen(PLAYER_PASSWORD(i)) + 1;
-	} else if (Typeof(i) == TYPE_PROGRAM) {
-		byts += size_prog(i);
 	}
 	return byts;
 }

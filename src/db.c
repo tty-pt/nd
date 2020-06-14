@@ -663,10 +663,6 @@ db_free_object(dbref i)
 	if (Typeof(i) == TYPE_PLAYER) {
 		FREE_PLAYER_SP(i);
 	}
-	if (Typeof(i) == TYPE_PROGRAM) {
-		uncompile_program(i);
-		FREE_PROGRAM_SP(i);
-	}
 }
 
 void
@@ -682,7 +678,6 @@ db_free(void)
 		db_top = 0;
 	}
 	clear_players();
-	clear_primitives();
 	recyclable = NOTHING;
 }
 

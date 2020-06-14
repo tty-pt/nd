@@ -75,7 +75,6 @@ void set_signals(void);
 void set_source(dbref player, dbref action, dbref source);
 void show_mcp_error(McpFrame * mfr, char *topic, char *text);
 long size_boolexp(struct boolexp *b);
-long size_prog(dbref prog);
 long size_properties(dbref player, int load);
 long size_proplist(PropPtr avl);
 void spit_file_segment(dbref player, const char *filename, const char *seg);

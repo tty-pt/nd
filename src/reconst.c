@@ -314,18 +314,8 @@ clear_players(void)
 }
 
 void
-clear_primitives(void)
-{
-}
-
-void
 add_event(int descr, dbref player, dbref loc, dbref trig, int dtime, dbref program,
 		  struct frame *fr, const char *strdata)
-{
-}
-
-void
-init_primitives(void)
 {
 }
 

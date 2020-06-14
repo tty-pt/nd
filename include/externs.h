@@ -67,7 +67,6 @@ extern void envpropqueue(int descr, dbref player, dbref where, dbref trigger, db
 
 						 int mlev, int mt);
 extern int scan_instances(dbref program);
-extern int program_active(dbref program);
 
 /* from db.c */
 extern int number(const char *s);
@@ -310,11 +309,7 @@ extern const char *unparse_boolexp(dbref player, struct boolexp *b, int fullname
 extern void interactive(int descr, dbref player, const char *command);
 
 /* From compile.c */
-extern void uncompile_program(dbref i);
-extern int get_primitive(const char *);
 extern void do_compile(int descr, dbref in_player, dbref in_program, int force_err_disp);
-extern void clear_primitives(void);
-extern void init_primitives(void);
 
 /* From interp.c */
 extern struct inst *interp_loop(dbref player, dbref program, struct frame *fr, int rettyp);

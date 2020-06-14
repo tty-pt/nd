@@ -247,7 +247,6 @@ init_game()
 		return -1;
 
 	db_free();
-	init_primitives();			/* init muf compiler */
 	mesg_init();				/* init mpi interpreter */
 	SRANDOM(getpid());			/* init random number generator */
 
