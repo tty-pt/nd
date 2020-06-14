@@ -165,45 +165,6 @@ purge_all_free_frames(void)
 	}
 }
 
-void
-purge_for_pool(void)
-{
-	/* This only purges up to the most recently used. */
-	/* Purge this a second time to purge all. */
-	struct forvars *cur, *next;
-
-	cur = *last_for;
-	*last_for = NULL;
-	last_for = &for_pool;
-
-	while (cur) {
-		next = cur->next;
-		free(cur);
-		cur = next;
-	}
-}
-
-
-void
-purge_try_pool(void)
-{
-	/* This only purges up to the most recently used. */
-	/* Purge this a second time to purge all. */
-	struct tryvars *cur, *next;
-
-	cur = *last_try;
-	*last_try = NULL;
-	last_try = &try_pool;
-
-	while (cur) {
-		next = cur->next;
-		free(cur);
-		cur = next;
-	}
-}
-
-
-
 struct frame *
 interp(int descr, dbref player, dbref location, dbref program,
 	   dbref source, int nosleeps, int whichperms, int forced_pid)
@@ -323,13 +284,7 @@ interp(int descr, dbref player, dbref location, dbref program,
 	push(fr->argument.st, &(fr->argument.top), PROG_STRING, 
 		 MIPSCAST alloc_prog_string(match_args));
 	return fr;
-}
-
-int already_created;
-
-void
-prog_clean(struct frame *fr)
-{
+	return 0;
 }
 
 void

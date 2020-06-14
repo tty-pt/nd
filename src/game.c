@@ -56,13 +56,8 @@ do_dump(dbref player, const char *newfile)
 			snprintf(buf, sizeof(buf), "Dumping...");
 		}
 		notify(player, buf);
-
-		/* dump_db_now(); */
-		{
-			long currtime = (long) time((time_t *) NULL);
-			add_property((dbref) 0, "_sys/lastdumptime", NULL, (int) currtime);
-			fork_and_dump();
-		}
+		add_property((dbref) 0, "_sys/lastdumptime", NULL, (int) (long) time((time_t *) NULL));
+		fork_and_dump();
 	} else {
 		notify(player, "Sorry, you are in a no dumping zone.");
 	}

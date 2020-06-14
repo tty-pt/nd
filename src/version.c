@@ -131,7 +131,6 @@ do_showextver(dbref player) {
 	notify_nolisten(player, get_set_c_version(), 1);
 	notify_nolisten(player, get_signal_c_version(), 1);
 	notify_nolisten(player, get_smatch_c_version(), 1);
-	notify_nolisten(player, get_snprintf_c_version(), 1);
 	notify_nolisten(player, get_speech_c_version(), 1);
 	notify_nolisten(player, get_stringutil_c_version(), 1);
 	notify_nolisten(player, get_timequeue_c_version(), 1);

@@ -651,12 +651,10 @@ do_toad(int descr, dbref player, const char *name, const char *recip)
 		/* we're ok */
 		/* do it */
 		send_contents(descr, victim, HOME);
-		dequeue_prog(victim, 0);  /* Dequeue the programs that the player's running */
 		for (stuff = 0; stuff < db_top; stuff++) {
 			if (OWNER(stuff) == victim) {
 				switch (Typeof(stuff)) {
 				case TYPE_PROGRAM:
-					dequeue_prog(stuff, 0);	/* dequeue player's progs */
 					if (TrueWizard(recipient)) {
 						FLAGS(stuff) &= ~(ABODE | WIZARD);
 						SetMLevel(stuff, 1);

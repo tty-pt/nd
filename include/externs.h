@@ -39,13 +39,6 @@ extern long next_muckevent_time(void);
 extern void next_muckevent(void);
 
 /* from timequeue.c */
-extern int add_event(int event_type, int subtyp, int dtime, int descr, dbref player,
-					 dbref loc, dbref trig, dbref program, struct frame *fr,
-					 const char *strdata, const char *strcmd, const char *str3);
-extern void next_timequeue_event(void);
-extern long next_event_time(void);
-extern int dequeue_prog_real(dbref, int, const char *, const int);
-extern int dequeue_process(int procnum);
 extern void propqueue(int descr, dbref player, dbref where, dbref trigger, dbref what,
 					  dbref xclude, const char *propname, const char *toparg,
 
@@ -190,7 +183,6 @@ extern int restricted(dbref player, dbref thing, object_flag_type flag);
 extern int payfor(dbref who, int cost);
 extern int ok_ascii_any(const char *name);
 extern int ok_name(const char *name);
-extern int isancestor(dbref parent, dbref child);
 
 /* From rob.c */
 extern void do_give(int descr, dbref player, const char *recipient, int amount);
@@ -291,8 +283,6 @@ extern void interactive(int descr, dbref player, const char *command);
 extern struct inst *interp_loop(dbref player, dbref program, struct frame *fr, int rettyp);
 extern struct frame *interp(int descr, dbref player, dbref location, dbref program,
 							dbref source, int nosleeping, int whichperms, int forced_pid);
-extern void purge_for_pool(void);
-
 /* from signal.h */
 extern void set_dumper_signals(void);
 #ifdef WIN32
@@ -308,8 +298,6 @@ extern void ts_modifyobject(dbref thing);
 
 /* From smatch.c */
 extern int equalstr(char *s, char *t);
-
-extern void CrT_summarize(dbref player);
 
 extern int force_level;
 extern dbref force_prog;
@@ -345,32 +333,20 @@ extern short global_dumpdone;
 extern void spawn_resolver(void);
 #endif
 
-
-/* from events.c */
-extern void dump_db_now(void);
-extern void delta_dump_now(void);
-
 /* from tune.c */
 extern void tune_load_parmsfile(dbref player);
 
 void dump_status(void);
 void kill_resolver(void);
 
-int add_mpi_event(int delay, int descr, dbref player, dbref loc, dbref trig, const char *mpi, const char *cmdstr, const char *argstr, int listen_p, int omesg_p, int bless_p);
-
 /* version-getting functions */
 
 const char *get_announce_c_version(void);
 const char *get_array_c_version(void);
 const char *get_boolexp_c_version(void);
-const char *get_compile_c_version(void);
 const char *get_copyright_c_version(void);
 const char *get_create_c_version(void);
 const char *get_db_c_version(void);
-const char *get_disassem_c_version(void);
-const char *get_diskprop_c_version(void);
-const char *get_edit_c_version(void);
-const char *get_events_c_version(void);
 const char *get_game_c_version(void);
 const char *get_hashtab_c_version(void);
 const char *get_help_c_version(void);
@@ -381,16 +357,9 @@ const char *get_log_c_version(void);
 const char *get_look_c_version(void);
 const char *get_match_c_version(void);
 const char *get_mcp_c_version(void);
-const char *get_mfuns_c_version(void);
-const char *get_mfuns2_c_version(void);
 const char *get_move_c_version(void);
 const char *get_msgparse_c_version(void);
 const char *get_mufevent_c_version(void);
-const char *get_oldcompress_c_version(void);
-const char *get_olddecomp_c_version(void);
-const char *get_p_array_c_version(void);
-const char *get_p_db_c_version(void);
-const char *get_p_stack_c_version(void);
 const char *get_player_c_version(void);
 const char *get_predicates_c_version(void);
 const char *get_prochelp_c_version(void);

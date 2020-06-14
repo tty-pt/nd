@@ -978,8 +978,6 @@ recycle(int descr, dbref player, dbref thing)
 			return;
 		}
 	}
-	/* dequeue any MUF or MPI events for the given object */
-	dequeue_prog(thing, 0);
 	switch (Typeof(thing)) {
 	case TYPE_ROOM:
 		if (!Wizard(OWNER(thing)))
