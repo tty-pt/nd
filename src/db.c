@@ -320,41 +320,6 @@ foldtree(struct macrotable *center)
 	}
 }
 
-int
-macrochain(struct macrotable *lastnode, FILE * f)
-{
-	char *line, *line2;
-	struct macrotable *newmacro;
-
-	if (!(line = file_line(f)))
-		return 0;
-	line2 = file_line(f);
-
-	newmacro = (struct macrotable *) new_macro(line, line2, getref(f));
-	free(line);
-	free(line2);
-
-	if (!macrotop)
-		macrotop = (struct macrotable *) newmacro;
-	else {
-		newmacro->left = lastnode;
-		lastnode->right = newmacro;
-	}
-	return (1 + macrochain(newmacro, f));
-}
-
-void
-macroload(FILE * f)
-{
-	int count = 0;
-
-	macrotop = NULL;
-	count = macrochain(macrotop, f);
-	for (count /= 2; count--; macrotop = macrotop->right) ;
-	foldtree(macrotop);
-	return;
-}
-
 void
 write_program(struct line *first, dbref i)
 {
@@ -1156,29 +1121,6 @@ db_read_object_foxen(FILE * f, struct object *o, dbref objno, int dtype, int rea
 	}
 }
 
-void
-autostart_progs(void)
-{
-	dbref i;
-	struct object *o;
-	struct line *tmp;
-
-	for (i = 0; i < db_top; i++) {
-		if (Typeof(i) == TYPE_PROGRAM) {
-			if ((FLAGS(i) & ABODE) && TrueWizard(OWNER(i))) {
-				/* pre-compile AUTOSTART programs. */
-				/* They queue up when they finish compiling. */
-				o = DBFETCH(i);
-				tmp = PROGRAM_FIRST(i);
-				PROGRAM_SET_FIRST(i, (struct line *) read_program(i));
-				do_compile(-1, OWNER(i), i, 0);
-				free_prog_text(PROGRAM_FIRST(i));
-				PROGRAM_SET_FIRST(i, tmp);
-			}
-		}
-	}
-}
-
 dbref
 db_read(FILE * f)
 {
@@ -1309,7 +1251,6 @@ db_read(FILE * f)
 							recyclable = i;
 						}
 					}
-					autostart_progs();
 					return db_top;
 				}
 			}

@@ -290,18 +290,6 @@ main(int argc, char **argv)
 	db_write(output_file);
 }
 
-/* dummy compiler */
-void
-do_compile(int descr, dbref p, dbref pr, int force_err_disp)
-{
-}
-struct macrotable
-*
-new_macro(const char *name, const char *definition, dbref player)
-{
-	return NULL;
-}
-
 void
 log_status(format, p1, p2, p3, p4, p5, p6, p7, p8)
 char *format, *p1, *p2, *p3, *p4, *p5, *p6, *p7, *p8;
@@ -310,12 +298,6 @@ char *format, *p1, *p2, *p3, *p4, *p5, *p6, *p7, *p8;
 
 void
 clear_players(void)
-{
-}
-
-void
-add_event(int descr, dbref player, dbref loc, dbref trig, int dtime, dbref program,
-		  struct frame *fr, const char *strdata)
 {
 }
 

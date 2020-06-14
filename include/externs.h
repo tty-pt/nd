@@ -39,25 +39,15 @@ extern long next_muckevent_time(void);
 extern void next_muckevent(void);
 
 /* from timequeue.c */
-extern void handle_read_event(int descr, dbref player, const char* command);
-extern int read_event_notify(int descr, dbref player, const char* cmd);
-extern int add_muf_read_event(int descr, dbref player, dbref prog, struct frame *fr);
-extern int add_muf_queue_event(int descr, dbref player, dbref loc, dbref trig, dbref prog,
-						   const char *argstr, const char *cmdstr, int listen_p);
 extern int add_event(int event_type, int subtyp, int dtime, int descr, dbref player,
 					 dbref loc, dbref trig, dbref program, struct frame *fr,
 					 const char *strdata, const char *strcmd, const char *str3);
 extern void next_timequeue_event(void);
 extern int in_timequeue(int pid);
-extern struct frame* timequeue_pid_frame(int pid);
 extern long next_event_time(void);
-extern void list_events(dbref program);
 extern int dequeue_prog_real(dbref, int, const char *, const int);
 extern int dequeue_process(int procnum);
-extern int dequeue_timers(int procnum, char* timerid);
-extern void purge_timenode_free_pool(void);
 extern int control_process(dbref player, int procnum);
-extern void do_dequeue(int descr, dbref player, const char *arg1);
 extern void propqueue(int descr, dbref player, dbref where, dbref trigger, dbref what,
 					  dbref xclude, const char *propname, const char *toparg,
 
@@ -66,8 +56,6 @@ extern void envpropqueue(int descr, dbref player, dbref where, dbref trigger, db
 						 dbref xclude, const char *propname, const char *toparg,
 
 						 int mlev, int mt);
-extern int scan_instances(dbref program);
-
 /* from db.c */
 extern int number(const char *s);
 extern int ifloat(const char *s);
@@ -96,9 +84,6 @@ extern int link_exit_dry(int descr, dbref player, dbref exit, char *dest_name, d
 extern void do_action(int descr, dbref player, const char *action_name, const char *source_name);
 
 /* from edit.c */
-extern struct macrotable
-*new_macro(const char *name, const char *definition, dbref player);
-extern char *macro_expansion(struct macrotable *node, const char *match);
 extern void match_and_list(int descr, dbref player, const char *name, char *linespec);
 extern void do_list(dbref player, dbref program, int *oarg, int argc);
 
@@ -308,9 +293,6 @@ extern const char *unparse_boolexp(dbref player, struct boolexp *b, int fullname
 /* From edit.c */
 extern void interactive(int descr, dbref player, const char *command);
 
-/* From compile.c */
-extern void do_compile(int descr, dbref in_player, dbref in_program, int force_err_disp);
-
 /* From interp.c */
 extern struct inst *interp_loop(dbref player, dbref program, struct frame *fr, int rettyp);
 extern struct frame *interp(int descr, dbref player, dbref location, dbref program,
@@ -318,7 +300,6 @@ extern struct frame *interp(int descr, dbref player, dbref location, dbref progr
 extern void purge_for_pool(void);
 
 /* From mufevent.c */
-extern int muf_event_exists(struct frame* fr, const char* eventid);
 extern int muf_event_process_unregister(struct frame *fr);
 
 /* from signal.h */
@@ -388,8 +369,6 @@ void dump_status(void);
 void kill_resolver(void);
 
 int add_mpi_event(int delay, int descr, dbref player, dbref loc, dbref trig, const char *mpi, const char *cmdstr, const char *argstr, int listen_p, int omesg_p, int bless_p);
-stk_array *get_pids(dbref ref);
-stk_array *get_pidinfo(int pid);
 
 /* version-getting functions */
 

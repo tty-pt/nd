@@ -294,7 +294,6 @@ main(int argc, char **argv)
 
 	close_sockets("\r\nServer shutting down.\r\n");
 
-	do_dequeue(-1, (dbref) 1, "all");
 	dump_database();
 
 	return 0;
@@ -643,7 +642,6 @@ shovechars()
 
 		next_muckevent();
 		process_commands();
-		muf_event_process();
 		do_tick();
 
 		for (d = descriptor_list; d; d = dnext) {
@@ -1361,18 +1359,16 @@ process_commands(void)
 						/* Un-escape MCP escaped lines */
 						tmp += 3;
 					}
-					/* WORK: send player's foreground/preempt programs an exclusive READ mufevent */
-					if (!read_event_notify(d->descriptor, d->player, tmp) && !*tmp) {
-						/* Didn't send blank line.  Eat it.  */
-						nprocessed++;
-						d->input.head = t->nxt;
-						d->input.lines--;
-						if (!d->input.head) {
-							d->input.tail = &d->input.head;
-							d->input.lines = 0;
-						}
-						free_text_block(t);
+
+					/* Didn't send blank line.  Eat it.  */
+					nprocessed++;
+					d->input.head = t->nxt;
+					d->input.lines--;
+					if (!d->input.head) {
+						d->input.tail = &d->input.head;
+						d->input.lines = 0;
 					}
+					free_text_block(t);
 				} else {
 					if (strncmp(t->start, "#$#", 3)) {
 						/* Not an MCP mesg, so count this against quota. */
@@ -1429,18 +1425,7 @@ do_command(struct descriptor_data *d, char *command)
 	if (d->connected)
 		ts_lastuseobject(d->player);
 
-	if (!strcmp(command, BREAK_COMMAND)) {
-	        if (!d->connected)
-		        return 0;
-		if (dequeue_prog(d->player, 2)) {
-			queue_ansi(d, "Foreground program aborted.\r\n");
-			if ((FLAGS(d->player) & INTERACTIVE))
-				if ((FLAGS(d->player) & READMODE))
-					process_command(d->descriptor, d->player, command);
-		}
-		PLAYER_SET_BLOCK(d->player, 0);
-		return 1;
-	} else if (!strcmp(command, QUIT_COMMAND)) {
+	if (!strcmp(command, QUIT_COMMAND)) {
 		return 0;
 	} else if ((!strncmp(command, WHO_COMMAND, sizeof(WHO_COMMAND) - 1)) ||
                    (*command == OVERIDE_TOKEN &&
@@ -1943,14 +1928,9 @@ announce_disconnect(struct descriptor_data *d)
 	dbref player = d->player;
 	dbref loc;
 	char buf[BUFFER_LEN];
-	int dcount;
 
 	if ((loc = getloc(player)) == NOTHING)
 		return;
-
-	get_player_descrs(d->player, &dcount);
-	if (dcount < 2 && dequeue_prog(player, 2))
-		notify(player, "Foreground program aborted.");
 
 	if ((!Dark(player)) && (!Dark(loc))) {
 		snprintf(buf, sizeof(buf), "%s has disconnected.", NAME(player));

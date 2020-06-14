@@ -21,7 +21,6 @@ extern void RCLEAR(struct inst *oper, char *file, int line);
 #define CLEAR(oper) RCLEAR(oper, __FILE__, __LINE__)
 extern void push(struct inst *stack, int *top, int type, voidptr res);
 
-extern struct inst *scopedvar_get(struct frame *fr, int level, int varnum);
 extern const char* scopedvar_getname(struct frame *fr, int level, int varnum);
 
 extern void copyinst(struct inst *from, struct inst *to);

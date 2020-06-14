@@ -107,16 +107,13 @@ void
 do_showextver(dbref player) {
 	notify_nolisten(player, get_array_c_version(), 1);
 	notify_nolisten(player, get_boolexp_c_version(), 1);
-	notify_nolisten(player, get_compile_c_version(), 1);
 	notify_nolisten(player, get_copyright_c_version(), 1);
 	notify_nolisten(player, get_create_c_version(), 1);
 	notify_nolisten(player, get_db_c_version(), 1);
-	notify_nolisten(player, get_edit_c_version(), 1);
 	notify_nolisten(player, get_events_c_version(), 1);
 	notify_nolisten(player, get_game_c_version(), 1);
 	notify_nolisten(player, get_hashtab_c_version(), 1);
 	notify_nolisten(player, get_help_c_version(), 1);
-	notify_nolisten(player, get_inst_c_version(), 1);
 	notify_nolisten(player, get_interface_c_version(), 1);
 	notify_nolisten(player, get_interp_c_version(), 1);
 	notify_nolisten(player, get_look_c_version(), 1);
@@ -156,7 +153,6 @@ do_showextver(dbref player) {
 	notify_nolisten(player, externs_h_version, 1);
 	notify_nolisten(player, fb_h_version, 1);
 	notify_nolisten(player, fbstrings_h_version, 1);
-	notify_nolisten(player, inst_h_version, 1);
 	notify_nolisten(player, interface_h_version, 1);
 	notify_nolisten(player, interp_h_version, 1);
 	notify_nolisten(player, match_h_version, 1);

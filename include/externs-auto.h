@@ -1,10 +1,6 @@
 #ifndef _EXTERNS_AUTO_H
 #define _EXTERNS_AUTO_H
 
-int add_muf_delay_event(int delay, int descr, dbref player, dbref loc, dbref trig, dbref prog, struct frame *fr, const char *mode);
-int add_muf_delayq_event(int delay, int descr, dbref player, dbref loc, dbref trig, dbref prog, const char *argstr, const char *cmdstr, int listen_p);
-int add_muf_timer_event(int descr, dbref player, dbref prog, struct frame *fr, int delay, char *id);
-int add_muf_tread_event(int descr, dbref player, dbref prog, struct frame *fr, int delay);
 void add_property(dbref player, const char *pname, const char *strval, int value);
 int array_delitem(stk_array ** harr, array_iter * item);
 int array_delrange(stk_array ** harr, array_iter * start, array_iter * end);
@@ -14,7 +10,6 @@ void copy_proplist(dbref obj, PropPtr * newer, PropPtr old);
 int dequeue_prog_real(dbref program, int sleeponly, const char *, const int);
 char * displayprop(dbref player, dbref obj, const char *name, char *buf, size_t bufsiz);
 void do_abort_silent(void);
-void do_dequeue(int descr, dbref player, const char *arg1);
 void do_doing(int descr, dbref player, const char *name, const char *mesg);
 void do_edit(int descr, dbref player, const char *name);
 void do_flock(int descr, dbref player, const char *name, const char *keyname);
@@ -46,8 +41,6 @@ void listenqueue(int descr, dbref player, dbref where, dbref trigger, dbref what
 int mcpframe_to_descr(McpFrame * ptr);
 int mcpframe_to_user(McpFrame * ptr);
 void muf_dlog_purge(struct frame *fr);
-void muf_event_add(struct frame *fr, char *event, struct inst *val, int exclusive);
-int muf_event_count(struct frame* fr);
 long next_muckevent_time(void);
 void next_muckevent(void);
 int notify_nolisten(dbref player, const char *msg, int isprivate);
@@ -69,7 +62,6 @@ void sane_dump_object(dbref player, const char *arg);
 void sanechange(dbref player, const char *command);
 void sanfix(dbref player);
 void sanity(dbref player);
-int scopedvar_poplevel(struct frame *fr);
 void send_contents(int descr, dbref loc, dbref dest);
 void set_signals(void);
 void set_source(dbref player, dbref action, dbref source);

@@ -18,8 +18,8 @@ ws-server-obj-y := ws-server.o
 fbmuck-obj-y := geometry.o plant.o biome.o noise.o search.o \
 	view.o item.o spell.o drink.o mob.o kill.o geography.o \
 	shop.o
-fbmuck-obj-y += array.o boolexp.o compile.o create.o db.o db_header.o \
-	edit.o events.o game.o hashtab.o help.o inst.o \
+fbmuck-obj-y += array.o boolexp.o create.o db.o db_header.o \
+	events.o game.o hashtab.o help.o \
 	interp.o look.o match.o mcp.o mfuns2.o \
 	mfuns.o move.o msgparse.o mufevent.o \
 	player.o \

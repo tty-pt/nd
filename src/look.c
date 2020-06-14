@@ -659,12 +659,7 @@ do_examine(int descr, dbref player, const char *name, const char *dir)
 	time_tm = localtime((&(DBFETCH(thing)->ts.lastused)));
 	(void) strftime(buf, BUFFER_LEN, (char *) "Lastused: %a %b %e %T %Z %Y", time_tm);
 	notify(player, buf);
-	if (Typeof(thing) == TYPE_PROGRAM) {
-		snprintf(buf, sizeof(buf), "Usecount: %d     Instances: %d",
-				DBFETCH(thing)->ts.usecount, PROGRAM_INSTANCES(thing));
-	} else {
-		snprintf(buf, sizeof(buf), "Usecount: %d", DBFETCH(thing)->ts.usecount);
-	}
+	snprintf(buf, sizeof(buf), "Usecount: %d", DBFETCH(thing)->ts.usecount);
 	notify(player, buf);
 
 	notify(player, "[ Use 'examine <object>=/' to list root properties. ]");

@@ -234,15 +234,6 @@ dump_warning(void)
 int
 init_game()
 {
-	FILE *f;
-
-	if ((f = fopen(MACRO_FILE, "rb")) == NULL)
-		warn("INIT: Macro storage file %s is tweaked.", MACRO_FILE);
-	else {
-		macroload(f);
-		fclose(f);
-	}
-
 	if ((input_file = fopen(STD_DB, "rb")) == NULL)
 		return -1;
 
@@ -380,10 +371,6 @@ process_command(int descr, dbref player, char *command)
 	}
 #endif /* LOG_COMMANDS */
 
-	if (FLAGS(player) & INTERACTIVE) {
-		interactive(descr, player, command);
-		return;
-	}
 	/* eat leading whitespace */
 	while (*command && isspace(*command))
 		command++;
@@ -665,32 +652,14 @@ process_command(int descr, dbref player, char *command)
 				Matched("@idescribe");
 				do_idescribe(descr, player, arg1, arg2);
 				break;
-			case 'k':
-			case 'K':
-				/* @kill */
-				Matched("@kill");
-				do_dequeue(descr, player, arg1);
-				break;
 			case 'l':
 			case 'L':
 				/* @link, @list, @lock */
 				switch (command[2]) {
 				case 'i':
 				case 'I':
-					switch (command[3]) {
-					case 'n':
-					case 'N':
-						Matched("@link");
-						do_link(descr, player, arg1, arg2);
-						break;
-					case 's':
-					case 'S':
-						Matched("@list");
-						match_and_list(descr, player, arg1, arg2);
-						break;
-					default:
-						goto bad;
-					}
+					Matched("@link");
+					do_link(descr, player, arg1, arg2);
 					break;
 				case 'o':
 				case 'O':
@@ -797,11 +766,6 @@ process_command(int descr, dbref player, char *command)
 				case 'R':
 					Matched("@propset");
 					do_propset(descr, player, arg1, arg2);
-					break;
-				case 's':
-				case 'S':
-					Matched("@ps");
-					list_events(player);
 					break;
 				default:
 					goto bad;

@@ -947,22 +947,6 @@ do_recycle(int descr, dbref player, const char *name)
 				return;
 				/* NOTREACHED */
 				break;
-			case TYPE_PROGRAM:
-				if (OWNER(thing) != OWNER(player)) {
-					notify(player, "Permission denied. (You can't recycle a program you don't own)");
-					return;
-				}
-				SetMLevel(thing, 0);
-				if(PROGRAM_INSTANCES(thing)) {
-					dequeue_prog(thing, 0);
-				}
-				/* FIXME: This is a workaround for bug #201633 */
-				if(PROGRAM_INSTANCES(thing)) {
-					assert(0);  /* getting here is a bug - we already dequeued it. */
-					notify(player, "Recycle failed: Program is still running.");
-					return;
-				}
-				break;
 			case TYPE_GARBAGE:
 				notify(player, "That's already garbage!");
 				return;
@@ -991,11 +975,6 @@ recycle(int descr, dbref player, dbref thing)
 		if(thing == force_prog) {
 			warn("SANITYCHECK: Was about to recycle FORCEing object #%d!", thing);
 			notify(player, "ERROR: Cannot recycle an object FORCEing you!");
-			return;
-		}
-		if((Typeof(thing) == TYPE_PROGRAM) && (PROGRAM_INSTANCES(thing) != 0)) {
-			warn("SANITYCHECK: Trying to recycle a running program (#%d) from FORCE!", thing);
-			notify(player, "ERROR: Cannot recycle a running program from FORCE.");
 			return;
 		}
 	}
