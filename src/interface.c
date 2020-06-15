@@ -101,7 +101,6 @@ struct descriptor_data {
 	long last_time;
 	long connected_at;
 	long last_pinged_at;
-	const char *hostname;
 	const char *username;
 	int quota;
         struct {
@@ -139,7 +138,7 @@ extern void fork_and_dump(void);
 void process_commands(void);
 int shovechars();
 void shutdownsock(struct descriptor_data *d);
-struct descriptor_data *initializesock(int s, const char *hostname);
+struct descriptor_data *initializesock(int s);
 void freeqs(struct descriptor_data *d);
 void welcome_user(struct descriptor_data *d);
 void close_sockets(const char *msg);
@@ -165,18 +164,10 @@ void    update_desc_count_table();
 int*    get_player_descrs(dbref player, int* count);
 void    forget_player_descr(dbref player, int);
 struct descriptor_data* descrdata_by_descr(int i);
-int online(dbref player);
 int online_init(void);
 dbref online_next(int *ptr);
 # define socket_write(d, buf, count) write(d->descriptor, buf, count)
 # define socket_read(d, buf, count) read(d->descriptor, buf, count)
-void spawn_resolver(void);
-void resolve_hostnames(void);
-#define MALLOC(result, type, number) do {   \
-                                       if (!((result) = (type *) malloc ((number) * sizeof (type)))) \
-                                       panic("Out of memory");                             \
-                                     } while (0)
-#define FREE(x) (free((void *) x))
 
 extern FILE *input_file;
 extern FILE *delta_infile;
@@ -404,7 +395,7 @@ notify_nolisten(dbref player, const char *msg, int isprivate)
 int
 notify_filtered(dbref from, dbref player, const char *msg, int isprivate)
 {
-	if ((msg == 0) || ignore_is_ignoring(player, from))
+	if (msg == 0)
 		return 0;
 	return notify_nolisten(player, msg, isprivate);
 }
@@ -836,7 +827,6 @@ new_connection(int port, int sock)
 	int newsock;
 	struct sockaddr_in addr;
 	socklen_t addr_len;
-	char hostname[128];
 
 	addr_len = (socklen_t)sizeof(addr);
 	newsock = accept(sock, (struct sockaddr *) &addr, &addr_len);
@@ -846,11 +836,9 @@ new_connection(int port, int sock)
 #ifdef F_SETFD
 		fcntl(newsock, F_SETFD, 1);
 #endif
-		strlcpy(hostname, addrout(port, addr.sin_addr.s_addr, addr.sin_port), sizeof(hostname));
-		warn("ACCEPT: %s(%d) on descriptor %d", hostname,
-				   ntohs(addr.sin_port), newsock);
+		warn("ACCEPT: %d on descriptor %d", ntohs(addr.sin_port), newsock);
 		warn("CONCOUNT: There are now %d open connections.", ++ndescriptors);
-		return initializesock(newsock, hostname);
+		return initializesock(newsock);
 	}
 }
 
@@ -877,12 +865,12 @@ void
 shutdownsock(struct descriptor_data *d)
 {
 	if (d->connected) {
-		warn("DISCONNECT: descriptor %d player %s(%d) from %s(%s)",
-				   d->descriptor, NAME(d->player), d->player, d->hostname, d->username);
+		warn("DISCONNECT: descriptor %d player %s(%d) from %s",
+				   d->descriptor, NAME(d->player), d->player, d->username);
 		announce_disconnect(d);
 	} else {
-		warn("DISCONNECT: descriptor %d from %s(%s) never connected.",
-				   d->descriptor, d->hostname, d->username);
+		warn("DISCONNECT: descriptor %d from %s never connected.",
+				   d->descriptor, d->username);
 	}
 	shutdown(d->descriptor, 2);
 	close(d->descriptor);
@@ -892,12 +880,10 @@ shutdownsock(struct descriptor_data *d)
 	*d->prev = d->next;
 	if (d->next)
 		d->next->prev = d->prev;
-	if (d->hostname)
-		free((void *) d->hostname);
 	if (d->username)
 		free((void *) d->username);
 	mcp_frame_clear(&d->mcpframe);
-	FREE(d);
+	free(d);
 	ndescriptors--;
 	warn("CONCOUNT: There are now %d open connections.", ndescriptors);
 }
@@ -930,12 +916,11 @@ mcpframe_to_user(McpFrame * ptr)
 }
 
 struct descriptor_data *
-initializesock(int s, const char *hostname)
+initializesock(int s)
 {
 	struct descriptor_data *d;
-	char buf[128], *ptr;
 
-	MALLOC(d, struct descriptor_data, 1);
+	d = malloc(sizeof(struct descriptor_data));
 
 	memset(d, 0, sizeof(struct descriptor_data));
 	d->descriptor = s;
@@ -964,14 +949,7 @@ initializesock(int s, const char *hostname)
 	d->last_time = d->connected_at;
 	d->last_pinged_at = d->connected_at;
 	mcp_frame_init(&d->mcpframe, d);
-	strlcpy(buf, hostname, sizeof(buf));
-	ptr = index(buf, ')');
-	if (ptr)
-		*ptr = '\0';
-	ptr = index(buf, '(');
-	*ptr++ = '\0';
-	d->hostname = alloc_string(buf);
-	d->username = alloc_string(ptr);
+	d->username = alloc_string("");
 	if (descriptor_list)
 		descriptor_list->prev = &d->next;
 	d->next = descriptor_list;
@@ -1035,9 +1013,8 @@ make_text_block(const char *s, int n)
 {
 	struct text_block *p;
 
-	MALLOC(p, struct text_block, 1);
-	MALLOC(p->buf, char, n);
-
+	p = malloc(sizeof(struct text_block));
+	p->buf = malloc(n * sizeof(char));
 	bcopy(s, p->buf, n);
 	p->nchars = n;
 	p->start = p->buf;
@@ -1048,8 +1025,8 @@ make_text_block(const char *s, int n)
 void
 free_text_block(struct text_block *t)
 {
-	FREE(t->buf);
-	FREE((char *) t);
+	free(t->buf);
+	free((char *) t);
 }
 
 void
@@ -1210,7 +1187,7 @@ freeqs(struct descriptor_data *d)
 	d->input.tail = &d->input.head;
 
 	if (d->raw_input)
-		FREE(d->raw_input);
+		free(d->raw_input);
 	d->raw_input = 0;
 	d->raw_input_at = 0;
 }
@@ -1234,7 +1211,7 @@ process_input(struct descriptor_data *d)
 		return 0;
 
 	if (!d->raw_input) {
-		MALLOC(d->raw_input, char, MAX_COMMAND_LEN);
+		d->raw_input = malloc(MAX_COMMAND_LEN * sizeof(char));
 		d->raw_input_at = d->raw_input;
 	}
 	p = d->raw_input_at;
@@ -1328,7 +1305,7 @@ process_input(struct descriptor_data *d)
 	if (p > d->raw_input) {
 		d->raw_input_at = p;
 	} else {
-		FREE(d->raw_input);
+		free(d->raw_input);
 		d->raw_input = 0;
 		d->raw_input_at = 0;
 	}
@@ -1637,12 +1614,10 @@ close_sockets(const char *msg) {
 		*d->prev = d->next;
 		if (d->next)
 			d->next->prev = d->prev;
-		if (d->hostname)
-			free((void *) d->hostname);
 		if (d->username)
 			free((void *) d->username);
 		mcp_frame_clear(&d->mcpframe);
-		FREE(d);
+		free(d);
 		ndescriptors--;
 	}
 	update_desc_count_table();
@@ -1745,23 +1720,23 @@ dump_users(struct descriptor_data *e, char *user)
 #ifdef GOD_PRIV
 				if (!God(e->player))
 					snprintf(buf, sizeof(buf),
+							"%-*s [%6d] %10s %4s%c%c\r\n",
+							PLAYER_NAME_LIMIT + 10, pbuf,
+							(int) DBFETCH(d->player)->location,
+							time_format_1(now - d->connected_at),
+							time_format_2(now - d->last_time),
+							((FLAGS(d->player) & INTERACTIVE) ? '*' : ' '),
+							secchar);
+				else
+#endif
+					snprintf(buf, sizeof(buf),
 							"%-*s [%6d] %10s %4s%c%c %s\r\n",
 							PLAYER_NAME_LIMIT + 10, pbuf,
 							(int) DBFETCH(d->player)->location,
 							time_format_1(now - d->connected_at),
 							time_format_2(now - d->last_time),
 							((FLAGS(d->player) & INTERACTIVE) ? '*' : ' '),
-							secchar, d->hostname);
-				else
-#endif
-					snprintf(buf, sizeof(buf),
-							"%-*s [%6d] %10s %4s%c%c %s(%s)\r\n",
-							PLAYER_NAME_LIMIT + 10, pbuf,
-							(int) DBFETCH(d->player)->location,
-							time_format_1(now - d->connected_at),
-							time_format_2(now - d->last_time),
-							((FLAGS(d->player) & INTERACTIVE) ? '*' : ' '),
-							secchar, d->hostname, d->username);
+							secchar, d->username);
 			} else {
 #if WHO_DOING
 				/* Modified to take into account PLAYER_NAME_LIMIT changes */
@@ -1876,7 +1851,7 @@ announce_connect(struct descriptor_data *d, dbref player)
 	}
 
 	exit = NOTHING;
-	if (online(player) == 1) {
+	if (PLAYER_DESCRCOUNT(player)) {
 		init_match(descr, player, "connect", TYPE_EXIT, &md);	/* match for connect */
 		md.match_level = 1;
 		match_all_exits(&md);
@@ -1902,7 +1877,7 @@ announce_connect(struct descriptor_data *d, dbref player)
 	if (exit != NOTHING)
 		do_move(descr, player, "connect", 1);
 
-	if (online(player) == 1) {
+	if (PLAYER_DESCRCOUNT(player) == 1) {
 		announce_puppets(player, "wakes up.", "_/pcon");
 	}
 
@@ -1932,7 +1907,7 @@ announce_disconnect(struct descriptor_data *d)
 	}
 
 	/* trigger local disconnect action */
-	if (online(player) == 1) {
+	if (PLAYER_DESCRCOUNT(player) == 1) {
 		if (can_move(d->descriptor, player, "disconnect", 1)) {
 			do_move(d->descriptor, player, "disconnect", 1);
 		}
@@ -2085,164 +2060,6 @@ descrdata_by_descr(int c)
 }
 
 /*** JME ***/
-int
-online(dbref player)
-{
-	return PLAYER_DESCRCOUNT(player);
-}
-
-int
-pcount(void)
-{
-    return current_descr_count;
-}
-
-int
-pidle(int c)
-{
-	struct descriptor_data *d;
-	time_t now;
-
-	d = descrdata_by_count(c);
-
-	(void) time(&now);
-	if (d) {
-		return (now - d->last_time);
-	}
-
-	return -1;
-}
-
-int
-pdescridle(int c)
-{
-	struct descriptor_data *d;
-	time_t now;
-
-	d = descrdata_by_descr(c);
-
-	(void) time(&now);
-	if (d) {
-		return (now - d->last_time);
-	}
-
-	return -1;
-}
-
-dbref
-pdbref(int c)
-{
-	struct descriptor_data *d;
-
-	d = descrdata_by_count(c);
-
-	if (d) {
-		return (d->player);
-	}
-
-	return NOTHING;
-}
-
-dbref
-pdescrdbref(int c)
-{
-	struct descriptor_data *d;
-
-	d = descrdata_by_descr(c);
-
-	if (d) {
-		return (d->player);
-	}
-
-	return NOTHING;
-}
-
-int
-pontime(int c)
-{
-	struct descriptor_data *d;
-	time_t now;
-
-	d = descrdata_by_count(c);
-
-	(void) time(&now);
-	if (d) {
-		return (now - d->connected_at);
-	}
-
-	return -1;
-}
-
-int
-pdescrontime(int c)
-{
-	struct descriptor_data *d;
-	time_t now;
-
-	d = descrdata_by_descr(c);
-
-	(void) time(&now);
-	if (d) {
-		return (now - d->connected_at);
-	}
-	return -1;
-}
-
-char *
-phost(int c)
-{
-	struct descriptor_data *d;
-
-	d = descrdata_by_count(c);
-
-	if (d) {
-		return ((char *) d->hostname);
-	}
-
-	return (char *) NULL;
-}
-
-char *
-pdescrhost(int c)
-{
-	struct descriptor_data *d;
-
-	d = descrdata_by_descr(c);
-
-	if (d) {
-		return ((char *) d->hostname);
-	}
-
-	return (char *) NULL;
-}
-
-char *
-puser(int c)
-{
-	struct descriptor_data *d;
-
-	d = descrdata_by_count(c);
-
-	if (d) {
-		return ((char *) d->username);
-	}
-
-	return (char *) NULL;
-}
-
-char *
-pdescruser(int c)
-{
-	struct descriptor_data *d;
-
-	d = descrdata_by_descr(c);
-
-	if (d) {
-		return ((char *) d->username);
-	}
-
-	return (char *) NULL;
-}
 
 /*** Foxen ***/
 int
@@ -2653,232 +2470,17 @@ dump_status(void)
 	warn("STATUS REPORT:");
 	for (d = descriptor_list; d; d = d->next) {
 		if (d->connected) {
-			snprintf(buf, sizeof(buf), "PLAYING descriptor %d player %s(%d) from host %s(%s), %s.\n",
-					d->descriptor, NAME(d->player), d->player, d->hostname, d->username,
+			snprintf(buf, sizeof(buf), "PLAYING descriptor %d player %s(%d) from user %s, %s.\n",
+					d->descriptor, NAME(d->player), d->player, d->username,
 					(d->last_time) ? "idle %d seconds" : "never used");
 		} else {
-			snprintf(buf, sizeof(buf), "CONNECTING descriptor %d from host %s(%s), %s.\n",
-					d->descriptor, d->hostname, d->username,
+			snprintf(buf, sizeof(buf), "CONNECTING descriptor %d from user %s, %s.\n",
+					d->descriptor, d->username,
 					(d->last_time) ? "idle %d seconds" : "never used");
 		}
 		warn(buf, now - d->last_time);
 	}
 }
 
-/* Ignore support -- Could do with moving into its own file */
-
-#if IGNORE_SUPPORT
-static int ignore_is_ignoring_sub(dbref Player, dbref Who)
-{
-	int Top, Bottom;
-	dbref* List;
-
-	if ((Player < 0) || (Player >= db_top) || (Typeof(Player) == TYPE_GARBAGE))
-		return 0;
-
-	if ((Who < 0) || (Who >= db_top) || (Typeof(Who) == TYPE_GARBAGE))
-		return 0;
-
-	Player	= OWNER(Player);
-	Who		= OWNER(Who);
-
-	/* You can't ignore yourself, or an unquelled wizard, */
-	/* and unquelled wizards can ignore no one. */
-	if ((Player == Who) || (Wizard(Player)) || (Wizard(Who))) 
-		return 0;
-
-	if (PLAYER_IGNORE_LAST(Player) == AMBIGUOUS)
-		return 0;
-
-	/* Ignore the last player ignored without bothering to look them up */
-	if (PLAYER_IGNORE_LAST(Player) == Who)
-		return 1;
-
-	if ((PLAYER_IGNORE_CACHE(Player) == NULL) && !ignore_prime_cache(Player))
-		return 0;
-
-	Top		= 0;
-	Bottom	= PLAYER_IGNORE_COUNT(Player);
-	List	= PLAYER_IGNORE_CACHE(Player);
-
-	while(Top < Bottom)
-	{
-		int Middle = Top + (Bottom - Top) / 2;
-
-		if (List[Middle] == Who)
-			break;
-
-		if (List[Middle] < Who)
-			Top		= Middle + 1;
-		else
-			Bottom	= Middle;
-	}
-
-	if (Top >= Bottom)
-		return 0;
-
-	PLAYER_SET_IGNORE_LAST(Player, Who);
-	
-	return 1;
-}
-
-int ignore_is_ignoring(dbref Player, dbref Who)
-{
-	return ignore_is_ignoring_sub(Player, Who)
-#if IGNORE_BIDIRECTIONAL
-		|| ignore_is_ignoring_sub(Who, Player)
-#endif
-		;
-}
-
-static int ignore_dbref_compare(const void* Lhs, const void* Rhs)
-{
-	return *(dbref*)Lhs - *(dbref*)Rhs;
-}
-
-int ignore_prime_cache(dbref Player)
-{
-	const char* Txt = 0;
-	const char* Ptr = 0;
-	dbref* List = 0;
-	int Count = 0;
-	int i;
-
-	if ((Player < 0) || (Player >= db_top) || (Typeof(Player) != TYPE_PLAYER))
-		return 0;
-
-	if ((Txt = get_property_class(Player, IGNORE_PROP)) == NULL)
-	{
-		PLAYER_SET_IGNORE_LAST(Player, AMBIGUOUS);
-		return 0;
-	}
-
-	while(*Txt && isspace(*Txt))
-		Txt++;
-
-	if (*Txt == '\0')
-	{
-		PLAYER_SET_IGNORE_LAST(Player, AMBIGUOUS);
-		return 0;
-	}
-
-	for(Ptr = Txt; *Ptr; )
-	{
-		Count++;
-
-		if (*Ptr == '#')
-			Ptr++;
-
-		while(*Ptr && !isspace(*Ptr))
-			Ptr++;
-
-		while(*Ptr && isspace(*Ptr))
-			Ptr++;
-	}
-
-	if ((List = (dbref*)malloc(sizeof(dbref) * Count)) == 0)
-		return 0;
-
-	for(Ptr = Txt, i = 0; *Ptr; )
-	{
-		if (*Ptr == '#')
-			Ptr++;
-
-		if (isdigit(*Ptr))
-			List[i++] = atoi(Ptr);
-		else
-			List[i++] = NOTHING;
-
-		while(*Ptr && !isspace(*Ptr))
-			Ptr++;
-
-		while(*Ptr && isspace(*Ptr))
-			Ptr++;
-	}
-
-	qsort(List, Count, sizeof(dbref), ignore_dbref_compare);
-
-	PLAYER_SET_IGNORE_CACHE(Player, List);
-	PLAYER_SET_IGNORE_COUNT(Player, Count);
-
-	return 1;
-}
-
-void ignore_flush_cache(dbref Player)
-{
-	if ((Player < 0) || (Player >= db_top) || (Typeof(Player) != TYPE_PLAYER))
-		return;
-
-	if (PLAYER_IGNORE_CACHE(Player))
-	{
-		free(PLAYER_IGNORE_CACHE(Player));
-		PLAYER_SET_IGNORE_CACHE(Player, NULL);
-		PLAYER_SET_IGNORE_COUNT(Player, 0);
-	}
-
-	PLAYER_SET_IGNORE_LAST(Player, NOTHING);
-}
-
-void ignore_flush_all_cache(void)
-{
-	int i;
-
-	/* Don't touch the database if it's not been loaded yet... */
-	if (db == 0)
-		return;
-	
-	for(i = 0; i < db_top; i++)
-	{
-		if (Typeof(i) == TYPE_PLAYER)
-		{
-			if (PLAYER_IGNORE_CACHE(i))
-			{
-				free(PLAYER_IGNORE_CACHE(i));
-				PLAYER_SET_IGNORE_CACHE(i, NULL);
-				PLAYER_SET_IGNORE_COUNT(i, 0);
-			}
-
-			PLAYER_SET_IGNORE_LAST(i, NOTHING);
-		}
-	}
-}
-
-void ignore_add_player(dbref Player, dbref Who)
-{
-	if ((Player < 0) || (Player >= db_top) || (Typeof(Player) == TYPE_GARBAGE))
-		return;
-
-	if ((Who < 0) || (Who >= db_top) || (Typeof(Who) == TYPE_GARBAGE))
-		return;
-
-	reflist_add(OWNER(Player), IGNORE_PROP, OWNER(Who));
-
-	ignore_flush_cache(OWNER(Player));
-}
-
-void ignore_remove_player(dbref Player, dbref Who)
-{
-	if ((Player < 0) || (Player >= db_top) || (Typeof(Player) == TYPE_GARBAGE))
-		return;
-
-	if ((Who < 0) || (Who >= db_top) || (Typeof(Who) == TYPE_GARBAGE))
-		return;
-
-	reflist_del(OWNER(Player), IGNORE_PROP, OWNER(Who));
-
-	ignore_flush_cache(OWNER(Player));
-}
-
-void ignore_remove_from_all_players(dbref Player)
-{
-	int i;
-
-	for(i = 0; i < db_top; i++)
-		if (Typeof(i) == TYPE_PLAYER)
-			reflist_del(i, IGNORE_PROP, Player);
-
-	ignore_flush_all_cache();
-}
-#endif
 static const char *interface_c_version = "$RCSfile$ $Revision: 1.127 $";
 const char *get_interface_c_version(void) { return interface_c_version; }

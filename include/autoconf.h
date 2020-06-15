@@ -51,12 +51,6 @@
    double. */
 #define HAVE_LONG_DOUBLE 1
 
-/* Define to 1 if you have the `mallinfo' function. */
-/* #undef HAVE_MALLINFO */
-
-/* Define to 1 if you have the <malloc.h> header file. */
-/* #undef HAVE_MALLOC_H */
-
 /* Define to 1 if you have the <memory.h> header file. */
 #define HAVE_MEMORY_H 1
 
@@ -147,12 +141,6 @@
 
 /* Configures which LINT to use to evaluate the sources. */
 /* #undef LINT */
-
-/* Enables memory usage profiling. */
-/* #undef MALLOC_PROFILING */
-
-/* With MALLOC_PROFILING, can detect double-frees, buffer overruns, etc. */
-/* #undef MALLOC_PROFILING_EXTRA */
 
 /* Define to the address where bug reports for this package should be sent. */
 #define PACKAGE_BUGREPORT "revar@belfry.com"

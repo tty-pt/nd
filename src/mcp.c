@@ -9,10 +9,6 @@
 #include "externs.h"
 #include "mcp.h"
 #include "mcppkg.h"
-#ifdef HAVE_MALLOC_H
-#include <malloc.h>
-#endif /* HAVE_MALLOC_H */
-
 
 #define MCP_MESG_PREFIX		"#$#"
 #define MCP_QUOTE_PREFIX	"#$\""

@@ -902,11 +902,8 @@ extern struct object *db;
 extern struct macrotable *macrotop;
 extern dbref db_top;
 
-#ifndef MALLOC_PROFILING
 extern char *alloc_string(const char *);
 extern struct shared_string *alloc_prog_string(const char *);
-#endif
-
 extern dbref new_object(void);		/* return a new object */
 
 extern struct boolexp *getboolexp(FILE *);	/* get a boolexp */

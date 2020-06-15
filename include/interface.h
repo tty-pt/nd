@@ -27,12 +27,6 @@ extern int* get_player_descrs(dbref player, int*count);
 extern int least_idle_player_descr(dbref who);
 extern int most_idle_player_descr(dbref who);
 extern int pcount(void);
-extern int pdescrcount(void);
-extern int pidle(int c);
-extern int pdescridle(int c);
-extern int pdbref(int c);
-extern int pdescrdbref(int c);
-extern int pontime(int c);
 extern int pdescrontime(int c);
 extern char *phost(int c);
 extern char *pdescrhost(int c);
@@ -52,14 +46,6 @@ extern int pnextdescr(int c);
 extern int pdescrflush(int c);
 extern int pdescrbufsize(int c);
 extern dbref partial_pmatch(const char *name);
-
-extern int ignore_is_ignoring(dbref Player, dbref Who);
-extern int ignore_prime_cache(dbref Player);
-extern void ignore_flush_cache(dbref Player);
-extern void ignore_flush_all_cache(void);
-extern void ignore_add_player(dbref Player, dbref Who);
-extern void ignore_remove_player(dbref Player, dbref Who);
-extern void ignore_remove_from_all_players(dbref Player);
 
 /* the following symbols are provided by game.c */
 

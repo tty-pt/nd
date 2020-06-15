@@ -162,16 +162,6 @@ propqueue(int descr, dbref player, dbref where, dbref trigger, dbref what, dbref
 							}
 						}
 					}
-				} else if (the_prog != NOTHING) {
-					struct frame *tmpfr;
-
-					strlcpy(match_args, toparg ? toparg : "", sizeof(match_args));
-					strlcpy(match_cmdname, "Queued event.", sizeof(match_cmdname));
-					tmpfr = interp(descr, player, where, the_prog, trigger,
-								   BACKGROUND, STD_HARDUID, 0);
-					if (tmpfr) {
-						interp_loop(player, the_prog, tmpfr, 0);
-					}
 				}
 				propq_level--;
 			} else {

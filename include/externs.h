@@ -329,10 +329,6 @@ extern pid_t global_dumper_pid;
 extern pid_t global_resolver_pid;
 extern short global_dumpdone;
 
-#ifdef SPAWN_HOST_RESOLVER
-extern void spawn_resolver(void);
-#endif
-
 /* from tune.c */
 extern void tune_load_parmsfile(dbref player);
 

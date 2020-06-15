@@ -7,9 +7,6 @@
 #include "autoconf.h"
 #include "config.h"
 #include "copyright.h"
-#ifdef MALLOC_PROFILING
-# include "crt_malloc.h"
-#endif
 #include "dbsearch.h"
 #include "defaults.h"
 #include "externs.h"

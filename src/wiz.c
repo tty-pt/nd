@@ -697,9 +697,6 @@ do_toad(int descr, dbref player, const char *name, const char *recip)
 			PLAYER_SET_DESCRCOUNT(victim, 0);
 		}
 
-		ignore_remove_from_all_players(victim);
-		ignore_flush_cache(victim);
-
 		FREE_PLAYER_SP(victim);
 		ALLOC_THING_SP(victim);
 		THING_SET_HOME(victim, PLAYER_HOME(player));

@@ -68,8 +68,6 @@ exec_or_notify(int descr, dbref player, dbref thing,
 	const char *p;
 	char *p2;
 	char *p3;
-	char tmpcmd[BUFFER_LEN];
-	char tmparg[BUFFER_LEN];
 
 	p = message;
 
@@ -104,20 +102,7 @@ exec_or_notify(int descr, dbref player, dbref thing,
 				return "You see nothing special.";
 			}
 		} else {
-			struct frame *tmpfr;
-
-			strlcpy(tmparg, match_args, sizeof(tmparg));
-			strlcpy(tmpcmd, match_cmdname, sizeof(tmpcmd));
 			p = do_parse_mesg(descr, player, thing, p, whatcalled, buf, sizeof(buf), MPI_ISPRIVATE | mpiflags);
-			strlcpy(match_args, p, sizeof(match_args));
-			strlcpy(match_cmdname, whatcalled, sizeof(match_cmdname));
-			tmpfr = interp(descr, player, DBFETCH(player)->location, i, thing,
-						   PREEMPT, STD_HARDUID, 0);
-			if (tmpfr) {
-				interp_loop(player, i, tmpfr, 0);
-			}
-			strlcpy(match_args, tmparg, sizeof(match_args));
-			strlcpy(match_cmdname, tmpcmd, sizeof(match_cmdname));
 			return NULL;
 		}
 	} else {
@@ -1533,9 +1518,9 @@ do_sweep(int descr, dbref player, const char *name)
 	for (; ref != NOTHING; ref = DBFETCH(ref)->next) {
 		switch (Typeof(ref)) {
 		case TYPE_PLAYER:
-			if (!Dark(thing) || online(ref)) {
+			if (!Dark(thing) || PLAYER_DESCRCOUNT(ref)) {
 				snprintf(buf, sizeof(buf), "  %s is a %splayer.",
-						unparse_object(player, ref), online(ref) ? "" : "sleeping ");
+						unparse_object(player, ref), PLAYER_DESCRCOUNT(ref) ? "" : "sleeping ");
 				notify(player, buf);
 			}
 			break;
@@ -1545,7 +1530,7 @@ do_sweep(int descr, dbref player, const char *name)
 				snprintf(buf, sizeof(buf), "  %.255s is a", unparse_object(player, ref));
 				if (FLAGS(ref) & ZOMBIE) {
 					tellflag = 1;
-					if (!online(OWNER(ref))) {
+					if (!PLAYER_DESCRCOUNT(OWNER(ref))) {
 						tellflag = 0;
 						strlcat(buf, " sleeping", sizeof(buf));
 					}
