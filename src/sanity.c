@@ -35,7 +35,6 @@ SanPrint(dbref player, const char *format, ...)
 {
 	va_list args;
 	char buf[16384];
-	static int san_linesprinted = 0;
 
 	va_start(args, format);
 
@@ -47,10 +46,6 @@ SanPrint(dbref player, const char *format, ...)
 		fprintf(stderr, "%s\n", buf);
 	} else {
 		notify_nolisten(player, buf, 1);
-		if (san_linesprinted++ > 100) {
-			flush_user_output(player);
-			san_linesprinted = 0;
-		}
 	}
 
 	va_end(args);
@@ -529,9 +524,6 @@ sanity(dbref player)
 			j = i + increp - 1;
 			j = (j >= db_top) ? (db_top - 1) : j;
 			SanPrint(player, "Checking objects %d to %d...", i, j);
-			if (player >= 0) {
-				flush_user_output(player);
-			}
 		}
 		check_object(player, i);
 	}

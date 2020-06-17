@@ -980,8 +980,12 @@ unset_source(dbref player, dbref loc, dbref action)
  *
  */
 void
-do_action(int descr, dbref player, const char *action_name, const char *source_name)
+cmd_action(command_t *cmd)
 {
+	int descr = cmd->fd;
+	dbref player = cmd->player;
+	char *action_name = cmd->argv[1],
+		*source_name = cmd->argv[2];;
 	dbref action, source;
 	static char buf[BUFFER_LEN];
 	char buf2[BUFFER_LEN];

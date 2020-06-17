@@ -7,14 +7,21 @@
 #include "copyright.h"
 
 #include "db.h"
-#include "mcp.h"
+
+typedef struct {
+	dbref player;
+	int fd, argc;
+	char *argv[8];
+} command_t;
+
+void
+command_debug(command_t *cmd, char *label);
 
 /* these symbols must be defined by the interface */
 extern int notify(dbref player, const char *msg);
 extern int notify_nolisten(dbref player, const char *msg, int ispriv);
 extern int notify_filtered(dbref from, dbref player, const char *msg, int ispriv);
-extern void wall_and_flush(const char *msg);
-extern void flush_user_output(dbref player);
+extern void wall(const char *msg);
 extern void wall_wizards(const char *msg);
 extern int shutdown_flag;		/* if non-zero, interface should shut down */
 extern int restart_flag;		/* if non-zero, should restart after shut down */
@@ -34,22 +41,15 @@ extern char *puser(int c);
 extern char *pdescruser(int c);
 extern int pfirstdescr(void);
 extern int plastdescr(void);
-extern void pboot(int c);
-extern int pdescrboot(int c);
-extern void pnotify(int c, char *outstr);
-extern int pdescrnotify(int c, char *outstr);
 extern int dbref_first_descr(dbref c);
 extern int pdescr(int c);
 extern int pdescrcon(int c);
-extern McpFrame *descr_mcpframe(int c);
 extern int pnextdescr(int c);
-extern int pdescrflush(int c);
-extern int pdescrbufsize(int c);
 extern dbref partial_pmatch(const char *name);
 
 /* the following symbols are provided by game.c */
 
-extern void process_command(int descr, dbref player, char *command);
+extern void command_process(command_t *cmd);
 
 extern dbref create_player(const char *name, const char *password);
 extern dbref connect_player(const char *name, const char *password);

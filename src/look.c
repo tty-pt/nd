@@ -177,12 +177,12 @@ look_room(int descr, dbref player, dbref loc, int verbose)
 	}
 	ts_useobject(loc);
 
-	if (web_look(descr, player, loc, description)) {
+	/* if (web_look(descr, player, loc, description)) { */
 		notify(player, unparse_object(player, loc));
 		notify(player, description);
 		/* tell him the contents */
 		look_contents(descr, player, loc, "You see:");
-	}
+	/* } */
 #if LOOK_PROPQUEUES
 	{
 		char obj_num[20];

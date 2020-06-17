@@ -9,15 +9,13 @@
 /* Definition of 'dbref' */
 #include "db.h"
 /* Definition of 'McpFrame' */
-#include "mcp.h"
-/* Definition of PropPtr, among other things */
 #include "props.h"
 /* Definition of match_data */
 #include "match.h"
 /* Auto-generated list of extern functions */
 #include "externs-auto.h"
 
-#define warn(...) fprintf(stderr, ## __VA_ARGS__)
+#define warn(fmt, ...) fprintf(stderr, fmt, ## __VA_ARGS__)
 
 /* interface.c */
 enum opts {
@@ -72,7 +70,7 @@ extern void do_attach(int descr, dbref player, const char *action_name, const ch
 extern int unset_source(dbref player, dbref loc, dbref action);
 extern int link_exit(int descr, dbref player, dbref exit, char *dest_name, dbref * dest_list);
 extern int link_exit_dry(int descr, dbref player, dbref exit, char *dest_name, dbref * dest_list);
-extern void do_action(int descr, dbref player, const char *action_name, const char *source_name);
+extern void cmd_action(command_t *cmd);
 
 /* from edit.c */
 extern void match_and_list(int descr, dbref player, const char *name, char *linespec);
@@ -324,7 +322,6 @@ extern void dispose_all_oldprops(void);
 
 /* from interface.c */
 extern void do_armageddon(dbref player, const char *msg);
-extern int pdescrsecure(int c);
 extern pid_t global_dumper_pid;
 extern pid_t global_resolver_pid;
 extern short global_dumpdone;
@@ -352,7 +349,6 @@ const char *get_interp_c_version(void);
 const char *get_log_c_version(void);
 const char *get_look_c_version(void);
 const char *get_match_c_version(void);
-const char *get_mcp_c_version(void);
 const char *get_move_c_version(void);
 const char *get_msgparse_c_version(void);
 const char *get_mufevent_c_version(void);

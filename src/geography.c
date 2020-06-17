@@ -568,7 +568,7 @@ gexit_claim_walk(dbref *exit_r, dbref *exit_there_r,
 }
 
 static void
-wall(int descr, dbref player, enum exit e)
+e_wall(int descr, dbref player, enum exit e)
 {
 	dbref exit, exit_there;
 	if (gexit_claim_walk(&exit, &exit_there, descr, player, e))
@@ -708,7 +708,7 @@ op_t op_map[] = {
 	['R'] = { .op.a = &uncarve },
 	['d'] = { .op.a = &door } ,
 	['D'] = { .op.a = &undoor },
-	['w'] = { .op.a = &wall },
+	['w'] = { .op.a = &e_wall },
 	['W'] = { .op.a = &unwall },
 	['x'] = { .op.b = &tell_pos, .type = 1 },
 	['X'] = { .op.b = &teleport, .type = 1 },
@@ -787,28 +787,4 @@ int gexits(int descr, dbref player, dbref where) {
                 ret |= i;
         }
         return ret;
-}
-
-void geo_notify(int descr, dbref player) {
-
-        dbref o[GEON_M], *o_p;
-	pos_t pos;
-	char buf[BUFFER_LEN + 2];
-	McpMesg msg;
-
-	map_where(pos, getloc(player));
-        map_search(o, pos, GEON_RADIUS);
-	mcp_mesg_init(&msg, MCP_WEB_PKG, "enter");
-	snprintf(buf, sizeof(buf), "0x%llx", MORTON_READ(pos));
-	mcp_mesg_arg_append(&msg, "x", buf);
-
-	for (o_p = o; o_p < o + GEON_BDI; o_p++) {
-		dbref loc = *o_p;
-		if (loc < 0 || Typeof(loc) != TYPE_ROOM)
-			continue;
-
-		web_room_mcp(loc, &msg);
-	}
-
-	mcp_mesg_clear(&msg);
 }

@@ -330,6 +330,7 @@ do_bless(int descr, dbref player, const char *what, const char *propname)
 	notify(player, buf);
 }
 
+#if 0
 void
 do_force(int descr, dbref player, const char *what, char *command)
 {
@@ -429,6 +430,7 @@ do_force(int descr, dbref player, const char *what, char *command)
 	force_level--;
 	force_prog=NOTHING;
 }
+#endif
 
 void
 do_stats(dbref player, const char *name)

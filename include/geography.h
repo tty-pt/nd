@@ -36,7 +36,7 @@ int gexit_can(dbref player, dbref exit);
 void gexit_snull(int descr, dbref player, dbref exit);
 int gexits(int descr, dbref player, dbref where);
 
-void geo_notify(int descr, dbref player);
+/* void geo_notify(int descr, dbref player); */
 dbref geo_clean(int descr, dbref player, dbref here);
 
 #endif

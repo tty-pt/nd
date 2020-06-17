@@ -20,7 +20,7 @@ fbmuck-obj-y := geometry.o plant.o biome.o noise.o search.o \
 	shop.o
 fbmuck-obj-y += array.o boolexp.o create.o db.o db_header.o \
 	game.o hashtab.o help.o \
-	interp.o look.o match.o mcp.o \
+	interp.o look.o match.o \
 	move.o msgparse.o \
 	player.o \
 	predicates.o propdirs.o property.o \

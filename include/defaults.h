@@ -169,31 +169,6 @@
 /* run an m3 exit with the commandline being the parameter on HUH */
 #define M3_HUH 0
 
-/* give a bit of warning before a database dump. */
-#define DBDUMP_WARNING 1
-#define DELTADUMP_WARNING 1
-
-#if DBDUMP_WARNING
-#define DBDUMP_WARN() wall_and_flush(DUMPING_MESG)
-#else
-#define DBDUMP_WARN() do {} while (0)
-#endif
-
-/* give a bit of warning before a delta dump. */
-/* only warns if DBDUMP_WARNING is also 1 */
-#if DELTADUMP_WARNING
-#define DELTADUMP_WARN() wall_and_flush(DELTAWARN_MESG)
-#else
-#define DELTADUMP_WARN(...) do {} while (0);
-#endif
-
-/* When a database dump completes, announce it. */
-#if 1
-#define DUMPDONE_WARN() wall_and_flush(DUMPDONE_MESG)
-#else
-#define DUMPWARN_WARN() do {} while (0)
-#endif
-
 /* clear out unused programs every so often */
 
 /* Makes WHO unavailable before connecting to a player, or when Interactive.

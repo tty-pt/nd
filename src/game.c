@@ -203,7 +203,7 @@ fork_and_dump(void)
 	last_monolithic_time = time(NULL);
 	warn("CHECKPOINTING: %s.#%d#", STD_DB, epoch);
 
-	DBDUMP_WARN();
+	wall(DUMPING_MESG);
 
 	if ((global_dumper_pid=fork())==0) {
 	/* We are the child. */
@@ -227,9 +227,7 @@ fork_and_dump(void)
 void
 dump_warning(void)
 {
-#if DBDUMP_WARNING
-	wall_and_flush(DUMPWARN_MESG);
-#endif
+	wall(DUMPWARN_MESG);
 }
 
 int
@@ -314,25 +312,569 @@ do_v(int descr, dbref player, char const *cmd)
 	return s - cmd;
 }
 
-void
-process_command(int descr, dbref player, char *command)
-{
-	char *arg1;
-	char *arg2;
-	char *full_command;
-	char *p;					/* utility */
-	struct timeval starttime;
-	struct timeval endtime;
-	pos_t pos;
-	map_where(pos, getloc(player));
+typedef void core_command_cb_t(command_t *);
 
+typedef struct {
+	char *name;
+	size_t nargs;
+	core_command_cb_t *cb;
+} core_command_t;
+
+void cmd_help(command_t *cmd) { do_help(cmd->player, cmd->argv[1], cmd->argv[2]); }
+
+core_command_t cmds[] = {
+	{
+		.name = "action",
+		.nargs = 2,
+		.cb = &cmd_action,
+		/* do_action(descr, player, arg1, arg2); */
+#if 0
+	}, {
+		.name = "advitam",
+		.nargs = 1,
+		.cb = &cmd_advitam,
+		/* do_advitam(descr, player, arg1); */
+	}, {
+		.name = "attach",
+		.nargs = 2,
+		.cb = &cmd_attach,
+		/* do_attach(descr, player, arg1, arg2); */
+	}, {
+		.name = "bless",
+		.nargs = 2,
+		.cb = &cmd_bless,
+		/* do_bless(descr, player, arg1, arg2); */
+	}, {
+		.name = "boot",
+		.nargs = 1,
+		.cb = &cmd_boot,
+		/* do_boot(player, arg1); */
+	}, {
+		.name = "chlock",
+		.nargs = 2,
+		.cb = &cmd_chlock,
+		/* do_chlock(descr, player, arg1, arg2); */
+	}, {
+		.name = "chown",
+		.nargs = 2,
+		.cp = &cmd_chown,
+		/* do_chown(descr, player, arg1, arg2); */
+	}, {
+		.name = "chlock",
+		.nargs = 2,
+		.cp = &cmd_chlock,
+		/* do_chlock(descr, player, arg1, arg2); */
+	}, {
+		.name = "clone",
+		.nargs = 2,
+		.cp = &cmd_clone,
+		/* do_clone(descr, player, arg1); */
+	}, {
+		.name = "conlock",
+		.nargs = 2,
+		.cp = &cmd_conlock,
+		/* do_conlock(descr, player, arg1, arg2); */
+	}, {
+		.name = "contents",
+		.nargs = 2,
+		.cp = &cmd_contents,
+		/* do_contents(descr, player, arg1, arg2); */
+	}, {
+		.name = "create",
+		.nargs = 2,
+		.cp = &cmd_create,
+		/* do_create(player, arg1, arg2); */
+	}, {
+		.name = "credits",
+		.nargs = 2,
+		.cp = &cmd_credits,
+		/* do_credits(player); */
+	}, {
+		.name = "serverdebug",
+		.nargs = 2,
+		.cb = &cmd_serverdebug,
+		/* do_serverdebug(descr, player, arg1, arg2); */
+	}, {
+		.name = "describe",
+		.nargs = 2,
+		.cb = &cmd_describe,
+		/* do_describe(descr, player, arg1, arg2); */
+	}, {
+		.name = "dig",
+		.nargs = 2,
+		.cb = &cmd_dig,
+		/* do_dig(descr, player, arg1, arg2); */
+	}, {
+		.name = "doing",
+		.nargs = 2,
+		.cb = &cmd_doing,
+		/* do_doing(descr, player, arg1, arg2); */
+	}, {
+		.name = "drop_message",
+		.nargs = 2,
+		.cb = &cmd_drop_message,
+		/* do_drop_message(descr, player, arg1, arg2); */
+	}, {
+		.name = "dump",
+		.nargs = 2,
+		.cb = &cmd_dump,
+		/* do_dump(player, full_command); */
+	}, {
+		.name = "entrances",
+		.nargs = 2,
+		.cb = &cmd_entrances,
+		/* do_entrances(descr, player, arg1, arg2); */
+
+		/* sane_dump_object(player, arg1); /1* examine *1/ */
+	}, {
+		.name = "fail",
+		.nargs = 2,
+		.cb = &cmd_fail,
+		/* do_fail(descr, player, arg1, arg2); */
+	}, {
+		.name = "find",
+		.nargs = 2,
+		.cb = &cmd_find,
+		/* do_find(player, arg1, arg2); */
+	}, {
+		.name = "flock",
+		.nargs = 2,
+		.cb = &cmd_flock,
+		/* do_flock(descr, player, arg1, arg2); */
+	}, {
+		.name = "force",
+		.nargs = 2,
+		.cb = &cmd_force,
+		/* do_force(descr, player, arg1, arg2); */
+	}, {
+		.name = "flock",
+		.nargs = 2,
+		.cb = &cmd_flock,
+		/* do_flock(descr, player, arg1, arg2); */
+	}, {
+		.name = "heal",
+		.nargs = 2,
+		.cb = &cmd_heal,
+		/* do_heal(descr, player, arg1); */
+	}, {
+		.name = "idescribe",
+		.nargs = 2,
+		.cb = &cmd_idescribe,
+		/* do_idescribe(descr, player, arg1, arg2); */
+	}, {
+		.name = "link",
+		.nargs = 2,
+		.cb = &cmd_link,
+		/* do_link(descr, player, arg1, arg2); */
+	}, {
+		.name = "lock",
+		.nargs = 2,
+		.cb = &cmd_lock,
+		/* do_lock(descr, player, arg1, arg2); */
+	}, {
+		.name = "name",
+		.nargs = 2,
+		.cb = &cmd_name,
+		/* do_name(descr, player, arg1, arg2); */
+	}, {
+		/* if (strcmp(command, "@newpassword")) */
+		/* 	goto bad; */
+		.name = "newpassword",
+		.nargs = 2,
+		.cb = &cmd_newpassword,
+		/* do_newpassword(player, arg1, arg2); */
+	}, {
+		.name = "odrop",
+		.nargs = 2,
+		.cb = &cmd_odrop,
+		/* do_odrop(descr, player, arg1, arg2); */
+	}, {
+		.name = "oecho",
+		.nargs = 2,
+		.cb = &cmd_oecho,
+		/* do_oecho(descr, player, arg1, arg2); */
+	}, {
+		.name = "ofail",
+		.nargs = 2,
+		.cb = &cmd_ofail,
+		/* do_ofail(descr, player, arg1, arg2); */
+	}, {
+		.name = "open",
+		.nargs = 2,
+		.cb = &cmd_open,
+		/* do_open(descr, player, arg1, arg2); */
+	}, {
+		.name = "osuccess",
+		.nargs = 2,
+		.cb = &cmd_osuccess,
+		/* do_osuccess(descr, player, arg1, arg2); */
+	}, {
+		.name = "owned",
+		.nargs = 2,
+		.cb = &cmd_owned,
+		/* do_owned(player, arg1, arg2); */
+	}, {
+		.name = "password",
+		.nargs = 2,
+		.cb = &cmd_password,
+		/* do_password(player, arg1, arg2); */
+	}, {
+		.name = "pcreate",
+		.nargs = 2,
+		.cb = &cmd_pcreate,
+		/* do_pcreate(player, arg1, arg2); */
+	}, {
+		.name = "pecho",
+		.nargs = 2,
+		.cb = &cmd_pecho,
+		/* do_pecho(descr, player, arg1, arg2); */
+	}, {
+		.name = "propset",
+		.nargs = 2,
+		.cb = &cmd_propset,
+		/* do_propset(descr, player, arg1, arg2); */
+	}, {
+		.name = "recycle",
+		.nargs = 2,
+		.cb = &cmd_recycle,
+		/* do_recycle(descr, player, arg1); */
+	}, {
+		.name = "relink",
+		.nargs = 2,
+		.cb = &cmd_relink,
+		/* do_relink(descr, player, arg1, arg2); */
+	}, {
+		/* Matched("@restrict"); */
+		.name = "restrict",
+		.nargs = 2,
+		.cb = &cmd_restrict,
+		/* do_restrict(player, arg1); */
+	}, {
+		/* sanity(player); */
+		.name = "command",
+		.nargs = 2,
+		.cb = &cmd_command,
+		/* sanechange(player, full_command); /1* sanchange *1/ */
+	}, {
+		/* sanfix(player); */
+		.name = "set",
+		.nargs = 2,
+		.cb = &cmd_set,
+		/* do_set(descr, player, arg1, arg2); */
+	}, {
+		.name = "showextver",
+		.nargs = 2,
+		.cb = &cmd_showextver,
+		/* do_showextver(player); */
+	}, {
+		.name = "shutdown",
+		.nargs = 2,
+		.cb = &cmd_shutdown,
+		/* do_shutdown(player); */
+	}, {
+		.name = "stats",
+		.nargs = 2,
+		.cb = &cmd_stats,
+		/* do_stats(player, arg1); */
+	}, {
+		.name = "success",
+		.nargs = 2,
+		.cb = &cmd_success,
+		/* do_success(descr, player, arg1, arg2); */
+	}, {
+		.name = "sweep",
+		.nargs = 2,
+		.cb = &cmd_sweep,
+		/* do_sweep(descr, player, arg1); */
+	}, {
+		.name = "teleport",
+		.nargs = 2,
+		.cb = &cmd_teleport,
+		/* do_teleport(descr, player, arg1, arg2); */
+	}, {
+		.name = "toad",
+		.nargs = 2,
+		.cb = &cmd_toad,
+		/* do_toad(descr, player, arg1, arg2); */
+	}, {
+		.name = "trace",
+		.nargs = 2,
+		.cb = &cmd_trace,
+		/* do_trace(descr, player, arg1, atoi(arg2)); */
+	}, {
+		.name = "unbless",
+		.nargs = 2,
+		.cb = &cmd_unbless,
+		/* do_unbless(descr, player, arg1, arg2); */
+	}, {
+		.name = "unlink",
+		.nargs = 2,
+		.cb = &cmd_unlink,
+		/* do_unlink(descr, player, arg1); */
+	}, {
+		.name = "unlock",
+		.nargs = 2,
+		.cb = &cmd_unlock,
+		/* do_unlock(descr, player, arg1); */
+	}, {
+		.name = "usage",
+		.nargs = 2,
+		.cb = &cmd_usage,
+		/* do_usage(player); */
+	}, {
+		.name = "version",
+		.nargs = 2,
+		.cb = &cmd_version,
+		/* do_version(player); */
+	}, {
+		.name = "wall",
+		.nargs = 2,
+		.cb = &cmd_wall,
+		/* do_wall(player, full_command); /1* rename *1/ */
+	}, {
+		.name = "buy",
+		.nargs = 2,
+		.cb = &cmd_buy,
+		/* do_buy(descr, player, arg1, arg2); */
+	}, {
+		.name = "leave",
+		.nargs = 2,
+		.cb = &cmd_leave,
+		/* do_leave(descr, player); /1* disembark *1/ */
+	}, {
+		.name = "drink",
+		.nargs = 2,
+		.cb = &cmd_drink,
+		/* do_drink(descr, player, arg1); */
+	}, {
+		.name = "drop",
+		.nargs = 2,
+		.cb = &cmd_drop,
+		/* do_drop(descr, player, arg1, arg2); */
+	}, {
+		.name = "eat",
+		.nargs = 2,
+		.cb = &cmd_eat,
+		/* do_eat(descr, player, arg1); */
+	}, {
+		.name = "examine",
+		.nargs = 2,
+		.cb = &cmd_examine,
+		/* do_examine(descr, player, arg1, arg2); */
+	}, {
+		.name = "equip",
+		.nargs = 2,
+		.cb = &cmd_equip,
+		/* do_equip(descr, player, arg1); */
+	}, {
+		.name = "fill",
+		.nargs = 2,
+		.cb = &cmd_fill,
+		/* do_fill(descr, player, arg1, arg2); */
+	}, {
+		.name = "get",
+		.nargs = 2,
+		.cb = &cmd_get,
+		/* do_get(descr, player, arg1, arg2); */
+	}, {
+		.name = "give",
+		.nargs = 2,
+		.cb = &cmd_give,
+		/* do_give(descr, player, arg1, atoi(arg2)); */
+	}, {
+		.name = "move",
+		.nargs = 2,
+		.cb = &cmd_move,
+		/* do_move(descr, player, arg1, 0); */
+	}, {
+		.name = "gripe",
+		.nargs = 2,
+		.cb = &cmd_gripe,
+		/* do_gripe(player, full_command); */
+	}, {
+		.name = "help",
+		.nargs = 2,
+		.cb = &cmd_help,
+		/* do_help(player, arg1, arg2); */
+	}, {
+		.name = "inventory",
+		.nargs = 2,
+		.cb = &cmd_inventory,
+		/* do_inventory(player); */
+	}, {
+		.name = "info",
+		.nargs = 2,
+		.cb = &cmd_info,
+		/* do_info(player, arg1, arg2); */
+	}, {
+		.name = "kill",
+		.nargs = 2,
+		.cb = &cmd_kill,
+		/* do_kill(descr, player, arg1); */
+	}, {
+		.name = "look_at",
+		.nargs = 2,
+		.cb = &cmd_look_at,
+		/* do_look_at(descr, player, arg1, arg2); */
+	}, {
+		.name = "leave",
+		.nargs = 2,
+		.cb = &cmd_leave,
+		/* do_leave(descr, player); */
+	}, {
+		.name = "move",
+		.nargs = 2,
+		.cb = &cmd_move,
+		/* do_move(descr, player, arg1, 0); */
+	}, {
+		.name = "motd",
+		.nargs = 2,
+		.cb = &cmd_motd,
+		/* /1* do_motd(player, full_command); *1/ */
+	}, {
+		.name = "view",
+		.nargs = 2,
+		.cb = &cmd_view,
+		/* do_view(descr, player); /1* map *1/ */
+	}, {
+		.name = "meme",
+		.nargs = 2,
+		.cb = &cmd_meme,
+		/* /1* do_meme(descr, player, arg1); *1/ */
+	}, {
+		.name = "man",
+		.nargs = 2,
+		.cb = &cmd_man,
+		/* do_man(player, (!*arg1 && !*arg2 && arg1 != arg2) ? "=" : arg1, arg2); */
+	}, {
+		.name = "news",
+		.nargs = 2,
+		.cb = &cmd_news,
+		/* do_news(player, arg1, arg2); */
+	}, {
+		.name = "page",
+		.nargs = 2,
+		.cb = &cmd_page,
+		/* do_page(player, arg1, arg2); */
+	}, {
+		.name = "pose",
+		.nargs = 2,
+		.cb = &cmd_pose,
+		/* do_pose(player, full_command); */
+	}, {
+		.name = "drop",
+		.nargs = 2,
+		.cb = &cmd_drop,
+		/* do_drop(descr, player, arg1, arg2); /1* put *1/ */
+	}, {
+		.name = "look_at",
+		.nargs = 2,
+		.cb = &cmd_look_at,
+		/* do_look_at(descr, player, arg1, arg2); /1* read (put alias) *1/ */
+	}, {
+		.name = "rob",
+		.nargs = 2,
+		.cb = &cmd_rob,
+		/* do_rob(descr, player, arg1); */
+	}, {
+		.name = "say",
+		.nargs = 2,
+		.cb = &cmd_say,
+		/* do_say(player, full_command); */
+	}, {
+		.name = "score",
+		.nargs = 2,
+		.cb = &cmd_score,
+		/* do_score(player); */
+	}, {
+		.name = "sell",
+		.nargs = 2,
+		.cb = &cmd_sell,
+		/* do_sell(descr, player, arg1, arg2); */
+	}, {
+		.name = "select",
+		.nargs = 2,
+		.cb = &cmd_select,
+		/* do_select(player, arg1); */
+	}, {
+		.name = "shop",
+		.nargs = 2,
+		.cb = &cmd_shop,
+		/* do_shop(player); */
+	}, {
+		.name = "sit",
+		.nargs = 2,
+		.cb = &cmd_sit,
+		/* do_sit(descr, player, arg1); */
+	}, {
+		.name = "stand",
+		.nargs = 2,
+		.cb = &cmd_stand,
+		/* do_stand(player); */
+	}, {
+		.name = "status",
+		.nargs = 2,
+		.cb = &cmd_status,
+		/* do_status(player); */
+	}, {
+		.name = "get",
+		.nargs = 2,
+		.cb = &cmd_get,
+		/* do_get(descr, player, arg1, arg2); /1* take *1/ */
+	}, {
+		.name = "drop",
+		.nargs = 2,
+		.cb = &cmd_drop,
+		/* do_drop(descr, player, arg1, arg2); /1* throw *1/ */
+	}, {
+		.name = "train",
+		.nargs = 2,
+		.cb = &cmd_train,
+		/* do_train(player, arg1, arg2); */
+	}, {
+		.name = "unequip",
+		.nargs = 2,
+		.cb = &cmd_unequip,
+		/* do_unequip(descr, player, arg1); */
+	}, {
+		.name = "whisper",
+		.nargs = 2,
+		.cb = &cmd_whisper,
+		/* do_whisper(descr, player, arg1, arg2); */
+#endif
+	},
+};
+
+core_command_t *
+command_match(command_t *cmd) {
+	if (cmd->argc < 1 || strcmp(cmd->argv[0], "help"))
+		return NULL;
+	return &cmds[0];
+}
+
+void
+command_process(command_t *cmd)
+{
+	if (cmd->argc < 1) {
+		return;
+	}
+
+	char *command = cmd->argv[0];
+	size_t command_n = 0;
+	dbref player = cmd->player;
+	int descr = cmd->fd;
+
+	/* struct timeval starttime; */
+	/* struct timeval endtime; */
+	pos_t pos;
+	map_where(pos, getloc(cmd->player));
+
+	command_debug(cmd, "command_process");
+	warn("command_process %s", command);
         // set current descriptor (needed for death)
         CBUG(GETLID(player) < 0);
         mobi_t *liv = MOBI(player);
         liv->descr = descr;
-
-	if (command == 0)
-		abort();
 
 	/* robustify player */
 	if (player < 0 || player >= db_top ||
@@ -341,46 +883,8 @@ process_command(int descr, dbref player, char *command)
 		return;
 	}
 
-#if LOG_COMMANDS
-	if (Wizard(OWNER(player))) {
-		if (!(FLAGS(player) & (INTERACTIVE | READMODE))) {
-			dbref here;
-			if (!*command)
-				goto out;
-			here = getloc(player);
-			warn("%s%s%s%s(%d) in %s(%d):%s %s",
-						Wizard(OWNER(player)) ? "WIZ: " : "",
-						(Typeof(player) != TYPE_PLAYER) ? NAME(player) : "",
-						(Typeof(player) != TYPE_PLAYER) ? " owned by " : "",
-						NAME(OWNER(player)), (int) player,
-						
-						here == NOTHING ? "NOWHERE" : NAME(here),
-						(int) DBFETCH(player)->location, " ", command);
-#if LOG_INTERACTIVE
-		} else {
-			warn("%s%s%s%s(%d) in %s(%d):%s %s",
-				    Wizard(OWNER(player)) ? "WIZ: " : "",
-				    (Typeof(player) != TYPE_PLAYER) ? NAME(player) : "",
-				    (Typeof(player) != TYPE_PLAYER) ? " owned by " : "",
-				    NAME(OWNER(player)), (int) player,
-				    NAME(DBFETCH(player)->location),
-				    (int) DBFETCH(player)->location,
-				    (FLAGS(player) & (READMODE)) ? " [READ] " : " [INTERP] ", command);
-#endif
-		}
-	}
-#endif /* LOG_COMMANDS */
-
-	/* eat leading whitespace */
-	while (*command && isspace(*command))
-		command++;
-
-	/* Disable null command once past READ line */
-	if (!*command)
-		goto out;
-
 	/* profile how long command takes. */
-	gettimeofday(&starttime, NULL);
+	/* gettimeofday(&starttime, NULL); */
 
 	/* if player is a wizard, and uses overide token to start line... */
 	/* ... then do NOT run actions, but run the command they specify. */
@@ -393,801 +897,30 @@ process_command(int descr, dbref player, char *command)
 		goto out;
 	}
 
+	for (; command_n < cmd->argc; command_n ++)
 	{
+		command = cmd->argv[command_n];
+		core_command_t *cmd_i = command_match(cmd);
+
+		if (cmd_i) {
+			cmd_i->cb(cmd);
+			// TODO get next command
+			break;
+		}
+
 		int matched;
 		command += do_v(descr, player, command);
 		if (*command == COMMAND_TOKEN) {
 			command++;
 			matched = 1;
-		} else if (*command == '\0')
-			goto end_of_command;
-		else
-			goto bad;
-
-		if (TrueWizard(OWNER(player)) && (*command == OVERIDE_TOKEN))
-			command++;
-		for (full_command = command;
-		     *full_command && !isspace(*full_command);
-		     full_command++) ;
-		if (*full_command)
-			full_command++;
-
-		/* find arg1 -- move over command word */
-		for (arg1 = command; *arg1 && !isspace(*arg1); arg1++) ;
-		/* truncate command */
-		if (*arg1)
-			*arg1++ = '\0';
-
-		/* remember command for programs */
-		strlcpy(match_args, full_command, sizeof(match_args));
-		strlcpy(match_cmdname, command, sizeof(match_cmdname));
-
-		/* move over spaces */
-		while (*arg1 && isspace(*arg1))
-			arg1++;
-
-		/* find end of arg1, start of arg2 */
-		for (arg2 = arg1; *arg2 && *arg2 != ARG_DELIMITER; arg2++) ;
-
-		/* truncate arg1 */
-		for (p = arg2 - 1; p >= arg1 && isspace(*p); p--)
-			*p = '\0';
-
-		/* go past delimiter if present */
-		if (*arg2)
-			*arg2++ = '\0';
-		while (*arg2 && isspace(*arg2))
-			arg2++;
-
-		switch (command[0]) {
-		case '@':
-			switch (command[1]) {
-			case 'a':
-			case 'A':
-				/* @action, @advitam, @armageddon, @attach */
-				switch (command[2]) {
-				case 'c':
-				case 'C':
-					Matched("@action");
-					do_action(descr, player, arg1, arg2);
-					break;
-				case 'd':
-				case 'D':
-					Matched("@advitam");
-					do_advitam(descr, player, arg1);
-					break;
-				case 'r':
-				case 'R':
-					if (strcmp(command, "@armageddon"))
-						goto bad;
-					do_armageddon(player, full_command);
-					break;
-				case 't':
-				case 'T':
-					Matched("@attach");
-					do_attach(descr, player, arg1, arg2);
-					break;
-				default:
-					goto bad;
-				}
-				break;
-			case 'b':
-			case 'B':
-				/* @bless, @boot */
-				switch (command[2]) {
-				case 'l':
-				case 'L':
-					Matched("@bless");
-					do_bless(descr, player, arg1, arg2);
-					break;
-				case 'o':
-				case 'O':
-					Matched("@boot");
-					do_boot(player, arg1);
-					break;
-				default:
-					goto bad;
-				}
-				break;
-			case 'c':
-			case 'C':
-				/* @chlock, @chown, @chown_lock, @clone,
-				   @conlock, @contents, @create, @credits */
-				switch (command[2]) {
-				case 'h':
-				case 'H':
-					switch (command[3]) {
-					case 'l':
-					case 'L':
-						Matched("@chlock");
-						do_chlock(descr, player, arg1, arg2);
-						break;
-					case 'o':
-					case 'O':
-						if(strlen(command) < 7) {
-							Matched("@chown");
-							do_chown(descr, player, arg1, arg2);
-						} else {
-							Matched("@chown_lock");
-							do_chlock(descr, player, arg1, arg2);
-						}
-						break;
-					default:
-						goto bad;
-					}
-					break;
-				case 'l':
-				case 'L':
-					Matched("@clone");
-					do_clone(descr, player, arg1);
-					break;
-				case 'o':
-				case 'O':
-					switch (command[4]) {
-					case 'l':
-					case 'L':
-						Matched("@conlock");
-						do_conlock(descr, player, arg1, arg2);
-						break;
-					case 't':
-					case 'T':
-						Matched("@contents");
-						do_contents(descr, player, arg1, arg2);
-						break;
-					default:
-						goto bad;
-					}
-					break;
-				case 'r':
-				case 'R':
-					if (strcmp(command, "@credits")) {
-						Matched("@create");
-						do_create(player, arg1, arg2);
-					} else {
-						do_credits(player);
-					}
-					break;
-				default:
-					goto bad;
-				}
-				break;
-			case 'd':
-			case 'D':
-				/* @dbginfo, @describe, @dig, @dlt,
-				   @doing, @drop, @dump */
-				switch (command[2]) {
-				case 'b':
-				case 'B':
-					Matched("@dbginfo");
-					do_serverdebug(descr, player, arg1, arg2);
-					break;
-				case 'e':
-				case 'E':
-					Matched("@describe");
-					do_describe(descr, player, arg1, arg2);
-					break;
-				case 'i':
-				case 'I':
-					Matched("@dig");
-					do_dig(descr, player, arg1, arg2);
-					break;
-				case 'o':
-				case 'O':
-					Matched("@doing");
-					do_doing(descr, player, arg1, arg2);
-					break;
-				case 'r':
-				case 'R':
-					Matched("@drop");
-					do_drop_message(descr, player, arg1, arg2);
-					break;
-				case 'u':
-				case 'U':
-					Matched("@dump");
-					do_dump(player, full_command);
-					break;
-				default:
-					goto bad;
-				}
-				break;
-			case 'e':
-			case 'E':
-				/* @edit, @entrances, @examine */
-				switch (command[2]) {
-				case 'n':
-				case 'N':
-					Matched("@entrances");
-					do_entrances(descr, player, arg1, arg2);
-					break;
-				case 'x':
-				case 'X':
-					Matched("@examine");
-					sane_dump_object(player, arg1);
-					break;
-				default:
-					goto bad;
-				}
-				break;
-			case 'f':
-			case 'F':
-				/* @fail, @find, @flock, @force, @force_lock */
-				switch (command[2]) {
-				case 'a':
-				case 'A':
-					Matched("@fail");
-					do_fail(descr, player, arg1, arg2);
-					break;
-				case 'i':
-				case 'I':
-					Matched("@find");
-					do_find(player, arg1, arg2);
-					break;
-				case 'l':
-				case 'L':
-					Matched("@flock");
-					do_flock(descr, player, arg1, arg2);
-					break;
-				case 'o':
-				case 'O':
-					if(strlen(command) < 7) {
-						Matched("@force");
-						do_force(descr, player, arg1, arg2);
-					} else {
-						Matched("@force_lock");
-						do_flock(descr, player, arg1, arg2);
-					}
-					break;
-				default:
-					goto bad;
-				}
-				break;
-			case 'h':
-				/* @heal */
-				Matched("@heal");
-				do_heal(descr, player, arg1);
-				break;
-			case 'i':
-			case 'I':
-				/* @idescribe */
-				Matched("@idescribe");
-				do_idescribe(descr, player, arg1, arg2);
-				break;
-			case 'l':
-			case 'L':
-				/* @link, @list, @lock */
-				switch (command[2]) {
-				case 'i':
-				case 'I':
-					Matched("@link");
-					do_link(descr, player, arg1, arg2);
-					break;
-				case 'o':
-				case 'O':
-					Matched("@lock");
-					do_lock(descr, player, arg1, arg2);
-					break;
-				default:
-					goto bad;
-				}
-				break;
-			case 'n':
-			case 'N':
-				/* @name, @newpassword */
-				switch (command[2]) {
-				case 'a':
-				case 'A':
-					Matched("@name");
-					do_name(descr, player, arg1, arg2);
-					break;
-				case 'e':
-				case 'E':
-					if (strcmp(command, "@newpassword"))
-						goto bad;
-					do_newpassword(player, arg1, arg2);
-					break;
-				default:
-					goto bad;
-				}
-				break;
-			case 'o':
-			case 'O':
-				/* @odrop, @oecho, @ofail, @open, @osuccess,
-				   @owned */
-				switch (command[2]) {
-				case 'd':
-				case 'D':
-					Matched("@odrop");
-					do_odrop(descr, player, arg1, arg2);
-					break;
-				case 'e':
-				case 'E':
-					Matched("@oecho");
-					do_oecho(descr, player, arg1, arg2);
-					break;
-				case 'f':
-				case 'F':
-					Matched("@ofail");
-					do_ofail(descr, player, arg1, arg2);
-					break;
-				case 'p':
-				case 'P':
-					Matched("@open");
-					do_open(descr, player, arg1, arg2);
-					break;
-				case 's':
-				case 'S':
-					Matched("@osuccess");
-					do_osuccess(descr, player, arg1, arg2);
-					break;
-				case 'w':
-				case 'W':
-					Matched("@owned");
-					do_owned(player, arg1, arg2);
-					break;
-				default:
-					goto bad;
-				}
-				break;
-			case 'p':
-			case 'P':
-				/* @password, @pcreate, @pecho, @program, 
-				   @propset, @ps */
-				switch (command[2]) {
-				case 'a':
-				case 'A':
-					Matched("@password");
-					do_password(player, arg1, arg2);
-					break;
-				case 'c':
-				case 'C':
-					Matched("@pcreate");
-					do_pcreate(player, arg1, arg2);
-					break;
-				case 'e':
-				case 'E':
-					Matched("@pecho");
-					do_pecho(descr, player, arg1, arg2);
-					break;
-				case 'r':
-				case 'R':
-					Matched("@propset");
-					do_propset(descr, player, arg1, arg2);
-					break;
-				default:
-					goto bad;
-				}
-				break;
-			case 'r':
-			case 'R':
-				/* @recycle, @relink, @restrict */
-				switch (command[3]) {
-				case 'c':
-				case 'C':
-					Matched("@recycle");
-					do_recycle(descr, player, arg1);
-					break;
-				case 'l':
-				case 'L':
-					Matched("@relink");
-					do_relink(descr, player, arg1, arg2);
-					break;
+			CBUG(1);
+		} else if (*command == '\0') {
+			continue;
+		} else
+			break;
+			/* goto bad; */
+	}
 #if 0
-				case 's':
-				case 'S':
-					Matched("@restrict");
-					do_restrict(player, arg1);
-					break;
-#endif
-				default:
-					goto bad;
-				}
-				break;
-			case 's':
-			case 'S':
-				/* @sanity, @sanchange, @sanfix, @set, @showextver,
-				   @shutdown, @stats, @success, @sweep */
-				switch (command[2]) {
-				case 'a':
-				case 'A':
-					if (!strcmp(command, "@sanity")) {
-						sanity(player);
-					} else if (!strcmp(command, "@sanchange")) {
-						sanechange(player, full_command);
-					} else if (!strcmp(command, "@sanfix")) {
-						sanfix(player);
-					} else {
-						goto bad;
-					}
-					break;
-				case 'e':
-				case 'E':
-					Matched("@set");
-					do_set(descr, player, arg1, arg2);
-					break;
-				case 'h':
-				case 'H':
-					if (!strcmp(command, "@showextver")) {
-						do_showextver(player);
-						break;
-					} else if (strcmp(command, "@shutdown"))
-						goto bad;
-					do_shutdown(player);
-					break;
-				case 't':
-				case 'T':
-					Matched("@stats");
-					do_stats(player, arg1);
-					break;
-				case 'u':
-				case 'U':
-					Matched("@success");
-					do_success(descr, player, arg1, arg2);
-					break;
-				case 'w':
-				case 'W':
-					Matched("@sweep");
-					do_sweep(descr, player, arg1);
-					break;
-				default:
-					goto bad;
-				}
-				break;
-			case 't':
-			case 'T':
-				/* @teleport, @toad, @trace, @tune */
-				switch (command[2]) {
-				case 'e':
-				case 'E':
-					Matched("@teleport");
-					do_teleport(descr, player, arg1, arg2);
-					break;
-				case 'o':
-				case 'O':
-					if (!strcmp(command, "@toad")) {
-						do_toad(descr, player, arg1, arg2);
-						break;
-					}
-					goto bad;
-				case 'r':
-				case 'R':
-					Matched("@trace");
-					do_trace(descr, player, arg1, atoi(arg2));
-					break;
-				default:
-					goto bad;
-				}
-				break;
-			case 'u':
-			case 'U':
-				/* @unbless, @unlink,
-				 * @unlock, @uncompile, @usage */
-				switch (command[2]) {
-				case 'N':
-				case 'n':
-					if (string_prefix(command, "@unb")) {
-						Matched("@unbless");
-						do_unbless(descr, player, arg1, arg2);
-					} else if (string_prefix(command, "@unli")) {
-						Matched("@unlink");
-						do_unlink(descr, player, arg1);
-					} else if (string_prefix(command, "@unlo")) {
-						Matched("@unlock");
-						do_unlock(descr, player, arg1);
-					} else {
-						goto bad;
-					}
-					break;
-
-				case 'S':
-				case 's':
-					Matched("@usage");
-					do_usage(player);
-					break;
-
-				default:
-					goto bad;
-					break;
-				}
-				break;
-			case 'v':
-			case 'V':
-				/* @version */
-				Matched("@version");
-				do_version(player);
-				break;
-			case 'w':
-			case 'W':
-				/* @wall */
-				if (strcmp(command, "@wall"))
-					goto bad;
-				do_wall(player, full_command);
-				break;
-			default:
-				goto bad;
-			}
-			break;
-		case 'b':
-			/* buy */
-			Matched("buy");
-			do_buy(descr, player, arg1, arg2);
-			break;
-		case 'd':
-		case 'D':
-			/* disembark, drink, drop */
-			switch (command[1]) {
-			case 'i':
-			case 'I':
-				Matched("disembark");
-				do_leave(descr, player);
-				break;
-			case 'r':
-			case 'R':
-				switch (command[2]) {
-				case 'i':
-				case 'I':
-					Matched("drink");
-					do_drink(descr, player, arg1);
-					break;
-				case 'o':
-				case 'O':
-					Matched("drop");
-					do_drop(descr, player, arg1, arg2);
-					break;
-				default:
-					goto bad;
-				}
-				break;
-			default:
-				goto bad;
-			}
-			break;
-		case 'e':
-		case 'E':
-			/* equip, examine */
-			switch (command[1]) {
-			case 'a':
-				Matched("eat");
-				do_eat(descr, player, arg1);
-				break;
-			case 'x':
-				Matched("examine");
-				do_examine(descr, player, arg1, arg2);
-				break;
-			default:
-				Matched("equip");
-				do_equip(descr, player, arg1);
-			}
-			break;
-		case 'f':
-		case 'F':
-			/* fill */
-			Matched("fill");
-			do_fill(descr, player, arg1, arg2);
-			break;
-		case 'g':
-		case 'G':
-			/* get, give, goto, gripe */
-			switch (command[1]) {
-			case 'e':
-			case 'E':
-				Matched("get");
-				do_get(descr, player, arg1, arg2);
-				break;
-			case 'i':
-			case 'I':
-				Matched("give");
-				do_give(descr, player, arg1, atoi(arg2));
-				break;
-			case 'o':
-			case 'O':
-				Matched("goto");
-				do_move(descr, player, arg1, 0);
-				break;
-			case 'r':
-			case 'R':
-				if (strcmp(command, "gripe"))
-					goto bad;
-				do_gripe(player, full_command);
-				break;
-			default:
-				goto bad;
-			}
-			break;
-		case 'h':
-		case 'H':
-			/* help */
-			Matched("help");
-			do_help(player, arg1, arg2);
-			break;
-		case 'i':
-		case 'I':
-			/* inventory, info */
-			if (strcmp(command, "info")) {
-				Matched("inventory");
-				do_inventory(player);
-			} else {
-				Matched("info");
-				do_info(player, arg1, arg2);
-			}
-			break;
-		case 'k':
-		case 'K':
-			/* kill */
-			Matched("kill");
-			do_kill(descr, player, arg1);
-			break;
-		case 'l':
-		case 'L':
-			/* leave, look */
-			if (string_prefix("look", command)) {
-				Matched("look");
-				do_look_at(descr, player, arg1, arg2);
-				break;
-			} else {
-				Matched("leave");
-				do_leave(descr, player);
-				break;
-			}
-		case 'm':
-		case 'M':
-			/* man, motd, move */
-			if (string_prefix(command, "move")) {
-				do_move(descr, player, arg1, 0);
-				break;
-			} else if (!strcmp(command, "motd")) {
-				/* FIXME */
-				/* do_motd(player, full_command); */
-				break;
-			} else if (!strcmp(command, "map")) {
-				do_view(descr, player);
-				break;
-			} else if (!strcmp(command, "meme")) {
-                                Matched("meme");
-                                do_meme(descr, player, arg1);
-			} else {
-				if (strcmp(command, "man"))
-					goto bad;
-				do_man(player, (!*arg1 && !*arg2 && arg1 != arg2) ? "=" : arg1, arg2);
-			}
-			break;
-		case 'n':
-		case 'N':
-			/* news */
-			Matched("news");
-			do_news(player, arg1, arg2);
-			break;
-		case 'p':
-		case 'P':
-			/* page, pose, put */
-			switch (command[1]) {
-			case 'a':
-			case 'A':
-				Matched("page");
-				do_page(player, arg1, arg2);
-				break;
-			case 'o':
-			case 'O':
-				Matched("pose");
-				do_pose(player, full_command);
-				break;
-			case 'u':
-			case 'U':
-				Matched("put");
-				do_drop(descr, player, arg1, arg2);
-				break;
-			default:
-				goto bad;
-			}
-			break;
-		case 'r':
-		case 'R':
-			/* read, rob */
-			switch (command[1]) {
-			case 'e':
-			case 'E':
-				Matched("read");	/* undocumented alias for look */
-				do_look_at(descr, player, arg1, arg2);
-				break;
-			case 'o':
-			case 'O':
-				Matched("rob");
-				do_rob(descr, player, arg1);
-				break;
-			default:
-				goto bad;
-			}
-			break;
-		case 's':
-		case 'S':
-			/* say, score, sell, shop, sit, stand, status */
-			switch (command[1]) {
-			case 'a':
-			case 'A':
-				Matched("say");
-				do_say(player, full_command);
-				break;
-			case 'c':
-			case 'C':
-				Matched("score");
-				do_score(player);
-				break;
-			case 'e':
-			case 'E':
-				switch (command[3]) {
-				case 'l':
-					Matched("sell");
-					do_sell(descr, player, arg1, arg2);
-					break;
-				case 'e':
-					Matched("select");
-					do_select(player, arg1);
-					break;
-				default:
-					goto bad;
-				}
-				break;
-			case 'h':
-			case 'H':
-				Matched("shop");
-				do_shop(player);
-				break;
-			case 'i':
-			case 'I':
-				Matched("sit");
-				do_sit(descr, player, arg1);
-				break;
-			case 't':
-			case 'T':
-				switch (command[3]) {
-				case 'n':
-					Matched("stand");
-					do_stand(player);
-					break;
-				case 't':
-					Matched("status");
-					do_status(player);
-					break;
-				default: goto bad;
-				}
-				break;
-			default:
-				goto bad;
-			}
-			break;
-		case 't':
-		case 'T':
-			/* take, throw */
-			switch (command[1]) {
-			case 'a':
-			case 'A':
-				Matched("take");
-				do_get(descr, player, arg1, arg2);
-				break;
-			case 'h':
-			case 'H':
-				Matched("throw");
-				do_drop(descr, player, arg1, arg2);
-				break;
-			case 'r':
-			case 'R':
-				Matched("train");
-				do_train(player, arg1, arg2);
-				break;
-			default:
-				goto bad;
-			}
-			break;
-		case 'u':
-		case 'U':
-			/* unequip */
-			Matched("unequip");
-			do_unequip(descr, player, arg1);
-			break;
-		case 'w':
-		case 'W':
-			/* whisper */
-			Matched("whisper");
-			do_whisper(descr, player, arg1, arg2);
 			break;
 		default:
 		  bad:
@@ -1227,6 +960,7 @@ end_of_command:
 	}
 	endtime.tv_usec -= starttime.tv_usec;
 	endtime.tv_sec -= starttime.tv_sec;
+#endif
 
 out:
 	{

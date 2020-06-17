@@ -439,7 +439,7 @@ do_view(int descr, dbref player)
 	}
 
 	view_draw(descr, player, view);
-        if (web_geo_view(descr, view_buf))
+	/* if (web_geo_view(descr, view_buf)) */
 		notify(player, view_buf);
 }
 
