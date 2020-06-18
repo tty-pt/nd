@@ -1030,8 +1030,11 @@ announce_connect(descr_t *d, dbref player)
 }
 
 int
-auth(int descr, char *user, char *password)
+auth(command_t *cmd)
 {
+	int descr = cmd->fd;
+	char *user = cmd->argv[1];
+	char *password = cmd->argv[2];
 	warn("auth %s %sx\n", user, password);
         int created = 0;
         dbref player = connect_player(user, password);
@@ -1067,7 +1070,7 @@ auth(int descr, char *user, char *password)
                            NAME(player), player, d->fd);
         d->flags = DF_CONNECTED;
         d->connected_at = time(NULL);
-        d->player = player;
+        cmd->player = d->player = player;
         remember_player_descr(player, d->fd);
         /* cks: someone has to initialize this somewhere. */
         PLAYER_SET_BLOCK(d->player, 0);
@@ -1085,8 +1088,7 @@ auth(int descr, char *user, char *password)
                                "#########################################################################");
         }
         /* if (!(web_support(d->fd) && d->proto.ws.old)) */
-                /* TODO do_view(d->fd, player); */
-
+	do_view(cmd);
         look_room(d->fd, player, getloc(player), 0);
 
         return 0;
@@ -1188,8 +1190,8 @@ out:
 	{
 		pos_t pos2;
 		map_where(pos2, getloc(player));
-		/* if (MORTON_READ(pos2) != MORTON_READ(pos)) TODO */
-		/* 	do_view(descr, player); */
+		if (MORTON_READ(pos2) != MORTON_READ(pos))
+			do_view(cmd);
 	}
 }
 
@@ -1212,7 +1214,7 @@ descr_process(descr_t *d, char *input, size_t input_len)
 		return;
 
 	if (*cmd.argv[0] == 'c')
-		auth(d->fd, cmd.argv[1], cmd.argv[2]);
+		auth(&cmd);
 	else
 		welcome_user(d);
 }
