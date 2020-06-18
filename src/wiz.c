@@ -942,11 +942,6 @@ do_muf_topprofs(dbref player, char *arg1)
 		tops = tops->next;
 		free(curr);
 	}
-	snprintf(buf, sizeof(buf), "Profile Length (sec): %5llu  %%idle: %5.2f%%  Total Cycles: %5lu",
-			(current_systime-sel_prof_start_time),
-			((double)(sel_prof_idle_sec+(sel_prof_idle_usec/1000000.0))*100.0)/
-			(double)((current_systime-sel_prof_start_time)+0.01),
-			sel_prof_idle_use);
 	notify(player,buf);
 	notify(player, "*Done*");
 }

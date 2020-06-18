@@ -259,13 +259,6 @@ extern void do_usage(command_t *);
 extern void do_bless(command_t *);
 extern void do_unbless(command_t *);
 
-extern time_t sel_prof_start_time;
-extern long sel_prof_idle_sec;
-extern long sel_prof_idle_usec;
-extern unsigned long sel_prof_idle_use;
-
-
-
 /* From boolexp.c */
 extern int eval_boolexp(int descr, dbref player, struct boolexp *b, dbref thing);
 extern struct boolexp *parse_boolexp(int descr, dbref player, const char *string, int dbloadp);
@@ -333,7 +326,6 @@ extern void dispose_all_oldprops(void);
 /* from interface.c */
 extern void do_armageddon(dbref player, const char *msg);
 extern pid_t global_dumper_pid;
-extern pid_t global_resolver_pid;
 extern short global_dumpdone;
 void do_flock(command_t *);
 

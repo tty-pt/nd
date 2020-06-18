@@ -81,14 +81,11 @@ typedef struct descr_st {
 	int fd, flags;
 	int con_number;
 	dbref player;
-	int output_size;
 	struct {
 		queue_t input, output;
 	} inband;
 	struct ws ws;
-	long last_time;
 	long connected_at;
-	long last_pinged_at;
 	/* int quota; */
 } descr_t;
 
@@ -237,101 +234,77 @@ core_command_t cmds[] = {
 		/* sanfix(player); */
 		.name = "set",
 		.cb = &do_set,
-		/* do_set(descr, player, arg1, arg2); */
 
 		/* do_showextver(player); */
 	}, {
 		.name = "shutdown",
 		.cb = &do_shutdown,
-		/* do_shutdown(player); */
 	}, {
 		.name = "stats",
 		.cb = &do_stats,
-		/* do_stats(player, arg1); */
 	}, {
 		.name = "success",
 		.cb = &do_success,
-		/* do_success(descr, player, arg1, arg2); */
 	}, {
 		.name = "sweep",
 		.cb = &do_sweep,
-		/* do_sweep(descr, player, arg1); */
 	}, {
 		.name = "teleport",
 		.cb = &do_teleport,
-		/* do_teleport(descr, player, arg1, arg2); */
 	}, {
 		.name = "toad",
 		.cb = &do_toad,
-		/* do_toad(descr, player, arg1, arg2); */
 	}, {
 		.name = "trace",
 		.cb = &do_trace,
-		/* do_trace(descr, player, arg1, atoi(arg2)); */
 	}, {
 		.name = "unbless",
 		.cb = &do_unbless,
-		/* do_unbless(descr, player, arg1, arg2); */
 	}, {
 		.name = "unlink",
 		.cb = &do_unlink,
-		/* do_unlink(descr, player, arg1); */
 	}, {
 		.name = "unlock",
 		.cb = &do_unlock,
-		/* do_unlock(descr, player, arg1); */
 	}, {
 		.name = "usage",
 		.cb = &do_usage,
-		/* do_usage(player); */
 	}, {
 		.name = "version",
 		.cb = &do_version,
-		/* do_version(player); */
 	}, {
 		.name = "wall",
 		.cb = &do_wall,
-		/* do_wall(player, full_command); /1* rename *1/ */
 	}, {
 		.name = "buy",
 		.cb = &do_buy,
-		/* do_buy(descr, player, arg1, arg2); */
 	}, {
 		.name = "leave",
 		.cb = &do_leave,
-		/* do_leave(descr, player); /1* disembark *1/ */
 	}, {
 		.name = "drink",
 		.cb = &do_drink,
-		/* do_drink(descr, player, arg1); */
 	}, {
 		.name = "drop",
 		.cb = &do_drop,
-		/* do_drop(descr, player, arg1, arg2); */
 	}, {
 		.name = "eat",
 		.cb = &do_eat,
-		/* do_eat(descr, player, arg1); */
 	}, {
 		.name = "examine",
 		.cb = &do_examine,
-		/* do_examine(descr, player, arg1, arg2); */
 	}, {
 		.name = "equip",
 		.cb = &do_equip,
-		/* do_equip(descr, player, arg1); */
 	}, {
 		.name = "fill",
 		.cb = &do_fill,
-		/* do_fill(descr, player, arg1, arg2); */
 	}, {
 		.name = "get",
 		.cb = &do_get,
-		/* do_get(descr, player, arg1, arg2); */
 	}, {
 		.name = "give",
 		.cb = &do_give,
-		/* do_give(descr, player, arg1, atoi(arg2)); */
 	/* }, { */
 	/* 	.name = "move", */
 	/* 	.cb = &do_move, */
@@ -339,31 +312,24 @@ core_command_t cmds[] = {
 	}, {
 		.name = "gripe",
 		.cb = &do_gripe,
-		/* do_gripe(player, full_command); */
 	}, {
 		.name = "help",
 		.cb = &do_help,
-		/* do_help(player, arg1, arg2); */
 	}, {
 		.name = "inventory",
 		.cb = &do_inventory,
-		/* do_inventory(player); */
 	}, {
 		.name = "info",
 		.cb = &do_info,
-		/* do_info(player, arg1, arg2); */
 	}, {
 		.name = "kill",
 		.cb = &do_kill,
-		/* do_kill(descr, player, arg1); */
 	}, {
 		.name = "look_at",
 		.cb = &do_look_at,
-		/* do_look_at(descr, player, arg1, arg2); */
 	}, {
 		.name = "leave",
 		.cb = &do_leave,
-		/* do_leave(descr, player); */
 	/* }, { */
 	/* 	.name = "move", */
 	/* 	.cb = &do_move, */
@@ -375,7 +341,6 @@ core_command_t cmds[] = {
 	}, {
 		.name = "view",
 		.cb = &do_view,
-		/* do_view(descr, player); /1* map *1/ */
 	/* }, { */
 	/* 	.name = "meme", */
 	/* 	.cb = &do_meme, */
@@ -383,39 +348,30 @@ core_command_t cmds[] = {
 	}, {
 		.name = "man",
 		.cb = &do_man,
-		/* do_man(player, (!*arg1 && !*arg2 && arg1 != arg2) ? "=" : arg1, arg2); */
 	}, {
 		.name = "news",
 		.cb = &do_news,
-		/* do_news(player, arg1, arg2); */
 	}, {
 		.name = "page",
 		.cb = &do_page,
-		/* do_page(player, arg1, arg2); */
 	}, {
 		.name = "pose",
 		.cb = &do_pose,
-		/* do_pose(player, full_command); */
 	}, {
 		.name = "drop",
 		.cb = &do_drop,
-		/* do_drop(descr, player, arg1, arg2); /1* put *1/ */
 	}, {
 		.name = "look_at",
 		.cb = &do_look_at,
-		/* do_look_at(descr, player, arg1, arg2); /1* read (put alias) *1/ */
 	}, {
 		.name = "rob",
 		.cb = &do_rob,
-		/* do_rob(descr, player, arg1); */
 	}, {
 		.name = "say",
 		.cb = &do_say,
-		/* do_say(player, full_command); */
 	}, {
 		.name = "score",
 		.cb = &do_score,
-		/* do_score(player); */
 	}, {
 		.name = "sell",
 		.cb = &do_sell,
@@ -461,10 +417,6 @@ int shutdown_flag = 0;
 
 static const char *create_fail =
 		"Either there is already a player with that name, or that name is illegal.\r\n";
-
-/* static const char *shutdown_message = "\r\nGoing down - Bye\r\n"; */
-
-int resolver_sock[2];
 
 static int sockfd, nextfd;
 descr_t descr_map[FD_SETSIZE];
@@ -545,44 +497,15 @@ commands_init() {
 }
 
 int shovechars();
-void freeqs(descr_t *d);
-void welcome_user(descr_t *d);
 void close_sockets(const char *msg);
-int boot_off(dbref player);
-void boot_player_off(dbref player);
-int make_socket(int);
-descr_t *new_connection(int port, int sock);
-void dump_users(descr_t *d, char *user);
-void parse_connect(const char *msg, char *command, char *user, char *pass);
-int descr_inband(descr_t *, const char *);
-/* moves qd into qo */
-int queue_write(descr_t *, const char *, int);
-int process_output(descr_t *d);
-void announce_connect(descr_t *, dbref);
-void announce_disconnect(descr_t *);
-char *time_format_1(long);
-char *time_format_2(long);
 void    remember_player_descr(dbref player, int);
-void    update_desc_count_table();
 int*    get_player_descrs(dbref player, int* count);
 void    forget_player_descr(dbref player, int);
 descr_t * descrdata_by_descr(int i);
-int online_init(void);
-dbref online_next(int *ptr);
-
-extern FILE *input_file;
-extern FILE *delta_infile;
-extern FILE *delta_outfile;
 
 short optflags = 0;
-pid_t global_resolver_pid=0;
 pid_t global_dumper_pid=0;
 short global_dumpdone=0;
-
-time_t sel_prof_start_time;
-long sel_prof_idle_sec;
-long sel_prof_idle_usec;
-unsigned long sel_prof_idle_use;
 
 void
 show_program_usage(char *prog)
@@ -604,6 +527,18 @@ show_program_usage(char *prog)
 
 extern int sanity_violated;
 int time_since_combat = 0;
+
+void
+close_sockets(const char *msg) {
+	descr_t *d;
+
+	DESCR_ITER(d) {
+		forget_player_descr(d->player, d->fd);
+		if (shutdown(d->fd, 2) < 0)
+			perror("shutdown");
+		close(d->fd);
+	}
+}
 
 int
 main(int argc, char **argv)
@@ -651,11 +586,6 @@ main(int argc, char **argv)
 	warn("INIT: TinyMUCK %s starting.", "version");
 	warn("%s PID is: %d", argv[0], getpid());
 
-	sel_prof_start_time = time(NULL); /* Set useful starting time */
-	sel_prof_idle_sec = 0;
-	sel_prof_idle_usec = 0;
-	sel_prof_idle_use = 0;
-
 	if (init_game() < 0) {
 		warn("Couldn't load " STD_DB "!");
 		return 2;
@@ -689,6 +619,29 @@ main(int argc, char **argv)
 }
 
 int notify_nolisten_level = 0;
+
+int
+descr_write(descr_t *d, const char *data, size_t len)
+{
+	return write(d->fd, data, len);
+
+#if 0
+	if (d->inband.output.p < d->inband.output.buf + QUEUE_MAX) {
+		memcpy(d->inband.output.p, data, len);
+		d->inband.output.len += len;
+		return len;
+	}
+
+	return -1;
+#endif
+}
+
+int
+descr_inband(descr_t *d, const char *s)
+{
+	/* warn("descr_inband %d %s", d->fd, s); */
+	return descr_write(d, s, strlen(s));
+}
 
 int
 notify_nolisten(dbref player, const char *msg, int isprivate)
@@ -885,58 +838,12 @@ msec_add(struct timeval t, int x)
 	return t;
 }
 
-/* struct timeval */
-/* update_quotas(struct timeval last, struct timeval current) */
-/* { */
-/* 	int nslices; */
-/* 	int cmds_per_time; */
-/* 	descr_t *d; */
-/* 	int td = msec_diff(current, last); */
-/* 	time_since_combat += td; */
-
-/* 	nslices = td / COMMAND_TIME_MSEC; */
-
-/* 	if (nslices > 0) { */
-/* 		for (d = descriptor_list; d; d = d->next) { */
-/* 			if (d->flags & DF_CONNECTED) { */
-/* 				cmds_per_time = ((FLAGS(d->player) & INTERACTIVE) */
-/* 								 ? (COMMANDS_PER_TIME * 8) : COMMANDS_PER_TIME); */
-/* 			} else { */
-/* 				cmds_per_time = COMMANDS_PER_TIME; */
-/* 			} */
-/* 			d->quota += cmds_per_time * nslices; */
-/* 			if (d->quota > COMMAND_BURST_SIZE) */
-/* 				d->quota = COMMAND_BURST_SIZE; */
-/* 		} */
-/* 	} */
-/* 	return msec_add(last, nslices * COMMAND_TIME_MSEC); */
-/* } */
-
-int
-descr_write(descr_t *d, const char *data, size_t len)
-{
-	/* FD_SET(d->fd, &writefds); */
-	return write(d->fd, data, len);
-
-#if 0
-	if (d->inband.output.p < d->inband.output.buf + QUEUE_MAX) {
-		memcpy(d->inband.output.p, data, len);
-		d->inband.output.len += len;
-		return len;
-	}
-
-	return -1;
-#endif
-}
-
 void
 goodbye_user(descr_t *d)
 {
 	descr_inband(d, "\r\n" LEAVE_MESSAGE "\r\n\r\n");
 }
 
-/* static int con_players_max = 0;	/1* one of Cynbe's good ideas. *1/ */
-/* static int con_players_curr = 0;	/1* for playermax checks. *1/ */
 extern void purge_free_frames(void);
 
 static void
@@ -980,566 +887,65 @@ queue_read(descr_t *d, queue_t *q) {
 	q->len += ret;
 	*(q->p = q->buf + q->len) = '\0';
 	ret ++;
-	/* q->p++; */
-	/* q->len++; */
 	warn("queue_read %d %ld bytes %ld+%d/%d -- %s\n", d->fd, q->len, q->len - ret, ret, QUEUE_MAX, q->buf);
-	/* FD_CLR(d->fd, &readfds); */
 	return ret;
 }
 
 void
-descr_process(descr_t *d, char *input, size_t input_len)
+mob_welcome(descr_t *d)
 {
-	warn("descr_process %d\n", d->fd);
-
-	command_t cmd = command_new(d, input, input_len);
-
-	if (!cmd.argc)
-		return;
-
-	if (d->flags & DF_CONNECTED) {
-		command_process(&cmd);
-		return;
-	}
-
-	if (cmd.argc != 3)
-		return;
-
-	if (*cmd.argv[0] == 'c')
-		auth(d->fd, cmd.argv[1], cmd.argv[2]);
-	else
-		welcome_user(d);
-}
-
-void queue_init(queue_t *q) {
-	q->p = q->buf;
-	q->len = 0;
-}
-
-int
-descr_read(descr_t *d)
-{
-	queue_t *q = &d->inband.input;
-	queue_init(q);
-	switch (queue_read(d, q)) {
-	case -1:
-		if (errno == EAGAIN)
-			return 0;
-
-		perror("descr_read");
-		return -1;
-	case 0:
-		return 0;
-	}
-
-	descr_process(d, q->buf, q->len);
-	return q->len;
-	/* return queue_read(d, &d->inband.input); */
-}
-
-int
-auth(int descr, char *user, char *password)
-{
-	warn("auth %s %sx\n", user, password);
-        int created = 0;
-        dbref player = connect_player(user, password);
-	descr_t *d = descrdata_by_descr(descr);
-
-        if ((optflags & OPT_WIZONLY) && !TrueWizard(player)) {
-                descr_inband(d, (optflags & OPT_WIZONLY)
-                           ? "Sorry, but the game is in maintenance mode currently, and "
-                           "only wizards are allowed to connect.  Try again later."
-                           : PLAYERMAX_BOOTMESG);
-                descr_inband(d, "\r\n");
-		d->flags |= DF_BOOTED;
-                return 1;
-        }
-
-        if (player == NOTHING) {
-                player = create_player(user, password);
-
-                if (player == NOTHING) {
-                        descr_inband(d, create_fail);
-                        /* if (d->proto.ws.ip) */
-                        /*         web_logout(d->fd); */
-
-                        warn("FAILED CREATE %s on fd %d", user, d->fd);
-                        return 1;
+	struct obj const *o = mob_obj_random();
+	if (o) {
+		CBUG(*o->name == '\0');
+		descr_inband(d, o->name);
+		descr_inband(d, "\r\n\r\n");
+		art(d->fd, o->art);
+                if (*o->description) {
+                        if (*o->description != '\0')
+                                descr_inband(d, o->description);
+                        descr_inband(d, "\r\n\r\n");
                 }
-
-                warn("CREATED %s(%d) on fd %d",
-                           NAME(player), player, d->fd);
-                created = 1;
-        } else
-                warn("CONNECTED: %s(%d) on fd %d",
-                           NAME(player), player, d->fd);
-        d->flags = DF_CONNECTED;
-        d->connected_at = time(NULL);
-        d->player = player;
-        /* update_desc_count_table(); */
-        remember_player_descr(player, d->fd);
-        /* cks: someone has to initialize this somewhere. */
-        PLAYER_SET_BLOCK(d->player, 0);
-        welcome_user(d);
-        spit_file(player, MOTD_FILE);
-        announce_connect(d, player);
-        if (created) {
-                /* TODO do_help(player, "begin", ""); */
-                mob_put(player);
-        } else {
-                if (sanity_violated && Wizard(player))
-                        notify(player,
-                               "#########################################################################\n"
-                               "## WARNING!  The DB appears to be corrupt!  Please repair immediately! ##\n"
-                               "#########################################################################");
-        }
-        /* if (!(web_support(d->fd) && d->proto.ws.old)) */
-                /* TODO do_view(d->fd, player); */
-
-        look_room(d->fd, player, getloc(player), 0);
-
-        return 0;
-}
-
-descr_t *
-descr_next() {
-	return &descr_map[nextfd];
-}
-
-descr_t *
-descr_new()
-{
-	descr_t *d = descr_next();
-
-	if (!d)
-		return NULL;
-
-	nextfd++;
-	memset(d, 0, sizeof(descr_t));
-
-	struct sockaddr_in addr;
-	socklen_t addr_len;
-
-	addr_len = (socklen_t)sizeof(addr);
-	d->fd = accept(sockfd, (struct sockaddr *) &addr, &addr_len);
-
-	warn("accept %d\n", d->fd);
-
-	/* FIXME */
-	if (d->fd <= 0) {
-		perror("descr_new");
-		return NULL;
-	}
-
-	FD_SET(d->fd, &readfds_new);
-	/* FD_SET(d->fd, &writefds); */
-
-	d->flags = 0;
-	d->player = -1;
-	d->con_number = 0;
-	d->connected_at = time(NULL);
-	if (fcntl(d->fd, F_SETFL, O_NONBLOCK) == -1) {
-		perror("make_nonblocking: fcntl");
-		panic("O_NONBLOCK fcntl failed");
-	}
-	/* d->quota = COMMAND_BURST_SIZE; */
-	d->last_time = d->connected_at;
-	d->last_pinged_at = d->connected_at;
-	/* FD_CLR(sockfd, &readfds); */
-	return d;
-}
-
-void
-descr_close(descr_t *d)
-{
-	if (d->flags & DF_CONNECTED) {
-		warn("%d disconnects", d->fd);
-		announce_disconnect(d);
-	} else
-		warn("%d never connected", d->fd);
-
-	shutdown(d->fd, 2);
-	close(d->fd);
-	if (d)
-		memset(d, 0, sizeof(descr_t));
-}
-
-int
-shovechars()
-{
-	time_t now;
-	struct timeval last_slice, current_time;
-	struct timeval next_slice;
-	struct timeval timeout, slice_timeout;
-	descr_t *d;
-	struct timeval sel_in, sel_out;
-	int avail_descriptors;
-
-	sockfd = make_socket(TINYPORT);
-
-	if (sockfd <= 0) {
-		perror("make_socket");
-		return sockfd;
-	}
-
-	nextfd = sockfd + 1;
-	FD_SET(sockfd, &readfds_new);
-	warn("shovechars %d\n", sockfd);
-
-	gettimeofday(&last_slice, (struct timezone *) 0);
-
-	avail_descriptors = sysconf(_SC_OPEN_MAX) - 5;
-
-	(void) time(&now);
-
-	mob_init();
-
-	/* Daemonize */
-	if ((optflags & OPT_DETACH) && daemon(1, 1) != 0)
-		_exit(0);
-
-/* And here, we do the actual player-interaction loop */
-
-	while (shutdown_flag == 0) {
-		gettimeofday(&current_time, (struct timezone *) 0);
-		/* last_slice = update_quotas(last_slice, current_time); */
-
-		/* process_commands(); */
-		do_tick();
-
-		DESCR_ITER(d) {
-			/* process_output(d); */
-			if (d->flags & DF_BOOTED) {
-				goodbye_user(d);
-				d->flags ^= DF_BOOTED;
-				descr_close(d);
-			}
-		}
-
-		if (global_dumpdone != 0) {
-			wall(DUMPING_MESG);
-			global_dumpdone = 0;
-		}
-		purge_free_frames();
-		untouchprops_incremental(1);
-
-		if (shutdown_flag)
-			break;
-
-		timeout.tv_sec = 1;
-		timeout.tv_usec = 0;
-		next_slice = msec_add(last_slice, COMMAND_TIME_MSEC);
-		slice_timeout = timeval_sub(next_slice, current_time);
-
-		gettimeofday(&sel_in,NULL);
-		readfds = readfds_new;
-		int select_n = select(FD_SETSIZE, &readfds, NULL, NULL, &timeout);
-
-		switch (select_n) {
-		case -1:
-			switch (errno) {
-			case EAGAIN:
-				return 0;
-			case EINTR:
-				continue;
-			}
-
-			perror("select");
-			return -1;
-		case 0:
-			continue;
-		}
-
-		warn("select_n %d\n", select_n);
-		gettimeofday(&sel_out,NULL);
-		if (sel_out.tv_usec < sel_in.tv_usec) {
-			sel_out.tv_usec += 1000000;
-			sel_out.tv_sec -= 1;
-		}
-		sel_out.tv_usec -= sel_in.tv_usec;
-		sel_out.tv_sec -= sel_in.tv_sec;
-		sel_prof_idle_sec += sel_out.tv_sec;
-		sel_prof_idle_usec += sel_out.tv_usec;
-		if (sel_prof_idle_usec >= 1000000) {
-			sel_prof_idle_usec -= 1000000;
-			sel_prof_idle_sec += 1;
-		}
-		sel_prof_idle_use++;
-		(void) time(&now);
-
-		for (d = descr_map;
-		     d < descr_map + FD_SETSIZE;
-		     d++) {
-			if (!FD_ISSET(d->fd, &readfds))
-				continue;
-
-			if (d->fd == sockfd)
-				descr_new();
-			else 
-				descr_read(d);
-
-			/* FD_CLR(d->fd, &readfds); */
-
-			/* if (queue_size(&d->inband.output)) */
-			/* 	FD_SET(d->fd, &writefds); */
-		}
-	}
-
-	/* End of the player processing loop */
-
-	(void) time(&now);
-	add_property((dbref) 0, "_sys/lastdumptime", NULL, (int) now);
-	add_property((dbref) 0, "_sys/shutdowntime", NULL, (int) now);
-	return 0;
-}
-
-void
-wall_wizards(const char *msg)
-{
-	descr_t *d;
-	char buf[BUFFER_LEN + 2];
-
-	strlcpy(buf, msg, sizeof(buf));
-	strlcat(buf, "\r\n", sizeof(buf));
-
-	DESCR_ITER(d)
-		if (Wizard(d->player))
-			descr_inband(d, buf);
-}
-
-int
-make_socket(int port)
-{
-	int opt;
-	struct sockaddr_in server;
-
-	sockfd = socket(AF_INET, SOCK_STREAM, 0);
-
-	if (sockfd < 0) {
-		perror("creating stream socket");
-		exit(3);
-	}
-
-	opt = 1;
-	if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, (char *) &opt, sizeof(opt)) < 0) {
-		perror("setsockopt");
-		exit(1);
-	}
-
-	opt = 1;
-	if (setsockopt(sockfd, SOL_SOCKET, SO_KEEPALIVE, (char *) &opt, sizeof(opt)) < 0) {
-		perror("setsockopt");
-		exit(1);
-	}
-
-	/*
-	opt = 240;
-	if (setsockopt(sockfd, SOL_TCP, TCP_KEEPIDLE, (char *) &opt, sizeof(opt)) < 0) {
-		perror("setsockopt");
-		exit(1);
-	}
-	*/
-
-	server.sin_family = AF_INET;
-	server.sin_addr.s_addr = INADDR_ANY;
-	server.sin_port = htons(port);
-
-	if (bind(sockfd, (struct sockaddr *) &server, sizeof(server))) {
-		perror("binding stream socket");
-		close(sockfd);
-		exit(4);
-	}
-
-	FD_ZERO(&readfds);
-	FD_ZERO(&writefds);
-	FD_SET(sockfd, &readfds);
-	descr_map[0].fd = sockfd;
-
-	listen(sockfd, 5);
-	return sockfd;
-}
-
-int
-descr_inband(descr_t *d, const char *s)
-{
-	/* warn("descr_inband %d %s", d->fd, s); */
-	return descr_write(d, s, strlen(s));
-}
-
-void
-parse_connect(const char *msg, char *command, char *user, char *pass)
-{
-	char *p;
-
-	while (*msg && isinput(*msg) && isspace(*msg))
-		msg++;
-	p = command;
-	while (*msg && isinput(*msg) && !isspace(*msg))
-		*p++ = tolower(*msg++);
-	*p = '\0';
-	while (*msg && isinput(*msg) && isspace(*msg))
-		msg++;
-	p = user;
-	while (*msg && isinput(*msg) && !isspace(*msg))
-		*p++ = *msg++;
-	*p = '\0';
-	while (*msg && isinput(*msg) && isspace(*msg))
-		msg++;
-	p = pass;
-	while (*msg && isinput(*msg) && !isspace(*msg))
-		*p++ = *msg++;
-	*p = '\0';
-}
-
-int
-boot_off(dbref player)
-{
-    int* darr;
-    int dcount;
-	descr_t *last = NULL;
-
-	darr = get_player_descrs(player, &dcount);
-	if (darr) {
-        last = descrdata_by_descr(darr[0]);
-	}
-
-	if (last) {
-		last->flags |= DF_BOOTED;
-		/* descr_close(last); */
-		return 1;
-	}
-	return 0;
-}
-
-void
-boot_player_off(dbref player)
-{
-    int di;
-    int* darr;
-    int dcount;
-    descr_t *d;
- 
-	darr = get_player_descrs(player, &dcount);
-    for (di = 0; di < dcount; di++) {
-        d = descrdata_by_descr(darr[di]);
-        if (d) {
-            d->flags = DF_BOOTED;
-        }
-    }
-}
-
-void
-close_sockets(const char *msg) {
-	descr_t *d;
-
-	DESCR_ITER(d) {
-		forget_player_descr(d->player, d->fd);
-		if (shutdown(d->fd, 2) < 0)
-			perror("shutdown");
-		close(d->fd);
 	}
 }
 
 void
-emergency_shutdown(void)
+welcome_user(descr_t *d)
 {
-	close_sockets("\r\nEmergency shutdown due to server crash.");
-}
+	FILE *f;
+	char *ptr;
+	char buf[BUFFER_LEN];
 
-void
-dump_users(descr_t *e, char *user)
-{
-	descr_t *d;
-	int wizard;
-	time_t now;
-	char buf[2048];
-	char pbuf[64];
-	char secchar = ' ';
+        /* if (!web_support(d->fd)) { */
+                if ((f = fopen(WELC_FILE, "rb")) == NULL) {
+                        descr_inband(d, DEFAULT_WELCOME_MESSAGE);
+                        perror("spit_file: welcome.txt");
+                } else {
+                        while (fgets(buf, sizeof(buf) - 3, f)) {
+                                ptr = index(buf, '\n');
+                                if (ptr && ptr > buf && *(ptr - 1) != '\r') {
+                                        *ptr++ = '\r';
+                                        *ptr++ = '\n';
+                                        *ptr++ = '\0';
+                                }
+                                descr_inband(d, buf);
+                        }
+                        fclose(f);
+                }
+        /* } */
 
-	wizard = (e->flags & DF_CONNECTED) && Wizard(e->player);
+        mob_welcome(d);
 
-	while (*user && (isspace(*user) || *user == '*'))
-		user++;
-
-	if (wizard)
-		/* S/he is connected and not quelled. Okay; log it. */
-		warn("WIZ: %s(%d) in %s(%d):  %s", NAME(e->player),
-					(int) e->player, NAME(DBFETCH(e->player)->location),
-					(int) DBFETCH(e->player)->location, "WHO");
-
-	if (!*user)
-		user = NULL;
-
-	(void) time(&now);
-	if (wizard) {
-		descr_inband(e, "Player Name                Location     On For Idle   Host\r\n");
-	} else {
-		descr_inband(e, "Player Name           On For Idle\r\n");
+	if (optflags & OPT_WIZONLY) {
+		descr_inband(d, "## The game is currently in maintenance mode, and only wizards will be able to connect.\r\n");
 	}
-
-	DESCR_ITER(d) if ((
-			   !WHO_HIDES_DARK || wizard
-			   || !(FLAGS(d->player) & DARK))
-			  && (!user || string_prefix(NAME(d->player), user))) {
-
-		secchar = ' ';
-
-		if (wizard) {
-			/* don't print flags, to save space */
-			snprintf(pbuf, sizeof(pbuf), "%.*s(#%d)", PLAYER_NAME_LIMIT + 1,
-				 NAME(d->player), (int) d->player);
-			snprintf(buf, sizeof(buf),
-				 "%-*s [%6d] %10s %4s%c%c\r\n",
-				 PLAYER_NAME_LIMIT + 10, pbuf,
-				 (int) DBFETCH(d->player)->location,
-				 time_format_1(now - d->connected_at),
-				 time_format_2(now - d->last_time),
-				 ((FLAGS(d->player) & INTERACTIVE) ? '*' : ' '),
-				 secchar);
-		} else {
-			snprintf(buf, sizeof(buf), "%-*s %10s %4s%c%c\r\n",
-				 (int)(PLAYER_NAME_LIMIT + 1),
-				 NAME(d->player),
-				 time_format_1(now - d->connected_at),
-				 time_format_2(now - d->last_time),
-				 ((FLAGS(d->player) & INTERACTIVE) ? '*' : ' '),
-				 secchar);
+#if PLAYERMAX
+	else if (con_players_curr >= PLAYERMAX_LIMIT) {
+		if (PLAYERMAX_WARNMESG && *PLAYERMAX_WARNMESG) {
+			descr_inband(d, PLAYERMAX_WARNMESG);
+			descr_inband(d, "\r\n");
 		}
 	}
-
-	descr_inband(e, buf);
-}
-
-char *
-time_format_1(long dt)
-{
-	register struct tm *delta;
-	static char buf[64];
-
-	delta = gmtime((time_t *) &dt);
-	if (delta->tm_yday > 0)
-		snprintf(buf, sizeof(buf), "%dd %02d:%02d", delta->tm_yday, delta->tm_hour, delta->tm_min);
-	else
-		snprintf(buf, sizeof(buf), "%02d:%02d", delta->tm_hour, delta->tm_min);
-	return buf;
-}
-
-char *
-time_format_2(long dt)
-{
-	register struct tm *delta;
-	static char buf[64];
-
-	delta = gmtime((time_t *) &dt);
-	if (delta->tm_yday > 0)
-		snprintf(buf, sizeof(buf), "%dd", delta->tm_yday);
-	else if (delta->tm_hour > 0)
-		snprintf(buf, sizeof(buf), "%dh", delta->tm_hour);
-	else if (delta->tm_min > 0)
-		snprintf(buf, sizeof(buf), "%dm", delta->tm_min);
-	else
-		snprintf(buf, sizeof(buf), "%ds", delta->tm_sec);
-	return buf;
+#endif
 }
 
 void
@@ -1623,6 +1029,265 @@ announce_connect(descr_t *d, dbref player)
 	return;
 }
 
+int
+auth(int descr, char *user, char *password)
+{
+	warn("auth %s %sx\n", user, password);
+        int created = 0;
+        dbref player = connect_player(user, password);
+	descr_t *d = descrdata_by_descr(descr);
+
+        if ((optflags & OPT_WIZONLY) && !TrueWizard(player)) {
+                descr_inband(d, (optflags & OPT_WIZONLY)
+                           ? "Sorry, but the game is in maintenance mode currently, and "
+                           "only wizards are allowed to connect.  Try again later."
+                           : PLAYERMAX_BOOTMESG);
+                descr_inband(d, "\r\n");
+		d->flags |= DF_BOOTED;
+                return 1;
+        }
+
+        if (player == NOTHING) {
+                player = create_player(user, password);
+
+                if (player == NOTHING) {
+                        descr_inband(d, create_fail);
+                        /* if (d->proto.ws.ip) */
+                        /*         web_logout(d->fd); */
+
+                        warn("FAILED CREATE %s on fd %d", user, d->fd);
+                        return 1;
+                }
+
+                warn("CREATED %s(%d) on fd %d",
+                           NAME(player), player, d->fd);
+                created = 1;
+        } else
+                warn("CONNECTED: %s(%d) on fd %d",
+                           NAME(player), player, d->fd);
+        d->flags = DF_CONNECTED;
+        d->connected_at = time(NULL);
+        d->player = player;
+        remember_player_descr(player, d->fd);
+        /* cks: someone has to initialize this somewhere. */
+        PLAYER_SET_BLOCK(d->player, 0);
+        welcome_user(d);
+        spit_file(player, MOTD_FILE);
+        announce_connect(d, player);
+        if (created) {
+                /* TODO do_help(player, "begin", ""); */
+                mob_put(player);
+        } else {
+                if (sanity_violated && Wizard(player))
+                        notify(player,
+                               "#########################################################################\n"
+                               "## WARNING!  The DB appears to be corrupt!  Please repair immediately! ##\n"
+                               "#########################################################################");
+        }
+        /* if (!(web_support(d->fd) && d->proto.ws.old)) */
+                /* TODO do_view(d->fd, player); */
+
+        look_room(d->fd, player, getloc(player), 0);
+
+        return 0;
+}
+
+static inline int
+do_v(int descr, dbref player, char const *cmd)
+{
+	int ofs = 1;
+	char const *s = cmd;
+
+	for (; *s && ofs > 0; s += ofs) {
+		switch (*s) {
+		case COMMAND_TOKEN:
+			return s - cmd;
+		/* case SAY_TOKEN: */
+		/* 	do_say(player, s + 1); */
+		/* 	return s + strlen(s) - cmd; */
+		/* case POSE_TOKEN: */
+		/* 	do_pose(player, s + 1); */
+		/* 	return s + strlen(s) - cmd; */
+		}
+
+		ofs = geo_v(descr, player, s);
+		if (ofs < 0)
+			ofs = - ofs;
+		s += ofs;
+		ofs = kill_v(descr, player, s);
+	}
+
+	return s - cmd;
+}
+
+void
+command_process(command_t *cmd)
+{
+	if (cmd->argc < 1) {
+		return;
+	}
+
+	char *command = cmd->argv[0];
+	size_t command_n = 0;
+	dbref player = cmd->player;
+	int descr = cmd->fd;
+
+	pos_t pos;
+	map_where(pos, getloc(cmd->player));
+
+	command_debug(cmd, "command_process");
+	warn("command_process %s", command);
+
+        // set current descriptor (needed for death)
+        CBUG(GETLID(player) < 0);
+        mobi_t *liv = MOBI(player);
+        liv->descr = descr;
+
+	/* robustify player */
+	if (player < 0 || player >= db_top ||
+		(Typeof(player) != TYPE_PLAYER && Typeof(player) != TYPE_THING)) {
+		warn("process_command: bad player %d", player);
+		return;
+	}
+
+	/* if player is a wizard, and uses overide token to start line... */
+	/* ... then do NOT run actions, but run the command they specify. */
+	if (!(TrueWizard(OWNER(player)) && (*command == OVERIDE_TOKEN))
+	    && can_move(descr, player, command, 0))
+	{
+		do_move(descr, player, command, 0);	/* command is exact match for exit */
+		*match_args = 0;
+		*match_cmdname = 0;
+		goto out;
+	}
+
+	for (; command_n < cmd->argc; command_n ++)
+	{
+		command = cmd->argv[command_n];
+		core_command_t *cmd_i = command_match(cmd);
+
+		if (cmd_i) {
+			cmd_i->cb(cmd);
+			// TODO get next command
+			break;
+		}
+
+		int matched;
+		command += do_v(descr, player, command);
+		if (*command == COMMAND_TOKEN) {
+			command++;
+			matched = 1;
+			CBUG(1);
+		} else if (*command == '\0') {
+			continue;
+		} else
+			break;
+			/* goto bad; */
+	}
+out:
+	{
+		pos_t pos2;
+		map_where(pos2, getloc(player));
+		/* if (MORTON_READ(pos2) != MORTON_READ(pos)) TODO */
+		/* 	do_view(descr, player); */
+	}
+}
+
+void
+descr_process(descr_t *d, char *input, size_t input_len)
+{
+	warn("descr_process %d\n", d->fd);
+
+	command_t cmd = command_new(d, input, input_len);
+
+	if (!cmd.argc)
+		return;
+
+	if (d->flags & DF_CONNECTED) {
+		command_process(&cmd);
+		return;
+	}
+
+	if (cmd.argc != 3)
+		return;
+
+	if (*cmd.argv[0] == 'c')
+		auth(d->fd, cmd.argv[1], cmd.argv[2]);
+	else
+		welcome_user(d);
+}
+
+void queue_init(queue_t *q) {
+	q->p = q->buf;
+	q->len = 0;
+}
+
+int
+descr_read(descr_t *d)
+{
+	queue_t *q = &d->inband.input;
+	queue_init(q);
+	switch (queue_read(d, q)) {
+	case -1:
+		if (errno == EAGAIN)
+			return 0;
+
+		perror("descr_read");
+		return -1;
+	case 0:
+		return 0;
+	}
+
+	descr_process(d, q->buf, q->len);
+	return q->len;
+	/* return queue_read(d, &d->inband.input); */
+}
+
+descr_t *
+descr_next() {
+	return &descr_map[nextfd];
+}
+
+descr_t *
+descr_new()
+{
+	descr_t *d = descr_next();
+
+	if (!d)
+		return NULL;
+
+	nextfd++;
+	memset(d, 0, sizeof(descr_t));
+
+	struct sockaddr_in addr;
+	socklen_t addr_len;
+
+	addr_len = (socklen_t)sizeof(addr);
+	d->fd = accept(sockfd, (struct sockaddr *) &addr, &addr_len);
+
+	warn("accept %d\n", d->fd);
+
+	/* FIXME */
+	if (d->fd <= 0) {
+		perror("descr_new");
+		return NULL;
+	}
+
+	FD_SET(d->fd, &readfds_new);
+
+	d->flags = 0;
+	d->player = -1;
+	d->con_number = 0;
+	d->connected_at = time(NULL);
+
+	if (fcntl(d->fd, F_SETFL, O_NONBLOCK) == -1) {
+		perror("make_nonblocking: fcntl");
+		panic("O_NONBLOCK fcntl failed");
+	}
+
+	return d;
+}
+
 void
 announce_disconnect(descr_t *d)
 {
@@ -1650,7 +1315,6 @@ announce_disconnect(descr_t *d)
 	d->player = NOTHING;
 
     forget_player_descr(player, d->fd);
-    /* update_desc_count_table(); */
 
 	/* queue up all _connect programs referred to by properties */
 	envpropqueue(d->fd, player, getloc(player), NOTHING, player, NOTHING,
@@ -1662,25 +1326,304 @@ announce_disconnect(descr_t *d)
 	DBDIRTY(player);
 }
 
+void
+descr_close(descr_t *d)
+{
+	if (d->flags & DF_CONNECTED) {
+		warn("%d disconnects", d->fd);
+		announce_disconnect(d);
+	} else
+		warn("%d never connected", d->fd);
+
+	shutdown(d->fd, 2);
+	close(d->fd);
+	if (d)
+		memset(d, 0, sizeof(descr_t));
+}
+
+int
+make_socket(int port)
+{
+	int opt;
+	struct sockaddr_in server;
+
+	sockfd = socket(AF_INET, SOCK_STREAM, 0);
+
+	if (sockfd < 0) {
+		perror("creating stream socket");
+		exit(3);
+	}
+
+	opt = 1;
+	if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, (char *) &opt, sizeof(opt)) < 0) {
+		perror("setsockopt");
+		exit(1);
+	}
+
+	opt = 1;
+	if (setsockopt(sockfd, SOL_SOCKET, SO_KEEPALIVE, (char *) &opt, sizeof(opt)) < 0) {
+		perror("setsockopt");
+		exit(1);
+	}
+
+	/*
+	opt = 240;
+	if (setsockopt(sockfd, SOL_TCP, TCP_KEEPIDLE, (char *) &opt, sizeof(opt)) < 0) {
+		perror("setsockopt");
+		exit(1);
+	}
+	*/
+
+	server.sin_family = AF_INET;
+	server.sin_addr.s_addr = INADDR_ANY;
+	server.sin_port = htons(port);
+
+	if (bind(sockfd, (struct sockaddr *) &server, sizeof(server))) {
+		perror("binding stream socket");
+		close(sockfd);
+		exit(4);
+	}
+
+	FD_ZERO(&readfds);
+	FD_ZERO(&writefds);
+	FD_SET(sockfd, &readfds);
+	descr_map[0].fd = sockfd;
+
+	listen(sockfd, 5);
+	return sockfd;
+}
+
+int
+shovechars()
+{
+	time_t now;
+	struct timeval timeout;
+	descr_t *d;
+	int avail_descriptors;
+
+	sockfd = make_socket(TINYPORT);
+
+	if (sockfd <= 0) {
+		perror("make_socket");
+		return sockfd;
+	}
+
+	nextfd = sockfd + 1;
+	FD_SET(sockfd, &readfds_new);
+	warn("shovechars %d\n", sockfd);
+
+	avail_descriptors = sysconf(_SC_OPEN_MAX) - 5;
+
+	(void) time(&now);
+
+	mob_init();
+
+	/* Daemonize */
+	if ((optflags & OPT_DETACH) && daemon(1, 1) != 0)
+		_exit(0);
+
+/* And here, we do the actual player-interaction loop */
+
+	while (shutdown_flag == 0) {
+		/* process_commands(); */
+		do_tick();
+
+		DESCR_ITER(d) {
+			if (d->flags & DF_BOOTED) {
+				goodbye_user(d);
+				d->flags ^= DF_BOOTED;
+				descr_close(d);
+			}
+		}
+
+		if (global_dumpdone != 0) {
+			wall(DUMPING_MESG);
+			global_dumpdone = 0;
+		}
+		purge_free_frames();
+		untouchprops_incremental(1);
+
+		if (shutdown_flag)
+			break;
+
+		timeout.tv_sec = 1;
+		timeout.tv_usec = 0;
+
+		readfds = readfds_new;
+		int select_n = select(FD_SETSIZE, &readfds, NULL, NULL, &timeout);
+
+		switch (select_n) {
+		case -1:
+			switch (errno) {
+			case EAGAIN:
+				return 0;
+			case EINTR:
+				continue;
+			}
+
+			perror("select");
+			return -1;
+		case 0:
+			continue;
+		}
+
+		warn("select_n %d\n", select_n);
+
+		for (d = descr_map;
+		     d < descr_map + FD_SETSIZE;
+		     d++) {
+			if (!FD_ISSET(d->fd, &readfds))
+				continue;
+
+			if (d->fd == sockfd)
+				descr_new();
+			else 
+				descr_read(d);
+		}
+	}
+
+	/* End of the player processing loop */
+
+	(void) time(&now);
+	add_property((dbref) 0, "_sys/lastdumptime", NULL, (int) now);
+	add_property((dbref) 0, "_sys/shutdowntime", NULL, (int) now);
+	return 0;
+}
+
+void
+wall_wizards(const char *msg)
+{
+	descr_t *d;
+	char buf[BUFFER_LEN + 2];
+
+	strlcpy(buf, msg, sizeof(buf));
+	strlcat(buf, "\r\n", sizeof(buf));
+
+	DESCR_ITER(d)
+		if (Wizard(d->player))
+			descr_inband(d, buf);
+}
+
+int
+boot_off(dbref player)
+{
+    int* darr;
+    int dcount;
+	descr_t *last = NULL;
+
+	darr = get_player_descrs(player, &dcount);
+	if (darr) {
+        last = descrdata_by_descr(darr[0]);
+	}
+
+	if (last) {
+		last->flags |= DF_BOOTED;
+		/* descr_close(last); */
+		return 1;
+	}
+	return 0;
+}
+
+void
+boot_player_off(dbref player)
+{
+    int di;
+    int* darr;
+    int dcount;
+    descr_t *d;
+ 
+	darr = get_player_descrs(player, &dcount);
+    for (di = 0; di < dcount; di++) {
+        d = descrdata_by_descr(darr[di]);
+        if (d) {
+            d->flags = DF_BOOTED;
+        }
+    }
+}
+
+void
+emergency_shutdown(void)
+{
+	close_sockets("\r\nEmergency shutdown due to server crash.");
+}
+
+char *
+time_format_1(long dt)
+{
+	register struct tm *delta;
+	static char buf[64];
+
+	delta = gmtime((time_t *) &dt);
+	if (delta->tm_yday > 0)
+		snprintf(buf, sizeof(buf), "%dd %02d:%02d", delta->tm_yday, delta->tm_hour, delta->tm_min);
+	else
+		snprintf(buf, sizeof(buf), "%02d:%02d", delta->tm_hour, delta->tm_min);
+	return buf;
+}
+
+void
+dump_users(descr_t *e, char *user)
+{
+	descr_t *d;
+	int wizard;
+	time_t now;
+	char buf[2048];
+	char pbuf[64];
+	char secchar = ' ';
+
+	wizard = (e->flags & DF_CONNECTED) && Wizard(e->player);
+
+	while (*user && (isspace(*user) || *user == '*'))
+		user++;
+
+	if (wizard)
+		/* S/he is connected and not quelled. Okay; log it. */
+		warn("WIZ: %s(%d) in %s(%d):  %s", NAME(e->player),
+					(int) e->player, NAME(DBFETCH(e->player)->location),
+					(int) DBFETCH(e->player)->location, "WHO");
+
+	if (!*user)
+		user = NULL;
+
+	(void) time(&now);
+	if (wizard) {
+		descr_inband(e, "Player Name                Location     On For Idle   Host\r\n");
+	} else {
+		descr_inband(e, "Player Name           On For Idle\r\n");
+	}
+
+	DESCR_ITER(d) if ((
+			   !WHO_HIDES_DARK || wizard
+			   || !(FLAGS(d->player) & DARK))
+			  && (!user || string_prefix(NAME(d->player), user))) {
+
+		secchar = ' ';
+
+		if (wizard) {
+			/* don't print flags, to save space */
+			snprintf(pbuf, sizeof(pbuf), "%.*s(#%d)", PLAYER_NAME_LIMIT + 1,
+				 NAME(d->player), (int) d->player);
+			snprintf(buf, sizeof(buf),
+				 "%-*s [%6d] %10s %c%c\r\n",
+				 PLAYER_NAME_LIMIT + 10, pbuf,
+				 (int) DBFETCH(d->player)->location,
+				 time_format_1(now - d->connected_at),
+				 ((FLAGS(d->player) & INTERACTIVE) ? '*' : ' '),
+				 secchar);
+		} else {
+			snprintf(buf, sizeof(buf), "%-*s %10s %c%c\r\n",
+				 (int)(PLAYER_NAME_LIMIT + 1),
+				 NAME(d->player),
+				 time_format_1(now - d->connected_at),
+				 ((FLAGS(d->player) & INTERACTIVE) ? '*' : ' '),
+				 secchar);
+		}
+	}
+
+	descr_inband(e, buf);
+}
+
 /***** O(1) Connection Optimizations *****/
-
-/* void */
-/* update_desc_count_table() */
-/* { */
-/* 	int c; */
-/* 	descr_t *d; */
-
-/* 	current_descr_count = 0; */
-/* 	for (c = 0, d = descriptor_list; d; d = d->next) */
-/* 	{ */
-/* 		if (!(d->flags & DF_CONNECTED)) */
-/* 			continue; */
-
-/* 		d->con_number = c + 1; */
-/* 		descr_count_table[c++] = d; */
-/* 		current_descr_count++; */
-/* 	} */
-/* } */
 
 int*
 get_player_descrs(dbref player, int* count)
@@ -1773,53 +1716,6 @@ descrdata_by_descr(int c)
 
 /*** JME ***/
 
-/*** Foxen ***/
-int
-least_idle_player_descr(dbref who)
-{
-	descr_t *d;
-	descr_t *best_d = NULL;
-	int dcount, di;
-	int* darr;
-	long best_time = 0;
-
-	darr = get_player_descrs(who, &dcount);
-	for (di = 0; di < dcount; di++) {
-		d = descrdata_by_descr(darr[di]);
-		if (d && (!best_time || d->last_time > best_time)) {
-			best_d = d;
-			best_time = d->last_time;
-		}
-	}
-	if (best_d) {
-		return best_d->con_number;
-	}
-	return 0;
-}
-
-int
-most_idle_player_descr(dbref who)
-{
-	descr_t *d;
-	descr_t *best_d = NULL;
-	int dcount, di;
-	int* darr;
-	long best_time = 0;
-
-	darr = get_player_descrs(who, &dcount);
-	for (di = 0; di < dcount; di++) {
-		d = descrdata_by_descr(darr[di]);
-		if (d && (!best_time || d->last_time < best_time)) {
-			best_d = d;
-			best_time = d->last_time;
-		}
-	}
-	if (best_d) {
-		return best_d->con_number;
-	}
-	return 0;
-}
-
 int
 dbref_first_descr(dbref c)
 {
@@ -1894,63 +1790,6 @@ art(int descr, const char *art)
 }
 
 void
-mob_welcome(descr_t *d)
-{
-	struct obj const *o = mob_obj_random();
-	if (o) {
-		CBUG(*o->name == '\0');
-		descr_inband(d, o->name);
-		descr_inband(d, "\r\n\r\n");
-		art(d->fd, o->art);
-                if (*o->description) {
-                        if (*o->description != '\0')
-                                descr_inband(d, o->description);
-                        descr_inband(d, "\r\n\r\n");
-                }
-	}
-}
-
-void
-welcome_user(descr_t *d)
-{
-	FILE *f;
-	char *ptr;
-	char buf[BUFFER_LEN];
-
-        /* if (!web_support(d->fd)) { */
-                if ((f = fopen(WELC_FILE, "rb")) == NULL) {
-                        descr_inband(d, DEFAULT_WELCOME_MESSAGE);
-                        perror("spit_file: welcome.txt");
-                } else {
-                        while (fgets(buf, sizeof(buf) - 3, f)) {
-                                ptr = index(buf, '\n');
-                                if (ptr && ptr > buf && *(ptr - 1) != '\r') {
-                                        *ptr++ = '\r';
-                                        *ptr++ = '\n';
-                                        *ptr++ = '\0';
-                                }
-                                descr_inband(d, buf);
-                        }
-                        fclose(f);
-                }
-        /* } */
-
-        mob_welcome(d);
-
-	if (optflags & OPT_WIZONLY) {
-		descr_inband(d, "## The game is currently in maintenance mode, and only wizards will be able to connect.\r\n");
-	}
-#if PLAYERMAX
-	else if (con_players_curr >= PLAYERMAX_LIMIT) {
-		if (PLAYERMAX_WARNMESG && *PLAYERMAX_WARNMESG) {
-			descr_inband(d, PLAYERMAX_WARNMESG);
-			descr_inband(d, "\r\n");
-		}
-	}
-#endif
-}
-
-void
 dump_status(void)
 {
 	descr_t *d;
@@ -1960,9 +1799,8 @@ dump_status(void)
 	(void) time(&now);
 	warn("STATUS REPORT:");
 	DESCR_ITER(d) snprintf(buf, sizeof(buf),
-			       "PLAYING fd %d player %s(%d) %s.\n",
-			       d->fd, NAME(d->player), d->player,
-			       (d->last_time) ? "idle %d seconds" : "never used");
+			       "PLAYING fd %d player %s(%d).\n",
+			       d->fd, NAME(d->player), d->player);
 }
 
 static const char *interface_c_version = "$RCSfile$ $Revision: 1.127 $";
