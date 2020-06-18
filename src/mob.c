@@ -440,8 +440,11 @@ mobs_aggro(int descr, dbref player)
 }
 
 void
-do_eat(int descr, dbref player, const char *what)
+do_eat(command_t *cmd)
 {
+	int descr = cmd->fd;
+	dbref player = cmd->player;
+	const char *what = cmd->argv[1];
 	mobi_t *p = MOBI(player);
 	dbref item = contents_find(descr, player, player, what);
 	int food;

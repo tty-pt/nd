@@ -204,7 +204,7 @@ kill_target(dbref attacker, dbref target)
 		moveto(target, PLAYER_HOME(target));
 		geo_clean(tar->descr, target, loc);
 		tar->klock = 0;
-		do_view(tar->descr, target);
+		/* TODO do_view(tar->descr, target); */
 	} else {
 		if (tar->target && GETAGGRO(target))
 			tar->target->klock --;
@@ -284,8 +284,11 @@ target_try(mobi_t *me, dbref target)
 }
 
 void
-do_kill(int descr, dbref player, const char *what)
+do_kill(command_t *cmd)
 {
+	int descr = cmd->fd;
+	dbref player = cmd->player;
+	const char *what = cmd->argv[1];
 	dbref here = getloc(player);
 	dbref target = strcmp(what, "me")
 		? contents_find(descr, player, here, what)
@@ -337,8 +340,9 @@ kill_update(mobi_t *liv)
 }
 
 void
-do_status(dbref player)
+do_status(command_t *cmd)
 {
+	dbref player = cmd->player;
 	// TODO optimize MOBI_EV / MOBI_EM
 	mobi_t *liv = MOBI(player);
 	notify_fmt(player, "hp %u/%u\tmp %u/%u\tstuck 0x%x\n"
@@ -354,8 +358,11 @@ do_status(dbref player)
 }
 
 void
-do_heal(int descr, dbref player, const char *name)
+do_heal(command_t *cmd)
 {
+	int descr = cmd->fd;
+	dbref player = cmd->player;
+	const char *name = cmd->argv[1];
 	dbref here = getloc(player);
 	dbref target;
 	mobi_t *tar;
@@ -382,8 +389,11 @@ do_heal(int descr, dbref player, const char *name)
 }
 
 void
-do_advitam(int descr, dbref player, const char *name)
+do_advitam(command_t *cmd)
 {
+	int descr = cmd->fd;
+	dbref player = cmd->player;
+	const char *name = cmd->argv[1];
 	dbref here = getloc(player);
 	dbref target = contents_find(descr, player, here, name);
 
@@ -413,8 +423,10 @@ do_givexp(int descr, dbref player, const char *name, const char *amount)
 }
 
 void
-do_train(dbref player, const char *attrib, const char *amount_s)
-{
+do_train(command_t *cmd) {
+	dbref player = cmd->player;
+	const char *attrib = cmd->argv[1];
+	const char *amount_s = cmd->argv[2];
 	mobi_t *liv = MOBI(player);
 	int attr;
 
@@ -477,8 +489,11 @@ kill_v(int descr, dbref player, char const *opcs)
 }
 
 void
-do_sit(int descr, dbref player, const char *name)
+do_sit(command_t *cmd)
 {
+	int descr = cmd->fd;
+	dbref player = cmd->player;
+	const char *name = cmd->argv[1];
 	if (GETSAT(player) != NOTHING) {
 		notify(player, "You are already sitting.");
 		return;
@@ -528,8 +543,10 @@ do_stand_silent(dbref player)
 }
 
 void
-do_stand(dbref player)
+do_stand(command_t *cmd)
 {
+	dbref player = cmd->player;
+
 	if (do_stand_silent(player))
 		notify(player, "You are already standing.");
 }

@@ -8,14 +8,26 @@
 
 #include "db.h"
 
+#define COMMAND(cmd) command_match(cmd
+
 typedef struct {
 	dbref player;
 	int fd, argc;
 	char *argv[8];
-} command_t;
+} command_t; /* FIXME commandi_t */
 
-void
-command_debug(command_t *cmd, char *label);
+typedef void core_command_cb_t(command_t *);
+
+typedef struct {
+	char *name;
+	/* size_t nargs; */
+	core_command_cb_t *cb;
+} core_command_t;
+
+extern core_command_t cmds[];
+
+void command_debug(command_t *cmd, char *label);
+core_command_t * command_match(command_t *cmd);
 
 /* these symbols must be defined by the interface */
 extern int notify(dbref player, const char *msg);
@@ -28,23 +40,10 @@ extern int restart_flag;		/* if non-zero, should restart after shut down */
 extern void emergency_shutdown(void);
 extern int boot_off(dbref player);
 extern void boot_player_off(dbref player);
-extern int online(dbref player);
-extern int index_descr(int c);
 extern int* get_player_descrs(dbref player, int*count);
 extern int least_idle_player_descr(dbref who);
 extern int most_idle_player_descr(dbref who);
-extern int pcount(void);
-extern int pdescrontime(int c);
-extern char *phost(int c);
-extern char *pdescrhost(int c);
-extern char *puser(int c);
-extern char *pdescruser(int c);
-extern int pfirstdescr(void);
-extern int plastdescr(void);
 extern int dbref_first_descr(dbref c);
-extern int pdescr(int c);
-extern int pdescrcon(int c);
-extern int pnextdescr(int c);
 extern dbref partial_pmatch(const char *name);
 
 /* the following symbols are provided by game.c */

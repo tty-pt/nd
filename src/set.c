@@ -41,8 +41,12 @@ match_controlled(int descr, dbref player, const char *name)
 }
 
 void
-do_name(int descr, dbref player, const char *name, char *newname)
+do_name(command_t *cmd)
 {
+	int descr = cmd->fd;
+	dbref player = cmd->player;
+	const char *name = cmd->argv[1];
+	char *newname = cmd->argv[2];
 	dbref thing;
 	char *password;
 
@@ -116,8 +120,12 @@ do_name(int descr, dbref player, const char *name, char *newname)
 }
 
 void
-do_describe(int descr, dbref player, const char *name, const char *description)
+do_describe(command_t *cmd)
 {
+	int descr = cmd->fd;
+	dbref player = cmd->player;
+	const char *name = cmd->argv[1];
+	const char *description = cmd->argv[2];
 	dbref thing;
 
 	NOGUEST("@describe",player);
@@ -134,8 +142,12 @@ do_describe(int descr, dbref player, const char *name, const char *description)
 }
 
 void
-do_idescribe(int descr, dbref player, const char *name, const char *description)
+do_idescribe(command_t *cmd)
 {
+	int descr = cmd->fd;
+	dbref player = cmd->player;
+	const char *name = cmd->argv[1];
+	const char *description = cmd->argv[2];
 	dbref thing;
 
 	NOGUEST("@idescribe",player);
@@ -170,8 +182,12 @@ do_doing(int descr, dbref player, const char *name, const char *mesg)
 }
 
 void
-do_fail(int descr, dbref player, const char *name, const char *message)
+do_fail(command_t *cmd)
 {
+	int descr = cmd->fd;
+	dbref player = cmd->player;
+	const char *name = cmd->argv[1];
+	const char *message = cmd->argv[2];
 	dbref thing;
 
 	NOGUEST("@fail",player);
@@ -188,8 +204,12 @@ do_fail(int descr, dbref player, const char *name, const char *message)
 }
 
 void
-do_success(int descr, dbref player, const char *name, const char *message)
+do_success(command_t *cmd)
 {
+	int descr = cmd->fd;
+	dbref player = cmd->player;
+	const char *name = cmd->argv[1];
+	const char *message = cmd->argv[2];
 	dbref thing;
 
 	NOGUEST("@success",player);
@@ -207,8 +227,12 @@ do_success(int descr, dbref player, const char *name, const char *message)
 
 /* sets the drop message for player */
 void
-do_drop_message(int descr, dbref player, const char *name, const char *message)
+do_drop_message(command_t *cmd)
 {
+	int descr = cmd->fd;
+	dbref player = cmd->player;
+	const char *name = cmd->argv[1];
+	const char *message = cmd->argv[2];
 	dbref thing;
 
 	NOGUEST("@drop",player);
@@ -225,8 +249,12 @@ do_drop_message(int descr, dbref player, const char *name, const char *message)
 }
 
 void
-do_osuccess(int descr, dbref player, const char *name, const char *message)
+do_osuccess(command_t *cmd)
 {
+	int descr = cmd->fd;
+	dbref player = cmd->player;
+	const char *name = cmd->argv[1];
+	const char *message = cmd->argv[2];
 	dbref thing;
 
 	NOGUEST("@osuccess",player);
@@ -243,8 +271,12 @@ do_osuccess(int descr, dbref player, const char *name, const char *message)
 }
 
 void
-do_ofail(int descr, dbref player, const char *name, const char *message)
+do_ofail(command_t *cmd)
 {
+	int descr = cmd->fd;
+	dbref player = cmd->player;
+	const char *name = cmd->argv[1];
+	const char *message = cmd->argv[2];
 	dbref thing;
 
 	NOGUEST("@ofail",player);
@@ -261,8 +293,12 @@ do_ofail(int descr, dbref player, const char *name, const char *message)
 }
 
 void
-do_odrop(int descr, dbref player, const char *name, const char *message)
+do_odrop(command_t *cmd)
 {
+	int descr = cmd->fd;
+	dbref player = cmd->player;
+	const char *name = cmd->argv[1];
+	const char *message = cmd->argv[2];
 	dbref thing;
 
 	NOGUEST("@odrop",player);
@@ -279,8 +315,12 @@ do_odrop(int descr, dbref player, const char *name, const char *message)
 }
 
 void
-do_oecho(int descr, dbref player, const char *name, const char *message)
+do_oecho(command_t *cmd)
 {
+	int descr = cmd->fd;
+	dbref player = cmd->player;
+	const char *name = cmd->argv[1];
+	const char *message = cmd->argv[2];
 	dbref thing;
 
 	NOGUEST("@oecho",player);
@@ -297,8 +337,12 @@ do_oecho(int descr, dbref player, const char *name, const char *message)
 }
 
 void
-do_pecho(int descr, dbref player, const char *name, const char *message)
+do_pecho(command_t *cmd)
 {
+	int descr = cmd->fd;
+	dbref player = cmd->player;
+	const char *name = cmd->argv[1];
+	const char *message = cmd->argv[2];
 	dbref thing;
 
 	NOGUEST("@pecho",player);
@@ -340,8 +384,12 @@ setlockstr(int descr, dbref player, dbref thing, const char *keyname)
 }
 
 void
-do_conlock(int descr, dbref player, const char *name, const char *keyname)
+do_conlock(command_t *cmd)
 {
+	int descr = cmd->fd;
+	dbref player = cmd->player;
+	const char *name = cmd->argv[1];
+	const char *keyname = cmd->argv[2];
 	dbref thing;
 	struct boolexp *key;
 	struct match_data md;
@@ -390,8 +438,12 @@ do_conlock(int descr, dbref player, const char *name, const char *keyname)
 }
 
 void
-do_flock(int descr, dbref player, const char *name, const char *keyname)
+do_flock(command_t *cmd)
 {
+	int descr = cmd->fd;
+	dbref player = cmd->player;
+	const char *name = cmd->argv[1];
+	const char *keyname = cmd->argv[2];
 	dbref thing;
 	struct boolexp *key;
 	struct match_data md;
@@ -445,8 +497,11 @@ do_flock(int descr, dbref player, const char *name, const char *keyname)
 }
 
 void
-do_chlock(int descr, dbref player, const char *name, const char *keyname)
-{
+do_chlock(command_t *cmd) {
+	int descr = cmd->fd;
+	dbref player = cmd->player;
+	const char *name = cmd->argv[1];
+	const char *keyname = cmd->argv[2];
 	dbref thing;
 	struct boolexp *key;
 	struct match_data md;
@@ -495,8 +550,12 @@ do_chlock(int descr, dbref player, const char *name, const char *keyname)
 }
 
 void
-do_lock(int descr, dbref player, const char *name, const char *keyname)
+do_lock(command_t *cmd)
 {
+	int descr = cmd->fd;
+	dbref player = cmd->player;
+	const char *name = cmd->argv[1];
+	const char *keyname = cmd->argv[2];
 	dbref thing;
 	struct boolexp *key;
 	struct match_data md;
@@ -543,13 +602,16 @@ do_lock(int descr, dbref player, const char *name, const char *keyname)
 			notify(player, "Locked.");
 		}
 	} else
-		do_unlock(descr, player, name);
+		do_unlock(cmd);
 
 }
 
 void
-do_unlock(int descr, dbref player, const char *name)
+do_unlock(command_t *cmd)
 {
+	int descr = cmd->fd;
+	dbref player = cmd->player;
+	const char *name = cmd->argv[1];
 	dbref thing;
 
 	NOGUEST("@unlock",player);
@@ -678,8 +740,11 @@ _do_unlink(int descr, dbref player, const char *name, int quiet)
 }
 
 void
-do_unlink(int descr, dbref player, const char *name)
+do_unlink(command_t *cmd)
 {
+	int descr = cmd->fd;
+	dbref player = cmd->player;
+	const char *name = cmd->argv[1];
 	NOGUEST("@unlink",player);
 	/* do a regular, non-quiet unlink. */
 	_do_unlink(descr, player, name, 0);
@@ -700,8 +765,12 @@ do_unlink_quiet(int descr, dbref player, const char *name)
  *
  */
 void
-do_relink(int descr, dbref player, const char *thing_name, const char *dest_name)
+do_relink(command_t *cmd)
 {
+	int descr = cmd->fd;
+	dbref player = cmd->player;
+	const char *thing_name = cmd->argv[1];
+	const char *dest_name = cmd->argv[2];
 	dbref thing;
 	dbref dest;
 	dbref good_dest[MAX_LINKS];
@@ -806,13 +875,17 @@ do_relink(int descr, dbref player, const char *thing_name, const char *dest_name
 
 	do_unlink_quiet(descr, player, thing_name);
 	notify(player, "Attempting to relink...");
-	do_link(descr, player, thing_name, dest_name);
+	do_link(cmd);
 
 }
 
 void
-do_chown(int descr, dbref player, const char *name, const char *newowner)
+do_chown(command_t *cmd)
 {
+	int descr = cmd->fd;
+	dbref player = cmd->player;
+	const char *name = cmd->argv[1];
+	const char *newowner = cmd->argv[2];
 	dbref thing;
 	dbref owner;
 	struct match_data md;
@@ -919,8 +992,12 @@ do_chown(int descr, dbref player, const char *name, const char *newowner)
  */
 
 void
-do_set(int descr, dbref player, const char *name, const char *flag)
+do_set(command_t *cmd)
 {
+	int descr = cmd->fd;
+	dbref player = cmd->player;
+	const char *name = cmd->argv[1];
+	const char *flag = cmd->argv[2];
 	dbref thing;
 	const char *p;
 	object_flag_type f;
@@ -1166,8 +1243,12 @@ do_set(int descr, dbref player, const char *name, const char *flag)
 }
 
 void
-do_propset(int descr, dbref player, const char *name, const char *prop)
+do_propset(command_t *cmd)
 {
+	int descr = cmd->fd;
+	dbref player = cmd->player;
+	const char *name = cmd->argv[1];
+	const char *prop = cmd->argv[2];
 	dbref thing, ref;
 	char *p, *q;
 	char buf[BUFFER_LEN];

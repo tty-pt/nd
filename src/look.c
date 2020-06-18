@@ -203,8 +203,12 @@ do_look_around(int descr, dbref player)
 }
 
 void
-do_look_at(int descr, dbref player, const char *name, const char *detail)
+do_look_at(command_t *cmd)
 {
+	int descr = cmd->fd;
+	dbref player = cmd->player;
+	const char *name = cmd->argv[1];
+	const char *detail = cmd->argv[2];
 	dbref thing;
 	struct match_data md;
 	/* int res; */
@@ -489,8 +493,12 @@ size_object(dbref i, int load)
 
 
 void
-do_examine(int descr, dbref player, const char *name, const char *dir)
+do_examine(command_t *cmd)
 {
+	int descr = cmd->fd;
+	dbref player = cmd->player;
+	const char *name = cmd->argv[1];
+	const char *dir = cmd->argv[2];
 	dbref thing;
 	char buf[BUFFER_LEN];
 	dbref content;
@@ -776,8 +784,9 @@ do_examine(int descr, dbref player, const char *name, const char *dir)
 
 
 void
-do_score(dbref player)
+do_score(command_t *cmd)
 {
+	dbref player = cmd->player;
 	char buf[BUFFER_LEN];
 
 	snprintf(buf, sizeof(buf), "You have %d %s.", GETVALUE(player),
@@ -786,8 +795,9 @@ do_score(dbref player)
 }
 
 void
-do_inventory(dbref player)
+do_inventory(command_t *cmd)
 {
+	dbref player = cmd->player;
 	dbref thing;
 
 	if ((thing = DBFETCH(player)->contents) == NOTHING) {
@@ -799,7 +809,7 @@ do_inventory(dbref player)
 		}
 	}
 
-	do_score(player);
+	do_score(cmd);
 }
 
 #define UPCASE(x) (toupper(x))
@@ -1215,8 +1225,11 @@ display_objinfo(dbref player, dbref obj, int output_type)
 
 
 void
-do_find(dbref player, const char *name, const char *flags)
+do_find(command_t *cmd)
 {
+	dbref player = cmd->player;
+	const char *name = cmd->argv[1];
+	const char *flags = cmd->argv[2];
 	dbref i;
 	struct flgchkdat check;
 	char buf[BUFFER_LEN + 2];
@@ -1244,8 +1257,11 @@ do_find(dbref player, const char *name, const char *flags)
 
 
 void
-do_owned(dbref player, const char *name, const char *flags)
+do_owned(command_t *cmd)
 {
+	dbref player = cmd->player;
+	const char *name = cmd->argv[1];
+	const char *flags = cmd->argv[2];
 	dbref victim, i;
 	struct flgchkdat check;
 	int total = 0;
@@ -1274,8 +1290,12 @@ do_owned(dbref player, const char *name, const char *flags)
 }
 
 void
-do_trace(int descr, dbref player, const char *name, int depth)
+do_trace(command_t *cmd)
 {
+	int descr = cmd->fd;
+	dbref player = cmd->fd;
+	const char *name = cmd->argv[1];
+	int depth = atoi(cmd->argv[2]);
 	dbref thing;
 	int i;
 	struct match_data md;
@@ -1301,8 +1321,12 @@ do_trace(int descr, dbref player, const char *name, int depth)
 }
 
 void
-do_entrances(int descr, dbref player, const char *name, const char *flags)
+do_entrances(command_t *cmd)
 {
+	int descr = cmd->fd;
+	dbref player = cmd->player;
+	const char *name = cmd->argv[1];
+	const char *flags = cmd->argv[2];
 	dbref i, j;
 	dbref thing;
 	struct match_data md;
@@ -1376,8 +1400,12 @@ do_entrances(int descr, dbref player, const char *name, const char *flags)
 }
 
 void
-do_contents(int descr, dbref player, const char *name, const char *flags)
+do_contents(command_t *cmd)
 {
+	int descr = cmd->fd;
+	dbref player = cmd->player;
+	const char *name = cmd->argv[1];
+	const char *flags = cmd->argv[2];
 	dbref i;
 	dbref thing;
 	struct match_data md;
@@ -1478,8 +1506,11 @@ exit_match_exists(dbref player, dbref obj, const char *name, int exactMatch)
 }
 
 void
-do_sweep(int descr, dbref player, const char *name)
+do_sweep(command_t *cmd)
 {
+	int descr = cmd->fd;
+	dbref player = cmd->player;
+	const char *name = cmd->argv[1];
 	dbref thing, ref, loc;
 	int flag, tellflag, dummy;
 	struct match_data md;

@@ -23,8 +23,11 @@
 #include "kill.h"
 
 void
-do_teleport(int descr, dbref player, const char *arg1, const char *arg2)
-{
+do_teleport(command_t *cmd) {
+	int descr = cmd->fd;
+	dbref player = cmd->player;
+	const char *arg1 = cmd->argv[1];
+	const char *arg2 = cmd->argv[2];
 	dbref victim;
 	dbref destination;
 	const char *to;
@@ -247,8 +250,11 @@ blessprops_wildcard(dbref player, dbref thing, const char *dir, const char *wild
 
 
 void
-do_unbless(int descr, dbref player, const char *what, const char *propname)
-{
+do_unbless(command_t *cmd) {
+	int descr = cmd->fd;
+	dbref player = cmd->player;
+	const char *what = cmd->argv[1];
+	const char *propname = cmd->argv[2];
 	dbref victim;
 	struct match_data md;
 	char buf[BUFFER_LEN];
@@ -283,8 +289,11 @@ do_unbless(int descr, dbref player, const char *what, const char *propname)
 
 
 void
-do_bless(int descr, dbref player, const char *what, const char *propname)
-{
+do_bless(command_t *cmd) {
+	int descr = cmd->fd;
+	dbref player = cmd->player;
+	const char *what = cmd->argv[1];
+	const char *propname = cmd->argv[2];
 	dbref victim;
 	struct match_data md;
 	char buf[BUFFER_LEN];
@@ -433,8 +442,9 @@ do_force(int descr, dbref player, const char *what, char *command)
 #endif
 
 void
-do_stats(dbref player, const char *name)
-{
+do_stats(command_t *cmd) {
+	dbref player = cmd->player;
+	const char *name = cmd->argv[1];
 	int rooms;
 	int exits;
 	int things;
@@ -561,8 +571,9 @@ do_stats(dbref player, const char *name)
 
 
 void
-do_boot(dbref player, const char *name)
-{
+do_boot(command_t *cmd) {
+	dbref player = cmd->player;
+	const char *name = cmd->argv[1];
 	dbref victim;
 	char buf[BUFFER_LEN];
 
@@ -600,8 +611,11 @@ do_boot(dbref player, const char *name)
 }
 
 void
-do_toad(int descr, dbref player, const char *name, const char *recip)
-{
+do_toad(command_t *cmd) {
+	int descr = cmd->fd;
+	dbref player = cmd->player;
+	const char *name = cmd->argv[1];
+	const char *recip = cmd->argv[2];
 	dbref victim;
 	dbref recipient;
 	dbref stuff;
@@ -710,8 +724,11 @@ do_toad(int descr, dbref player, const char *name, const char *recip)
 }
 
 void
-do_newpassword(dbref player, const char *name, const char *password)
+do_newpassword(command_t *cmd)
 {
+	dbref player = cmd->player;
+	const char *name = cmd->argv[1];
+	const char *password = cmd->argv[2];
 	dbref victim;
 	char buf[BUFFER_LEN];
 
@@ -749,8 +766,10 @@ do_newpassword(dbref player, const char *name, const char *password)
 }
 
 void
-do_pcreate(dbref player, const char *user, const char *password)
-{
+do_pcreate(command_t *cmd) {
+	dbref player = cmd->player;
+	const char *user = cmd->argv[1];
+	const char *password = cmd->argv[2];
 	dbref newguy;
 	char buf[BUFFER_LEN];
 
@@ -769,26 +788,9 @@ do_pcreate(dbref player, const char *user, const char *password)
 	}
 }
 
-
-
 void
-do_serverdebug(int descr, dbref player, const char *arg1, const char *arg2)
-{
-	if (!Wizard(OWNER(player))) {
-		notify(player, "Permission denied. (@dbginfo is a wizard-only command)");
-		return;
-	}
-	if (!*arg1) {
-		notify(player, "Usage: @dbginfo [cache|guitest|misc]");
-		return;
-	}
-	notify(player, "Done.");
-}
-
-
-void
-do_usage(dbref player)
-{
+do_usage(command_t *cmd) {
+	dbref player = cmd->player;
 	int pid, psize;
 
 #ifdef HAVE_GETRUSAGE

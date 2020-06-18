@@ -20,8 +20,10 @@
 /* Commands which involve speaking */
 
 void
-do_say(dbref player, const char *message)
+do_say(command_t *cmd)
 {
+	dbref player = cmd->player;
+	const char *message = cmd->argv[1];
 	dbref loc;
 	char buf[BUFFER_LEN];
 
@@ -36,8 +38,12 @@ do_say(dbref player, const char *message)
 }
 
 void
-do_whisper(int descr, dbref player, const char *arg1, const char *arg2)
+do_whisper(command_t *cmd)
 {
+	int descr = cmd->fd;
+	dbref player = cmd->player;
+	const char *arg1 = cmd->argv[1];
+	const char *arg2 = cmd->argv[2];
 	dbref who;
 	char buf[BUFFER_LEN];
 	struct match_data md;
@@ -70,8 +76,10 @@ do_whisper(int descr, dbref player, const char *arg1, const char *arg2)
 }
 
 void
-do_pose(dbref player, const char *message)
+do_pose(command_t *cmd)
 {
+	dbref player = cmd->player;
+	const char *message = cmd->argv[1];
 	dbref loc;
 	char buf[BUFFER_LEN];
 
@@ -84,8 +92,10 @@ do_pose(dbref player, const char *message)
 }
 
 void
-do_wall(dbref player, const char *message)
+do_wall(command_t *cmd)
 {
+	dbref player = cmd->player;
+	const char *message = cmd->argv[1];
 	dbref i;
 	char buf[BUFFER_LEN];
 
@@ -103,8 +113,10 @@ do_wall(dbref player, const char *message)
 }
 
 void
-do_gripe(dbref player, const char *message)
+do_gripe(command_t *cmd)
 {
+	dbref player = cmd->player;
+	const char *message = cmd->argv[1];
 	dbref loc;
 	char buf[BUFFER_LEN];
 
@@ -130,8 +142,11 @@ do_gripe(dbref player, const char *message)
 
 /* doesn't really belong here, but I couldn't figure out where else */
 void
-do_page(dbref player, const char *arg1, const char *arg2)
+do_page(command_t *cmd)
 {
+	dbref player = cmd->player;
+	const char *arg1 = cmd->argv[1];
+	const char *arg2 = cmd->argv[2];
 	char buf[BUFFER_LEN];
 	dbref target;
 

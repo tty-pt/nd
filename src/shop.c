@@ -24,8 +24,9 @@ vendor_find(dbref where)
 }
 
 void
-do_shop(dbref player)
+do_shop(command_t *cmd)
 {
+	dbref player = cmd->player;
 	dbref npc = vendor_find(getloc(player));
 
 	if (npc == NOTHING) {
@@ -51,8 +52,12 @@ do_shop(dbref player)
 }
 
 void
-do_buy(int descr, dbref player, const char *name, const char *amount_s)
+do_buy(command_t *cmd)
 {
+	int descr = cmd->fd;
+	dbref player = cmd->player;
+	const char *name = cmd->argv[1];
+	const char *amount_s = cmd->argv[2];
 	dbref npc = vendor_find(getloc(player));
 
 	if (npc == NOTHING) {
@@ -122,8 +127,12 @@ do_buy(int descr, dbref player, const char *name, const char *amount_s)
 }
 
 void
-do_sell(int descr, dbref player, const char *name, const char *amount_s)
+do_sell(command_t *cmd)
 {
+	int descr = cmd->fd;
+	dbref player = cmd->player;
+	const char *name = cmd->argv[1];
+	const char *amount_s = cmd->argv[2];
 	dbref npc = vendor_find(getloc(player));
 
 	if (npc == NOTHING) {

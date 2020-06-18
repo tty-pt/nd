@@ -646,8 +646,10 @@ do_move(int descr, dbref player, const char *direction, int lev)
 
 
 void
-do_leave(int descr, dbref player)
+do_leave(command_t *cmd)
 {
+	int descr = cmd->fd;
+	dbref player = cmd->player;
 	dbref loc, dest;
 
 	loc = DBFETCH(player)->location;
@@ -686,8 +688,12 @@ do_leave(int descr, dbref player)
 
 
 void
-do_get(int descr, dbref player, const char *what, const char *obj)
+do_get(command_t *cmd)
 {
+	int descr = cmd->fd;
+	dbref player = cmd->player;
+	const char *what = cmd->argv[1];
+	const char *obj = cmd->argv[2];
 	dbref thing, cont;
 	int cando;
 	struct match_data md;
@@ -765,8 +771,12 @@ do_get(int descr, dbref player, const char *what, const char *obj)
 }
 
 void
-do_drop(int descr, dbref player, const char *name, const char *obj)
+do_drop(command_t *cmd)
 {
+	int descr = cmd->fd;
+	dbref player = cmd->player;
+	const char *name = cmd->argv[1];
+	const char *obj = cmd->argv[2];
 	dbref loc, cont;
 	dbref thing;
 	char buf[BUFFER_LEN];
@@ -866,8 +876,11 @@ do_drop(int descr, dbref player, const char *name, const char *obj)
 }
 
 void
-do_recycle(int descr, dbref player, const char *name)
+do_recycle(command_t *cmd)
 {
+	int descr = cmd->fd;
+	dbref player = cmd->player;
+	const char *name = cmd->argv[1];
 	dbref thing;
 	char buf[BUFFER_LEN];
 	struct match_data md;

@@ -15,8 +15,11 @@
 #include "externs.h"
 
 void
-do_rob(int descr, dbref player, const char *what)
+do_rob(command_t *cmd)
 {
+	int descr = cmd->fd;
+	dbref player = cmd->player;
+	const char *what = cmd->argv[1];
 	dbref thing;
 	char buf[BUFFER_LEN];
 	struct match_data md;
@@ -62,8 +65,12 @@ do_rob(int descr, dbref player, const char *what)
 }
 
 void
-do_give(int descr, dbref player, const char *recipient, int amount)
+do_give(command_t *cmd)
 {
+	int descr = cmd->fd;
+	dbref player = cmd->player;
+	const char *recipient = cmd->argv[1];
+	int amount = atoi(cmd->argv[2]);
 	dbref who;
 	char buf[BUFFER_LEN];
 	struct match_data md;

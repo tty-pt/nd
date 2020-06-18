@@ -141,8 +141,11 @@ create_player(const char *name, const char *password)
 }
 
 void
-do_password(dbref player, const char *old, const char *newobj)
+do_password(command_t *cmd)
 {
+	dbref player = cmd->player;
+	const char *old = cmd->argv[1];
+	const char *newobj = cmd->argv[2];
 	NOGUEST("@password",player);
 
 	if (!PLAYER_PASSWORD(player) || !check_password(player, old)) {

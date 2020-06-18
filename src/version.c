@@ -83,18 +83,19 @@ const char *infotext[] =
 
 
 void
-do_credits(dbref player)
+do_credits(command_t *cmd)
 {
-    int i;
+	dbref player = cmd->player;
+	int i;
 
-    for (i = 0; infotext[i]; i++) {
-        notify(player, infotext[i]);
-    }
+	for (i = 0; infotext[i]; i++)
+		notify(player, infotext[i]);
 }
 
 void
-do_version(dbref player)
+do_version(command_t *cmd)
 {
+	dbref player = cmd->player;
 	char s[BUFFER_LEN];
 
 	snprintf(s,BUFFER_LEN,"Version: %s Compiled on: %s %s",VERSION,DATE,"");

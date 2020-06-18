@@ -246,16 +246,22 @@ show_subfile(dbref player, const char *dir, const char *topic, const char *seg, 
 
 #if !defined(STANDALONE_HELP)
 void
-do_man(dbref player, char *topic, char *seg)
+do_man(command_t *cmd)
 {
+	dbref player = cmd->player;
+	char *topic = cmd->argv[1];
+	char *seg = cmd->argv[2];
 	if (show_subfile(player, MAN_DIR, topic, seg, FALSE))
 		return;
 	index_file(player, topic, MAN_FILE);
 }
 
 void
-do_help(dbref player, char *topic, char *seg)
+do_help(command_t *cmd)
 {
+	dbref player = cmd->player;
+	char *topic = cmd->argv[1];
+	char *seg = cmd->argv[2];
 	if (show_subfile(player, HELP_DIR, topic, seg, FALSE))
 		return;
 	index_file(player, topic, HELP_FILE);
@@ -263,16 +269,22 @@ do_help(dbref player, char *topic, char *seg)
 
 
 void
-do_news(dbref player, char *topic, char *seg)
+do_news(command_t *cmd)
 {
+	dbref player = cmd->player;
+	char *topic = cmd->argv[1];
+	char *seg = cmd->argv[2];
 	if (show_subfile(player, NEWS_DIR, topic, seg, FALSE))
 		return;
 	index_file(player, topic, NEWS_FILE);
 }
 
 void
-do_info(dbref player, const char *topic, const char *seg)
+do_info(command_t *cmd)
 {
+	dbref player = cmd->player;
+	const char *topic = cmd->argv[1];
+	const char *seg = cmd->argv[2];
 	char *buf;
 	int f;
 	int cols;

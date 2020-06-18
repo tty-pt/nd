@@ -14,6 +14,7 @@
 #include "match.h"
 /* Auto-generated list of extern functions */
 #include "externs-auto.h"
+#include "interface.h"
 
 #define warn(fmt, ...) fprintf(stderr, fmt, ## __VA_ARGS__)
 
@@ -45,6 +46,17 @@ extern void envpropqueue(int descr, dbref player, dbref where, dbref trigger, db
 						 dbref xclude, const char *propname, const char *toparg,
 
 						 int mlev, int mt);
+void do_newpassword(command_t *);
+void do_oecho(command_t *);
+void do_propset(command_t *);
+void do_sweep(command_t *);
+void do_leave(command_t *);
+void do_whisper(command_t *);
+void do_pecho(command_t *);
+void do_pose(command_t *);
+void do_score(command_t *);
+void do_view(command_t *);
+
 /* from db.c */
 extern int number(const char *s);
 extern int ifloat(const char *s);
@@ -61,16 +73,16 @@ extern void write_program(struct line *first, dbref i);
 extern dbref db_write_deltas(FILE * f);
 
 /* From create.c */
-extern void do_open(int descr, dbref player, const char *direction, const char *linkto);
-extern void do_link(int descr, dbref player, const char *name, const char *room_name);
-extern void do_dig(int descr, dbref player, const char *name, const char *pname);
-extern void do_create(dbref player, char *name, char *cost);
-extern void do_clone(int descr, dbref player, char *name);
-extern void do_attach(int descr, dbref player, const char *action_name, const char *source_name);
+extern void do_open(command_t *);
+extern void do_link(command_t *);
+extern void do_dig(command_t *);
+extern void do_create(command_t *);
+extern void do_clone(command_t *);
+extern void do_attach(command_t *cmd);
 extern int unset_source(dbref player, dbref loc, dbref action);
 extern int link_exit(int descr, dbref player, dbref exit, char *dest_name, dbref * dest_list);
 extern int link_exit_dry(int descr, dbref player, dbref exit, char *dest_name, dbref * dest_list);
-extern void cmd_action(command_t *cmd);
+extern void do_action(command_t *cmd);
 
 /* from edit.c */
 extern void match_and_list(int descr, dbref player, const char *name, char *linespec);
@@ -78,7 +90,7 @@ extern void do_list(dbref player, dbref program, int *oarg, int argc);
 
 /* From game.c */
 extern void do_dump(dbref player, const char *newfile);
-extern void do_shutdown(dbref player);
+extern void do_shutdown(command_t *);
 extern void dump_warning(void);
 extern void dump_deltas(void);
 extern void fork_and_dump(void);
@@ -92,12 +104,11 @@ extern void kill_hash(hash_tab * table, unsigned size, int freeptrs);
 
 /* From help.c */
 extern void spit_file(dbref player, const char *filename);
-extern void do_help(dbref player, char *topic, char *seg);
-extern void do_mpihelp(dbref player, char *topic, char *seg);
-extern void do_news(dbref player, char *topic, char *seg);
-extern void do_man(dbref player, char *topic, char *seg);
-extern void do_motd(dbref player, char *text);
-extern void do_info(dbref player, const char *topic, const char *seg);
+extern void do_help(command_t *);
+extern void do_news(command_t *);
+extern void do_man(command_t *);
+extern void do_motd(command_t *);
+extern void do_info(command_t *);
 
 /* From look.c */
 extern void look_room(int descr, dbref player, dbref room, int verbose);
@@ -106,14 +117,14 @@ extern long size_object(dbref i, int load);
 
 /* extern void look_room_simple(dbref player, dbref room); */
 extern void do_look_around(int descr, dbref player);
-extern void do_look_at(int descr, dbref player, const char *name, const char *detail);
-extern void do_examine(int descr, dbref player, const char *name, const char *dir);
-extern void do_inventory(dbref player);
-extern void do_find(dbref player, const char *name, const char *flags);
-extern void do_owned(dbref player, const char *name, const char *flags);
-extern void do_trace(int descr, dbref player, const char *name, int depth);
-extern void do_entrances(int descr, dbref player, const char *name, const char *flags);
-extern void do_contents(int descr, dbref player, const char *name, const char *flags);
+extern void do_look_at(command_t *cmd);
+extern void do_examine(command_t *cmd);
+extern void do_inventory(command_t *cmd);
+extern void do_find(command_t *);
+extern void do_owned(command_t *);
+extern void do_trace(command_t *);
+extern void do_entrances(command_t *);
+extern void do_contents(command_t *);
 extern void exec_or_notify_prop(int descr, dbref player, dbref thing,
 						   const char *propname, const char *whatcalled);
 extern const char * exec_or_notify(int descr, dbref player, dbref thing,
@@ -121,30 +132,30 @@ extern const char * exec_or_notify(int descr, dbref player, dbref thing,
 						   int mpiflags);
 
 /* from item.c */
-extern void do_select(dbref player, const char *n_s);
-extern void do_equip(int descr, dbref player, const char *name);
-extern void do_unequip(int descr, dbref player, char const *name);
-extern void do_drink(int descr, dbref player, const char *what);
-extern void do_eat(int descr, dbref player, const char *what);
-extern void do_fill(int descr, dbref player, const char *vial_s, const char *source_s);
+extern void do_select(command_t *);
+extern void do_equip(command_t *);
+extern void do_unequip(command_t *);
+extern void do_drink(command_t *);
+extern void do_eat(command_t *);
+extern void do_fill(command_t *);
 
 /* from shop.c */
-extern void do_shop(dbref player);
-extern void do_buy(int descr, dbref player, const char *name, const char *amount);
-extern void do_sell(int descr, dbref player, const char *name, const char *amount);
+extern void do_shop(command_t *);
+extern void do_buy(command_t *);
+extern void do_sell(command_t *);
 extern int p_vendor(dbref obj);
 
 /* from kill.c */
-extern void do_kill(int descr, dbref player, const char *what);
-extern void do_advitam(int descr, dbref player, const char *what);
-extern void do_heal(int descr, dbref player, const char *what);
-extern void do_status(dbref player);
-extern void do_train(dbref player, const char *what, const char *amount);
+extern void do_kill(command_t *);
+extern void do_advitam(command_t *cmd);
+extern void do_heal(command_t *);
+extern void do_status(command_t *);
+extern void do_train(command_t *);
 extern int kill_v(int descr, dbref player, const char *cmd);
 
 int do_stand_silent(dbref player);
-extern void do_sit(int descr, dbref player, const char *what);
-extern void do_stand(dbref player);
+extern void do_sit(command_t *);
+extern void do_stand(command_t *);
 
 /* From move.c */
 extern void moveto(dbref what, dbref where);
@@ -153,14 +164,14 @@ extern void send_home(int descr, dbref thing, int homepuppet);
 extern int parent_loop_check(dbref source, dbref dest);
 extern int can_move(int descr, dbref player, const char *direction, int lev);
 extern void do_move(int descr, dbref player, const char *direction, int lev);
-extern void do_get(int descr, dbref player, const char *what, const char *obj);
-extern void do_drop(int descr, dbref player, const char *name, const char *obj);
-extern void do_recycle(int descr, dbref player, const char *name);
+extern void do_get(command_t *);
+extern void do_drop(command_t *);
+extern void do_recycle(command_t *);
 extern void recycle(int descr, dbref player, dbref thing);
 
 /* From player.c */
 extern dbref lookup_player(const char *name);
-extern void do_password(dbref player, const char *old, const char *newobj);
+extern void do_password(command_t *);
 extern void add_player(dbref who);
 extern void delete_player(dbref who);
 extern void clear_players(void);
@@ -183,37 +194,37 @@ extern int ok_ascii_any(const char *name);
 extern int ok_name(const char *name);
 
 /* From rob.c */
-extern void do_give(int descr, dbref player, const char *recipient, int amount);
-extern void do_rob(int descr, dbref player, const char *what);
+extern void do_give(command_t *);
+extern void do_rob(command_t *);
 
 /* From set.c */
-extern void do_name(int descr, dbref player, const char *name, char *newname);
-extern void do_describe(int descr, dbref player, const char *name, const char *description);
-extern void do_idescribe(int descr, dbref player, const char *name, const char *description);
-extern void do_fail(int descr, dbref player, const char *name, const char *message);
-extern void do_success(int descr, dbref player, const char *name, const char *message);
-extern void do_drop_message(int descr, dbref player, const char *name, const char *message);
-extern void do_osuccess(int descr, dbref player, const char *name, const char *message);
-extern void do_ofail(int descr, dbref player, const char *name, const char *message);
-extern void do_odrop(int descr, dbref player, const char *name, const char *message);
+extern void do_name(command_t *);
+extern void do_describe(command_t *);
+extern void do_idescribe(command_t *);
+extern void do_fail(command_t *);
+extern void do_success(command_t *);
+extern void do_drop_message(command_t *);
+extern void do_osuccess(command_t *);
+extern void do_ofail(command_t *);
+extern void do_odrop(command_t *);
 extern int setlockstr(int descr, dbref player, dbref thing, const char *keyname);
-extern void do_lock(int descr, dbref player, const char *name, const char *keyname);
-extern void do_unlock(int descr, dbref player, const char *name);
-extern void do_relink(int descr, dbref player, const char *thing_name, const char *dest_name);
-extern void do_unlink(int descr, dbref player, const char *name);
+extern void do_lock(command_t *);
+extern void do_unlock(command_t *);
+extern void do_relink(command_t *);
+extern void do_unlink(command_t *);
 extern void do_unlink_quiet(int descr, dbref player, const char *name);
-extern void do_chown(int descr, dbref player, const char *name, const char *newobj);
-extern void do_set(int descr, dbref player, const char *name, const char *flag);
-extern void do_chlock(int descr, dbref player, const char *name, const char *keyname);
-extern void do_conlock(int descr, dbref player, const char *name, const char *keyname);
+extern void do_chown(command_t *);
+extern void do_set(command_t *);
+extern void do_chlock(command_t *);
+extern void do_conlock(command_t *);
 extern void set_flags_from_tunestr(dbref obj, const char* flags);
 
 /* From speech.c */
 #define ONOTIFYF(who, ...) notify_except_fmt(DBFETCH(getloc(who))->contents, who, __VA_ARGS__)
-extern void do_wall(dbref player, const char *message);
-extern void do_gripe(dbref player, const char *message);
-extern void do_say(dbref player, const char *message);
-extern void do_page(dbref player, const char *arg1, const char *arg2);
+extern void do_wall(command_t *cmd);
+extern void do_gripe(command_t *cmd);
+extern void do_say(command_t *cmd);
+extern void do_page(command_t *cmd);
 extern void notify_listeners(dbref who, dbref xprog, dbref obj, dbref room, const char *msg, int isprivate);
 extern void notify_except(dbref first, dbref exception, const char *msg, dbref who);
 extern void notify_except_fmt(dbref first, dbref exception, char *format, ...);
@@ -238,16 +249,15 @@ extern int member(dbref thing, dbref list);
 extern dbref remove_first(dbref first, dbref what);
 
 /* From wiz.c */
-extern void do_teleport(int descr, dbref player, const char *arg1, const char *arg2);
-extern void do_force(int descr, dbref player, const char *what, char *command);
-extern void do_stats(dbref player, const char *name);
-extern void do_toad(int descr, dbref player, const char *name, const char *recip);
-extern void do_boot(dbref player, const char *name);
-extern void do_pcreate(dbref player, const char *arg1, const char *arg2);
-extern void do_usage(dbref player);
-extern void do_serverdebug(int descr, dbref player, const char *arg1, const char *arg2);
-extern void do_bless(int descr, dbref player, const char *target, const char *propname);
-extern void do_unbless(int descr, dbref player, const char *target, const char *propname);
+extern void do_teleport(command_t *);
+extern void do_force(command_t *);
+extern void do_stats(command_t *);
+extern void do_toad(command_t *);
+extern void do_boot(command_t *);
+extern void do_pcreate(command_t *);
+extern void do_usage(command_t *);
+extern void do_bless(command_t *);
+extern void do_unbless(command_t *);
 
 extern time_t sel_prof_start_time;
 extern long sel_prof_idle_sec;
@@ -300,8 +310,8 @@ extern int equalstr(char *s, char *t);
 extern int force_level;
 extern dbref force_prog;
 
-extern void do_credits(dbref player);
-extern void do_version(dbref player);
+extern void do_credits(command_t *);
+extern void do_version(command_t *);
 
 /* from random.c */
 void *init_seed(char *seed);
@@ -325,6 +335,7 @@ extern void do_armageddon(dbref player, const char *msg);
 extern pid_t global_dumper_pid;
 extern pid_t global_resolver_pid;
 extern short global_dumpdone;
+void do_flock(command_t *);
 
 /* from tune.c */
 extern void tune_load_parmsfile(dbref player);

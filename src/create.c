@@ -97,8 +97,12 @@ exit_loop_check(dbref source, dbref dest)
 
 /* use this to create an exit */
 void
-do_open(int descr, dbref player, const char *direction, const char *linkto)
+do_open(command_t *cmd)
 {
+	int descr = cmd->fd;
+	dbref player = cmd->player;
+	const char *direction = cmd->argv[1];
+	const char *linkto = cmd->argv[2];
 	dbref loc, exit;
 	dbref good_dest[MAX_LINKS];
 	char buf[BUFFER_LEN];
@@ -326,8 +330,12 @@ link_exit_dry(int descr, dbref player, dbref exit, char *dest_name, dbref * dest
  * All destinations must either be owned by you, or be LINK_OK.
  */
 void
-do_link(int descr, dbref player, const char *thing_name, const char *dest_name)
+do_link(command_t *cmd)
 {
+	int descr = cmd->fd;
+	dbref player = cmd->player;
+	const char *thing_name = cmd->argv[1];
+	const char *dest_name = cmd->argv[2];
 	dbref thing;
 	dbref dest;
 	dbref good_dest[MAX_LINKS];
@@ -470,8 +478,12 @@ do_link(int descr, dbref player, const char *thing_name, const char *dest_name)
  * Use this to create a room.
  */
 void
-do_dig(int descr, dbref player, const char *name, const char *pname)
+do_dig(command_t *cmd)
 {
+	int descr = cmd->fd;
+	dbref player = cmd->player;
+	const char *name = cmd->argv[1];
+	const char *pname = cmd->argv[2];
 	dbref room;
 	dbref parent;
 	dbref newparent;
@@ -662,8 +674,11 @@ copy_props(dbref player, dbref source, dbref destination, const char *dir)
  * Use this to clone an object.
  */
 void
-do_clone(int descr, dbref player, char *name)
+do_clone(command_t *cmd)
 {
+	int descr = cmd->fd;
+	dbref player = cmd->player;
+	char *name = cmd->argv[1];
 	static char buf[BUFFER_LEN];
 	dbref  thing, clonedthing;
 	int    cost;
@@ -777,8 +792,11 @@ do_clone(int descr, dbref player, char *name)
  * Use this to create an object.
  */
 void
-do_create(dbref player, char *name, char *acost)
+do_create(command_t *cmd)
 {
+	dbref player = cmd->player;
+	char *name = cmd->argv[1];
+	char *acost = cmd->argv[2];
 	dbref loc;
 	dbref thing;
 	int cost;
@@ -980,7 +998,7 @@ unset_source(dbref player, dbref loc, dbref action)
  *
  */
 void
-cmd_action(command_t *cmd)
+do_action(command_t *cmd)
 {
 	int descr = cmd->fd;
 	dbref player = cmd->player;
@@ -1058,8 +1076,11 @@ cmd_action(command_t *cmd)
  *
  */
 void
-do_attach(int descr, dbref player, const char *action_name, const char *source_name)
-{
+do_attach(command_t *cmd) {
+	int descr = cmd->fd;
+	dbref player = cmd->player;
+	const char *action_name = cmd->argv[1];
+	const char *source_name = cmd->argv[2];
 	dbref action, source;
 	dbref loc;				/* player's current location */
 	struct match_data md;

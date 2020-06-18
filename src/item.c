@@ -86,8 +86,10 @@ cannot_equip(dbref who, dbref eq)
 }
 
 void
-do_select(dbref player, const char *n_s)
+do_select(command_t *cmd)
 {
+	dbref player = cmd->player;
+	const char *n_s = cmd->argv[1];
 	unsigned n = strtoul(n_s, NULL, 0);
 	mobi_t *liv = MOBI(player);
 	liv->select = n;
@@ -95,8 +97,11 @@ do_select(dbref player, const char *n_s)
 }
 
 void
-do_equip(int descr, dbref player, char const *name)
+do_equip(command_t *cmd)
 {
+	int descr = cmd->fd;
+	dbref player = cmd->player;
+	char const *name = cmd->argv[1];
 	dbref eq = contents_find(descr, player, player, name);
 
 	if (eq < 0) {
@@ -149,8 +154,10 @@ unequip(dbref who, unsigned eql)
 }
 
 void
-do_unequip(int descr, dbref player, char const *name)
+do_unequip(command_t *cmd)
 {
+	dbref player = cmd->player;
+	char const *name = cmd->argv[1];
 	enum bodypart bp = BODYPART_ID(*name);
 	dbref eq;
 

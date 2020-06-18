@@ -413,8 +413,10 @@ _view_build(int descr, dbref player,
 }
 
 void
-do_view(int descr, dbref player)
+do_view(command_t *cmd)
 {
+	int descr = cmd->fd;
+	dbref player = cmd->player;
 	struct bio bd[VIEW_M], *n_p = bd,
 		   *n_max = &bd[VIEW_BDI + 1];
 	pos_t pos, opos;

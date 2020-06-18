@@ -2,30 +2,6 @@
 #define _SPEECH_H_
 
 void
-do_say(dbref player, const char *message)
-;
-
-void
-do_whisper(int descr, dbref player, const char *arg1, const char *arg2)
-;
-
-void
-do_pose(dbref player, const char *message)
-;
-
-void
-do_wall(dbref player, const char *message)
-;
-
-void
-do_gripe(dbref player, const char *message)
-;
-
-void
-do_page(dbref player, const char *arg1, const char *arg2)
-;
-
-void
 notify_listeners(dbref who, dbref xprog, dbref obj, dbref room, const char *msg, int isprivate)
 ;
 
