@@ -479,7 +479,18 @@ command_idx(command_t *cmd)
 
 core_command_t *
 command_match(command_t *cmd) {
-	return cmds_hashed[command_idx(cmd)];
+	core_command_t *cc = cmds_hashed[command_idx(cmd)];
+	char *a, *b;
+
+	if (!cc)
+		return NULL;
+
+	for (a = cc->name, b = cmd->argv[0];
+	     *a && *b; a++, b++)
+		if (*a != *b)
+			return NULL;
+
+	return cc;
 }
 
 command_t command_null(command_t *cmd) {
