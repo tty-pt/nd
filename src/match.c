@@ -23,13 +23,13 @@ char match_cmdname[BUFFER_LEN];	/* triggering command */
 char match_args[BUFFER_LEN];	/* remaining text */
 
 void
-init_match(int descr, dbref player, const char *name, int type, struct match_data *md)
+init_match(command_t *cmd, const char *name, int type, struct match_data *md)
 {
 	md->exact_match = md->last_match = NOTHING;
 	md->match_count = 0;
-	md->match_who = player;
-	md->match_from = player;
-	md->match_descr = descr;
+	md->match_who = cmd->player;
+	md->match_from = cmd->player;
+	md->match_descr = cmd->fd;
 	md->match_name = name;
 	md->check_keys = 0;
 	md->preferred_type = type;
@@ -40,18 +40,18 @@ init_match(int descr, dbref player, const char *name, int type, struct match_dat
 }
 
 void
-init_match_check_keys(int descr, dbref player, const char *name, int type,
-					  struct match_data *md)
+init_match_check_keys(command_t *cmd, const char *name, int type,
+		      struct match_data *md)
 {
-	init_match(descr, player, name, type, md);
+	init_match(cmd, name, type, md);
 	md->check_keys = 1;
 }
 
 void
-init_match_remote(int descr, dbref player, dbref what, const char *name, int type,
+init_match_remote(command_t *cmd, dbref what, const char *name, int type,
 				  struct match_data *md)
 {
-	init_match(descr, player, name, type, md);
+	init_match(cmd, name, type, md);
 	md->match_from = what;
 }
 

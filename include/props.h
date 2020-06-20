@@ -1,6 +1,7 @@
 #ifndef _PROPS_H
 #define _PROPS_H
 
+#include "command.h"
 
 union pdata_u {
 	char *str;
@@ -147,9 +148,9 @@ extern void add_property(dbref player, const char *type, const char *strval, int
 extern void remove_property_list(dbref player, int all);
 extern void remove_property(dbref player, const char *type);
 
-extern int has_property(int descr, dbref player, dbref what, const char *type,
+extern int has_property(command_t *cmd, dbref what, const char *type,
 						const char *strval, int value);
-extern int has_property_strict(int descr, dbref player, dbref what, const char *type,
+extern int has_property_strict(command_t *cmd, dbref what, const char *type,
 							   const char *strval, int value);
 
 extern const char *get_property_class(dbref player, const char *type);

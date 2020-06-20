@@ -416,8 +416,9 @@ mob_obj_random()
 }
 
 void
-mobs_aggro(int descr, dbref player)
+mobs_aggro(command_t *cmd)
 {
+	dbref player = cmd->player;
         mobi_t *me;
 	dbref tmp;
 	int klock = 0;
@@ -442,11 +443,10 @@ mobs_aggro(int descr, dbref player)
 void
 do_eat(command_t *cmd)
 {
-	int descr = cmd->fd;
 	dbref player = cmd->player;
 	const char *what = cmd->argv[1];
 	mobi_t *p = MOBI(player);
-	dbref item = contents_find(descr, player, player, what);
+	dbref item = contents_find(cmd, player, what);
 	int food;
 	unsigned stack;
 
@@ -464,7 +464,7 @@ do_eat(command_t *cmd)
 	p->hunger = food;
 	notify_wts(player, "eat", "eats", " %s", NAME(item));
 	if (!stack) {
-		recycle(descr, player, item);
+		recycle(cmd, item);
 		return;
 	}
 	SETSTACK(item, stack - 1);

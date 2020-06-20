@@ -297,9 +297,9 @@ view_draw(int descr, dbref player, view_t view) {
 }
 
 static inline void
-view_build_exit(view_tile_t *t, int descr, dbref player, dbref loc, enum exit e) {
+view_build_exit(command_t *cmd, view_tile_t *t, dbref loc, enum exit e) {
 	register dbref tmp
-		= e_exit_where(descr, player, loc, e);
+		= e_exit_where(cmd, loc, e);
 
 	if (tmp > 0) {
 		t->exits |= e;
@@ -309,9 +309,9 @@ view_build_exit(view_tile_t *t, int descr, dbref player, dbref loc, enum exit e)
 }
 
 static inline void
-view_build_exit_z(view_tile_t *t, int descr, dbref player, dbref loc, enum exit e) {
+view_build_exit_z(command_t *cmd, view_tile_t *t, dbref loc, enum exit e) {
 	register dbref tmp
-		= e_exit_where(descr, player, loc, e);
+		= e_exit_where(cmd, loc, e);
 
 	if (tmp > 0 && DBFETCH(tmp)->sp.exit.ndest
 			&& DBFETCH(tmp)->sp.exit.dest[0] >= 0)
@@ -320,7 +320,8 @@ view_build_exit_z(view_tile_t *t, int descr, dbref player, dbref loc, enum exit 
 }
 
 static inline void
-view_build_exit_s(view_tile_t *t, int descr, dbref player, dbref loc, pos_t p, enum exit e) {
+view_build_exit_s(command_t *cmd, view_tile_t *t,
+		  dbref loc, pos_t p, enum exit e) {
 	pos_t pa;
 	pos_move(pa, p, e);
 	register dbref tmp;
@@ -334,7 +335,7 @@ view_build_exit_s(view_tile_t *t, int descr, dbref player, dbref loc, pos_t p, e
 	/* 		tmp); */
 
 	if (tmp > 0) {
-		tmp = e_exit_where(descr, player, tmp, e_simm(e));
+		tmp = e_exit_where(cmd, tmp, e_simm(e));
 		if (tmp > 0) {
 			t->exits |= e;
 			if (GETDOOR(tmp))
@@ -371,23 +372,23 @@ view_build_flags(dbref loc) {
 }
 
 static void
-view_build_tile(int descr, dbref player,
+view_build_tile(command_t *cmd,
 		struct bio *n, dbref loc,
 		view_tile_t *t, pos_t p)
 {
 	if (loc > 0) {
-		view_build_exit(t, descr, player, loc, E_EAST);
-		view_build_exit(t, descr, player, loc, E_NORTH);
-		view_build_exit(t, descr, player, loc, E_WEST);
-		view_build_exit(t, descr, player, loc, E_SOUTH);
-		view_build_exit_z(t, descr, player, loc, E_UP);
-		view_build_exit_z(t, descr, player, loc, E_DOWN);
+		view_build_exit(cmd, t, loc, E_EAST);
+		view_build_exit(cmd, t, loc, E_NORTH);
+		view_build_exit(cmd, t, loc, E_WEST);
+		view_build_exit(cmd, t, loc, E_SOUTH);
+		view_build_exit_z(cmd, t, loc, E_UP);
+		view_build_exit_z(cmd, t, loc, E_DOWN);
 		t->flags = view_build_flags(loc);
 	} else {
-		view_build_exit_s(t, descr, player, loc, p, E_EAST);
-		view_build_exit_s(t, descr, player, loc, p, E_NORTH);
-		view_build_exit_s(t, descr, player, loc, p, E_WEST);
-		view_build_exit_s(t, descr, player, loc, p, E_SOUTH);
+		view_build_exit_s(cmd, t, loc, p, E_EAST);
+		view_build_exit_s(cmd, t, loc, p, E_NORTH);
+		view_build_exit_s(cmd, t, loc, p, E_WEST);
+		view_build_exit_s(cmd, t, loc, p, E_SOUTH);
 		/* view_build_exit_sz(t, descr, player, loc, E_UP); */
 		/* view_build_exit_sz(t, descr, player, loc, E_DOWN); */
 	}
@@ -398,7 +399,7 @@ view_build_tile(int descr, dbref player,
 }
 
 static inline view_tile_t *
-_view_build(int descr, dbref player,
+_view_build(command_t *cmd,
 		struct bio *n, dbref *g,
 		view_tile_t *b, pos_t p)
 {
@@ -406,8 +407,7 @@ _view_build(int descr, dbref player,
 
 	// TODO vary p vertically and horizontally
 	for (; g < g_max ; n++, g++, b++, p[1]++)
-		view_build_tile(descr, player,
-				n, *g, b, p);
+		view_build_tile(cmd, n, *g, b, p);
 
         return b;
 }
@@ -431,8 +431,7 @@ do_view(command_t *cmd)
 	memset(view, 0, sizeof(view));
 
 	for (; n_p < n_max;) {
-		_view_build(descr, player, n_p,
-				o_p, p, pos);
+		_view_build(cmd, n_p, o_p, p, pos);
 		p += VIEW_SIZE;
 		o_p += VIEW_SIZE;
 		n_p += VIEW_SIZE;

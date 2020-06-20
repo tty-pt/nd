@@ -24,7 +24,6 @@
 
 void
 do_teleport(command_t *cmd) {
-	int descr = cmd->fd;
 	dbref player = cmd->player;
 	const char *arg1 = cmd->argv[1];
 	const char *arg2 = cmd->argv[2];
@@ -38,7 +37,7 @@ do_teleport(command_t *cmd) {
 		victim = player;
 		to = arg1;
 	} else {
-		init_match(descr, player, arg1, NOTYPE, &md);
+		init_match(cmd, arg1, NOTYPE, &md);
 		match_neighbor(&md);
 		match_possession(&md);
 		match_me(&md);
@@ -60,7 +59,7 @@ do_teleport(command_t *cmd) {
 #endif
 
 	/* get destination */
-	init_match(descr, player, to, TYPE_PLAYER, &md);
+	init_match(cmd, to, TYPE_PLAYER, &md);
 	match_possession(&md);
 	match_me(&md);
 	match_here(&md);
@@ -129,7 +128,8 @@ do_teleport(command_t *cmd) {
 				break;
 			}
 			notify(victim, "You feel a wrenching sensation...");
-			enter_room(descr, victim, destination, DBFETCH(victim)->location);
+			command_t cmd_er = command_new_null(cmd->fd, victim);
+			enter_room(&cmd_er, destination, DBFETCH(victim)->location);
 			break;
 		case TYPE_THING:
 			if (parent_loop_check(victim, destination)) {
@@ -154,7 +154,8 @@ do_teleport(command_t *cmd) {
 				&& !(FLAGS(destination) & STICKY))
 						destination = DBFETCH(destination)->sp.room.dropto;
 			if (SECURE_THING_MOVEMENT && (Typeof(victim) == TYPE_THING)) {
-				enter_room(descr, victim, destination, DBFETCH(victim)->location);
+				command_t cmd_er = command_new_null(cmd->fd, victim);
+				enter_room(&cmd_er, destination, DBFETCH(victim)->location);
 			} else {
 				moveto(victim, destination);
 			}
@@ -251,7 +252,6 @@ blessprops_wildcard(dbref player, dbref thing, const char *dir, const char *wild
 
 void
 do_unbless(command_t *cmd) {
-	int descr = cmd->fd;
 	dbref player = cmd->player;
 	const char *what = cmd->argv[1];
 	const char *propname = cmd->argv[2];
@@ -271,7 +271,7 @@ do_unbless(command_t *cmd) {
 	}
 
 	/* get victim */
-	init_match(descr, player, what, NOTYPE, &md);
+	init_match(cmd, what, NOTYPE, &md);
 	match_everything(&md);
 	if ((victim = noisy_match_result(&md)) == NOTHING) {
 		return;
@@ -290,7 +290,6 @@ do_unbless(command_t *cmd) {
 
 void
 do_bless(command_t *cmd) {
-	int descr = cmd->fd;
 	dbref player = cmd->player;
 	const char *what = cmd->argv[1];
 	const char *propname = cmd->argv[2];
@@ -316,7 +315,7 @@ do_bless(command_t *cmd) {
 	}
 
 	/* get victim */
-	init_match(descr, player, what, NOTYPE, &md);
+	init_match(cmd, what, NOTYPE, &md);
 	match_everything(&md);
 	if ((victim = noisy_match_result(&md)) == NOTHING) {
 		return;
@@ -612,7 +611,6 @@ do_boot(command_t *cmd) {
 
 void
 do_toad(command_t *cmd) {
-	int descr = cmd->fd;
 	dbref player = cmd->player;
 	const char *name = cmd->argv[1];
 	const char *recip = cmd->argv[2];
@@ -666,7 +664,8 @@ do_toad(command_t *cmd) {
 	} else {
 		/* we're ok */
 		/* do it */
-		send_contents(descr, victim, HOME);
+		command_t cmd_sc = command_new_null(cmd->fd, victim);
+		send_contents(&cmd_sc, HOME);
 		for (stuff = 0; stuff < db_top; stuff++) {
 			if (OWNER(stuff) == victim) {
 				switch (Typeof(stuff)) {

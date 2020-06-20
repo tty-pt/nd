@@ -187,7 +187,8 @@ set_lock_property(dbref player, const char *pname, const char *lok)
 	if (!lok || !*lok) {
 		mydat.data.lok = TRUE_BOOLEXP;
 	} else {
-		mydat.data.lok = parse_boolexp(-1, (dbref) 1, lok, 1);
+		command_t cmd_be = command_new_null(-1, (dbref) 1);
+		mydat.data.lok = parse_boolexp(&cmd_be, lok, 1);
 	}
 	set_property(player, pname, &mydat);
 }
@@ -310,15 +311,15 @@ get_property(dbref player, const char *pname)
 /* checks if object has property, returning 1 if it or any of its contents has
    the property stated                                                      */
 int
-has_property(int descr, dbref player, dbref what, const char *pname, const char *strval,
+has_property(command_t *cmd, dbref what, const char *pname, const char *strval,
 			 int value)
 {
 	dbref things;
 
-	if (has_property_strict(descr, player, what, pname, strval, value))
+	if (has_property_strict(cmd, what, pname, strval, value))
 		return 1;
 	for (things = DBFETCH(what)->contents; things != NOTHING; things = DBFETCH(things)->next) {
-		if (has_property(descr, player, things, pname, strval, value))
+		if (has_property(cmd, things, pname, strval, value))
 			return 1;
 	}
 #if LOCK_ENVCHECK
@@ -336,7 +337,7 @@ has_property(int descr, dbref player, dbref what, const char *pname, const char 
 static int has_prop_recursion_limit = 2;
 /* checks if object has property, returns 1 if it has the property */
 int
-has_property_strict(int descr, dbref player, dbref what, const char *pname, const char *strval,
+has_property_strict(command_t *cmd, dbref what, const char *pname, const char *strval,
 					int value)
 {
 	PropPtr p;
@@ -352,7 +353,7 @@ has_property_strict(int descr, dbref player, dbref what, const char *pname, cons
 			str = DoNull(PropDataStr(p));
 
 			if (has_prop_recursion_limit-->0) {
-				ptr = do_parse_mesg(descr, player, what, str, "(Lock)", buf, sizeof(buf),
+				ptr = do_parse_mesg(cmd, what, str, "(Lock)", buf, sizeof(buf),
 									(MPI_ISPRIVATE | MPI_ISLOCK |
 									((PropFlags(p) & PROP_BLESSED)? MPI_ISBLESSED : 0)));
 			} else {
@@ -862,7 +863,8 @@ db_get_single_prop(FILE * f, dbref obj, long pos, PropPtr pnode, const char *pdi
 		break;
 	case PROP_LOKTYP:
 		if (!do_diskbase_propvals || pos) {
-			lok = parse_boolexp(-1, (dbref) 1, value, 32767);
+			command_t cmd_be = command_new_null(-1, (dbref) 1);
+			lok = parse_boolexp(&cmd_be, value, 32767);
 			flg &= ~PROP_ISUNLOADED;
 			if (pnode) {
 				SetPDataLok(pnode, lok);

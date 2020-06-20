@@ -10,12 +10,7 @@ notify_except(dbref first, dbref exception, const char *msg, dbref who)
 ;
 
 void
-parse_oprop(int descr, dbref player, dbref dest, dbref exit, const char *propname,
-			   const char *prefix, const char *whatcalled)
-;
-
-void
-parse_omessage(int descr, dbref player, dbref dest, dbref exit, const char *msg,
+parse_omessage(command_t *cmd, dbref dest, dbref exit, const char *msg,
 			   const char *prefix, const char *whatcalled, int mpiflags)
 ;
 

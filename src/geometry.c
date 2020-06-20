@@ -156,19 +156,19 @@ obj_stack_add(struct obj o, dbref where, unsigned char n)
 }
 
 dbref
-contents_find(int descr, dbref player, dbref where, const char *name)
+contents_find(command_t *cmd, dbref where, const char *name)
 {
 	struct match_data md;
-	init_match_remote(descr, player, where, name, TYPE_THING, &md);
+	init_match_remote(cmd, where, name, TYPE_THING, &md);
 	match_possession(&md);
 	return md.exact_match;
 }
 
 dbref
-e_exit_where(int descr, dbref player, dbref loc, enum exit e)
+e_exit_where(command_t *cmd, dbref loc, enum exit e)
 {
 	struct match_data md;
-	init_match_remote(descr, player, loc, e_name(e), TYPE_EXIT, &md),
+	init_match_remote(cmd, loc, e_name(e), TYPE_EXIT, &md),
 	match_room_exits(loc, &md);
 	return match_result(&md);
 }

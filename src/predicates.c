@@ -261,8 +261,9 @@ can_link(dbref who, dbref what)
  * whether it's an exit or not.
  */
 int
-could_doit(int descr, dbref player, dbref thing)
+could_doit(command_t *cmd, dbref thing)
 {
+	dbref player = cmd->player;
 	dbref source, dest, owner;
 
 	if (Typeof(thing) == TYPE_EXIT) {
@@ -331,22 +332,22 @@ geo:
 		return 0;
 out:
 		/* Check the @lock on the thing, as a final test. */
-	return (eval_boolexp(descr, player, GETLOCK(thing), thing));
+	return (eval_boolexp(cmd, GETLOCK(thing), thing));
 }
 
 
 int
-test_lock(int descr, dbref player, dbref thing, const char *lockprop)
+test_lock(command_t *cmd, dbref thing, const char *lockprop)
 {
 	struct boolexp *lokptr;
 
 	lokptr = get_property_lock(thing, lockprop);
-	return (eval_boolexp(descr, player, lokptr, thing));
+	return (eval_boolexp(cmd, lokptr, thing));
 }
 
 
 int
-test_lock_false_default(int descr, dbref player, dbref thing, const char *lockprop)
+test_lock_false_default(command_t *cmd, dbref thing, const char *lockprop)
 {
 	struct boolexp *lok;
 
@@ -354,12 +355,13 @@ test_lock_false_default(int descr, dbref player, dbref thing, const char *lockpr
 
 	if (lok == TRUE_BOOLEXP)
 		return 0;
-	return (eval_boolexp(descr, player, lok, thing));
+	return (eval_boolexp(cmd, lok, thing));
 }
 
 int
-can_doit(int descr, dbref player, dbref thing, const char *default_fail_msg)
+can_doit(command_t *cmd, dbref thing, const char *default_fail_msg)
 {
+	dbref player = cmd->player;
 	char const *dwts = "door";
 	char dir = '\0';
 	int door = 0;
@@ -393,17 +395,17 @@ can_doit(int descr, dbref player, dbref thing, const char *default_fail_msg)
 		return 0;
 	}
 
-	if (!could_doit(descr, player, thing)) {
+	if (!could_doit(cmd, thing)) {
 		/* can't do it */
 		if (GETFAIL(thing)) {
-			exec_or_notify_prop(descr, player, thing, MESGPROP_FAIL, "(@Fail)");
+			exec_or_notify_prop(cmd, thing, MESGPROP_FAIL, "(@Fail)");
 		} else if (door) {
 			notify_fmt(player, "That %s is locked.", dwts);
 		} else if (default_fail_msg) {
 			notify(player, default_fail_msg);
 		}
 		if (GETOFAIL(thing) && !Dark(player)) {
-			parse_oprop(descr, player, getloc(player), thing, MESGPROP_OFAIL,
+			parse_oprop(cmd, getloc(player), thing, MESGPROP_OFAIL,
 						   NAME(player), "(@Ofail)");
 		}
 		return 0;
@@ -415,11 +417,11 @@ can_doit(int descr, dbref player, dbref thing, const char *default_fail_msg)
 
 		/* can do it */
 		if (GETSUCC(thing)) {
-			exec_or_notify_prop(descr, player, thing, MESGPROP_SUCC, "(@Succ)");
+			exec_or_notify_prop(cmd, thing, MESGPROP_SUCC, "(@Succ)");
 		} else if (Typeof(thing) == TYPE_EXIT && e_exit_is(thing))
 			notify_fmt(player, "You go %s.", e_name(exit_e(thing)));
 		if (GETOSUCC(thing) && !Dark(player)) {
-			parse_oprop(descr, player, getloc(player), thing, MESGPROP_OSUCC,
+			parse_oprop(cmd, getloc(player), thing, MESGPROP_OSUCC,
 						   NAME(player), "(@Osucc)");
 		}
 		if (door)

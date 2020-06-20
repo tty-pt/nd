@@ -119,7 +119,7 @@ void mob_save(void);
 void mob_init();
 void mobs_add(ref_t where, enum biome, long long);
 mobi_t *mob_put(ref_t where);
-void mobs_aggro(int descr, ref_t player);
+void mobs_aggro(command_t *cmd);
 struct obj const *mob_obj_random();
 void mob_update(void);
 

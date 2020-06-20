@@ -35,6 +35,7 @@
 
 #include "db.h"
 #include "interface.h"
+#include "command.h"
 #include "params.h"
 #include "defaults.h"
 #include "props.h"
@@ -305,10 +306,6 @@ core_command_t cmds[] = {
 	}, {
 		.name = "give",
 		.cb = &do_give,
-	/* }, { */
-	/* 	.name = "move", */
-	/* 	.cb = &do_move, */
-	/* 	/1* do_move(descr, player, arg1, 0); *1/ */
 	}, {
 		.name = "gripe",
 		.cb = &do_gripe,
@@ -483,6 +480,23 @@ command_idx(command_t *cmd)
 core_command_t *
 command_match(command_t *cmd) {
 	return cmds_hashed[command_idx(cmd)];
+}
+
+command_t command_null(command_t *cmd) {
+	command_t ret;
+	ret.player = cmd->player;
+	ret.fd = cmd->fd;
+	ret.argc = 0;
+	memset(ret.argv, '0', sizeof(ret.argv));
+	return ret;
+}
+
+command_t command_new_null(int descr, ref_t player) {
+	command_t ret;
+	command_null(&ret);
+	ret.player = player;
+	ret.fd = descr;
+	return ret;
 }
 
 static void
@@ -682,6 +696,7 @@ notify_nolisten(dbref player, const char *msg, int isprivate)
 			if (Wizard(OWNER(player)) || ref == NOTHING ||
 			    Typeof(ref) != TYPE_ROOM || !(FLAGS(ref) & ZOMBIE)) {
 				if (isprivate || getloc(player) != getloc(OWNER(player))) {
+					command_t cmd_pp = command_new_null(-1, player);
 					char pbuf[BUFFER_LEN];
 					const char *prefix;
 					char ch = *match_args;
@@ -692,7 +707,7 @@ notify_nolisten(dbref player, const char *msg, int isprivate)
 					{
 						notify_nolisten_level++;
 
-						prefix = do_parse_prop(-1, player, player, MESGPROP_PECHO, "(@Pecho)", pbuf, sizeof(pbuf), MPI_ISPRIVATE);
+						prefix = do_parse_prop(&cmd_pp, player, MESGPROP_PECHO, "(@Pecho)", pbuf, sizeof(pbuf), MPI_ISPRIVATE);
 
 						notify_nolisten_level--;
 					}
@@ -763,9 +778,10 @@ notify_from_echo(dbref from, dbref player, const char *msg, int isprivate)
 				char pbuf[BUFFER_LEN];
 				const char *prefix;
 				char ch = *match_args;
+				command_t cmd_pp = command_new_null(-1, from);
 
 				*match_args = '\0';
-				prefix = do_parse_prop(-1, from, player, MESGPROP_OECHO, "(@Oecho)", pbuf, sizeof(pbuf), MPI_ISPRIVATE);
+				prefix = do_parse_prop(&cmd_pp, player, MESGPROP_OECHO, "(@Oecho)", pbuf, sizeof(pbuf), MPI_ISPRIVATE);
 				*match_args = ch;
 
 				if (!prefix || !*prefix)
@@ -972,13 +988,13 @@ announce_puppets(dbref player, const char *msg, const char *prop)
 }
 
 void
-announce_connect(descr_t *d, dbref player)
+announce_connect(command_t *cmd)
 {
+	dbref player = cmd->player;
 	dbref loc;
 	char buf[BUFFER_LEN];
 	struct match_data md;
 	dbref exit;
-	int descr = d->fd;
 
 	if ((loc = getloc(player)) == NOTHING)
 		return;
@@ -990,7 +1006,7 @@ announce_connect(descr_t *d, dbref player)
 
 	exit = NOTHING;
 	if (PLAYER_DESCRCOUNT(player)) {
-		init_match(descr, player, "connect", TYPE_EXIT, &md);	/* match for connect */
+		init_match(cmd, "connect", TYPE_EXIT, &md);	/* match for connect */
 		md.match_level = 1;
 		match_all_exits(&md);
 		exit = match_result(&md);
@@ -999,11 +1015,10 @@ announce_connect(descr_t *d, dbref player)
 	}
 
 	if (exit == NOTHING || !(FLAGS(exit) & STICKY)) {
-		if (can_move(descr, player, AUTOLOOK_CMD, 1)) {
-			do_move(descr, player, AUTOLOOK_CMD, 1);
-		} else {
-			do_look_around(descr, player);
-		}
+		if (can_move(cmd, AUTOLOOK_CMD, 1))
+			go_move(cmd, AUTOLOOK_CMD, 1);
+		else
+			do_look_around(cmd);
 	}
 
 	/*
@@ -1013,16 +1028,16 @@ announce_connect(descr_t *d, dbref player)
 	 */
 
 	if (exit != NOTHING)
-		do_move(descr, player, "connect", 1);
+		go_move(cmd, "connect", 1);
 
 	if (PLAYER_DESCRCOUNT(player) == 1) {
 		announce_puppets(player, "wakes up.", "_/pcon");
 	}
 
 	/* queue up all _connect programs referred to by properties */
-	envpropqueue(descr, player, getloc(player), NOTHING, player, NOTHING,
+	envpropqueue(cmd, getloc(player), NOTHING, player, NOTHING,
 				 "_connect", "Connect", 1, 1);
-	envpropqueue(descr, player, getloc(player), NOTHING, player, NOTHING,
+	envpropqueue(cmd, getloc(player), NOTHING, player, NOTHING,
 				 "_oconnect", "Oconnect", 1, 0);
 
 	ts_useobject(player);
@@ -1076,7 +1091,7 @@ auth(command_t *cmd)
         PLAYER_SET_BLOCK(d->player, 0);
         welcome_user(d);
         spit_file(player, MOTD_FILE);
-        announce_connect(d, player);
+        announce_connect(cmd);
         if (created) {
                 /* TODO do_help(player, "begin", ""); */
                 mob_put(player);
@@ -1089,21 +1104,21 @@ auth(command_t *cmd)
         }
         /* if (!(web_support(d->fd) && d->proto.ws.old)) */
 	do_view(cmd);
-        look_room(d->fd, player, getloc(player), 0);
+        look_room(cmd, getloc(player), 0);
 
         return 0;
 }
 
 static inline int
-do_v(int descr, dbref player, char const *cmd)
+do_v(command_t *cmd, char const *cmdstr)
 {
 	int ofs = 1;
-	char const *s = cmd;
+	char const *s = cmdstr;
 
 	for (; *s && ofs > 0; s += ofs) {
 		switch (*s) {
 		case COMMAND_TOKEN:
-			return s - cmd;
+			return s - cmdstr;
 		/* case SAY_TOKEN: */
 		/* 	do_say(player, s + 1); */
 		/* 	return s + strlen(s) - cmd; */
@@ -1112,14 +1127,14 @@ do_v(int descr, dbref player, char const *cmd)
 		/* 	return s + strlen(s) - cmd; */
 		}
 
-		ofs = geo_v(descr, player, s);
+		ofs = geo_v(cmd, s);
 		if (ofs < 0)
 			ofs = - ofs;
 		s += ofs;
-		ofs = kill_v(descr, player, s);
+		ofs = kill_v(cmd, s);
 	}
 
-	return s - cmd;
+	return s - cmdstr;
 }
 
 void
@@ -1155,9 +1170,9 @@ command_process(command_t *cmd)
 	/* if player is a wizard, and uses overide token to start line... */
 	/* ... then do NOT run actions, but run the command they specify. */
 	if (!(TrueWizard(OWNER(player)) && (*command == OVERIDE_TOKEN))
-	    && can_move(descr, player, command, 0))
+	    && can_move(cmd, command, 0))
 	{
-		do_move(descr, player, command, 0);	/* command is exact match for exit */
+		go_move(cmd, command, 0);	/* command is exact match for exit */
 		*match_args = 0;
 		*match_cmdname = 0;
 		goto out;
@@ -1175,7 +1190,7 @@ command_process(command_t *cmd)
 		}
 
 		int matched;
-		command += do_v(descr, player, command);
+		command += do_v(cmd, command);
 		if (*command == COMMAND_TOKEN) {
 			command++;
 			matched = 1;
@@ -1293,6 +1308,7 @@ descr_new()
 void
 announce_disconnect(descr_t *d)
 {
+	command_t cmd = command_new_null(d->fd, d->player);
 	dbref player = d->player;
 	dbref loc;
 	char buf[BUFFER_LEN];
@@ -1307,9 +1323,8 @@ announce_disconnect(descr_t *d)
 
 	/* trigger local disconnect action */
 	if (PLAYER_DESCRCOUNT(player) == 1) {
-		if (can_move(d->fd, player, "disconnect", 1)) {
-			do_move(d->fd, player, "disconnect", 1);
-		}
+		if (can_move(&cmd, "disconnect", 1))
+			go_move(&cmd, "disconnect", 1);
 		announce_puppets(player, "falls asleep.", "_/pdcon");
 	}
 
@@ -1319,9 +1334,9 @@ announce_disconnect(descr_t *d)
     forget_player_descr(player, d->fd);
 
 	/* queue up all _connect programs referred to by properties */
-	envpropqueue(d->fd, player, getloc(player), NOTHING, player, NOTHING,
+	envpropqueue(&cmd, getloc(player), NOTHING, player, NOTHING,
 				 "_disconnect", "Disconnect", 1, 1);
-	envpropqueue(d->fd, player, getloc(player), NOTHING, player, NOTHING,
+	envpropqueue(&cmd, getloc(player), NOTHING, player, NOTHING,
 				 "_odisconnect", "Odisconnect", 1, 0);
 
 	ts_lastuseobject(player);

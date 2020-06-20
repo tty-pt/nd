@@ -7,6 +7,7 @@
 #include <stddef.h>
 #include <string.h>
 #include "db.h"
+#include "command.h"
 #endif
 
 /* it is possible to add other coord_t (like char) but a corresponding
@@ -53,8 +54,6 @@ typedef upoint4D_t upos_t;
 
 typedef uint64_t morton_t; // 4d morton, btw
 typedef int64_t smorton_t;
-
-typedef int ref_t;
 
 struct rect {
 	point_t s;
@@ -176,15 +175,15 @@ e_exit_dest(dbref exit)
 		return DBFETCH(exit)->sp.exit.dest[0];
 }
 
-ref_t e_exit_where(int descr, dbref player, ref_t loc, enum exit e);
+ref_t e_exit_where(command_t *cmd, ref_t loc, enum exit e);
 int e_exit_can(ref_t player, ref_t exit);
 int e_ground(ref_t room, enum exit e);
 void e_exit_dest_set(dbref exit, dbref dest);
 
 static inline ref_t
-e_exit_here(int descr, ref_t player, enum exit e)
+e_exit_here(command_t *cmd, enum exit e)
 {
-	return e_exit_where(descr, player, getloc(player), e);
+	return e_exit_where(cmd, getloc(cmd->player), e);
 }
 
 ref_t
@@ -194,7 +193,7 @@ ref_t
 obj_stack_add(struct obj o, ref_t where,
 		unsigned char n);
 ref_t
-contents_find(int descr, ref_t player, ref_t where,
+contents_find(command_t *cmd, ref_t where,
 		const char *name);
 #endif
 #endif

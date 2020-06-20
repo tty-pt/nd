@@ -136,7 +136,7 @@ living_dead(mobi_t *liv)
 }
 
 static inline dbref
-body(int descr, dbref player, dbref mob)
+body(command_t *cmd, dbref mob)
 {
 	char buf[32];
 	struct obj o = { "", "", "" };
@@ -156,11 +156,11 @@ body(int descr, dbref player, dbref mob)
 
 	if (n > 0) {
 		ONOTIFYF(mob, "%s's body drops to the ground.", NAME(mob));
-		struct boolexp *key = parse_boolexp(descr, player, NAME(player), 0);
+		struct boolexp *key = parse_boolexp(cmd, NAME(cmd->player), 0);
 		SETCONLOCK(dead_mob, key);
 		return dead_mob;
 	} else {
-		recycle(descr, player, dead_mob);
+		recycle(cmd, dead_mob);
 		return NOTHING;
 	}
 }
@@ -201,8 +201,9 @@ kill_target(dbref attacker, dbref target)
 
 	if (Typeof(target) == TYPE_PLAYER) {
 		dbref loc = getloc(target);
+		command_t cmd_new = command_new_null(tar->descr, target);
 		moveto(target, PLAYER_HOME(target));
-		geo_clean(tar->descr, target, loc);
+		geo_clean(&cmd_new, loc);
 		tar->klock = 0;
 		/* TODO do_view(tar->descr, target); */
 	} else {
@@ -210,13 +211,14 @@ kill_target(dbref attacker, dbref target)
 			tar->target->klock --;
 
 		if (GETTMP(getloc(target))) {
+			command_t cmd_att = command_new_null(att->descr, attacker);
 			int descr = 0;
 			if (att) {
 				descr = att->descr;
-				body(descr, attacker, target);
+				body(&cmd_att, target);
 				att->target = NULL;
 			}
-			recycle(descr, attacker, target);
+			recycle(&cmd_att, target);
 			tar->who = 0;
 			return;
 		}
@@ -291,7 +293,7 @@ do_kill(command_t *cmd)
 	const char *what = cmd->argv[1];
 	dbref here = getloc(player);
 	dbref target = strcmp(what, "me")
-		? contents_find(descr, player, here, what)
+		? contents_find(cmd, here, what)
 		: player;
 	mobi_t *att, *tar;
 
@@ -360,7 +362,6 @@ do_status(command_t *cmd)
 void
 do_heal(command_t *cmd)
 {
-	int descr = cmd->fd;
 	dbref player = cmd->player;
 	const char *name = cmd->argv[1];
 	dbref here = getloc(player);
@@ -368,7 +369,7 @@ do_heal(command_t *cmd)
 	mobi_t *tar;
 
 	if (strcmp(name, "me")) {
-		target = contents_find(descr, player, here, name);
+		target = contents_find(cmd, here, name);
 
 	} else
 		target = player;
@@ -391,11 +392,10 @@ do_heal(command_t *cmd)
 void
 do_advitam(command_t *cmd)
 {
-	int descr = cmd->fd;
 	dbref player = cmd->player;
 	const char *name = cmd->argv[1];
 	dbref here = getloc(player);
-	dbref target = contents_find(descr, player, here, name);
+	dbref target = contents_find(cmd, here, name);
 
 	if (!(FLAGS(player) & WIZARD)
 	    || target == NOTHING
@@ -410,9 +410,10 @@ do_advitam(command_t *cmd)
 }
 
 void
-do_givexp(int descr, dbref player, const char *name, const char *amount)
+do_givexp(command_t *cmd, const char *name, const char *amount)
 {
-	dbref target = contents_find(descr, player, getloc(player), name);
+	dbref player = cmd->player;
+	dbref target = contents_find(cmd, getloc(player), name);
 	int amt = strtol(amount, NULL, 0);
 
 	if (!(FLAGS(player) & WIZARD)
@@ -466,8 +467,9 @@ do_train(command_t *cmd) {
 }
 
 int
-kill_v(int descr, dbref player, char const *opcs)
+kill_v(command_t *cmd, char const *opcs)
 {
+	dbref player = cmd->player;
 	char *end;
 	if (isdigit(*opcs)) {
 		unsigned combo = strtol(opcs, &end, 0);
@@ -491,7 +493,6 @@ kill_v(int descr, dbref player, char const *opcs)
 void
 do_sit(command_t *cmd)
 {
-	int descr = cmd->fd;
 	dbref player = cmd->player;
 	const char *name = cmd->argv[1];
 	if (GETSAT(player) != NOTHING) {
@@ -505,7 +506,7 @@ do_sit(command_t *cmd)
 		return;
 	}
 
-	dbref seat = contents_find(descr, player, getloc(player), name);
+	dbref seat = contents_find(cmd, getloc(player), name);
 	int max = GETSEATM(seat);
 	if (!max) {
 		notify(player, "You can't sit on that.");

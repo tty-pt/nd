@@ -90,7 +90,7 @@ string_match(register const char *src, register const char *sub)
  * %n    for the player's name.
  */
 char *
-pronoun_substitute(int descr, dbref player, const char *str)
+pronoun_substitute(command_t *cmd, const char *str)
 {
 	char c;
 	char d;
@@ -103,6 +103,7 @@ pronoun_substitute(int descr, dbref player, const char *str)
 	const char *sexstr;
 	const char *self_sub;		/* self substitution code */
 	const char *temp_sub;
+	dbref player = cmd->player;
 	dbref mywhere = player;
 	int sex;
 
@@ -120,7 +121,7 @@ pronoun_substitute(int descr, dbref player, const char *str)
 
 	sexstr = get_property_class(player, "sex");
 	if (sexstr) {
-		sexstr = do_parse_mesg(descr, player, player, sexstr, "(Lock)", sexbuf, sizeof(sexbuf),
+		sexstr = do_parse_mesg(cmd, player, sexstr, "(Lock)", sexbuf, sizeof(sexbuf),
 						(MPI_ISPRIVATE | MPI_ISLOCK |
 							(Prop_Blessed(player, "sex")? MPI_ISBLESSED : 0)));
 	}

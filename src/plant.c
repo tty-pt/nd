@@ -131,14 +131,14 @@ plant_yield(plant_t *pl, coord_t tmp,
 }
 
 static inline void
-plant_add(int descr, dbref player, dbref where, unsigned char plid, unsigned char n, coord_t tmp)
+plant_add(command_t *cmd, dbref where, unsigned char plid, unsigned char n, coord_t tmp)
 {
 	if (n == 0)
 		return;
 	plant_t *pl = PLANT(plid);
 	dbref plant = obj_stack_add(pl->o, where, n);
 	dbref fruit = obj_add(pl->fruit, plant);
-	struct boolexp *key = parse_boolexp(descr, player, NAME(player), 0);
+	struct boolexp *key = parse_boolexp(cmd, NAME(cmd->player), 0);
 	unsigned yield = plant_yield(pl, tmp, n);
 	SETCONLOCK(plant, key);
         SETPLID(plant, plid);
@@ -148,7 +148,7 @@ plant_add(int descr, dbref player, dbref where, unsigned char plid, unsigned cha
 }
 
 static inline void
-_plants_add(int descr, dbref player, dbref where,
+_plants_add(command_t *cmd, dbref where,
 		struct plant_data *pd,
 		coord_t tmp)
 {
@@ -160,13 +160,13 @@ _plants_add(int descr, dbref player, dbref where,
 		if (!aux)
 			continue;
 
-		plant_add(descr, player, where,
+		plant_add(cmd, where,
 				pd->id[i], aux, tmp);
         }
 }
 
 void
-plants_add(int descr, dbref player, dbref where,
+plants_add(command_t *cmd, dbref where,
 		struct plant_data *pd,
 		morton_t ty, coord_t tmp,
 		ucoord_t rn)
@@ -174,12 +174,12 @@ plants_add(int descr, dbref player, dbref where,
 	struct plant_data epd;
 
         if (pd->n)
-                _plants_add(descr, player, where,
+                _plants_add(cmd, where,
 				pd, tmp);
 
 	plants_noise(&epd, ty, tmp, rn, PLANT_EXTRA);
 
         if (epd.n)
-                _plants_add(descr, player, where,
+                _plants_add(cmd, where,
 				&epd, tmp);
 }

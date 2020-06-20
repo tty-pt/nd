@@ -99,10 +99,9 @@ do_select(command_t *cmd)
 void
 do_equip(command_t *cmd)
 {
-	int descr = cmd->fd;
 	dbref player = cmd->player;
 	char const *name = cmd->argv[1];
-	dbref eq = contents_find(descr, player, player, name);
+	dbref eq = contents_find(cmd, player, name);
 
 	if (eq < 0) {
 		notify(player, "You are not carrying that.");

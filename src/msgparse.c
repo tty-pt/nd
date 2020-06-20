@@ -45,19 +45,19 @@
 #endif
 
 char *
-do_parse_mesg(int descr, dbref player, dbref what, const char *inbuf, const char *abuf, char *outbuf, int outbuflen, int mesgtyp)
+do_parse_mesg(command_t *cmd, dbref what, const char *inbuf, const char *abuf, char *outbuf, int outbuflen, int mesgtyp)
 {
 	strlcpy(outbuf, inbuf, outbuflen);
 	return outbuf;
 }
 
 char *
-do_parse_prop(int descr, dbref player, dbref what, const char *propname, const char *abuf, char *outbuf, int outbuflen, int mesgtyp)
+do_parse_prop(command_t *cmd, dbref what, const char *propname, const char *abuf, char *outbuf, int outbuflen, int mesgtyp)
 {
 	const char* propval = get_property_class(what, propname);
 	if (!propval)
 		return NULL;
-	return do_parse_mesg(descr, player, what, propval, abuf, outbuf, outbuflen, mesgtyp);
+	return do_parse_mesg(cmd, what, propval, abuf, outbuf, outbuflen, mesgtyp);
 }
 
 static const char *msgparse_c_version = "$RCSfile$ $Revision: 1.30 $";

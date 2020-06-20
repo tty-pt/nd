@@ -49,18 +49,18 @@ print_owner(dbref player, dbref thing)
 }
 
 void
-exec_or_notify_prop(int descr, dbref player, dbref thing,
+exec_or_notify_prop(command_t *cmd, dbref thing,
 					const char *propname, const char *whatcalled)
 {
 	const char *message = get_property_class(thing, propname);
 	int mpiflags = Prop_Blessed(thing, propname)? MPI_ISBLESSED : 0;
 
 	if (message)
-		notify(player, exec_or_notify(descr, player, thing, message, whatcalled, mpiflags));
+		notify(cmd->player, exec_or_notify(cmd, thing, message, whatcalled, mpiflags));
 }
 
 const char *
-exec_or_notify(int descr, dbref player, dbref thing,
+exec_or_notify(command_t *cmd, dbref thing,
 			   const char *message, const char *whatcalled,
 			   int mpiflags)
 {
@@ -102,18 +102,19 @@ exec_or_notify(int descr, dbref player, dbref thing,
 				return "You see nothing special.";
 			}
 		} else {
-			p = do_parse_mesg(descr, player, thing, p, whatcalled, buf, sizeof(buf), MPI_ISPRIVATE | mpiflags);
+			p = do_parse_mesg(cmd, thing, p, whatcalled, buf, sizeof(buf), MPI_ISPRIVATE | mpiflags);
 			return NULL;
 		}
 	} else {
-		p = do_parse_mesg(descr, player, thing, p, whatcalled, buf, sizeof(buf), MPI_ISPRIVATE | mpiflags);
+		p = do_parse_mesg(cmd, thing, p, whatcalled, buf, sizeof(buf), MPI_ISPRIVATE | mpiflags);
 		return p;
 	}
 }
 
 static void
-look_contents(int descr, dbref player, dbref loc, const char *contents_name)
+look_contents(command_t *cmd, dbref loc, const char *contents_name)
 {
+	dbref player = cmd->player;
         char buf[BUFSIZ];
         size_t buf_l = 0;
 	dbref thing;
@@ -140,15 +141,16 @@ look_contents(int descr, dbref player, dbref loc, const char *contents_name)
 extern void art(dbref descr, const char *arts);
 
 static void
-look_simple(int descr, dbref player, dbref thing)
+look_simple(command_t *cmd, dbref thing)
 {
+	dbref player = cmd->player;
 	char const *art_str = GETMESG(thing, MESGPROP_ART);
 
 	if (art_str)
-		art(descr, art_str);
+		art(cmd->fd, art_str);
 
 	if (GETDESC(thing)) {
-		notify(player, exec_or_notify(descr, player, thing, GETDESC(thing), "(@Desc)",
+		notify(player, exec_or_notify(cmd, thing, GETDESC(thing), "(@Desc)",
 				Prop_Blessed(thing, MESGPROP_DESC)? MPI_ISBLESSED : 0));
 	} else if (!art_str) {
 		notify(player, "You see nothing special.");
@@ -156,22 +158,23 @@ look_simple(int descr, dbref player, dbref thing)
 }
 
 void
-look_room(int descr, dbref player, dbref loc, int verbose)
+look_room(command_t *cmd, dbref loc, int verbose)
 {
+	dbref player = cmd->player;
 	char const *description = NULL;
 	/* tell him the name, and the number if he can link to it */
 
 	/* tell him the description */
 	if (Typeof(loc) == TYPE_ROOM) {
 		if (GETDESC(loc)) {
-			description = exec_or_notify(descr, player, loc, GETDESC(loc), "(@Desc)",
+			description = exec_or_notify(cmd, loc, GETDESC(loc), "(@Desc)",
 				Prop_Blessed(loc, MESGPROP_DESC)? MPI_ISBLESSED : 0);
 		}
 		/* tell him the appropriate messages if he has the key */
-		can_doit(descr, player, loc, 0);
+		can_doit(cmd, loc, 0);
 	} else {
 		if (GETIDESC(loc)) {
-			description = exec_or_notify(descr, player, loc, GETIDESC(loc), "(@Idesc)",
+			description = exec_or_notify(cmd, loc, GETIDESC(loc), "(@Idesc)",
 				Prop_Blessed(loc, MESGPROP_IDESC)? MPI_ISBLESSED : 0);
 		}
 	}
@@ -181,7 +184,7 @@ look_room(int descr, dbref player, dbref loc, int verbose)
 		notify(player, unparse_object(player, loc));
 		notify(player, description);
 		/* tell him the contents */
-		look_contents(descr, player, loc, "You see:");
+		look_contents(cmd, loc, "You see:");
 	/* } */
 #if LOOK_PROPQUEUES
 	{
@@ -193,19 +196,18 @@ look_room(int descr, dbref player, dbref loc, int verbose)
 }
 
 void
-do_look_around(int descr, dbref player)
+do_look_around(command_t *cmd)
 {
 	dbref loc;
 
-	if ((loc = getloc(player)) == NOTHING)
+	if ((loc = getloc(cmd->player)) == NOTHING)
 		return;
-	look_room(descr, player, loc, 1);
+	look_room(cmd, loc, 1);
 }
 
 void
 do_look_at(command_t *cmd)
 {
-	int descr = cmd->fd;
 	dbref player = cmd->player;
 	const char *name = cmd->argv[1];
 	const char *detail = cmd->argv[2];
@@ -219,11 +221,11 @@ do_look_at(command_t *cmd)
 
 	if (*name == '\0' || !strcmp(name, "here")) {
 		if ((thing = getloc(player)) != NOTHING) {
-			look_room(descr, player, thing, 1);
+			look_room(cmd, thing, 1);
 		}
 	} else {
 		/* look at a thing here */
-		init_match(descr, player, name, NOTYPE, &md);
+		init_match(cmd, name, NOTYPE, &md);
 		match_all_exits(&md);
 		match_neighbor(&md);
 		match_possession(&md);
@@ -242,7 +244,7 @@ do_look_at(command_t *cmd)
 				if (getloc(player) != thing && !can_link_to(player, TYPE_ROOM, thing)) {
 					notify(player, "Permission denied. (you're not where you want to look, and can't link to it)");
 				} else {
-					look_room(descr, player, thing, 1);
+					look_room(cmd, thing, 1);
 				}
 				break;
 			case TYPE_PLAYER:
@@ -250,8 +252,8 @@ do_look_at(command_t *cmd)
 					&& !controls(player, thing)) {
 					notify(player, "Permission denied. (Your location isn't the same as what you're looking at)");
 				} else {
-					look_simple(descr, player, thing);
-					look_contents(descr, player, thing, "Carrying:");
+					look_simple(cmd, thing);
+					look_contents(cmd, thing, "Carrying:");
 #if LOOK_PROPQUEUES
 					snprintf(obj_num, sizeof(obj_num), "#%d", thing);
 					envpropqueue(descr, player, thing, player, thing,
@@ -264,9 +266,9 @@ do_look_at(command_t *cmd)
 					&& getloc(thing) != player && !controls(player, thing)) {
 					notify(player, "Permission denied. (You're not in the same room as or carrying the object)");
 				} else {
-					look_simple(descr, player, thing);
+					look_simple(cmd, thing);
 					if (!(FLAGS(thing) & HAVEN)) {
-						look_contents(descr, player, thing, "Contains:");
+						look_contents(cmd, thing, "Contains:");
 						ts_useobject(thing);
 					}
 #if LOOK_PROPQUEUES
@@ -277,7 +279,7 @@ do_look_at(command_t *cmd)
 				}
 				break;
 			default:
-				look_simple(descr, player, thing);
+				look_simple(cmd, thing);
 				if (Typeof(thing) != TYPE_PROGRAM)
 					ts_useobject(thing);
 #if LOOK_PROPQUEUES
@@ -315,7 +317,7 @@ do_look_at(command_t *cmd)
 				propadr = next_prop(pptr, propadr, propname, sizeof(propname));
 			}
 			if (lastmatch && PropType(lastmatch) == PROP_STRTYP) {
-				notify(player, exec_or_notify(descr, player, thing, PropDataStr(lastmatch), "(@detail)",
+				notify(player, exec_or_notify(cmd, thing, PropDataStr(lastmatch), "(@detail)",
 					(PropFlags(lastmatch) & PROP_BLESSED)? MPI_ISBLESSED : 0));
 			} else if (ambig_flag) {
 				notify(player, AMBIGUOUS_MESSAGE);
@@ -495,7 +497,6 @@ size_object(dbref i, int load)
 void
 do_examine(command_t *cmd)
 {
-	int descr = cmd->fd;
 	dbref player = cmd->player;
 	const char *name = cmd->argv[1];
 	const char *dir = cmd->argv[2];
@@ -512,7 +513,7 @@ do_examine(command_t *cmd)
 			return;
 	} else {
 		/* look it up */
-		init_match(descr, player, name, NOTYPE, &md);
+		init_match(cmd, name, NOTYPE, &md);
 
 		match_all_exits(&md);
 		match_neighbor(&md);
@@ -1292,7 +1293,6 @@ do_owned(command_t *cmd)
 void
 do_trace(command_t *cmd)
 {
-	int descr = cmd->fd;
 	dbref player = cmd->fd;
 	const char *name = cmd->argv[1];
 	int depth = atoi(cmd->argv[2]);
@@ -1300,7 +1300,7 @@ do_trace(command_t *cmd)
 	int i;
 	struct match_data md;
 
-	init_match(descr, player, name, NOTYPE, &md);
+	init_match(cmd, name, NOTYPE, &md);
 	match_absolute(&md);
 	match_here(&md);
 	match_me(&md);
@@ -1323,7 +1323,6 @@ do_trace(command_t *cmd)
 void
 do_entrances(command_t *cmd)
 {
-	int descr = cmd->fd;
 	dbref player = cmd->player;
 	const char *name = cmd->argv[1];
 	const char *flags = cmd->argv[2];
@@ -1337,7 +1336,7 @@ do_entrances(command_t *cmd)
 	if (*name == '\0') {
 		thing = getloc(player);
 	} else {
-		init_match(descr, player, name, NOTYPE, &md);
+		init_match(cmd, name, NOTYPE, &md);
 		match_all_exits(&md);
 		match_neighbor(&md);
 		match_possession(&md);
@@ -1402,7 +1401,6 @@ do_entrances(command_t *cmd)
 void
 do_contents(command_t *cmd)
 {
-	int descr = cmd->fd;
 	dbref player = cmd->player;
 	const char *name = cmd->argv[1];
 	const char *flags = cmd->argv[2];
@@ -1416,7 +1414,7 @@ do_contents(command_t *cmd)
 	if (*name == '\0') {
 		thing = getloc(player);
 	} else {
-		init_match(descr, player, name, NOTYPE, &md);
+		init_match(cmd, name, NOTYPE, &md);
 		match_me(&md);
 		match_here(&md);
 		match_all_exits(&md);
@@ -1508,7 +1506,6 @@ exit_match_exists(dbref player, dbref obj, const char *name, int exactMatch)
 void
 do_sweep(command_t *cmd)
 {
-	int descr = cmd->fd;
 	dbref player = cmd->player;
 	const char *name = cmd->argv[1];
 	dbref thing, ref, loc;
@@ -1519,7 +1516,7 @@ do_sweep(command_t *cmd)
 	if (*name == '\0') {
 		thing = getloc(player);
 	} else {
-		init_match(descr, player, name, NOTYPE, &md);
+		init_match(cmd, name, NOTYPE, &md);
 		match_me(&md);
 		match_here(&md);
 		match_all_exits(&md);

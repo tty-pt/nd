@@ -26,17 +26,17 @@ enum gexit_flags {
 };
 
 void geo_update(void);
-dbref geo_room(int descr, dbref player, dbref exit);
-int geo_claim(int descr, dbref player, dbref room);
-int geo_v(int descr, dbref player, const char *cmd);
+dbref geo_room(command_t *cmd, dbref exit);
+int geo_claim(command_t *cmd, dbref room);
+int geo_v(command_t *cmd, const char *);
 
 dbref geo_there(dbref where, enum exit e);
 void gexit_dest_set(dbref exit, dbref dest);
 int gexit_can(dbref player, dbref exit);
-void gexit_snull(int descr, dbref player, dbref exit);
-int gexits(int descr, dbref player, dbref where);
+void gexit_snull(command_t *cmd, dbref exit);
+int gexits(command_t *cmd, dbref where);
 
 /* void geo_notify(int descr, dbref player); */
-dbref geo_clean(int descr, dbref player, dbref here);
+dbref geo_clean(command_t *cmd, dbref here);
 
 #endif

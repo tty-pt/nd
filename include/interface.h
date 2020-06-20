@@ -7,27 +7,7 @@
 #include "copyright.h"
 
 #include "db.h"
-
-#define COMMAND(cmd) command_match(cmd
-
-typedef struct {
-	dbref player;
-	int fd, argc;
-	char *argv[8];
-} command_t; /* FIXME commandi_t */
-
-typedef void core_command_cb_t(command_t *);
-
-typedef struct {
-	char *name;
-	/* size_t nargs; */
-	core_command_cb_t *cb;
-} core_command_t;
-
-extern core_command_t cmds[];
-
-void command_debug(command_t *cmd, char *label);
-core_command_t * command_match(command_t *cmd);
+#include "command.h"
 
 /* these symbols must be defined by the interface */
 extern int notify(dbref player, const char *msg);
@@ -52,7 +32,6 @@ extern void command_process(command_t *cmd);
 
 extern dbref create_player(const char *name, const char *password);
 extern dbref connect_player(const char *name, const char *password);
-extern void do_look_around(int descr, dbref player);
 
 extern int init_game();
 extern void dump_database(void);

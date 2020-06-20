@@ -53,7 +53,6 @@ drink(dbref who, dbref source)
 void
 do_drink(command_t *cmd)
 {
-	int descr = cmd->fd;
 	dbref player = cmd->player;
 	const char *name = cmd->argv[1];
 	dbref vial;
@@ -64,7 +63,7 @@ do_drink(command_t *cmd)
 		return;
 	}
 
-	vial = contents_find(descr, player, player, name);
+	vial = contents_find(cmd, player, name);
 
 	if (vial == NOTHING) {
 		notify(player, "Drink what?");
@@ -81,11 +80,10 @@ do_drink(command_t *cmd)
 void
 do_fill(command_t *cmd)
 {
-	int descr = cmd->fd;
 	dbref player = cmd->player;
 	const char *vial_s = cmd->argv[1];
 	const char *source_s = cmd->argv[2];
-	dbref vial = contents_find(descr, player, player, vial_s);
+	dbref vial = contents_find(cmd, player, vial_s);
 	unsigned m, n;
 
 	if (vial == NOTHING) {
@@ -105,7 +103,7 @@ do_fill(command_t *cmd)
 		return;
 	}
 
-	dbref source = contents_find(descr, player, getloc(player), source_s);
+	dbref source = contents_find(cmd, getloc(player), source_s);
 
 	if (source < 0) {
 		notify(player, "Invalid source.");

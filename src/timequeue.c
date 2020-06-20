@@ -85,11 +85,12 @@ extern char *time_format_2(long dt);
 
 static int propq_level = 0;
 void
-propqueue(int descr, dbref player, dbref where, dbref trigger, dbref what, dbref xclude,
+propqueue(command_t *cmd, dbref where, dbref trigger, dbref what, dbref xclude,
 		  const char *propname, const char *toparg, int mlev, int mt)
 {
 	const char *tmpchar;
 	const char *pname;
+	dbref player = cmd->player;
 	dbref the_prog;
 	char buf[BUFFER_LEN];
 	char exbuf[BUFFER_LEN];
@@ -144,7 +145,7 @@ propqueue(int descr, dbref player, dbref where, dbref trigger, dbref what, dbref
 					ival = (mt == 0) ? MPI_ISPUBLIC : MPI_ISPRIVATE;
 					if (Prop_Blessed(what, propname))
 						ival |= MPI_ISBLESSED;
-					do_parse_mesg(descr, player, what, tmpchar + 1, "(MPIqueue)", cbuf, sizeof(cbuf), ival);
+					do_parse_mesg(cmd, what, tmpchar + 1, "(MPIqueue)", cbuf, sizeof(cbuf), ival);
 					if (*cbuf) {
 						if (mt) {
 							notify_filtered(player, player, cbuf, 1);
@@ -153,7 +154,7 @@ propqueue(int descr, dbref player, dbref where, dbref trigger, dbref what, dbref
 							dbref plyr;
 
 							snprintf(bbuf, sizeof(bbuf), ">> %.4000s",
-									pronoun_substitute(descr, player, cbuf));
+									pronoun_substitute(cmd, cbuf));
 							plyr = DBFETCH(where)->contents;
 							while (plyr != NOTHING) {
 								if (Typeof(plyr) == TYPE_PLAYER && plyr != player)
@@ -174,25 +175,25 @@ propqueue(int descr, dbref player, dbref where, dbref trigger, dbref what, dbref
 		strlcat(buf, "/", sizeof(buf));
 		while ((pname = next_prop_name(what, exbuf, sizeof(exbuf), buf))) {
 			strlcpy(buf, pname, sizeof(buf));
-			propqueue(descr, player, where, trigger, what, xclude, buf, toparg, mlev, mt);
+			propqueue(cmd, where, trigger, what, xclude, buf, toparg, mlev, mt);
 		}
 	}
 }
 
 
 void
-envpropqueue(int descr, dbref player, dbref where, dbref trigger, dbref what, dbref xclude,
+envpropqueue(command_t *cmd, dbref where, dbref trigger, dbref what, dbref xclude,
 			 const char *propname, const char *toparg, int mlev, int mt)
 {
 	while (what != NOTHING) {
-		propqueue(descr, player, where, trigger, what, xclude, propname, toparg, mlev, mt);
+		propqueue(cmd, where, trigger, what, xclude, propname, toparg, mlev, mt);
 		what = getparent(what);
 	}
 }
 
 
 void
-listenqueue(int descr, dbref player, dbref where, dbref trigger, dbref what, dbref xclude,
+listenqueue(command_t *cmd, dbref where, dbref trigger, dbref what, dbref xclude,
 			const char *propname, const char *toparg, int mlev, int mt, int mpi_p)
 {
 	return;

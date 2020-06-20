@@ -22,12 +22,13 @@
 
 
 static dbref
-match_controlled(int descr, dbref player, const char *name)
+match_controlled(command_t *cmd, const char *name)
 {
+	dbref player = cmd->player;
 	dbref match;
 	struct match_data md;
 
-	init_match(descr, player, name, NOTYPE, &md);
+	init_match(cmd, name, NOTYPE, &md);
 	match_absolute(&md);
 	match_everything(&md);
 
@@ -43,7 +44,6 @@ match_controlled(int descr, dbref player, const char *name)
 void
 do_name(command_t *cmd)
 {
-	int descr = cmd->fd;
 	dbref player = cmd->player;
 	const char *name = cmd->argv[1];
 	char *newname = cmd->argv[2];
@@ -52,7 +52,7 @@ do_name(command_t *cmd)
 
 	NOGUEST("@name",player);
 
-	if ((thing = match_controlled(descr, player, name)) != NOTHING) {
+	if ((thing = match_controlled(cmd, name)) != NOTHING) {
 		/* check for bad name */
 		if (*newname == '\0') {
 			notify(player, "Give it what new name?");
@@ -122,7 +122,6 @@ do_name(command_t *cmd)
 void
 do_describe(command_t *cmd)
 {
-	int descr = cmd->fd;
 	dbref player = cmd->player;
 	const char *name = cmd->argv[1];
 	const char *description = cmd->argv[2];
@@ -130,7 +129,7 @@ do_describe(command_t *cmd)
 
 	NOGUEST("@describe",player);
 
-	if ((thing = match_controlled(descr, player, name)) != NOTHING) {
+	if ((thing = match_controlled(cmd, name)) != NOTHING) {
 		ts_modifyobject(thing);
 		SETDESC(thing, description);
 		if(description && *description) {
@@ -144,7 +143,6 @@ do_describe(command_t *cmd)
 void
 do_idescribe(command_t *cmd)
 {
-	int descr = cmd->fd;
 	dbref player = cmd->player;
 	const char *name = cmd->argv[1];
 	const char *description = cmd->argv[2];
@@ -152,7 +150,7 @@ do_idescribe(command_t *cmd)
 
 	NOGUEST("@idescribe",player);
 
-	if ((thing = match_controlled(descr, player, name)) != NOTHING) {
+	if ((thing = match_controlled(cmd, name)) != NOTHING) {
 		ts_modifyobject(thing);
 		SETIDESC(thing, description);
 		if(description && *description) {
@@ -164,13 +162,14 @@ do_idescribe(command_t *cmd)
 }
 
 void
-do_doing(int descr, dbref player, const char *name, const char *mesg)
+do_doing(command_t *cmd, const char *name, const char *mesg)
 {
+	dbref player = cmd->player;
 	dbref thing;
 
-	NOGUEST("@doing",player);
+	NOGUEST("@doing", player);
 
-	if ((thing = match_controlled(descr, player, name)) != NOTHING) {
+	if ((thing = match_controlled(cmd, name)) != NOTHING) {
 		ts_modifyobject(thing);
 		SETDOING(thing, mesg);
 		if(mesg && *mesg) {
@@ -184,7 +183,6 @@ do_doing(int descr, dbref player, const char *name, const char *mesg)
 void
 do_fail(command_t *cmd)
 {
-	int descr = cmd->fd;
 	dbref player = cmd->player;
 	const char *name = cmd->argv[1];
 	const char *message = cmd->argv[2];
@@ -192,7 +190,7 @@ do_fail(command_t *cmd)
 
 	NOGUEST("@fail",player);
 
-	if ((thing = match_controlled(descr, player, name)) != NOTHING) {
+	if ((thing = match_controlled(cmd, name)) != NOTHING) {
 		ts_modifyobject(thing);
 		SETFAIL(thing, message);
 		if(message && *message) {
@@ -206,7 +204,6 @@ do_fail(command_t *cmd)
 void
 do_success(command_t *cmd)
 {
-	int descr = cmd->fd;
 	dbref player = cmd->player;
 	const char *name = cmd->argv[1];
 	const char *message = cmd->argv[2];
@@ -214,7 +211,7 @@ do_success(command_t *cmd)
 
 	NOGUEST("@success",player);
 
-	if ((thing = match_controlled(descr, player, name)) != NOTHING) {
+	if ((thing = match_controlled(cmd, name)) != NOTHING) {
 		ts_modifyobject(thing);
 		SETSUCC(thing, message);
 		if(message && *message) {
@@ -229,7 +226,6 @@ do_success(command_t *cmd)
 void
 do_drop_message(command_t *cmd)
 {
-	int descr = cmd->fd;
 	dbref player = cmd->player;
 	const char *name = cmd->argv[1];
 	const char *message = cmd->argv[2];
@@ -237,7 +233,7 @@ do_drop_message(command_t *cmd)
 
 	NOGUEST("@drop",player);
 
-	if ((thing = match_controlled(descr, player, name)) != NOTHING) {
+	if ((thing = match_controlled(cmd, name)) != NOTHING) {
 		ts_modifyobject(thing);
 		SETDROP(thing, message);
 		if(message && *message) {
@@ -251,7 +247,6 @@ do_drop_message(command_t *cmd)
 void
 do_osuccess(command_t *cmd)
 {
-	int descr = cmd->fd;
 	dbref player = cmd->player;
 	const char *name = cmd->argv[1];
 	const char *message = cmd->argv[2];
@@ -259,7 +254,7 @@ do_osuccess(command_t *cmd)
 
 	NOGUEST("@osuccess",player);
 
-	if ((thing = match_controlled(descr, player, name)) != NOTHING) {
+	if ((thing = match_controlled(cmd, name)) != NOTHING) {
 		ts_modifyobject(thing);
 		SETOSUCC(thing, message);
 		if(message && *message) {
@@ -273,7 +268,6 @@ do_osuccess(command_t *cmd)
 void
 do_ofail(command_t *cmd)
 {
-	int descr = cmd->fd;
 	dbref player = cmd->player;
 	const char *name = cmd->argv[1];
 	const char *message = cmd->argv[2];
@@ -281,7 +275,7 @@ do_ofail(command_t *cmd)
 
 	NOGUEST("@ofail",player);
 
-	if ((thing = match_controlled(descr, player, name)) != NOTHING) {
+	if ((thing = match_controlled(cmd, name)) != NOTHING) {
 		ts_modifyobject(thing);
 		SETOFAIL(thing, message);
 		if(message && *message) {
@@ -295,7 +289,6 @@ do_ofail(command_t *cmd)
 void
 do_odrop(command_t *cmd)
 {
-	int descr = cmd->fd;
 	dbref player = cmd->player;
 	const char *name = cmd->argv[1];
 	const char *message = cmd->argv[2];
@@ -303,7 +296,7 @@ do_odrop(command_t *cmd)
 
 	NOGUEST("@odrop",player);
 
-	if ((thing = match_controlled(descr, player, name)) != NOTHING) {
+	if ((thing = match_controlled(cmd, name)) != NOTHING) {
 		ts_modifyobject(thing);
 		SETODROP(thing, message);
 		if(message && *message) {
@@ -317,7 +310,6 @@ do_odrop(command_t *cmd)
 void
 do_oecho(command_t *cmd)
 {
-	int descr = cmd->fd;
 	dbref player = cmd->player;
 	const char *name = cmd->argv[1];
 	const char *message = cmd->argv[2];
@@ -325,7 +317,7 @@ do_oecho(command_t *cmd)
 
 	NOGUEST("@oecho",player);
 
-	if ((thing = match_controlled(descr, player, name)) != NOTHING) {
+	if ((thing = match_controlled(cmd, name)) != NOTHING) {
 		ts_modifyobject(thing);
 		SETOECHO(thing, message);
 		if(message && *message) {
@@ -339,7 +331,6 @@ do_oecho(command_t *cmd)
 void
 do_pecho(command_t *cmd)
 {
-	int descr = cmd->fd;
 	dbref player = cmd->player;
 	const char *name = cmd->argv[1];
 	const char *message = cmd->argv[2];
@@ -347,7 +338,7 @@ do_pecho(command_t *cmd)
 
 	NOGUEST("@pecho",player);
 
-	if ((thing = match_controlled(descr, player, name)) != NOTHING) {
+	if ((thing = match_controlled(cmd, name)) != NOTHING) {
 		ts_modifyobject(thing);
 		SETPECHO(thing, message);
 		if(message && *message) {
@@ -362,12 +353,12 @@ do_pecho(command_t *cmd)
    If the lockstring is null, then it unlocks the object.
    this returns a 1 or a 0 to represent success. */
 int
-setlockstr(int descr, dbref player, dbref thing, const char *keyname)
+setlockstr(command_t *cmd, dbref thing, const char *keyname)
 {
 	struct boolexp *key;
 
 	if (*keyname != '\0') {
-		key = parse_boolexp(descr, player, keyname, 0);
+		key = parse_boolexp(cmd, keyname, 0);
 		if (key == TRUE_BOOLEXP) {
 			return 0;
 		} else {
@@ -386,7 +377,6 @@ setlockstr(int descr, dbref player, dbref thing, const char *keyname)
 void
 do_conlock(command_t *cmd)
 {
-	int descr = cmd->fd;
 	dbref player = cmd->player;
 	const char *name = cmd->argv[1];
 	const char *keyname = cmd->argv[2];
@@ -397,7 +387,7 @@ do_conlock(command_t *cmd)
 
 	NOGUEST("@conlock",player);
 
-	init_match(descr, player, name, NOTYPE, &md);
+	init_match(cmd, name, NOTYPE, &md);
 	match_absolute(&md);
 	match_everything(&md);
 
@@ -423,7 +413,7 @@ do_conlock(command_t *cmd)
 		ts_modifyobject(thing);
 		notify(player, "Container lock cleared.");
 	} else {
-		key = parse_boolexp(descr, player, keyname, 0);
+		key = parse_boolexp(cmd, keyname, 0);
 		if (key == TRUE_BOOLEXP) {
 			notify(player, "I don't understand that key.");
 		} else {
@@ -440,7 +430,6 @@ do_conlock(command_t *cmd)
 void
 do_flock(command_t *cmd)
 {
-	int descr = cmd->fd;
 	dbref player = cmd->player;
 	const char *name = cmd->argv[1];
 	const char *keyname = cmd->argv[2];
@@ -451,7 +440,7 @@ do_flock(command_t *cmd)
 
 	NOGUEST("@force_lock",player);
 
-	init_match(descr, player, name, NOTYPE, &md);
+	init_match(cmd, name, NOTYPE, &md);
 	match_absolute(&md);
 	match_everything(&md);
 
@@ -482,7 +471,7 @@ do_flock(command_t *cmd)
 		ts_modifyobject(thing);
 		notify(player, "Force lock cleared.");
 	} else {
-		key = parse_boolexp(descr, player, keyname, 0);
+		key = parse_boolexp(cmd, keyname, 0);
 		if (key == TRUE_BOOLEXP) {
 			notify(player, "I don't understand that key.");
 		} else {
@@ -498,7 +487,6 @@ do_flock(command_t *cmd)
 
 void
 do_chlock(command_t *cmd) {
-	int descr = cmd->fd;
 	dbref player = cmd->player;
 	const char *name = cmd->argv[1];
 	const char *keyname = cmd->argv[2];
@@ -509,7 +497,7 @@ do_chlock(command_t *cmd) {
 
 	NOGUEST("@chown_lock",player);
 
-	init_match(descr, player, name, NOTYPE, &md);
+	init_match(cmd, name, NOTYPE, &md);
 	match_absolute(&md);
 	match_everything(&md);
 
@@ -535,7 +523,7 @@ do_chlock(command_t *cmd) {
 		ts_modifyobject(thing);
 		notify(player, "Chown lock cleared.");
 	} else {
-		key = parse_boolexp(descr, player, keyname, 0);
+		key = parse_boolexp(cmd, keyname, 0);
 		if (key == TRUE_BOOLEXP) {
 			notify(player, "I don't understand that key.");
 		} else {
@@ -552,7 +540,6 @@ do_chlock(command_t *cmd) {
 void
 do_lock(command_t *cmd)
 {
-	int descr = cmd->fd;
 	dbref player = cmd->player;
 	const char *name = cmd->argv[1];
 	const char *keyname = cmd->argv[2];
@@ -562,7 +549,7 @@ do_lock(command_t *cmd)
 
 	NOGUEST("@lock",player);
 
-	init_match(descr, player, name, NOTYPE, &md);
+	init_match(cmd, name, NOTYPE, &md);
 	match_absolute(&md);
 	match_everything(&md);
 
@@ -576,7 +563,7 @@ do_lock(command_t *cmd)
 	default:
 		if (Typeof(thing) == TYPE_EXIT
 		    && e_exit_is(thing)
-		    && geo_claim(descr, player, getloc(thing)))
+		    && geo_claim(cmd, getloc(thing)))
 			return;
 
 		if (!controls(player, thing)) {
@@ -587,14 +574,14 @@ do_lock(command_t *cmd)
 	}
 
 	if(keyname && *keyname) {
-		key = parse_boolexp(descr, player, keyname, 0);
+		key = parse_boolexp(cmd, keyname, 0);
 		if (key == TRUE_BOOLEXP) {
 			notify(player, "I don't understand that key.");
 		} else {
 			/* everything ok, do it */
 			if (Typeof(thing) == TYPE_EXIT
 			    && e_exit_is(thing)
-			    && geo_claim(descr, player, getloc(thing)))
+			    && geo_claim(cmd, getloc(thing)))
 				return;
 
 			SETLOCK(thing, key);
@@ -609,14 +596,13 @@ do_lock(command_t *cmd)
 void
 do_unlock(command_t *cmd)
 {
-	int descr = cmd->fd;
 	dbref player = cmd->player;
 	const char *name = cmd->argv[1];
 	dbref thing;
 
 	NOGUEST("@unlock",player);
 
-	if ((thing = match_controlled(descr, player, name)) != NOTHING) {
+	if ((thing = match_controlled(cmd, name)) != NOTHING) {
 		ts_modifyobject(thing);
 		CLEARLOCK(thing);
 		notify(player, "Unlocked.");
@@ -670,12 +656,13 @@ controls_link(dbref who, dbref what)
 /* like do_unlink, but if quiet is true, then only error messages are
    printed. */
 void
-_do_unlink(int descr, dbref player, const char *name, int quiet)
+_do_unlink(command_t *cmd, const char *name, int quiet)
 {
+	dbref player = cmd->player;
 	dbref exit;
 	struct match_data md;
 
-	init_match(descr, player, name, TYPE_EXIT, &md);
+	init_match(cmd, name, TYPE_EXIT, &md);
 	match_absolute(&md);
 	match_player(&md);
 	match_everything(&md);
@@ -742,18 +729,17 @@ _do_unlink(int descr, dbref player, const char *name, int quiet)
 void
 do_unlink(command_t *cmd)
 {
-	int descr = cmd->fd;
 	dbref player = cmd->player;
 	const char *name = cmd->argv[1];
 	NOGUEST("@unlink",player);
 	/* do a regular, non-quiet unlink. */
-	_do_unlink(descr, player, name, 0);
+	_do_unlink(cmd, name, 0);
 }
 
 void
-do_unlink_quiet(int descr, dbref player, const char *name)
+do_unlink_quiet(command_t *cmd, const char *name)
 {
-	_do_unlink(descr, player, name, 1);
+	_do_unlink(cmd, name, 1);
 }
 
 /*
@@ -767,7 +753,6 @@ do_unlink_quiet(int descr, dbref player, const char *name)
 void
 do_relink(command_t *cmd)
 {
-	int descr = cmd->fd;
 	dbref player = cmd->player;
 	const char *thing_name = cmd->argv[1];
 	const char *dest_name = cmd->argv[2];
@@ -779,7 +764,7 @@ do_relink(command_t *cmd)
 
 	NOGUEST("@relink",player);
 
-	init_match(descr, player, thing_name, TYPE_EXIT, &md);
+	init_match(cmd, thing_name, TYPE_EXIT, &md);
 	match_all_exits(&md);
 	match_neighbor(&md);
 	match_possession(&md);
@@ -820,7 +805,7 @@ do_relink(command_t *cmd)
 			   to be ok. Detailed error messages are given by
 			   link_exit_dry(). */
 			   
-			ndest = link_exit_dry(descr, player, thing, (char *) dest_name, good_dest);
+			ndest = link_exit_dry(cmd, thing, (char *) dest_name, good_dest);
 			if(ndest == 0) {
 				notify(player, "Invalid target.");
 				return;
@@ -829,7 +814,7 @@ do_relink(command_t *cmd)
 			break;
 		case TYPE_THING:
 		case TYPE_PLAYER:
-			init_match(descr, player, dest_name, TYPE_ROOM, &md);
+			init_match(cmd, dest_name, TYPE_ROOM, &md);
 			match_neighbor(&md);
 			match_absolute(&md);
 			match_registered(&md);
@@ -850,7 +835,7 @@ do_relink(command_t *cmd)
 			}
 			break;
 		case TYPE_ROOM:			/* room dropto's */
-			init_match(descr, player, dest_name, TYPE_ROOM, &md);
+			init_match(cmd, dest_name, TYPE_ROOM, &md);
 			match_neighbor(&md);
 			match_possession(&md);
 			match_registered(&md);
@@ -873,7 +858,7 @@ do_relink(command_t *cmd)
 			return;
 	}
 
-	do_unlink_quiet(descr, player, thing_name);
+	do_unlink_quiet(cmd, thing_name);
 	notify(player, "Attempting to relink...");
 	do_link(cmd);
 
@@ -882,7 +867,6 @@ do_relink(command_t *cmd)
 void
 do_chown(command_t *cmd)
 {
-	int descr = cmd->fd;
 	dbref player = cmd->player;
 	const char *name = cmd->argv[1];
 	const char *newowner = cmd->argv[2];
@@ -894,7 +878,7 @@ do_chown(command_t *cmd)
 		notify(player, "You must specify what you want to take ownership of.");
 		return;
 	}
-	init_match(descr, player, name, NOTYPE, &md);
+	init_match(cmd, name, NOTYPE, &md);
 	match_everything(&md);
 	match_absolute(&md);
 	if ((thing = noisy_match_result(&md)) == NOTHING)
@@ -922,7 +906,7 @@ do_chown(command_t *cmd)
 		if (Typeof(thing) != TYPE_EXIT ||
 			(DBFETCH(thing)->sp.exit.ndest && !controls_link(player, thing))) {
 			if (!(FLAGS(thing) & CHOWN_OK) ||
-				Typeof(thing) == TYPE_PROGRAM || !test_lock(descr, player, thing, "_/chlk")) {
+				Typeof(thing) == TYPE_PROGRAM || !test_lock(cmd, thing, "_/chlk")) {
 				notify(player, "You can't take possession of that.");
 				return;
 			}
@@ -994,7 +978,6 @@ do_chown(command_t *cmd)
 void
 do_set(command_t *cmd)
 {
-	int descr = cmd->fd;
 	dbref player = cmd->player;
 	const char *name = cmd->argv[1];
 	const char *flag = cmd->argv[2];
@@ -1005,7 +988,7 @@ do_set(command_t *cmd)
 	NOGUEST("@set",player);
 
 	/* find thing */
-	if ((thing = match_controlled(descr, player, name)) == NOTHING)
+	if ((thing = match_controlled(cmd, name)) == NOTHING)
 		return;
 #ifdef GOD_PRIV
 	/* Only God can set anything on any of his stuff */
@@ -1245,7 +1228,6 @@ do_set(command_t *cmd)
 void
 do_propset(command_t *cmd)
 {
-	int descr = cmd->fd;
 	dbref player = cmd->player;
 	const char *name = cmd->argv[1];
 	const char *prop = cmd->argv[2];
@@ -1260,7 +1242,7 @@ do_propset(command_t *cmd)
 	NOGUEST("@propset",player);
 
 	/* find thing */
-	if ((thing = match_controlled(descr, player, name)) == NOTHING)
+	if ((thing = match_controlled(cmd, name)) == NOTHING)
 		return;
 
 	while (isspace(*prop))
@@ -1321,7 +1303,7 @@ do_propset(command_t *cmd)
 		mydat.data.fval = strtod(value, NULL);
 		set_property(thing, pname, &mydat);
 	} else if (string_prefix("dbref", type)) {
-		init_match(descr, player, value, NOTYPE, &md);
+		init_match(cmd, value, NOTYPE, &md);
 		match_absolute(&md);
 		match_everything(&md);
 		if ((ref = noisy_match_result(&md)) == NOTHING)
@@ -1330,7 +1312,7 @@ do_propset(command_t *cmd)
 		mydat.data.ref = ref;
 		set_property(thing, pname, &mydat);
 	} else if (string_prefix("lock", type)) {
-		lok = parse_boolexp(descr, player, value, 0);
+		lok = parse_boolexp(cmd, value, 0);
 		if (lok == TRUE_BOOLEXP) {
 			notify(player, "I don't understand that lock.");
 			return;

@@ -40,7 +40,6 @@ do_say(command_t *cmd)
 void
 do_whisper(command_t *cmd)
 {
-	int descr = cmd->fd;
 	dbref player = cmd->player;
 	const char *arg1 = cmd->argv[1];
 	const char *arg2 = cmd->argv[2];
@@ -48,7 +47,7 @@ do_whisper(command_t *cmd)
 	char buf[BUFFER_LEN];
 	struct match_data md;
 
-	init_match(descr, player, arg1, TYPE_PLAYER, &md);
+	init_match(cmd, arg1, TYPE_PLAYER, &md);
 	match_neighbor(&md);
 	match_me(&md);
 	if (Wizard(player) && Typeof(player) == TYPE_PLAYER) {
@@ -201,12 +200,13 @@ notify_listeners(dbref who, dbref xprog, dbref obj, dbref room, const char *msg,
 	    && !isprivate
 	    && (FLAGS(obj) & VEHICLE)
 	    && getloc(who) == getloc(obj)) {
+		command_t cmd_pp = command_new_null(-1, who);
 		char pbuf[BUFFER_LEN];
 		const char *prefix;
 
 		memset(buf,0,BUFFER_LEN); /* Make sure the buffer is zeroed */
 
-		prefix = do_parse_prop(-1, who, obj, MESGPROP_OECHO, "(@Oecho)", pbuf, sizeof(pbuf), MPI_ISPRIVATE);
+		prefix = do_parse_prop(&cmd_pp, obj, MESGPROP_OECHO, "(@Oecho)", pbuf, sizeof(pbuf), MPI_ISPRIVATE);
 		if (!prefix || !*prefix)
 			prefix = "Outside>";
 		snprintf(buf, sizeof(buf), "%s %.*s", prefix, (int)(BUFFER_LEN - 2 - strlen(prefix)), msg);
@@ -287,7 +287,7 @@ notify_wts_to(dbref who, dbref tar, char const *a, char const *b, char *format, 
 }
 
 void
-parse_oprop(int descr, dbref player, dbref dest, dbref exit, const char *propname,
+parse_oprop(command_t *cmd, dbref dest, dbref exit, const char *propname,
 			   const char *prefix, const char *whatcalled)
 {
 	const char* msg = get_property_class(exit, propname);
@@ -296,18 +296,18 @@ parse_oprop(int descr, dbref player, dbref dest, dbref exit, const char *propnam
 		ival |= MPI_ISBLESSED;
 
 	if (msg)
-		parse_omessage(descr, player, dest, exit, msg, prefix, whatcalled, ival);
+		parse_omessage(cmd, dest, exit, msg, prefix, whatcalled, ival);
 }
 
 void
-parse_omessage(int descr, dbref player, dbref dest, dbref exit, const char *msg,
+parse_omessage(command_t *cmd, dbref dest, dbref exit, const char *msg,
 			   const char *prefix, const char *whatcalled, int mpiflags)
 {
 	char buf[BUFFER_LEN];
 	char *ptr;
 
-	do_parse_mesg(descr, player, exit, msg, whatcalled, buf, sizeof(buf), MPI_ISPUBLIC | mpiflags);
-	ptr = pronoun_substitute(descr, player, buf);
+	do_parse_mesg(cmd, exit, msg, whatcalled, buf, sizeof(buf), MPI_ISPUBLIC | mpiflags);
+	ptr = pronoun_substitute(cmd, buf);
 	if (!*ptr)
 		return;
 
@@ -319,7 +319,7 @@ parse_omessage(int descr, dbref player, dbref dest, dbref exit, const char *msg,
 
 	prefix_message(buf, ptr, prefix, BUFFER_LEN, 1);
 
-	notify_except(DBFETCH(dest)->contents, player, buf, player);
+	notify_except(DBFETCH(dest)->contents, cmd->player, buf, cmd->player);
 }
 
 

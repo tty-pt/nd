@@ -26,13 +26,14 @@ struct line *read_program(dbref i);
  */
 
 static dbref
-parse_linkable_dest(int descr, dbref player, dbref exit, const char *dest_name)
+parse_linkable_dest(command_t *cmd, dbref exit, const char *dest_name)
 {
+	dbref player = cmd->player;
 	dbref dobj;					/* destination room/player/thing/link */
 	static char buf[BUFFER_LEN];
 	struct match_data md;
 
-	init_match(descr, player, dest_name, NOTYPE, &md);
+	init_match(cmd, dest_name, NOTYPE, &md);
 	match_absolute(&md);
 	match_everything(&md);
 	match_home(&md);
@@ -99,7 +100,6 @@ exit_loop_check(dbref source, dbref dest)
 void
 do_open(command_t *cmd)
 {
-	int descr = cmd->fd;
 	dbref player = cmd->player;
 	const char *direction = cmd->argv[1];
 	const char *linkto = cmd->argv[2];
@@ -169,7 +169,7 @@ do_open(command_t *cmd)
 			if (!payfor(player, LINK_COST)) {
 				notify_fmt(player, "You don't have enough %s to link.", PENNIES);
 			} else {
-				ndest = link_exit(descr, player, exit, (char *) qname, good_dest);
+				ndest = link_exit(cmd, exit, (char *) qname, good_dest);
 				DBFETCH(exit)->sp.exit.ndest = ndest;
 				DBFETCH(exit)->sp.exit.dest = (dbref *) malloc(sizeof(dbref) * ndest);
 				for (i = 0; i < ndest; i++) {
@@ -193,8 +193,9 @@ do_open(command_t *cmd)
 }
 
 int
-_link_exit(int descr, dbref player, dbref exit, char *dest_name, dbref * dest_list, int dryrun)
+_link_exit(command_t *cmd, dbref exit, char *dest_name, dbref * dest_list, int dryrun)
 {
+	dbref player = cmd->player;
 	char *p, *q;
 	int prdest;
 	dbref dest;
@@ -216,7 +217,7 @@ _link_exit(int descr, dbref player, dbref exit, char *dest_name, dbref * dest_li
 		if (*dest_name)
 			for (dest_name++; *dest_name && isspace(*dest_name); dest_name++) ;
 
-		if ((dest = parse_linkable_dest(descr, player, exit, q)) == NOTHING)
+		if ((dest = parse_linkable_dest(cmd, exit, q)) == NOTHING)
 			continue;
 
 		switch (Typeof(dest)) {
@@ -303,9 +304,9 @@ _link_exit(int descr, dbref player, dbref exit, char *dest_name, dbref * dest_li
  */
 
 int
-link_exit(int descr, dbref player, dbref exit, char *dest_name, dbref * dest_list)
+link_exit(command_t *cmd, dbref exit, char *dest_name, dbref * dest_list)
 {
-	return _link_exit(descr, player, exit, dest_name, dest_list, 0);
+	return _link_exit(cmd, exit, dest_name, dest_list, 0);
 }
 
 /*
@@ -315,9 +316,9 @@ link_exit(int descr, dbref player, dbref exit, char *dest_name, dbref * dest_lis
  * error messages are still output.
  */
 int
-link_exit_dry(int descr, dbref player, dbref exit, char *dest_name, dbref * dest_list)
+link_exit_dry(command_t *cmd, dbref exit, char *dest_name, dbref * dest_list)
 {
-	return _link_exit(descr, player, exit, dest_name, dest_list, 1);
+	return _link_exit(cmd, exit, dest_name, dest_list, 1);
 }
 
 /* do_link
@@ -332,7 +333,6 @@ link_exit_dry(int descr, dbref player, dbref exit, char *dest_name, dbref * dest
 void
 do_link(command_t *cmd)
 {
-	int descr = cmd->fd;
 	dbref player = cmd->player;
 	const char *thing_name = cmd->argv[1];
 	const char *dest_name = cmd->argv[2];
@@ -345,7 +345,7 @@ do_link(command_t *cmd)
 
 	NOGUEST("@link",player);
 
-	init_match(descr, player, thing_name, TYPE_EXIT, &md);
+	init_match(cmd, thing_name, TYPE_EXIT, &md);
 	match_all_exits(&md);
 	match_neighbor(&md);
 	match_possession(&md);
@@ -398,7 +398,7 @@ do_link(command_t *cmd)
 
 		/* link has been validated and paid for; do it */
 		OWNER(thing) = OWNER(player);
-		ndest = link_exit(descr, player, thing, (char *) dest_name, good_dest);
+		ndest = link_exit(cmd, thing, (char *) dest_name, good_dest);
 		if (ndest == 0) {
 			notify(player, "No destinations linked.");
 			SETVALUE(player, GETVALUE(player) + LINK_COST);
@@ -416,7 +416,7 @@ do_link(command_t *cmd)
 		break;
 	case TYPE_THING:
 	case TYPE_PLAYER:
-		init_match(descr, player, dest_name, TYPE_ROOM, &md);
+		init_match(cmd, dest_name, TYPE_ROOM, &md);
 		match_neighbor(&md);
 		match_absolute(&md);
 		match_registered(&md);
@@ -444,7 +444,7 @@ do_link(command_t *cmd)
 		notify(player, "Home set.");
 		break;
 	case TYPE_ROOM:			/* room dropto's */
-		init_match(descr, player, dest_name, TYPE_ROOM, &md);
+		init_match(cmd, dest_name, TYPE_ROOM, &md);
 		match_neighbor(&md);
 		match_possession(&md);
 		match_registered(&md);
@@ -480,7 +480,6 @@ do_link(command_t *cmd)
 void
 do_dig(command_t *cmd)
 {
-	int descr = cmd->fd;
 	dbref player = cmd->player;
 	const char *name = cmd->argv[1];
 	const char *pname = cmd->argv[2];
@@ -554,7 +553,7 @@ do_dig(command_t *cmd)
 
 	if (*qname) {
 		notify(player, "Trying to set parent...");
-		init_match(descr, player, qname, TYPE_ROOM, &md);
+		init_match(cmd, qname, TYPE_ROOM, &md);
 		match_absolute(&md);
 		match_registered(&md);
 		match_here(&md);
@@ -676,7 +675,6 @@ copy_props(dbref player, dbref source, dbref destination, const char *dir)
 void
 do_clone(command_t *cmd)
 {
-	int descr = cmd->fd;
 	dbref player = cmd->player;
 	char *name = cmd->argv[1];
 	static char buf[BUFFER_LEN];
@@ -701,7 +699,7 @@ do_clone(command_t *cmd)
 	/* All OK so far, so try to find the thing that should be cloned. We
 	   do not allow rooms, exits, etc. to be cloned for now. */
 
-	init_match(descr, player, name, TYPE_THING, &md);
+	init_match(cmd, name, TYPE_THING, &md);
 	match_possession(&md);
 	match_neighbor(&md);
 	match_registered(&md);
@@ -897,12 +895,13 @@ do_create(command_t *cmd)
  *
  */
 dbref
-parse_source(int descr, dbref player, const char *source_name)
+parse_source(command_t *cmd, const char *source_name)
 {
+	dbref player = cmd->player;
 	dbref source;
 	struct match_data md;
 
-	init_match(descr, player, source_name, NOTYPE, &md);
+	init_match(cmd, source_name, NOTYPE, &md);
 	/* source type can be any */
 	match_neighbor(&md);
 	match_me(&md);
@@ -1000,7 +999,6 @@ unset_source(dbref player, dbref loc, dbref action)
 void
 do_action(command_t *cmd)
 {
-	int descr = cmd->fd;
 	dbref player = cmd->player;
 	char *action_name = cmd->argv[1],
 		*source_name = cmd->argv[2];;
@@ -1035,7 +1033,7 @@ do_action(command_t *cmd)
 		notify(player, "That's a strange name for an action!");
 		return;
 	}
-	if (((source = parse_source(descr, player, qname)) == NOTHING))
+	if (((source = parse_source(cmd, qname)) == NOTHING))
 		return;
         if (!payfor(player, EXIT_COST)) {
                 notify_fmt(player, "Sorry, you don't have enough %s to make an action.", PENNIES);
@@ -1077,7 +1075,6 @@ do_action(command_t *cmd)
  */
 void
 do_attach(command_t *cmd) {
-	int descr = cmd->fd;
 	dbref player = cmd->player;
 	const char *action_name = cmd->argv[1];
 	const char *source_name = cmd->argv[2];
@@ -1098,7 +1095,7 @@ do_attach(command_t *cmd) {
 		notify(player, "You must specify an action name and a source object.");
 		return;
 	}
-	init_match(descr, player, action_name, TYPE_EXIT, &md);
+	init_match(cmd, action_name, TYPE_EXIT, &md);
 	match_all_exits(&md);
 	match_registered(&md);
 	match_absolute(&md);
@@ -1113,7 +1110,7 @@ do_attach(command_t *cmd) {
 		notify(player, "Permission denied. (you don't control the action you're trying to reattach)");
 		return;
 	}
-	if (((source = parse_source(descr, player, source_name)) == NOTHING)
+	if (((source = parse_source(cmd, source_name)) == NOTHING)
 		|| Typeof(source) == TYPE_PROGRAM)
 		return;
 

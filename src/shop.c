@@ -54,7 +54,6 @@ do_shop(command_t *cmd)
 void
 do_buy(command_t *cmd)
 {
-	int descr = cmd->fd;
 	dbref player = cmd->player;
 	const char *name = cmd->argv[1];
 	const char *amount_s = cmd->argv[2];
@@ -66,7 +65,7 @@ do_buy(command_t *cmd)
 	}
 
 	int amount = *amount_s ? atoi(amount_s) : 1;
-	dbref item = contents_find(descr, player, npc, name);
+	dbref item = contents_find(cmd, npc, name);
 
 	if (item == NOTHING) {
 		notify_fmt(player, "%s does not sell %s.", NAME(npc), name);
@@ -129,7 +128,6 @@ do_buy(command_t *cmd)
 void
 do_sell(command_t *cmd)
 {
-	int descr = cmd->fd;
 	dbref player = cmd->player;
 	const char *name = cmd->argv[1];
 	const char *amount_s = cmd->argv[2];
@@ -144,7 +142,7 @@ do_sell(command_t *cmd)
 	    a = amount;
 
 	dbref item;
-	while ((item = contents_find(descr, player, player, name)) > 0) {
+	while ((item = contents_find(cmd, player, name)) > 0) {
 		int cost = GETVALUE(item);
 		int npchas = GETVALUE(npc);
 
@@ -155,7 +153,7 @@ do_sell(command_t *cmd)
 		}
 
 		// FIXME matched shop item props kept
-		dbref nu = contents_find(descr, player, npc, NAME(item));
+		dbref nu = contents_find(cmd, npc, NAME(item));
 
 		if (nu == NOTHING) {
 			nu = new_object();
@@ -172,7 +170,7 @@ do_sell(command_t *cmd)
 			   NAME(item), cost);
 
 		DBDIRTY(nu);
-		recycle(descr, player, item);
+		recycle(cmd, item);
 		a--;
 	}
 

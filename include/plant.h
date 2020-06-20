@@ -1,6 +1,7 @@
 #ifndef PLANT_H
 #define PLANT_H
 
+#include "command.h"
 #include "geometry.h"
 
 #define PLANT_EXTRA 4
@@ -39,7 +40,7 @@ plants_shuffle(struct plant_data *,
 		morton_t v);
 
 void
-plants_add(int descr, ref_t player, ref_t where,
+plants_add(command_t *cmd, ref_t where,
 		struct plant_data *pd,
 		morton_t ty, coord_t tmp,
 		ucoord_t rn);

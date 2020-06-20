@@ -4,6 +4,7 @@
 #define _MATCH_H
 
 #include "copyright.h"
+#include "command.h"
 #include "db.h"
 
 struct match_data {
@@ -27,10 +28,10 @@ struct match_data {
 /* Then get value from match_result() */
 
 /* initialize matcher */
-extern void init_match(int descr, dbref player, const char *name, int type,
+extern void init_match(command_t *cmd, const char *name, int type,
 
 					   struct match_data *md);
-extern void init_match_check_keys(int descr, dbref player, const char *name, int type,
+extern void init_match_check_keys(command_t *cmd, const char *name, int type,
 
 								  struct match_data *md);
 
