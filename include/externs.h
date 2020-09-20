@@ -312,7 +312,6 @@ void do_flock(command_t *);
 extern void tune_load_parmsfile(dbref player);
 
 void dump_status(void);
-void kill_resolver(void);
 
 /* version-getting functions */
 

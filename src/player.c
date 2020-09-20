@@ -139,7 +139,7 @@ add_player(dbref who)
 
 	hd.dbval = who;
 	if (add_hash(NAME(who), hd, player_list, PLAYER_HASH_SIZE) == NULL) {
-		panic("Out of memory");
+		BUG("Out of memory");
 	} else {
 		return;
 	}

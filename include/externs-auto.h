@@ -13,7 +13,6 @@ const char * exit_prefix(register const char *string, register const char *prefi
 int fetch_propvals(dbref obj, const char *dir);
 long get_tz_offset(void);
 dbref getparent(dbref obj);
-void kill_resolver(void);
 void listenqueue(command_t *cmd, dbref where, dbref trigger, dbref what, dbref xclude, const char *propname, const char *toparg, int mlev, int mt, int mpi_p);
 int notify_nolisten(dbref player, const char *msg, int isprivate);
 int notify_from_echo(dbref from, dbref player, const char *msg, int isprivate);
@@ -24,8 +23,6 @@ void notify_listeners(dbref who, dbref xprog, dbref obj, dbref room, const char 
 void notify_except(dbref first, dbref exception, const char *msg, dbref who);
 int ok_password(const char *password);
 int ok_player_name(const char *name);
-int prop_read_perms(dbref player, dbref obj, const char *name, int mlev);
-int prop_write_perms(dbref player, dbref obj, const char *name, int mlev);
 void san_main(void);
 void sane_dump_object(dbref player, const char *arg);
 void sanechange(dbref player, const char *command);
