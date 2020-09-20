@@ -912,14 +912,14 @@ db_get_single_prop(FILE * f, dbref obj, long pos, PropPtr pnode, const char *pdi
 			tpnt[2] = toupper(tpnt[2]);
 			if (!strncmp(tpnt, "INF", 3)) {
 				if (!dtemp) {
-					mydat.data.fval = INF;
+					mydat.data.fval = HUGE_VAL;
 				} else {
-					mydat.data.fval = NINF;
+					mydat.data.fval = -HUGE_VAL;
 				}
 			} else {
 				if (!strncmp(tpnt, "NAN", 3)) {
 					/* FIXME: This should be NaN. */
-					mydat.data.fval = INF;
+					mydat.data.fval = HUGE_VAL;
 				}
 			}
 		} else {

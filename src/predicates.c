@@ -439,8 +439,6 @@ can_see(dbref player, dbref thing, int can_see_loc)
 
 	if (can_see_loc) {
 		switch (Typeof(thing)) {
-		case TYPE_PROGRAM:
-			return ((FLAGS(thing) & LINK_OK) || controls(player, thing));
 #if DARK_SLEEPERS
 		case TYPE_PLAYER:
 			return (!Dark(thing) && online(thing));
@@ -533,8 +531,7 @@ restricted(dbref player, dbref thing, object_flag_type flag)
 {
 	switch (flag) {
 	case ABODE:
-			/* Trying to set a program AUTOSTART requires TrueWizard */
-		return (!TrueWizard(OWNER(player)) && (Typeof(thing) == TYPE_PROGRAM));
+		return 0;
 		/* NOTREACHED */
 		break;
         case YIELD:
@@ -590,9 +587,6 @@ restricted(dbref player, dbref thing, object_flag_type flag)
 #endif
 		/* NOTREACHED */
 		break;
-	case MUCKER:
-	case SMUCKER:
-	case (SMUCKER | MUCKER):
 	case BUILDER:
 		/* Would someone tell me why setting a program SMUCKER|MUCKER doesn't
 		 * go through here? -winged */

@@ -30,8 +30,7 @@
 #include "noise.h"
 #include <string.h>
 #include "xxhash.h"
-#include "params.h"
-#include "debug.h"
+#include "externs.h"
 
 #define HASH XXH32
 
@@ -126,7 +125,7 @@ temp(ucoord_t obits, noise_t he, noise_t tm, coord_t pos_y) // fahrenheit * 10
 /* }}} */
 
 noise_t uhash(void *p, size_t l, int seed) {
-	return HASH(p, sizeof(point_t), seed);
+	return HASH(p, l, seed);
 }
 
 /* gets a (deterministic) random value for point p */
@@ -134,8 +133,6 @@ noise_t uhash(void *p, size_t l, int seed) {
 static inline noise_t
 r(point_t p, unsigned seed, unsigned w)
 {
-	/* noise_t m = morton2D_point(p); */
-	/* return XXH(&m, sizeof(noise_t), seed); */
 	register noise_t v = HASH(p, sizeof(point_t), seed);
 	return ((long long unsigned) v) >> w;
 }

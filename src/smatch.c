@@ -16,13 +16,7 @@ static int smatch(char *s1, char *s2);
 
 char *cstrchr(char *s, char c);
 char *estrchr(char *s, char c, char e);
-int cstrcmp(char *s, char *t);
-int cstrncmp(char *s, char *t, int n);
 
-#ifdef STRSTR
-char *strstr(char *s1, char *s2);
-
-#endif
 int equalstr(char *s, char *t);
 
 #define DOWNCASE(x) (tolower(x))
@@ -60,44 +54,6 @@ estrchr(char *s, char c, char e)
 		return s;
 	else
 		return NULL;
-}
-
-#ifdef STRSTR
-char *
-strstr(char *s1, char *s2)
-{
-	register char *temp = s1;
-	int len = strlen(s2);
-
-	while (temp = strchr(temp, *s2)) {
-		if (!strncmp(temp, s2, len))
-			return temp;
-		else
-			temp++;
-	}
-	return NULL;
-}
-
-#endif
-
-int
-cstrcmp(char *s, char *t)
-{
-	while (*s && *t && DOWNCASE(*s) == DOWNCASE(*t)) {
-		s++;
-		t++;
-	}
-	return (DOWNCASE(*s) - DOWNCASE(*t));
-}
-
-int
-cstrncmp(char *s, char *t, int n)
-{
-	for (; n && *s && *t && DOWNCASE(*s) == DOWNCASE(*t); s++, t++, n--) ;
-	if (n <= 0)
-		return 0;
-	else
-		return (DOWNCASE(*s) - DOWNCASE(*t));
 }
 
 #define test(x) if (DOWNCASE(x) == c1) return truthval

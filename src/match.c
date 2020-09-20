@@ -230,7 +230,7 @@ match_exits(dbref first, struct match_data *md)
 {
 	dbref exit, absolute;
 	const char *exitname, *p;
-	int i, exitprog, lev, partial;
+	int exitprog, lev, partial;
 
 	if (first == NOTHING)
 		return;					/* Easy fail match */
@@ -249,11 +249,6 @@ match_exits(dbref first, struct match_data *md)
 		exitprog = 0;
 		if (FLAGS(exit) & HAVEN) {
 			exitprog = 1;
-		} else if (DBFETCH(exit)->sp.exit.dest) {
-			if (*DBFETCH(exit)->sp.exit.dest != NOTHING)
-				for (i = 0; i < DBFETCH(exit)->sp.exit.ndest; i++)
-					if (Typeof((DBFETCH(exit)->sp.exit.dest)[i]) == TYPE_PROGRAM)
-						exitprog = 1;
 		}
 		if (exitprog && md->partial_exits &&
 			(FLAGS(exit) & XFORCIBLE) && FLAGS(OWNER(exit)) & WIZARD) {
@@ -279,7 +274,7 @@ match_exits(dbref first, struct match_data *md)
 				/* make sure there's nothing afterwards */
 				while (isspace(*exitname))
 					exitname++;
-				lev = PLevel(exit);
+				lev = FLAGS(exit) & ABODE ? 0 : 1;
 				if (COMPATIBLE_PRIORITIES && (lev == 1) &&
 					(DBFETCH(exit)->location == NOTHING ||
 					 Typeof(DBFETCH(exit)->location) != TYPE_THING ||
@@ -572,5 +567,15 @@ match_rmatch(dbref arg1, struct match_data *md)
 		break;
 	}
 }
+
+dbref
+ematch_from(command_t *cmd, dbref where, const char *name) {
+	struct match_data md;
+	init_match(cmd, name, TYPE_THING, &md);
+	md.match_from = where;
+	match_list(DBFETCH(md.match_from)->contents, &md);
+	return md.exact_match;
+}
+
 static const char *match_c_version = "$RCSfile$ $Revision: 1.12 $";
 const char *get_match_c_version(void) { return match_c_version; }

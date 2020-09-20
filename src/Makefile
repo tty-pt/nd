@@ -10,26 +10,25 @@ ldlibs-y := -lpcre -lm -lxxhash -ldb
 ldlibs-$(CONFIG_SSL) += -lssl -lcrypto
 cflags-y := -g -Wall -Wno-initializer-overrides
 
-exe := fbmuck prochelp ws-server
+exe := fbmuck prochelp
 src = ChangeLog COPYING ${real-obj-y:%.o=%.c}
 
 prochelp-obj-y := prochelp.o
-ws-server-obj-y := ws-server.o
 fbmuck-obj-y := geometry.o plant.o biome.o noise.o search.o \
 	view.o item.o spell.o drink.o mob.o kill.o geography.o \
 	shop.o
-fbmuck-obj-y += array.o boolexp.o create.o db.o db_header.o \
+fbmuck-obj-y += boolexp.o create.o db.o \
 	game.o hashtab.o help.o \
-	interp.o look.o match.o \
+	look.o match.o \
 	move.o msgparse.o \
 	player.o \
 	predicates.o propdirs.o property.o \
-	props.o random.o rob.o sanity.o set.o \
+	props.o rob.o sanity.o set.o \
 	signal.o smatch.o speech.o stringutil.o \
-	timequeue.o timestamp.o unparse.o utils.o wiz.o \
-	version.o copyright.o interface.o web.o
+	timequeue.o unparse.o utils.o wiz.o \
+	copyright.o interface.o web.o
 
-exe-obj-y := ${fbmuck-obj-y} ${prochelp-obj-y} ${ws-server-obj-y}
+exe-obj-y := ${fbmuck-obj-y} ${prochelp-obj-y}
 
 HELPFILES := man.txt help.txt mpihelp.txt
 

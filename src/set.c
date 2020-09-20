@@ -87,7 +87,6 @@ do_name(command_t *cmd)
 			if (NAME(thing)) {
 				free((void *) NAME(thing));
 			}
-			ts_modifyobject(thing);
 			NAME(thing) = alloc_string(newname);
 			add_player(thing);
 			notify(player, "Name set.");
@@ -108,14 +107,9 @@ do_name(command_t *cmd)
 		if (NAME(thing)) {
 			free((void *) NAME(thing));
 		}
-		ts_modifyobject(thing);
 		NAME(thing) = alloc_string(newname);
 		notify(player, "Name set.");
 		DBDIRTY(thing);
-		if (Typeof(thing) == TYPE_EXIT && MLevRaw(thing)) {
-			SetMLevel(thing, 0);
-			notify(player, "Action priority Level reset to zero.");
-		}
 	}
 }
 
@@ -130,7 +124,6 @@ do_describe(command_t *cmd)
 	NOGUEST("@describe",player);
 
 	if ((thing = match_controlled(cmd, name)) != NOTHING) {
-		ts_modifyobject(thing);
 		SETDESC(thing, description);
 		if(description && *description) {
 			notify(player, "Description set.");
@@ -151,7 +144,6 @@ do_idescribe(command_t *cmd)
 	NOGUEST("@idescribe",player);
 
 	if ((thing = match_controlled(cmd, name)) != NOTHING) {
-		ts_modifyobject(thing);
 		SETIDESC(thing, description);
 		if(description && *description) {
 			notify(player, "Description set.");
@@ -170,7 +162,6 @@ do_doing(command_t *cmd, const char *name, const char *mesg)
 	NOGUEST("@doing", player);
 
 	if ((thing = match_controlled(cmd, name)) != NOTHING) {
-		ts_modifyobject(thing);
 		SETDOING(thing, mesg);
 		if(mesg && *mesg) {
 			notify(player, "Doing set.");
@@ -191,7 +182,6 @@ do_fail(command_t *cmd)
 	NOGUEST("@fail",player);
 
 	if ((thing = match_controlled(cmd, name)) != NOTHING) {
-		ts_modifyobject(thing);
 		SETFAIL(thing, message);
 		if(message && *message) {
 			notify(player, "Message set.");
@@ -212,7 +202,6 @@ do_success(command_t *cmd)
 	NOGUEST("@success",player);
 
 	if ((thing = match_controlled(cmd, name)) != NOTHING) {
-		ts_modifyobject(thing);
 		SETSUCC(thing, message);
 		if(message && *message) {
 			notify(player, "Message set.");
@@ -234,7 +223,6 @@ do_drop_message(command_t *cmd)
 	NOGUEST("@drop",player);
 
 	if ((thing = match_controlled(cmd, name)) != NOTHING) {
-		ts_modifyobject(thing);
 		SETDROP(thing, message);
 		if(message && *message) {
 			notify(player, "Message set.");
@@ -255,7 +243,6 @@ do_osuccess(command_t *cmd)
 	NOGUEST("@osuccess",player);
 
 	if ((thing = match_controlled(cmd, name)) != NOTHING) {
-		ts_modifyobject(thing);
 		SETOSUCC(thing, message);
 		if(message && *message) {
 			notify(player, "Message set.");
@@ -276,7 +263,6 @@ do_ofail(command_t *cmd)
 	NOGUEST("@ofail",player);
 
 	if ((thing = match_controlled(cmd, name)) != NOTHING) {
-		ts_modifyobject(thing);
 		SETOFAIL(thing, message);
 		if(message && *message) {
 			notify(player, "Message set.");
@@ -297,7 +283,6 @@ do_odrop(command_t *cmd)
 	NOGUEST("@odrop",player);
 
 	if ((thing = match_controlled(cmd, name)) != NOTHING) {
-		ts_modifyobject(thing);
 		SETODROP(thing, message);
 		if(message && *message) {
 			notify(player, "Message set.");
@@ -318,7 +303,6 @@ do_oecho(command_t *cmd)
 	NOGUEST("@oecho",player);
 
 	if ((thing = match_controlled(cmd, name)) != NOTHING) {
-		ts_modifyobject(thing);
 		SETOECHO(thing, message);
 		if(message && *message) {
 			notify(player, "Message set.");
@@ -339,7 +323,6 @@ do_pecho(command_t *cmd)
 	NOGUEST("@pecho",player);
 
 	if ((thing = match_controlled(cmd, name)) != NOTHING) {
-		ts_modifyobject(thing);
 		SETPECHO(thing, message);
 		if(message && *message) {
 			notify(player, "Message set.");
@@ -363,12 +346,10 @@ setlockstr(command_t *cmd, dbref thing, const char *keyname)
 			return 0;
 		} else {
 			/* everything ok, do it */
-			ts_modifyobject(thing);
 			SETLOCK(thing, key);
 			return 1;
 		}
 	} else {
-		ts_modifyobject(thing);
 		CLEARLOCK(thing);
 		return 1;
 	}
@@ -410,7 +391,6 @@ do_conlock(command_t *cmd)
 		mydat.flags = PROP_LOKTYP;
 		mydat.data.lok = TRUE_BOOLEXP;
 		set_property(thing, "_/clk", &mydat);
-		ts_modifyobject(thing);
 		notify(player, "Container lock cleared.");
 	} else {
 		key = parse_boolexp(cmd, keyname, 0);
@@ -421,7 +401,6 @@ do_conlock(command_t *cmd)
 			mydat.flags = PROP_LOKTYP;
 			mydat.data.lok = key;
 			set_property(thing, "_/clk", &mydat);
-			ts_modifyobject(thing);
 			notify(player, "Container lock set.");
 		}
 	}
@@ -468,7 +447,6 @@ do_flock(command_t *cmd)
 		mydat.flags = PROP_LOKTYP;
 		mydat.data.lok = TRUE_BOOLEXP;
 		set_property(thing, "@/flk", &mydat);
-		ts_modifyobject(thing);
 		notify(player, "Force lock cleared.");
 	} else {
 		key = parse_boolexp(cmd, keyname, 0);
@@ -479,7 +457,6 @@ do_flock(command_t *cmd)
 			mydat.flags = PROP_LOKTYP;
 			mydat.data.lok = key;
 			set_property(thing, "@/flk", &mydat);
-			ts_modifyobject(thing);
 			notify(player, "Force lock set.");
 		}
 	}
@@ -520,7 +497,6 @@ do_chlock(command_t *cmd) {
 		mydat.flags = PROP_LOKTYP;
 		mydat.data.lok = TRUE_BOOLEXP;
 		set_property(thing, "_/chlk", &mydat);
-		ts_modifyobject(thing);
 		notify(player, "Chown lock cleared.");
 	} else {
 		key = parse_boolexp(cmd, keyname, 0);
@@ -531,7 +507,6 @@ do_chlock(command_t *cmd) {
 			mydat.flags = PROP_LOKTYP;
 			mydat.data.lok = key;
 			set_property(thing, "_/chlk", &mydat);
-			ts_modifyobject(thing);
 			notify(player, "Chown lock set.");
 		}
 	}
@@ -585,7 +560,6 @@ do_lock(command_t *cmd)
 				return;
 
 			SETLOCK(thing, key);
-			ts_modifyobject(thing);
 			notify(player, "Locked.");
 		}
 	} else
@@ -603,7 +577,6 @@ do_unlock(command_t *cmd)
 	NOGUEST("@unlock",player);
 
 	if ((thing = match_controlled(cmd, name)) != NOTHING) {
-		ts_modifyobject(thing);
 		CLEARLOCK(thing);
 		notify(player, "Unlocked.");
 	}
@@ -647,7 +620,6 @@ controls_link(dbref who, dbref what)
 			return 0;
 		}
 
-	case TYPE_PROGRAM:
 	default:
 		return 0;
 	}
@@ -683,7 +655,6 @@ _do_unlink(command_t *cmd, const char *name, int quiet)
 					SETVALUE(OWNER(exit), GETVALUE(OWNER(exit)) + LINK_COST);
 					DBDIRTY(OWNER(exit));
 				}
-				ts_modifyobject(exit);
 				DBSTORE(exit, sp.exit.ndest, 0);
 				if (DBFETCH(exit)->sp.exit.dest) {
 					free((void *) DBFETCH(exit)->sp.exit.dest);
@@ -691,28 +662,19 @@ _do_unlink(command_t *cmd, const char *name, int quiet)
 				}
 				if(!quiet)
 					notify(player, "Unlinked.");
-				if (MLevRaw(exit)) {
-					SetMLevel(exit, 0);
-					DBDIRTY(exit);
-					if(!quiet)
-						notify(player, "Action priority Level reset to 0.");
-				}
 				break;
 			case TYPE_ROOM:
-				ts_modifyobject(exit);
 				DBSTORE(exit, sp.room.dropto, NOTHING);
 				if(!quiet)
 					notify(player, "Dropto removed.");
 				break;
 			case TYPE_THING:
-				ts_modifyobject(exit);
 				THING_SET_HOME(exit, OWNER(exit));
 				DBDIRTY(exit);
 				if(!quiet)
 					notify(player, "Thing's home reset to owner.");
 				break;
 			case TYPE_PLAYER:
-				ts_modifyobject(exit);
 				PLAYER_SET_HOME(exit, PLAYER_START);
 				DBDIRTY(exit);
 				if(!quiet)
@@ -849,9 +811,6 @@ do_relink(command_t *cmd)
 				return;
 			}
 			break;
-		case TYPE_PROGRAM:
-			notify(player, "You can't link programs to things!");
-			return;
 		default:
 			notify(player, "Internal error: weird object type.");
 			warn("PANIC: weird object: Typeof(%d) = %ld", thing, Typeof(thing));
@@ -906,7 +865,7 @@ do_chown(command_t *cmd)
 		if (Typeof(thing) != TYPE_EXIT ||
 			(DBFETCH(thing)->sp.exit.ndest && !controls_link(player, thing))) {
 			if (!(FLAGS(thing) & CHOWN_OK) ||
-				Typeof(thing) == TYPE_PROGRAM || !test_lock(cmd, thing, "_/chlk")) {
+				!test_lock(cmd, thing, "_/chlk")) {
 				notify(player, "You can't take possession of that.");
 				return;
 			}
@@ -926,7 +885,6 @@ do_chown(command_t *cmd)
 			notify(player, "You can only chown \"here\".");
 			return;
 		}
-		ts_modifyobject(thing);
 		OWNER(thing) = OWNER(owner);
 		break;
 	case TYPE_THING:
@@ -934,15 +892,12 @@ do_chown(command_t *cmd)
 			notify(player, "You aren't carrying that.");
 			return;
 		}
-		ts_modifyobject(thing);
 		OWNER(thing) = OWNER(owner);
 		break;
 	case TYPE_PLAYER:
 		notify(player, "Players always own themselves.");
 		return;
 	case TYPE_EXIT:
-	case TYPE_PROGRAM:
-		ts_modifyobject(thing);
 		OWNER(thing) = OWNER(owner);
 		break;
 	case TYPE_GARBAGE:
@@ -1023,7 +978,6 @@ do_set(command_t *cmd)
 				return;
 			}
 			remove_property_list(thing, Wizard(OWNER(player)));
-			ts_modifyobject(thing);
 			notify(player, "All user-owned properties removed.");
 			free((void *) x);
 			return;
@@ -1046,11 +1000,9 @@ do_set(command_t *cmd)
 		}
 
 		if (!(*pname)) {
-			ts_modifyobject(thing);
 			remove_property(thing, type);
 			notify(player, "Property removed.");
 		} else {
-			ts_modifyobject(thing);
 			if (ival) {
 				add_property(thing, type, NULL, ival);
 			} else {
@@ -1064,70 +1016,6 @@ do_set(command_t *cmd)
 	/* identify flag */
 	if (*p == '\0') {
 		notify(player, "You must specify a flag to set.");
-		return;
-	} else if ((!strcmp("0", p) || !strcmp("M0", p)) ||
-			   ((string_prefix("MUCKER", p)) && (*flag == NOT_TOKEN))) {
-		if (!Wizard(OWNER(player))) {
-			if ((OWNER(player) != OWNER(thing)) || (Typeof(thing) != TYPE_PROGRAM)) {
-				notify(player, "Permission denied. (You can't clear that mucker flag)");
-				return;
-			}
-		}
-		if (force_level) {
-			notify(player, "Can't set this flag from an @force or {force}.");
-			return;
-		}
-		SetMLevel(thing, 0);
-		notify(player, "Mucker level set.");
-		return;
-	} else if (!strcmp("1", p) || !strcmp("M1", p)) {
-		if (!Wizard(OWNER(player))) {
-			if ((OWNER(player) != OWNER(thing)) || (Typeof(thing) != TYPE_PROGRAM)
-				|| (MLevRaw(player) < 1)) {
-				notify(player, "Permission denied. (You may not set that M1)");
-				return;
-			}
-		}
-		if (force_level) {
-			notify(player, "Can't set this flag from an @force or {force}.");
-			return;
-		}
-		SetMLevel(thing, 1);
-		notify(player, "Mucker level set.");
-		return;
-	} else if ((!strcmp("2", p) || !strcmp("M2", p)) ||
-			   ((string_prefix("MUCKER", p)) && (*flag != NOT_TOKEN))) {
-		if (!Wizard(OWNER(player))) {
-			if ((OWNER(player) != OWNER(thing)) || (Typeof(thing) != TYPE_PROGRAM)
-				|| (MLevRaw(player) < 2)) {
-				notify(player, "Permission denied. (You may not set that M2)");
-				return;
-			}
-		}
-		if (force_level) {
-			notify(player, "Can't set this flag from an @force or {force}.");
-			return;
-		}
-		SetMLevel(thing, 2);
-		notify(player, "Mucker level set.");
-		return;
-	} else if (!strcmp("3", p) || !strcmp("M3", p)) {
-		if (!Wizard(OWNER(player))) {
-			if ((OWNER(player) != OWNER(thing)) || (Typeof(thing) != TYPE_PROGRAM)
-				|| (MLevRaw(player) < 3)) {
-				notify(player, "Permission denied. (You may not set that M3)");
-				return;
-			}
-		}
-		if (force_level) {
-			notify(player, "Can't set this flag from an @force or {force}.");
-			return;
-		}
-		SetMLevel(thing, 3);
-		notify(player, "Mucker level set.");
-		return;
-	} else if (!strcmp("4", p) || !strcmp("M4", p)) {
-		notify(player, "To set Mucker Level 4, set the Wizard bit and another Mucker bit.");
 		return;
 	} else if (string_prefix("WIZARD", p)) {
 		if (force_level) {
@@ -1212,13 +1100,11 @@ do_set(command_t *cmd)
 	/* else everything is ok, do the set */
 	if (*flag == NOT_TOKEN) {
 		/* reset the flag */
-		ts_modifyobject(thing);
 		FLAGS(thing) &= ~f;
 		DBDIRTY(thing);
 		notify(player, "Flag reset.");
 	} else {
 		/* set the flag */
-		ts_modifyobject(thing);
 		FLAGS(thing) |= f;
 		DBDIRTY(thing);
 		notify(player, "Flag set.");
@@ -1346,14 +1232,6 @@ set_flags_from_tunestr(dbref obj, const char* tunestr)
 		char pcc = toupper(*p);
 		if (pcc == '\0' || pcc == '\n' || pcc == '\r') {
 			break;
-		} else if (pcc == '0') {
-			SetMLevel(obj, 0);
-		} else if (pcc == '1') {
-			SetMLevel(obj, 1);
-		} else if (pcc == '2') {
-			SetMLevel(obj, 2);
-		} else if (pcc == '3') {
-			SetMLevel(obj, 3);
 		} else if (pcc == 'A') {
 			f = ABODE;
 		} else if (pcc == 'B') {
@@ -1370,8 +1248,6 @@ set_flags_from_tunestr(dbref obj, const char* tunestr)
 			f = KILL_OK;
 		} else if (pcc == 'L') {
 			f = LINK_OK;
-		} else if (pcc == 'M') {
-			SetMLevel(obj, 2);
 		} else if (pcc == 'Q') {
 			f = QUELL;
 		} else if (pcc == 'S') {
@@ -1392,7 +1268,6 @@ set_flags_from_tunestr(dbref obj, const char* tunestr)
 		FLAGS(obj) |= f;
 		p++;
 	}
-	ts_modifyobject(obj);
 	DBDIRTY(obj);
 }
 

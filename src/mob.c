@@ -11,8 +11,6 @@
 
 #include "params.h"
 
-#include "debug.h"
-
 #define HUNGER_Y	4
 #define THIRST_Y	2
 #define HUNGER_INC	(1 << (DAYTICK_Y - HUNGER_Y))
@@ -69,7 +67,7 @@ enum bodypart ch_bodypart_map[] = {
 	['g'] = BP_LEGS,
 };
 
-mobi_t mobi_map[MOBI_SIZE], *mobi_cur = &mobi_map[0];
+mobi_t mobi_map[MOBI_SIZE];
 
 #include "drop.c"
 
@@ -254,7 +252,6 @@ static void
 mobi_init(mobi_t *liv, dbref who)
 {
 	int i;
-	mobi_cur = liv;
 	memset(liv, 0, sizeof(mobi_t));
 	liv->who = who;
 	liv->mob = MOB(MOB_HUMAN);
@@ -270,7 +267,7 @@ mobi_init(mobi_t *liv, dbref who)
 
 	spells_init(liv->spells, who);
 
-	SETLID(who, mobi_cur - mobi_map);
+	SETLID(who, liv - mobi_map);
 
 	for (i = 0; i < EQ_MAX; i++) {
 		register dbref eq = GETEQ(who, i);
@@ -292,15 +289,12 @@ mob_put(dbref who)
 
 	CBUG(who < 0 || Typeof(who) == TYPE_GARBAGE);
 
-	for (liv = mobi_cur, i = 0;
+	for (liv = &mobi_map[0], i = 0;
 	     i < m;
 	     i++, liv++)
 	{
-		if (liv > mobi_map + m)
-			liv = mobi_map;
-
 		if (liv->who <= 0) {
-			/* debug("will mobi_init %d %d %d", who, i, liv->who); */
+			/* debug("will mobi_init %d %d\n", who, i); */
 			mobi_init(liv, who);
 			return liv;
 		}
@@ -575,7 +569,5 @@ mob_update()
 
 		if (n->who > 0)
 			mobi_update(n);
-		else if (n < mobi_cur)
-			mobi_cur = n;
 	}
 }

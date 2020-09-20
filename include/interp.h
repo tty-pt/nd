@@ -16,17 +16,6 @@ typedef void *voidptr;
 #define UPCASE(x) (toupper(x))
 #define DOWNCASE(x) (tolower(x))
 
-extern void RCLEAR(struct inst *oper, char *file, int line);
-
-#define CLEAR(oper) RCLEAR(oper, __FILE__, __LINE__)
-extern void push(struct inst *stack, int *top, int type, voidptr res);
-
-extern const char* scopedvar_getname(struct frame *fr, int level, int varnum);
-
-extern void copyinst(struct inst *from, struct inst *to);
-
-extern void push(struct inst *stack, int *top, int type, voidptr res);
-
 #define Min(x,y) ((x < y) ? x : y)
 
 #define PRIM_PROTOTYPE dbref player, dbref program, int mlev, \

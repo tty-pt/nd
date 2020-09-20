@@ -13,9 +13,6 @@
 #include "web.h"
 #endif
 
-/* #undef NDEBUG */
-#include "debug.h"
-
 #define BIOME_BG(i) (NIGHT_IS \
 		? ANSI_RESET : biomes[i].bg)
 

@@ -15,8 +15,6 @@
 #include "noise.h"
 #include "view.h"
 #include "mob.h"
-#undef NDEBUG
-#include "debug.h"
 
 #define PRECOVERY
 
@@ -380,10 +378,9 @@ gexit_snull(command_t *cmd, dbref exit)
 static void
 walk(command_t *cmd, enum exit e) {
 
-#if defined(PRECOVERY) && 0
+#if 1
 	dbref player = cmd->player;
-	int descr = cmd->fd;
-	dbref exit = e_exit_here(descr, player, e),
+	dbref exit = e_exit_here(cmd, e),
 	      there;
 
 	if (exit >= 0) {
@@ -392,7 +389,7 @@ walk(command_t *cmd, enum exit e) {
 			pos_t pos;
 			geo_pos(pos, getloc(player), e);
 			map_put(pos, there, 0);
-			exits_fix(descr, player, there, exit);
+			exits_fix(cmd, there, exit);
 		}
 	}
 #endif
@@ -623,7 +620,7 @@ tell_pos(command_t *cmd, struct cmd_dir cd) {
 	}
 
 	map_where(pos, getloc(who));
-	notify_fmt(cmd->player, "0x%llx", pos);
+	notify_fmt(cmd->player, "0x%llx", MORTON_READ(pos));
 	return ret;
 }
 
@@ -635,10 +632,8 @@ teleport(command_t *cmd, struct cmd_dir cd)
 	int ret = 0;
 	if (cd.rep == 1)
 		cd.rep = 0;
-	if (cd.dir == '!') {
-		memcpy(pos, &cd.rep, sizeof(cd.rep));
-		ret = 1;
-	} else if (cd.dir == '?') {
+	if (cd.dir == '?') {
+		// X6? teleport to chivas
 		dbref who = (dbref) cd.rep;
 		if (Typeof(who) == TYPE_PLAYER) {
 			map_where(pos, getloc(who));

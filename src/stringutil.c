@@ -312,26 +312,6 @@ alloc_string(const char *string)
 	return s;
 }
 
-struct shared_string *
-alloc_prog_string(const char *s)
-{
-	struct shared_string *ss;
-	int length;
-
-	if (s == NULL || *s == '\0')
-		return (NULL);
-
-	length = strlen(s);
-	if ((ss = (struct shared_string *)
-		 malloc(sizeof(struct shared_string) + length)) == NULL)
-		abort();
-
-	ss->links = 1;
-	ss->length = length;
-	bcopy(s, ss->data, ss->length + 1);
-	return (ss);
-}
-
 char *
 intostr(int i)
 {

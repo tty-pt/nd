@@ -11,81 +11,16 @@
 #include <stdio.h>
 #include <math.h>
 #include <time.h>
-#ifdef HAVE_TIMEBITS_H
-#  define __need_timeval 1
-#  include <timebits.h>
-#endif
 
-/* max length of command argument to process_command */
-#define MAX_COMMAND_LEN 2048
-#define BUFFER_LEN ((MAX_COMMAND_LEN)*4)
-#define FILE_BUFSIZ ((BUFSIZ)*8)
-
-/* Defining INF as infinite.  This is HUGE_VAL on IEEE754 systems. */
-#ifdef WIN32
-#include <limits>
-using namespace std;
-# define INF (numeric_limits<double>::infinity())
-# define NINF (-1 * numeric_limits<double>::infinity())
-#elif defined(HUGE_VAL)
-# define INF (HUGE_VAL)
-# define NINF (-HUGE_VAL)
-#else
-# define INF (9.9E999)
-# define NINF (-9.9E999)
-#endif
-
-/* Defining Pi, Half Pi, and Quarter Pi.  */
-#ifdef M_PI
-# define F_PI M_PI
-# define NF_PI -M_PI
-#else
-# define F_PI 3.141592653589793236
-# define NF_PI -3.141592653589793236
-#endif
-
-#ifdef M_PI_2
-# define H_PI M_PI_2
-# define NH_PI -M_PI_2
-#else
-# define H_PI 1.5707963267949
-# define NH_PI -1.5707963267949
-#endif
-
-#ifdef M_PI_4  /* A quarter slice.  Yum. */
-# define Q_PI M_PI_4
-# define NQ_PI -M_PI_4
-#else
-# define Q_PI 0.7853981633974
-# define NQ_PI -0.7853981633974
-#endif
+#define BUFFER_LEN 8192
 
 extern char match_args[BUFFER_LEN];
 extern char match_cmdname[BUFFER_LEN];
 
 typedef int dbref;				/* offset into db */
 
-#define TIME_INFINITE ((sizeof(time_t) == 4)? 0xefffffff : 0xefffffffffffffff)
-
-/* #define DB_READLOCK(x) */
-/* #define DB_WRITELOCK(x) */
-#define DB_RELEASE(x)
-
-#ifdef GDBM_DATABASE
-#  define DBFETCH(x)  dbfetch(x)
-#  define DBDIRTY(x)  dbdirty(x)
-#else							/* !GDBM_DATABASE */
-#  define DBFETCH(x)  (db + (x))
-#  ifdef DEBUGDBDIRTY
-#    define DBDIRTY(x)  {if (!(db[x].flags & OBJECT_CHANGED))  \
-			   log2file("dirty.out", "#%d: %s %d\n", (int)x, \
-			   __FILE__, __LINE__); \
-		       db[x].flags |= OBJECT_CHANGED;}
-#  else
-#    define DBDIRTY(x)  {db[x].flags |= OBJECT_CHANGED;}
-#  endif
-#endif
-
+#define DBFETCH(x)  (db + (x))
+#define DBDIRTY(x)  {db[x].flags |= OBJECT_CHANGED;}
 #define DBSTORE(x, y, z)    {DBFETCH(x)->y = z; DBDIRTY(x);}
 
 #define NAME(x)     (db[x].name)
@@ -302,14 +237,10 @@ enum at { ARMOR_LIGHT, ARMOR_MEDIUM, ARMOR_HEAVY, };
 #define ISGUEST(x)	(get_property(x, MESGPROP_GUEST) != NULL)
 #define NOGUEST(_cmd,x) if(ISGUEST(x)) { char tmpstr[BUFFER_LEN]; warn("Guest %s(#%d) failed attempt to %s.\n",NAME(x),x,_cmd); snprintf(tmpstr, sizeof(tmpstr), "Guests are not allowed to %s.\r", _cmd); notify_nolisten(x,tmpstr,1); return; }
 
-/* #define DB_PARMSINFO     0x0001 */
-#define DB_COMPRESSED    0x0002
-
 #define TYPE_ROOM           0x0
 #define TYPE_THING          0x1
 #define TYPE_EXIT           0x2
 #define TYPE_PLAYER         0x3
-#define TYPE_PROGRAM        0x4
 #define NOTYPE1				0x5 /* Room for expansion */
 #define TYPE_GARBAGE        0x6
 #define NOTYPE              0x7	/* no particular type */
@@ -328,8 +259,6 @@ enum at { ARMOR_LIGHT, ARMOR_MEDIUM, ARMOR_HEAVY, };
 
 #define INTERNAL           0x80	/* internal-use-only flag */
 #define STICKY            0x100	/* this object goes home when dropped */
-#define SETUID STICKY			/* Used for programs that must run with the
-								 * permissions of their owner */
 #define SILENT STICKY
 #define BUILDER           0x200	/* this player can use construction commands */
 #define BOUND BUILDER
@@ -344,13 +273,9 @@ enum at { ARMOR_LIGHT, ARMOR_MEDIUM, ARMOR_HEAVY, };
 #define EXPANSION3		 0x8000 /* Expansion bit */
 #define HAVEN           0x10000	/* can't kill here */
 #define HIDE HAVEN
-#define HARDUID HAVEN			/* Program runs with uid of trigger owner */
 #define ABODE           0x20000	/* can set home here */
 #define ABATE ABODE
-#define AUTOSTART ABODE
-#define MUCKER          0x40000	/* programmer */
 #define QUELL           0x80000	/* When set, wiz-perms are turned off */
-#define SMUCKER        0x100000	/* second programmer bit.  For levels */
 #define INTERACTIVE    0x200000	/* internal: denotes player is in editor, or
 								 * muf READ. */
 #define OBJECT_CHANGED 0x400000	/* internal: when an object is dbdirty()ed,
@@ -390,30 +315,6 @@ typedef long object_flag_type;
 #define TrueWizard(x) ((FLAGS(x) & WIZARD) != 0)
 #define Dark(x) ((FLAGS(x) & DARK) != 0)
 
-#define MLevRaw(x) (((FLAGS(x) & MUCKER)? 2:0) + ((FLAGS(x) & SMUCKER)? 1:0))
-
-/* Setting a program M0 is supposed to make it not run, but if it's set
- * Wizard, it used to run anyway without the extra double-check for MUCKER
- * or SMUCKER -- now it doesn't, change by Winged */
-#define MLevel(x) (((FLAGS(x) & WIZARD) && \
-			((FLAGS(x) & MUCKER) || (FLAGS(x) & SMUCKER)))? 4 : \
-		   (((FLAGS(x) & MUCKER)? 2 : 0) + \
-		    ((FLAGS(x) & SMUCKER)? 1 : 0)))
-
-#define SetMLevel(x,y) { FLAGS(x) &= ~(MUCKER | SMUCKER); \
-			 if (y>=2) FLAGS(x) |= MUCKER; \
-                         if (y%2) FLAGS(x) |= SMUCKER; }
-
-#define PLevel(x) ((FLAGS(x) & (MUCKER | SMUCKER))? \
-                   (((FLAGS(x) & MUCKER)? 2:0) + ((FLAGS(x) & SMUCKER)? 1:0) + 1) : \
-                    ((FLAGS(x) & ABODE)? 0 : 1))
-
-#define PREEMPT 0
-#define FOREGROUND 1
-#define BACKGROUND 2
-
-#define Mucker(x) (MLevel(x) != 0)
-
 #define Builder(x) ((FLAGS(x) & (WIZARD|BUILDER)) != 0)
 
 #define Linkable(x) ((x) == HOME || \
@@ -446,332 +347,11 @@ struct boolexp {
 #define HOME ((dbref) -3)		/* virtual room, represents mover's home */
 #define WATER ((dbref) -4)	/* water tile */
 
-/* editor data structures */
-
-/* Line data structure */
-struct line {
-	const char *this_line;		/* the line itself */
-	struct line *next, *prev;	/* the next line and the previous line */
-};
-
-/* constants and defines for MUV data types */
-#define MUV_ARRAY_OFFSET		16
-#define MUV_ARRAY_MASK			(0xff << MUV_ARRAY_OFFSET)
-#define MUV_ARRAYOF(x)			(x + (1 << MUV_ARRAY_OFFSET))
-#define MUV_TYPEOF(x)			(x & ~MUV_ARRAY_MASK)
-#define MUV_ARRAYSETLEVEL(x,l)	((l << MUV_ARRAY_OFFSET) | MUF_TYPEOF(x))
-#define MUV_ARRAYGETLEVEL(x)	((x & MUV_ARRAY_MASK) >> MUV_ARRAY_OFFSET)
-
-
-/* stack and object declarations */
-/* Integer types go here */
-#define PROG_VARIES      255    /* MUV flag denoting variable number of args */
-#define PROG_VOID        254    /* MUV void return type */
-#define PROG_UNTYPED     253    /* MUV unknown var type */
-
-#define PROG_CLEARED     0
-#define PROG_PRIMITIVE   1		/* forth prims and hard-coded C routines */
-#define PROG_INTEGER     2		/* integer types */
-#define PROG_FLOAT       3		/* float types */
-#define PROG_OBJECT      4		/* database objects */
-#define PROG_VAR         5		/* variables */
-#define PROG_LVAR        6		/* local variables, unique per program */
-#define PROG_SVAR        7		/* scoped variables, unique per procedure */
-
-/* Pointer types go here, numbered *AFTER* PROG_STRING */
-#define PROG_STRING      9		/* string types */
-#define PROG_FUNCTION    10		/* function names for debugging. */
-#define PROG_LOCK        11		/* boolean expression */
-#define PROG_ADD         12		/* program address - used in calls&jmps */
-#define PROG_IF          13		/* A low level IF statement */
-#define PROG_EXEC        14		/* EXECUTE shortcut */
-#define PROG_JMP         15		/* JMP shortcut */
-#define PROG_ARRAY       16		/* Array of other stack items. */
-#define PROG_MARK        17		/* Stack marker for [ and ] */
-#define PROG_SVAR_AT     18		/* @ shortcut for scoped vars */
-#define PROG_SVAR_AT_CLEAR 19	/* @ for scoped vars, with var clear optim */
-#define PROG_SVAR_BANG   20		/* ! shortcut for scoped vars */
-#define PROG_TRY         21		/* TRY shortcut */
-#define PROG_LVAR_AT     22		/* @ shortcut for local vars */
-#define PROG_LVAR_AT_CLEAR 23	/* @ for local vars, with var clear optim */
-#define PROG_LVAR_BANG   24		/* ! shortcut for local vars */
-
-#define MAX_VAR         54		/* maximum number of variables including the
-								   * basic ME, LOC, TRIGGER, and COMMAND vars */
-#define RES_VAR          4		/* no of reserved variables */
-
-#define STACK_SIZE       1024	/* maximum size of stack */
-
-struct shared_string {			/* for sharing strings in programs */
-	int links;					/* number of pointers to this struct */
-	int length;					/* length of string data */
-	char data[1];				/* shared string data */
-};
-
-struct prog_addr {				/* for 'address references */
-	int links;					/* number of pointers */
-	dbref progref;				/* program dbref */
-	struct inst *data;			/* pointer to the code */
-};
-
-struct stack_addr {				/* for the system callstack */
-	dbref progref;				/* program call was made from */
-	struct inst *offset;		/* the address of the call */
-};
-
-struct stk_array_t;
-
-struct muf_proc_data {
-    char *procname;
-	int vars;
-	int args;
-	const char **varnames;
-};
-
-struct inst {					/* instruction */
-	short type;
-	short line;
-	union {
-		struct shared_string *string;	/* strings */
-		struct boolexp *lock;	/* booleam lock expression */
-		int number;				/* used for both primitives and integers */
-		double fnumber;			/* used for float storage */
-		dbref objref;			/* object reference */
-		struct stk_array_t *array;	/* pointer to muf array */
-		struct inst *call;		/* use in IF and JMPs */
-		struct prog_addr *addr;	/* the result of 'funcname */
-		struct muf_proc_data *mufproc;	/* Data specific to each procedure */
-	} data;
-};
-
-#include "array.h"
-
-typedef struct inst vars[MAX_VAR];
-
-struct forvars {
-	int didfirst;
-	struct inst cur;
-	struct inst end;
-	int step;
-	struct forvars *next;
-};
-
-struct tryvars {
-	int depth;
-	int call_level;
-	int for_count;
-	struct inst *addr;
-	struct tryvars *next;
-};
-
-struct stack {
-	int top;
-	struct inst st[STACK_SIZE];
-};
-
-struct sysstack {
-	int top;
-	struct stack_addr st[STACK_SIZE];
-};
-
-struct callstack {
-	int top;
-	dbref st[STACK_SIZE];
-};
-
-struct localvars {
-	struct localvars *next;
-	struct localvars **prev;
-	dbref prog;
-	vars lvars;
-};
-
-struct forstack {
-	int top;
-	struct forvars *st;
-};
-
-struct trystack {
-	int top;
-	struct tryvars *st;
-};
-
-#define MAX_BREAKS 16
-struct debuggerdata {
-	unsigned debugging:1;		/* if set, this frame is being debugged */
-	unsigned force_debugging:1;	/* if set, debugger is active, even if not set Z */
-	unsigned bypass:1;			/* if set, bypass breakpoint on starting instr */
-	unsigned isread:1;			/* if set, the prog is trying to do a read */
-	unsigned showstack:1;		/* if set, show stack debug line, each inst. */
-	unsigned dosyspop:1;		/* if set, fix up system stack before returning. */
-	int lastlisted;				/* last listed line */
-	char *lastcmd;				/* last executed debugger command */
-	short breaknum;				/* the breakpoint that was just caught on */
-
-	dbref lastproglisted;		/* What program's text was last loaded to list? */
-	struct line *proglines;		/* The actual program text last loaded to list. */
-
-	short count;				/* how many breakpoints are currently set */
-	short temp[MAX_BREAKS];		/* is this a temp breakpoint? */
-	short level[MAX_BREAKS];	/* level breakpnts.  If -1, no check. */
-	struct inst *lastpc;		/* Last inst interped.  For inst changes. */
-	struct inst *pc[MAX_BREAKS];	/* pc breakpoint.  If null, no check. */
-	int pccount[MAX_BREAKS];	/* how many insts to interp.  -2 for inf. */
-	int lastline;				/* Last line interped.  For line changes. */
-	int line[MAX_BREAKS];		/* line breakpts.  -1 no check. */
-	int linecount[MAX_BREAKS];	/* how many lines to interp.  -2 for inf. */
-	dbref prog[MAX_BREAKS];		/* program that breakpoint is in. */
-};
-
-struct scopedvar_t {
-	int count;
-	const char** varnames;
-	struct scopedvar_t *next;
-	struct inst vars[1];
-};
-
-struct dlogidlist {
-	struct dlogidlist *next;
-	char dlogid[32];
-};
-
-struct mufwatchpidlist {
-	struct mufwatchpidlist *next;
-	int pid;
-};
-
-#define STD_REGUID 0
-#define STD_SETUID 1
-#define STD_HARDUID 2
-
-/* frame data structure necessary for executing programs */
-struct frame {
-	struct frame *next;
-	struct sysstack system;		/* system stack */
-	struct stack argument;		/* argument stack */
-	struct callstack caller;	/* caller prog stack */
-	struct forstack fors;		/* for loop stack */
-	struct trystack trys;		/* try block stack */
-	struct localvars* lvars;	/* local variables */
-	vars variables;				/* global variables */
-	struct inst *pc;			/* next executing instruction */
-	short writeonly;			/* This program should not do reads */
-	short multitask;			/* This program's multitasking mode */
-	short timercount;			/* How many timers currently exist. */
-	short level;				/* prevent interp call loops */
-	int perms;					/* permissions restrictions on program */
-	short already_created;		/* this prog already created an object */
-	short been_background;		/* this prog has run in the background */
-	short skip_declare;         /* tells interp to skip next scoped var decl */
-	short wantsblanks;          /* specifies program will accept blank READs */
-	dbref trig;					/* triggering object */
-	long started;				/* When this program started. */
-	int instcnt;				/* How many instructions have run. */
-	int pid;					/* what is the process id? */
-	char* errorstr;             /* the error string thrown */
-	char* errorinst;            /* the instruction name that threw an error */
-	dbref errorprog;            /* the program that threw an error */
-	int errorline;              /* the program line that threw an error */
-	int descr;					/* what is the descriptor that started this? */
-	void *rndbuf;				/* buffer for seedable random */
-	struct scopedvar_t *svars;	/* Variables with function scoping. */
-	struct debuggerdata brkpt;	/* info the debugger needs */
-	struct timeval proftime;    /* profiling timing code */
-    struct timeval totaltime;   /* profiling timing code */
-	struct mufevent *events;	/* MUF event list. */
-	struct dlogidlist *dlogids;	/* List of dlogids this frame uses. */
-	struct mufwatchpidlist *waiters;
-	struct mufwatchpidlist *waitees;
-	union {
-		struct {
-			unsigned int div_zero:1;	/* Divide by zero */
-			unsigned int nan:1;	/* Result would not be a number */
-			unsigned int imaginary:1;	/* Result would be imaginary */
-			unsigned int f_bounds:1;	/* Float boundary error */
-			unsigned int i_bounds:1;	/* Integer boundary error */
-		} error_flags;
-		int is_flags;
-	} error;
-};
-
-
-struct publics {
-	char *subname;
-	int mlev;
-	union {
-		struct inst *ptr;
-		int no;
-	} addr;
-	struct publics *next;
-};
-
-
-struct mcp_binding {
-	struct mcp_binding *next;
-
-	char *pkgname;
-	char *msgname;
-	struct inst *addr;
-};
-
-struct program_specific {
-	unsigned short instances;	/* number of instances of this prog running */
-	short curr_line;			/* current-line */
-	int siz;					/* size of code */
-	struct inst *code;			/* byte-compiled code */
-	struct inst *start;			/* place to start executing */
-	struct line *first;			/* first line */
-	struct publics *pubs;		/* public subroutine addresses */
-	struct mcp_binding *mcpbinds;	/* MCP message bindings. */
-	struct timeval proftime;	/* profiling time spent in this program. */
-	time_t profstart;			/* time when profiling started for this prog */
-	unsigned int profuses;		/* #calls to this program while profiling */
-};
-
-#define PROGRAM_SP(x)			(DBFETCH(x)->sp.program.sp)
-#define ALLOC_PROGRAM_SP(x)     { PROGRAM_SP(x) = (struct program_specific *)malloc(sizeof(struct program_specific)); }
-#define FREE_PROGRAM_SP(x)      { dbref foo = x; if(PROGRAM_SP(foo)) free(PROGRAM_SP(foo)); PROGRAM_SP(foo) = (struct program_specific *)NULL; }
-
-#define PROGRAM_INSTANCES(x)	(PROGRAM_SP(x)!=NULL?PROGRAM_SP(x)->instances:0)
-#define PROGRAM_CURR_LINE(x)	(PROGRAM_SP(x)->curr_line)
-#define PROGRAM_SIZ(x)			(PROGRAM_SP(x)->siz)
-#define PROGRAM_CODE(x)			(PROGRAM_SP(x)->code)
-#define PROGRAM_START(x)		(PROGRAM_SP(x)->start)
-#define PROGRAM_FIRST(x)		(PROGRAM_SP(x)->first)
-#define PROGRAM_PUBS(x)			(PROGRAM_SP(x)->pubs)
-#define PROGRAM_MCPBINDS(x)		(PROGRAM_SP(x)->mcpbinds)
-#define PROGRAM_PROFTIME(x)		(PROGRAM_SP(x)->proftime)
-#define PROGRAM_PROFSTART(x)	(PROGRAM_SP(x)->profstart)
-#define PROGRAM_PROF_USES(x)	(PROGRAM_SP(x)->profuses)
-
-#define PROGRAM_INC_INSTANCES(x)	(PROGRAM_SP(x)->instances++)
-#define PROGRAM_DEC_INSTANCES(x)	(PROGRAM_SP(x)->instances--)
-#define PROGRAM_INC_PROF_USES(x)	(PROGRAM_SP(x)->profuses++)
-
-#define PROGRAM_SET_INSTANCES(x,y)	(PROGRAM_SP(x)->instances = y)
-#define PROGRAM_SET_CURR_LINE(x,y)	(PROGRAM_SP(x)->curr_line = y)
-#define PROGRAM_SET_SIZ(x,y)		(PROGRAM_SP(x)->siz = y)
-#define PROGRAM_SET_CODE(x,y)		(PROGRAM_SP(x)->code = y)
-#define PROGRAM_SET_START(x,y)		(PROGRAM_SP(x)->start = y)
-#define PROGRAM_SET_FIRST(x,y)		(PROGRAM_SP(x)->first = y)
-#define PROGRAM_SET_PUBS(x,y)		(PROGRAM_SP(x)->pubs = y)
-#define PROGRAM_SET_MCPBINDS(x,y)	(PROGRAM_SP(x)->mcpbinds = y)
-#define PROGRAM_SET_PROFTIME(x,y,z)	(PROGRAM_SP(x)->proftime.tv_usec = z, PROGRAM_SP(x)->proftime.tv_sec = y)
-#define PROGRAM_SET_PROFSTART(x,y)	(PROGRAM_SP(x)->profstart = y)
-#define PROGRAM_SET_PROF_USES(x,y)	(PROGRAM_SP(x)->profuses = y)
-
-
 struct player_specific {
 	dbref home;
-	dbref curr_prog;			/* program I'm currently editing */
-	short insert_mode;			/* in insert mode? */
-	short block;
 	const char *password;
 	int *descrs;
 	int descr_count;
-	dbref* ignore_cache;
-	int ignore_count;
-	dbref ignore_last;
 };
 
 #define THING_SP(x)		(DBFETCH(x)->sp.player.sp)
@@ -787,26 +367,14 @@ struct player_specific {
 #define FREE_PLAYER_SP(x)       { dbref foo = x; free(PLAYER_SP(foo)); PLAYER_SP(foo) = NULL; }
 
 #define PLAYER_HOME(x)		(PLAYER_SP(x)->home)
-#define PLAYER_CURR_PROG(x)	(PLAYER_SP(x)->curr_prog)
-#define PLAYER_INSERT_MODE(x)	(PLAYER_SP(x)->insert_mode)
-#define PLAYER_BLOCK(x)		(PLAYER_SP(x)->block)
 #define PLAYER_PASSWORD(x)	(PLAYER_SP(x)->password)
 #define PLAYER_DESCRS(x)    (PLAYER_SP(x)->descrs)
 #define PLAYER_DESCRCOUNT(x)    (PLAYER_SP(x)->descr_count)
-#define PLAYER_IGNORE_CACHE(x)  (PLAYER_SP(x)->ignore_cache)
-#define PLAYER_IGNORE_COUNT(x)  (PLAYER_SP(x)->ignore_count)
-#define PLAYER_IGNORE_LAST(x)   (PLAYER_SP(x)->ignore_last)
 
 #define PLAYER_SET_HOME(x,y)		(PLAYER_SP(x)->home = y)
-#define PLAYER_SET_CURR_PROG(x,y)	(PLAYER_SP(x)->curr_prog = y)
-#define PLAYER_SET_INSERT_MODE(x,y)	(PLAYER_SP(x)->insert_mode = y)
-#define PLAYER_SET_BLOCK(x,y)		(PLAYER_SP(x)->block = y)
 #define PLAYER_SET_PASSWORD(x,y)	(PLAYER_SP(x)->password = y)
 #define PLAYER_SET_DESCRS(x,y)		(PLAYER_SP(x)->descrs = y)
 #define PLAYER_SET_DESCRCOUNT(x,y)	(PLAYER_SP(x)->descr_count = y)
-#define PLAYER_SET_IGNORE_CACHE(x,y)	(PLAYER_SP(x)->ignore_cache = y)
-#define PLAYER_SET_IGNORE_COUNT(x,y)	(PLAYER_SP(x)->ignore_count = y)
-#define PLAYER_SET_IGNORE_LAST(x,y)		(PLAYER_SP(x)->ignore_last = y)
 
 /* union of type-specific fields */
 
@@ -814,9 +382,6 @@ union specific {				/* I've been railroaded! */
 	struct {					/* ROOM-specific fields */
 		dbref dropto;
 	} room;
-/*    struct {		*//* THING-specific fields */
-/*	dbref   home;   */
-/*    }       thing;    */
 	struct {					/* EXIT-specific fields */
 		int ndest;
 		dbref *dest;
@@ -824,20 +389,10 @@ union specific {				/* I've been railroaded! */
 	struct {					/* PLAYER-specific fields */
 		struct player_specific *sp;
 	} player;
-	struct {					/* PROGRAM-specific fields */
-		struct program_specific *sp;
-	} program;
 };
 
 
 /* timestamps record */
-
-struct timestamps {
-	time_t created;
-	time_t modified;
-	time_t lastused;
-	int usecount;
-};
 
 
 struct object {
@@ -850,30 +405,12 @@ struct object {
 	dbref next;					/* pointer to next in contents/exits chain */
 	struct plist *properties;
 
-#ifdef DISKBASE
-	long propsfpos;
-	time_t propstime;
-	dbref nextold;
-	dbref prevold;
-	short propsmode;
-	short spacer;
-#endif
-
 	object_flag_type flags;
 
 	unsigned int mpi_prof_use;
 	struct timeval mpi_proftime;
 
-	struct timestamps ts;
 	union specific sp;
-};
-
-struct macrotable {
-	char *name;
-	char *definition;
-	dbref implementor;
-	struct macrotable *left;
-	struct macrotable *right;
 };
 
 /* Possible data types that may be stored in a hash table */
@@ -899,7 +436,6 @@ typedef hash_entry *hash_tab;
 #define DEFHASHSIZE        (256)	/* Table for compiler $defines */
 
 extern struct object *db;
-extern struct macrotable *macrotop;
 extern dbref db_top;
 
 extern char *alloc_string(const char *);

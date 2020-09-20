@@ -16,8 +16,6 @@
 #include "match.h"
 #include "fbstrings.h"
 
-struct line *read_program(dbref i);
-
 /* parse_linkable_dest()
  *
  * A utility for open and link which checks whether a given destination
@@ -223,10 +221,9 @@ _link_exit(command_t *cmd, dbref exit, char *dest_name, dbref * dest_list, int d
 		switch (Typeof(dest)) {
 		case TYPE_PLAYER:
 		case TYPE_ROOM:
-		case TYPE_PROGRAM:
 			if (prdest) {
 				snprintf(buf, sizeof(buf),
-						"Only one player, room, or program destination allowed. Destination %s ignored.",
+						"Only one player or room destination allowed. Destination %s ignored.",
 						unparse_object(player, dest));
 				notify(player, buf);
 
@@ -459,9 +456,6 @@ do_link(command_t *cmd)
 			DBFETCH(thing)->sp.room.dropto = dest;	/* dropto */
 			notify(player, "Dropto set.");
 		}
-		break;
-	case TYPE_PROGRAM:
-		notify(player, "You can't link programs to things!");
 		break;
 	default:
 		notify(player, "Internal error: weird object type.");
@@ -923,10 +917,6 @@ parse_source(command_t *cmd, const char *source_name)
 		notify(player, "You can't attach an action to an action.");
 		return NOTHING;
 	}
-	if (Typeof(source) == TYPE_PROGRAM) {
-		notify(player, "You can't attach an action to a program.");
-		return NOTHING;
-	}
 	return source;
 }
 
@@ -1110,8 +1100,7 @@ do_attach(command_t *cmd) {
 		notify(player, "Permission denied. (you don't control the action you're trying to reattach)");
 		return;
 	}
-	if (((source = parse_source(cmd, source_name)) == NOTHING)
-		|| Typeof(source) == TYPE_PROGRAM)
+	if ((source = parse_source(cmd, source_name)) == NOTHING)
 		return;
 
 	if (!unset_source(player, loc, action)) {
@@ -1119,10 +1108,6 @@ do_attach(command_t *cmd) {
 	}
 	set_source(player, action, source);
 	notify(player, "Action re-attached.");
-	if (MLevRaw(action)) {
-		SetMLevel(action, 0);
-		notify(player, "Action priority Level reset to zero.");
-	}
 }
 static const char *create_c_version = "$RCSfile$ $Revision: 1.28 $";
 const char *get_create_c_version(void) { return create_c_version; }

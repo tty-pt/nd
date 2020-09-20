@@ -1,5 +1,4 @@
 #include "geometry.h"
-#include "debug.h"
 #ifndef CLIENT
 #include "db.h"
 #include "props.h"

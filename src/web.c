@@ -2,8 +2,6 @@
 #include "externs.h"
 #include "interface.h"
 #include "geography.h"
-#undef NDEBUG
-#include "debug.h"
 
 extern int auth(int descr, char *user, char *password);
 extern void identify(int descr, unsigned ip, unsigned old);

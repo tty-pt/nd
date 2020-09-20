@@ -118,7 +118,6 @@ sane_dump_object(dbref player, const char *arg)
 			SanPrint(player, "    %s", unparse(DBFETCH(d)->sp.exit.dest[i]));
 		break;
 
-	case TYPE_PROGRAM:
 	case TYPE_GARBAGE:
 	default:
 		break;
@@ -177,7 +176,6 @@ valid_obj(dbref obj)
 	case TYPE_ROOM:
 	case TYPE_EXIT:
 	case TYPE_PLAYER:
-	case TYPE_PROGRAM:
 	case TYPE_THING:
 		return 1;
 		break;
@@ -334,13 +332,6 @@ check_player(dbref player, dbref obj)
 
 
 void
-check_program(dbref player, dbref obj)
-{
-	return;
-}
-
-
-void
 check_garbage(dbref player, dbref obj)
 {
 	if (NEXTOBJ(obj) != NOTHING && TYPEOF(NEXTOBJ(obj)) != TYPE_GARBAGE) {
@@ -356,7 +347,7 @@ check_contents_list(dbref player, dbref obj)
 	dbref i;
 	int limit;
 
-	if (TYPEOF(obj) != TYPE_PROGRAM && TYPEOF(obj) != TYPE_EXIT && TYPEOF(obj) != TYPE_GARBAGE) {
+	if (TYPEOF(obj) != TYPE_EXIT && TYPEOF(obj) != TYPE_GARBAGE) {
 		for (i = CONTENTS(obj), limit = db_top;
 			 valid_obj(i) &&
 			 --limit && LOCATION(i) == obj && TYPEOF(i) != TYPE_EXIT; i = NEXTOBJ(i)) ;
@@ -400,7 +391,7 @@ check_exits_list(dbref player, dbref obj)
 	dbref i;
 	int limit;
 
-	if (TYPEOF(obj) != TYPE_PROGRAM && TYPEOF(obj) != TYPE_EXIT && TYPEOF(obj) != TYPE_GARBAGE) {
+	if (TYPEOF(obj) != TYPE_EXIT && TYPEOF(obj) != TYPE_GARBAGE) {
 		for (i = EXITS(obj), limit = db_top;
 			 valid_obj(i) &&
 			 --limit && LOCATION(i) == obj && TYPEOF(i) == TYPE_EXIT; i = NEXTOBJ(i)) ;
@@ -465,7 +456,7 @@ check_object(dbref player, dbref obj)
 
 	if (LOCATION(obj) != NOTHING &&
 		(TYPEOF(LOCATION(obj)) == TYPE_GARBAGE ||
-		 TYPEOF(LOCATION(obj)) == TYPE_EXIT || TYPEOF(LOCATION(obj)) == TYPE_PROGRAM))
+		 TYPEOF(LOCATION(obj)) == TYPE_EXIT))
 		violate(player, obj, "thinks it is located in a non-container object");
 
 	if ((TYPEOF(obj) == TYPE_GARBAGE) && (LOCATION(obj) != NOTHING))
@@ -486,9 +477,6 @@ check_object(dbref player, dbref obj)
 		break;
 	case TYPE_EXIT:
 		check_exit(player, obj);
-		break;
-	case TYPE_PROGRAM:
-		check_program(player, obj);
 		break;
 	case TYPE_GARBAGE:
 		check_garbage(player, obj);
@@ -736,8 +724,6 @@ create_lostandfound(dbref * player, dbref * room)
 		rpass = rand_password();
 		PLAYER_SET_PASSWORD(*player, NULL);
 		set_password(*player, rpass);
-		PLAYER_SET_CURR_PROG(*player, NOTHING);
-		PLAYER_SET_INSERT_MODE(*player, 0);
 		PUSH(*player, DBFETCH(*room)->contents);
 		DBDIRTY(*player);
 		add_player(*player);
@@ -818,12 +804,6 @@ fix_player(dbref obj)
 }
 
 void
-fix_program(dbref obj)
-{
-	return;
-}
-
-void
 fix_garbage(dbref obj)
 {
 	return;
@@ -839,7 +819,7 @@ find_misplaced_objects(void)
 			TYPEOF(loop) != TYPE_THING &&
 			TYPEOF(loop) != TYPE_PLAYER &&
 			TYPEOF(loop) != TYPE_EXIT &&
-			TYPEOF(loop) != TYPE_PROGRAM && TYPEOF(loop) != TYPE_GARBAGE) {
+			TYPEOF(loop) != TYPE_GARBAGE) {
 			SanFixedRef(loop, "Object #%d is of unknown type");
 			sanity_violated = 1;
 			continue;
@@ -880,7 +860,6 @@ find_misplaced_objects(void)
 			if (loop != GLOBAL_ENVIRONMENT && (!valid_obj(LOCATION(loop)) ||
 											   TYPEOF(LOCATION(loop)) == TYPE_GARBAGE ||
 											   TYPEOF(LOCATION(loop)) == TYPE_EXIT ||
-											   TYPEOF(LOCATION(loop)) == TYPE_PROGRAM ||
 											   (TYPEOF(loop) == TYPE_PLAYER &&
 												TYPEOF(LOCATION(loop)) == TYPE_PLAYER))) {
 				if (TYPEOF(loop) == TYPE_PLAYER) {
@@ -943,9 +922,6 @@ find_misplaced_objects(void)
 		case TYPE_EXIT:
 			fix_exit(loop);
 			break;
-		case TYPE_PROGRAM:
-			fix_program(loop);
-			break;
 		case TYPE_GARBAGE:
 			fix_garbage(loop);
 			break;
@@ -965,7 +941,6 @@ adopt_orphans(void)
 			case TYPE_ROOM:
 			case TYPE_THING:
 			case TYPE_PLAYER:
-			case TYPE_PROGRAM:
 				DBFETCH(loop)->next = DBFETCH(LOCATION(loop))->contents;
 				DBFETCH(LOCATION(loop))->contents = loop;
 				SanFixed2(loop, LOCATION(loop), "Orphaned object %s added to contents of %s");
@@ -1175,337 +1150,5 @@ sanechange(dbref player, const char *command)
 	}
 }
 
-void
-extract_prop(FILE * f, const char *dir, PropPtr p)
-{
-	char buf[BUFFER_LEN * 2];
-	char *ptr;
-	const char *ptr2;
-	char tbuf[50];
-
-	if (PropType(p) == PROP_DIRTYP)
-		return;
-
-	for (ptr = buf, ptr2 = dir + 1; *ptr2;)
-		*ptr++ = *ptr2++;
-	for (ptr2 = PropName(p); *ptr2;)
-		*ptr++ = *ptr2++;
-	*ptr++ = PROP_DELIMITER;
-	ptr2 = intostr(PropFlagsRaw(p) & ~(PROP_TOUCHED | PROP_ISUNLOADED));
-	while (*ptr2)
-		*ptr++ = *ptr2++;
-	*ptr++ = PROP_DELIMITER;
-
-	ptr2 = "";
-	switch (PropType(p)) {
-	case PROP_INTTYP:
-		if (!PropDataVal(p))
-			return;
-		ptr2 = intostr(PropDataVal(p));
-		break;
-	case PROP_FLTTYP:
-		if (PropDataFVal(p) == 0.0)
-			return;
-		snprintf(tbuf, sizeof(tbuf), "%.17g", PropDataFVal(p));
-		ptr2 = tbuf;
-		break;
-	case PROP_REFTYP:
-		if (PropDataRef(p) == NOTHING)
-			return;
-		ptr2 = intostr(PropDataRef(p));
-		break;
-	case PROP_STRTYP:
-		if (!*PropDataStr(p))
-			return;
-		ptr2 = PropDataStr(p);
-		break;
-	case PROP_LOKTYP:
-		if (PropFlags(p) & PROP_ISUNLOADED)
-			return;
-		if (PropDataLok(p) == TRUE_BOOLEXP)
-			return;
-		ptr2 = unparse_boolexp((dbref) 1, PropDataLok(p), 0);
-		break;
-	}
-	while (*ptr2)
-		*ptr++ = *ptr2++;
-	*ptr++ = '\n';
-	*ptr++ = '\0';
-	if (fputs(buf, f) == EOF) {
-		fprintf(stderr, "extract_prop(): failed write!\n");
-		abort();
-	}
-}
-
-void
-extract_props_rec(FILE * f, dbref obj, const char *dir, PropPtr p)
-{
-	char buf[BUFFER_LEN];
-
-	if (!p)
-		return;
-
-	extract_props_rec(f, obj, dir, AVL_LF(p));
-	extract_prop(f, dir, p);
-	if (PropDir(p)) {
-		snprintf(buf, sizeof(buf), "%s%s%c", dir, PropName(p), PROPDIR_DELIMITER);
-		extract_props_rec(f, obj, buf, PropDir(p));
-	}
-	extract_props_rec(f, obj, dir, AVL_RT(p));
-}
-
-
-void
-extract_props(FILE * f, dbref obj)
-{
-	extract_props_rec(f, obj, "/", DBFETCH(obj)->properties);
-}
-
-void
-extract_program(FILE * f, dbref obj)
-{
-	char buf[BUFFER_LEN];
-	FILE *pf;
-	int c = 0;
-
-	snprintf(buf, sizeof(buf), "muf/%d.m", obj);
-	pf = fopen(buf, "rb");
-	if (!pf) {
-		fprintf(f, "  (No listing found)\n");
-		return;
-	}
-	while (fgets(buf, BUFFER_LEN, pf)) {
-		c++;
-		fprintf(f, "%s", buf);	/* newlines automatically included */
-	}
-	fclose(pf);
-	fprintf(f, "  End of program listing (%d lines)\n", c);
-}
-
-
-void
-extract_object(FILE * f, dbref d)
-{
-	int i;
-
-	fprintf(f, "  #%d\n", d);
-	fprintf(f, "  Object:         %s\n", unparse(d));
-	fprintf(f, "  Owner:          %s\n", unparse(OWNER(d)));
-	fprintf(f, "  Location:       %s\n", unparse(LOCATION(d)));
-	fprintf(f, "  Contents Start: %s\n", unparse(CONTENTS(d)));
-	fprintf(f, "  Exits Start:    %s\n", unparse(EXITS(d)));
-	fprintf(f, "  Next:           %s\n", unparse(NEXTOBJ(d)));
-
-	switch (TYPEOF(d)) {
-	case TYPE_THING:
-		fprintf(f, "  Home:           %s\n", unparse(THING_HOME(d)));
-		fprintf(f, "  Value:          %d\n", GETVALUE(d));
-		break;
-
-	case TYPE_ROOM:
-		fprintf(f, "  Drop-to:        %s\n", unparse(DBFETCH(d)->sp.room.dropto));
-		break;
-
-	case TYPE_PLAYER:
-		fprintf(f, "  Home:           %s\n", unparse(PLAYER_HOME(d)));
-		fprintf(f, "  Pennies:        %d\n", GETVALUE(d));
-		break;
-
-	case TYPE_EXIT:
-		fprintf(f, "  Links:         ");
-		for (i = 0; i < DBFETCH(d)->sp.exit.ndest; i++)
-			fprintf(f, " %s;", unparse(DBFETCH(d)->sp.exit.dest[i]));
-		fprintf(f, "\n");
-		break;
-
-	case TYPE_PROGRAM:
-		fprintf(f, "  Listing:\n");
-		extract_program(f, d);
-		break;
-
-	case TYPE_GARBAGE:
-	default:
-		break;
-	}
-
-	if (DBFETCH(d)->properties) {
-		fprintf(f, "  Properties:\n");
-		extract_props(f, d);
-	} else {
-		fprintf(f, "  No properties\n");
-	}
-	fprintf(f, "\n");
-}
-
-void
-extract(void)
-{
-	dbref d;
-	int i;
-	char filename[80];
-	FILE *f;
-
-	i = sscanf(cbuf, "%*s %d %s", &d, filename);
-
-	if (!valid_obj(d)) {
-		printf("%d is an invalid dbref.\n", d);
-		return;
-	}
-
-	if (i == 2) {
-		f = fopen(filename, "wb");
-		if (!f) {
-			printf("Could not open file %s\n", filename);
-			return;
-		}
-		printf("Writing to file %s\n", filename);
-	} else {
-		f = stdout;
-	}
-
-	for (i = 0; i < db_top; i++) {
-		if ((OWNER(i) == d) && (TYPEOF(i) != TYPE_GARBAGE)) {
-			extract_object(f, i);
-		}						/* extract only objects owned by this player */
-	}							/* loop through db */
-
-	if (f != stdout)
-		fclose(f);
-
-	printf("\nDone.\n");
-}
-
-void
-extract_single(void)
-{
-	dbref d;
-	int i;
-	char filename[80];
-	FILE *f;
-
-	i = sscanf(cbuf, "%*s %d %s", &d, filename);
-
-	if (!valid_obj(d)) {
-		printf("%d is an invalid dbref.\n", d);
-		return;
-	}
-
-	if (i == 2) {
-		f = fopen(filename, "wb");
-		if (!f) {
-			printf("Could not open file %s\n", filename);
-			return;
-		}
-		printf("Writing to file %s\n", filename);
-	} else {
-		f = stdout;
-	}
-
-	if (TYPEOF(d) != TYPE_GARBAGE) {
-		extract_object(f, d);
-	}
-	/* extract only objects owned by this player */
-	if (f != stdout)
-		fclose(f);
-
-	printf("\nDone.\n");
-}
-
-
-void
-hack_it_up(void)
-{
-	char *ptr;
-
-	do {
-		printf("\nCommand: (? for help)\n");
-		fgets(cbuf, sizeof(cbuf), stdin);
-
-		switch (tolower(cbuf[0])) {
-		case 's':
-			printf("Running Sanity...\n");
-			sanity(NOTHING);
-			break;
-
-		case 'f':
-			printf("Running Sanfix...\n");
-			sanfix(NOTHING);
-			break;
-
-		case 'p':
-			for (ptr = cbuf; *ptr && !isspace(*ptr); ptr++) ;
-			if (*ptr)
-				ptr++;
-			sane_dump_object(NOTHING, ptr);
-			break;
-
-		case 'w':
-			*buf2 = '\0';
-			sscanf(cbuf, "%*s %s", buf2);
-			if (*buf2) {
-				printf("Writing database to %s...\n", buf2);
-			} else {
-				printf("Writing database...\n");
-			}
-			do_dump(GOD, buf2);
-			printf("Done.\n");
-			break;
-
-		case 'c':
-			for (ptr = cbuf; *ptr && !isspace(*ptr); ptr++) ;
-			if (*ptr)
-				ptr++;
-			sanechange(NOTHING, ptr);
-			break;
-
-		case 'x':
-			extract();
-			break;
-
-		case 'y':
-			extract_single();
-			break;
-
-		case 'h':
-		case '?':
-			printf("\n");
-			printf("s                           Run Sanity checks on database\n");
-			printf("f                           Automatically fix the database\n");
-			printf("p <dbref>                   Print an object\n");
-			printf("q                           Quit\n");
-			printf("w <file>                    Write database to file.\n");
-			printf("c <dbref> <field> <value>   Change a field on an object.\n");
-			printf("                              (\"c ? ?\" for list)\n");
-			printf("x <dbref> [<filename>]      Extract all objects belonging to <dbref>\n");
-			printf("y <dbref> [<filename>]      Extract the single object <dbref>\n");
-			printf("?                           Help! (Displays this screen.\n");
-			break;
-		}
-	}
-
-	while (cbuf[0] != 'q');
-
-	printf("Quitting.\n\n");
-}
-
-
-void
-san_main(void)
-{
-	printf("\nEntering the Interactive Sanity DB editor.\n");
-	printf("Good luck!\n\n");
-
-	printf("Number of objects in DB is: %d\n", db_top - 1);
-	printf("Global Environment is: %s\n", unparse(GLOBAL_ENVIRONMENT));
-
-#ifdef GOD_PRIV
-	printf("God is: %s\n", unparse(GOD));
-	printf("\n");
-#endif
-
-	hack_it_up();
-
-	printf("Exiting sanity editor...\n\n");
-}
 static const char *sanity_c_version = "$RCSfile$ $Revision: 1.18 $";
 const char *get_sanity_c_version(void) { return sanity_c_version; }

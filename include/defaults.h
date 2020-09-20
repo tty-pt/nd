@@ -49,12 +49,6 @@
 /* The mesg to display when booting a connection because of connect limit */
 #define PLAYERMAX_BOOTMESG "Sorry, but there are too many players online.  Please try reconnecting in a few minutes."
 
-/*
- * Message if someone trys the create command and your system is
- * setup for registration.
- */
-#define REG_MSG "Sorry, you can get a character by e-mailing XXXX@machine.net.address with a charname and password."
-
 /* command to run when entering a room. */
 #define AUTOLOOK_CMD "look"
 
@@ -75,10 +69,6 @@
 
 /* various times */
 #define AGING_TIME TIME_DAY(90)	/* Unused time before obj shows as old. */
-#define DUMP_INTERVAL TIME_HOUR(4)	/* time between dumps (or deltas) */
-#define DUMP_WARNTIME TIME_MINUTE(2)	/* warning time before a dump */
-#define MONOLITHIC_INTERVAL TIME_DAY(1)	/* max time between full dumps */
-#define CLEAN_INTERVAL TIME_MINUTE(15)	/* time between unused obj purges */
 
 
 /* Information needed for SSL */
@@ -193,12 +183,6 @@
 
 /* Searches up the room environments for listeners */
 #define LISTENERS_ENV 1
-
-/* Minimum mucker level to write to the userlog. 4 = wiz */
-#define USERLOG_MLEV 3
-
-/* Allow mortal players to @force around objects that are set ZOMBIE. */
-#define ZOMBIES 1
 
 /* Allow only wizards to @set the VEHICLE flag on Thing objects. */
 #define WIZ_VEHICLES 0

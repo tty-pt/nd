@@ -1,7 +1,6 @@
 #include "plant.h"
 
 #include "params.h"
-#include "debug.h"
 
 #include "props.h"
 #include "externs.h"

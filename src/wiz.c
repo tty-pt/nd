@@ -96,9 +96,6 @@ do_teleport(command_t *cmd) {
 		case TYPE_ROOM:
 			destination = GLOBAL_ENVIRONMENT;
 			break;
-		case TYPE_PROGRAM:
-			destination = OWNER(victim);
-			break;
 		default:
 			destination = PLAYER_START;	/* caught in the next
 											   * switch anyway */
@@ -136,7 +133,6 @@ do_teleport(command_t *cmd) {
 				notify(player, "You can't make a container contain itself!");
 				break;
 			}
-		case TYPE_PROGRAM:
 			if (Typeof(destination) != TYPE_ROOM
 				&& Typeof(destination) != TYPE_PLAYER && Typeof(destination) != TYPE_THING) {
 				notify(player, "Bad destination.");
@@ -354,13 +350,6 @@ do_force(int descr, dbref player, const char *what, char *command)
 		return;
 	}
 
-#if !ZOMBIES
-	if (!Wizard(player) || Typeof(player) != TYPE_PLAYER){
-		notify(player, "Zombies are not enabled here.");
-		return;
-	}
-#endif
-
 	/* get victim */
 	init_match(descr, player, what, NOTYPE, &md);
 	match_neighbor(&md);
@@ -448,12 +437,9 @@ do_stats(command_t *cmd) {
 	int exits;
 	int things;
 	int players;
-	int programs;
 	int garbage = 0;
 	int total;
 	int altered = 0;
-	int oldobjs = 0;
-	time_t currtime = time(NULL);
 	dbref i;
 	dbref owner=NOTHING;
 	char buf[BUFFER_LEN];
@@ -462,7 +448,7 @@ do_stats(command_t *cmd) {
 		snprintf(buf, sizeof(buf), "The universe contains %d objects.", db_top);
 		notify(player, buf);
 	} else {
-		total = rooms = exits = things = players = programs = 0;
+		total = rooms = exits = things = players = 0;
 		if (name != NULL && *name != '\0') {
 			owner = lookup_player(name);
 			if (owner == NOTHING) {
@@ -479,10 +465,6 @@ do_stats(command_t *cmd) {
 				/* count objects marked as changed. */
 				if ((OWNER(i) == owner) && (FLAGS(i) & OBJECT_CHANGED))
 					altered++;
-
-				/* if unused for 90 days, inc oldobj count */
-				if ((OWNER(i) == owner) &&
-					(currtime - DBFETCH(i)->ts.lastused) > AGING_TIME) oldobjs++;
 
 				switch (Typeof(i)) {
 				case TYPE_ROOM:
@@ -505,11 +487,6 @@ do_stats(command_t *cmd) {
 						total++, players++;
 					break;
 
-				case TYPE_PROGRAM:
-					if (OWNER(i) == owner)
-						total++, programs++;
-					break;
-
 				}
 			}
 		} else {
@@ -519,10 +496,6 @@ do_stats(command_t *cmd) {
 				/* count objects marked as changed. */
 				if (FLAGS(i) & OBJECT_CHANGED)
 					altered++;
-
-				/* if unused for 90 days, inc oldobj count */
-				if ((currtime - DBFETCH(i)->ts.lastused) > AGING_TIME)
-					oldobjs++;
 
 				switch (Typeof(i)) {
 				case TYPE_ROOM:
@@ -541,10 +514,6 @@ do_stats(command_t *cmd) {
 					total++;
 					players++;
 					break;
-				case TYPE_PROGRAM:
-					total++;
-					programs++;
-					break;
 				case TYPE_GARBAGE:
 					total++;
 					garbage++;
@@ -557,13 +526,12 @@ do_stats(command_t *cmd) {
 				   rooms, (rooms == 1) ? " " : "s",
 				   exits, (exits == 1) ? " " : "s", things, (things == 1) ? " " : "s");
 
-		notify_fmt(player, "%7d program%s     %7d player%s      %7d garbage",
-				   programs, (programs == 1) ? " " : "s",
+		notify_fmt(player, "%7d player%s      %7d garbage",
 				   players, (players == 1) ? " " : "s", garbage);
 
 		notify_fmt(player,
-				   "%7d total object%s                     %7d old & unused",
-				   total, (total == 1) ? " " : "s", oldobjs);
+				   "%7d total object%s",
+				   total, (total == 1) ? " " : "s");
 
 	}
 }
@@ -669,11 +637,6 @@ do_toad(command_t *cmd) {
 		for (stuff = 0; stuff < db_top; stuff++) {
 			if (OWNER(stuff) == victim) {
 				switch (Typeof(stuff)) {
-				case TYPE_PROGRAM:
-					if (TrueWizard(recipient)) {
-						FLAGS(stuff) &= ~(ABODE | WIZARD);
-						SetMLevel(stuff, 1);
-					}
 				case TYPE_ROOM:
 				case TYPE_THING:
 				case TYPE_EXIT:
@@ -836,113 +799,6 @@ do_usage(command_t *cmd) {
 	notify(player, "Sorry, this server was compiled with NO_USAGE_COMMAND.");
 
 #endif							/* NO_USAGE_COMMAND */
-}
-
-
-
-void
-do_muf_topprofs(dbref player, char *arg1)
-{
-	struct profnode {
-		struct profnode *next;
-		dbref  prog;
-		double proftime;
-		double pcnt;
-		long   comptime;
-		long   usecount;
-	} *tops = NULL;
-
-	struct profnode *curr = NULL;
-	int nodecount = 0;
-	char buf[BUFFER_LEN];
-	dbref i = NOTHING;
-	int count = atoi(arg1);
-	time_t current_systime = time(NULL);
-
-	if (!Wizard(OWNER(player))) {
-		notify(player, "Permission denied. (MUF profiling stats are wiz-only)");
-		return;
-	}
-	if (!strcmp(arg1, "reset")) {
-		for (i = db_top; i-->0; ) {
-			if (Typeof(i) == TYPE_PROGRAM) {
-				PROGRAM_SET_PROFTIME(i, 0, 0);
-				PROGRAM_SET_PROFSTART(i, current_systime);
-				PROGRAM_SET_PROF_USES(i, 0);
-			}
-		}
-		notify(player, "MUF profiling statistics cleared.");
-		return;
-	}
-	if (count < 0) {
-		notify(player, "Count has to be a positive number.");
-		return;
-	} else if (count == 0) {
-		count = 10;
-	}
-
-	for (i = db_top; i-->0; ) {
-		if (Typeof(i) == TYPE_PROGRAM && PROGRAM_CODE(i)) {
-			struct profnode *newnode = (struct profnode *)malloc(sizeof(struct profnode));
-			struct timeval tmpt = PROGRAM_PROFTIME(i);
-
-			newnode->next = NULL;
-			newnode->prog = i;
-			newnode->proftime = tmpt.tv_sec;
-			newnode->proftime += (tmpt.tv_usec / 1000000.0);
-			newnode->comptime = current_systime - PROGRAM_PROFSTART(i);
-			newnode->usecount = PROGRAM_PROF_USES(i);
-			if (newnode->comptime > 0) {
-				newnode->pcnt = 100.0 * newnode->proftime / newnode->comptime;
-			} else {
-				newnode->pcnt =  0.0;
-			}
-			if (!tops) {
-				tops = newnode;
-				nodecount++;
-			} else if (newnode->pcnt < tops->pcnt) {
-				if (nodecount < count) {
-					newnode->next = tops;
-					tops = newnode;
-					nodecount++;
-				} else {
-					free(newnode);
-				}
-			} else {
-				if (nodecount >= count) {
-					curr = tops;
-					tops = tops->next;
-					free(curr);
-				} else {
-					nodecount++;
-				}
-				if (!tops) {
-					tops = newnode;
-				} else if (newnode->pcnt < tops->pcnt) {
-					newnode->next = tops;
-					tops = newnode;
-				} else {
-					for (curr = tops; curr->next; curr = curr->next) {
-						if (newnode->pcnt < curr->next->pcnt) {
-							break;
-						}
-					}
-					newnode->next = curr->next;
-					curr->next = newnode;
-				}
-			}
-		}
-	}
-	notify(player, "     %CPU   TotalTime  UseCount  Program");
-	while (tops) {
-		curr = tops;
-		snprintf(buf, sizeof(buf), "%10.3f %10.3f %9ld %s", curr->pcnt, curr->proftime, curr->usecount, unparse_object(player, curr->prog));
-		notify(player, buf);
-		tops = tops->next;
-		free(curr);
-	}
-	notify(player,buf);
-	notify(player, "*Done*");
 }
 
 static const char *wiz_c_version = "$RCSfile$ $Revision: 1.38 $";

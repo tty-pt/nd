@@ -19,8 +19,6 @@
 #include "dbsearch.h"
 #include "externs.h"
 #include "web.h"
-#undef NDEBUG
-#include "debug.h"
 
 #define EXEC_SIGNAL '@'			/* Symbol which tells us what we're looking at
 					 * is an execution order and not a message.    */
@@ -38,7 +36,6 @@ print_owner(dbref player, dbref thing)
 	case TYPE_ROOM:
 	case TYPE_THING:
 	case TYPE_EXIT:
-	case TYPE_PROGRAM:
 		snprintf(buf, sizeof(buf), "Owner: %s", NAME(OWNER(thing)));
 		break;
 	case TYPE_GARBAGE:
@@ -95,15 +92,10 @@ exec_or_notify(command_t *cmd, dbref thing,
 			if (*p)
 				p++;
 		}
-		if (i < 0 || i >= db_top || (Typeof(i) != TYPE_PROGRAM)) {
-			if (*p) {
-				return p;
-			} else {
-				return "You see nothing special.";
-			}
+		if (*p) {
+			return p;
 		} else {
-			p = do_parse_mesg(cmd, thing, p, whatcalled, buf, sizeof(buf), MPI_ISPRIVATE | mpiflags);
-			return NULL;
+			return "You see nothing special.";
 		}
 	} else {
 		p = do_parse_mesg(cmd, thing, p, whatcalled, buf, sizeof(buf), MPI_ISPRIVATE | mpiflags);
@@ -178,7 +170,6 @@ look_room(command_t *cmd, dbref loc, int verbose)
 				Prop_Blessed(loc, MESGPROP_IDESC)? MPI_ISBLESSED : 0);
 		}
 	}
-	ts_useobject(loc);
 
 	/* if (web_look(descr, player, loc, description)) { */
 		notify(player, unparse_object(player, loc));
@@ -269,7 +260,6 @@ do_look_at(command_t *cmd)
 					look_simple(cmd, thing);
 					if (!(FLAGS(thing) & HAVEN)) {
 						look_contents(cmd, thing, "Contains:");
-						ts_useobject(thing);
 					}
 #if LOOK_PROPQUEUES
 					snprintf(obj_num, sizeof(obj_num), "#%d", thing);
@@ -280,8 +270,6 @@ do_look_at(command_t *cmd)
 				break;
 			default:
 				look_simple(cmd, thing);
-				if (Typeof(thing) != TYPE_PROGRAM)
-					ts_useobject(thing);
 #if LOOK_PROPQUEUES
 				snprintf(obj_num, sizeof(obj_num), "#%d", thing);
 				envpropqueue(descr, player, thing, player, thing,
@@ -352,9 +340,6 @@ flag_description(dbref thing)
 	case TYPE_PLAYER:
 		strlcat(buf, "PLAYER", sizeof(buf));
 		break;
-	case TYPE_PROGRAM:
-		strlcat(buf, "PROGRAM", sizeof(buf));
-		break;
 	case TYPE_GARBAGE:
 		strlcat(buf, "GARBAGE", sizeof(buf));
 		break;
@@ -371,38 +356,23 @@ flag_description(dbref thing)
 		if (FLAGS(thing) & QUELL)
 			strlcat(buf, " QUELL", sizeof(buf));
 		if (FLAGS(thing) & STICKY)
-			strlcat(buf, (Typeof(thing) == TYPE_PROGRAM) ? " SETUID" :
-				   (Typeof(thing) == TYPE_PLAYER) ? " SILENT" : " STICKY", sizeof(buf));
+			strlcat(buf, Typeof(thing) == TYPE_PLAYER ? " SILENT" : " STICKY", sizeof(buf));
 		if (FLAGS(thing) & DARK)
-			strlcat(buf, (Typeof(thing) != TYPE_PROGRAM) ? " DARK" : " DEBUGGING", sizeof(buf));
+			strlcat(buf, " DARK", sizeof(buf));
 		if (FLAGS(thing) & LINK_OK)
 			strlcat(buf, " LINK_OK", sizeof(buf));
 
 		if (FLAGS(thing) & KILL_OK)
 			strlcat(buf, " KILL_OK", sizeof(buf));
 
-		if (MLevRaw(thing)) {
-			strlcat(buf, " MUCKER", sizeof(buf));
-			switch (MLevRaw(thing)) {
-			case 1:
-				strlcat(buf, "1", sizeof(buf));
-				break;
-			case 2:
-				strlcat(buf, "2", sizeof(buf));
-				break;
-			case 3:
-				strlcat(buf, "3", sizeof(buf));
-				break;
-			}
-		}
 		if (FLAGS(thing) & BUILDER)
-			strlcat(buf, (Typeof(thing) == TYPE_PROGRAM) ? " BOUND" : " BUILDER", sizeof(buf));
+			strlcat(buf, " BUILDER", sizeof(buf));
 		if (FLAGS(thing) & CHOWN_OK)
 			strlcat(buf, (Typeof(thing) == TYPE_PLAYER) ? " COLOR" : " CHOWN_OK", sizeof(buf));
 		if (FLAGS(thing) & JUMP_OK)
 			strlcat(buf, " JUMP_OK", sizeof(buf));
 		if (FLAGS(thing) & VEHICLE)
-			strlcat(buf, (Typeof(thing) == TYPE_PROGRAM) ? " VIEWABLE" : " VEHICLE", sizeof(buf));
+			strlcat(buf, " VEHICLE", sizeof(buf));
 #if ENABLE_MATCH_YIELD
                 if (FLAGS(thing) & YIELD)
                         strlcat(buf, " YIELD", sizeof(buf));
@@ -419,9 +389,9 @@ flag_description(dbref thing)
 		if (FLAGS(thing) & ZOMBIE)
 			strlcat(buf, " ZOMBIE", sizeof(buf));
 		if (FLAGS(thing) & HAVEN)
-			strlcat(buf, Typeof(thing) != TYPE_PROGRAM ? ((Typeof(thing) == TYPE_THING) ? " HIDE" : " HAVEN") : " HARDUID", sizeof(buf));
+			strlcat(buf, Typeof(thing) == TYPE_THING ? " HIDE" : " HAVEN", sizeof(buf));
 		if (FLAGS(thing) & ABODE)
-			strlcat(buf, Typeof(thing) != TYPE_PROGRAM ? (Typeof(thing) != TYPE_EXIT ? " ABODE" : " ABATE") : " AUTOSTART", sizeof(buf));
+			strlcat(buf, Typeof(thing) != TYPE_EXIT ? " ABODE" : " ABATE", sizeof(buf));
 	}
 	return buf;
 }
@@ -506,7 +476,6 @@ do_examine(command_t *cmd)
 	dbref exit;
 	int i, cnt;
 	struct match_data md;
-	struct tm *time_tm;			/* used for timestamps */
 
 	if (*name == '\0') {
 		if ((thing = getloc(player)) == NOTHING)
@@ -565,7 +534,6 @@ do_examine(command_t *cmd)
 				CPENNIES, GETVALUE(thing));
 		break;
 	case TYPE_EXIT:
-	case TYPE_PROGRAM:
 		snprintf(buf, sizeof(buf), "%.*s  Owner: %s",
 				(int) (BUFFER_LEN - strlen(NAME(OWNER(thing))) - 35),
 				unparse_object(player, thing),
@@ -641,20 +609,6 @@ do_examine(command_t *cmd)
 		snprintf(buf, sizeof(buf), "Idesc: %s", GETIDESC(thing));
 		notify(player, buf);
 	}
-
-	/* Timestamps */
-	/* ex: time_tm = localtime((time_t *)(&(DBFETCH(thing)->ts.created))); */
-	time_tm = localtime((&(DBFETCH(thing)->ts.created)));
-	(void) strftime(buf, BUFFER_LEN, (char *) "Created:  %a %b %e %T %Z %Y", time_tm);
-	notify(player, buf);
-	time_tm = localtime((&(DBFETCH(thing)->ts.modified)));
-	(void) strftime(buf, BUFFER_LEN, (char *) "Modified: %a %b %e %T %Z %Y", time_tm);
-	notify(player, buf);
-	time_tm = localtime((&(DBFETCH(thing)->ts.lastused)));
-	(void) strftime(buf, BUFFER_LEN, (char *) "Lastused: %a %b %e %T %Z %Y", time_tm);
-	notify(player, buf);
-	snprintf(buf, sizeof(buf), "Usecount: %d", DBFETCH(thing)->ts.usecount);
-	notify(player, buf);
 
 	notify(player, "[ Use 'examine <object>=/' to list root properties. ]");
 
@@ -755,26 +709,6 @@ do_examine(command_t *cmd)
 				notify(player, buf);
 				break;
 			}
-		}
-		break;
-	case TYPE_PROGRAM:
-		if (PROGRAM_SIZ(thing)) {
-			struct timeval tv = PROGRAM_PROFTIME(thing);
-			snprintf(buf, sizeof(buf), "Program compiled size: %d instructions", PROGRAM_SIZ(thing));
-			notify(player, buf);
-			snprintf(buf, sizeof(buf), "Cumulative runtime: %d.%06d seconds ", (int)tv.tv_sec, (int)tv.tv_usec);
-			notify(player, buf);
-		} else {
-			snprintf(buf, sizeof(buf), "Program not compiled.");
-			notify(player, buf);
-		}
-
-		/* print location if player can link to it */
-		if (DBFETCH(thing)->location != NOTHING && (controls(player, DBFETCH(thing)->location)
-													|| can_link_to(player, NOTYPE,
-																   DBFETCH(thing)->location))) {
-			snprintf(buf, sizeof(buf), "Location: %s", unparse_object(player, DBFETCH(thing)->location));
-			notify(player, buf);
 		}
 		break;
 	default:
@@ -913,14 +847,6 @@ init_checkflags(dbref player, const char *flags, struct flgchkdat *check)
 				check->istype = TYPE_PLAYER;
 			}
 			break;
-		case 'F':
-			if (mode) {
-				check->isnotprog = 1;
-			} else {
-				check->fortype = 1;
-				check->istype = TYPE_PROGRAM;
-			}
-			break;
 		case '~':
 		case '^':
 			check->loadedsize = (Wizard(player) && *flags == '^');
@@ -943,46 +869,6 @@ init_checkflags(dbref player, const char *flags, struct flgchkdat *check)
 				check->isold = 0;
 			} else {
 				check->isold = 1;
-			}
-			break;
-		case '0':
-			if (mode) {
-				check->isnotzero = 1;
-			} else {
-				check->forlevel = 1;
-				check->islevel = 0;
-			}
-			break;
-		case '1':
-			if (mode) {
-				check->isnotone = 1;
-			} else {
-				check->forlevel = 1;
-				check->islevel = 1;
-			}
-			break;
-		case '2':
-			if (mode) {
-				check->isnottwo = 1;
-			} else {
-				check->forlevel = 1;
-				check->islevel = 2;
-			}
-			break;
-		case '3':
-			if (mode) {
-				check->isnotthree = 1;
-			} else {
-				check->forlevel = 1;
-				check->islevel = 3;
-			}
-			break;
-		case 'M':
-			if (mode) {
-				check->forlevel = 1;
-				check->islevel = 0;
-			} else {
-				check->isnotzero = 1;
 			}
 			break;
 		case 'A':
@@ -1111,19 +997,6 @@ checkflags(dbref what, struct flgchkdat check)
 		return (0);
 	if (check.isnotplayer && (Typeof(what) == TYPE_PLAYER))
 		return (0);
-	if (check.isnotprog && (Typeof(what) == TYPE_PROGRAM))
-		return (0);
-
-	if (check.forlevel && (MLevRaw(what) != check.islevel))
-		return (0);
-	if (check.isnotzero && (MLevRaw(what) == 0))
-		return (0);
-	if (check.isnotone && (MLevRaw(what) == 1))
-		return (0);
-	if (check.isnottwo && (MLevRaw(what) == 2))
-		return (0);
-	if (check.isnotthree && (MLevRaw(what) == 3))
-		return (0);
 
 	if (FLAGS(what) & check.clearflags)
 		return (0);
@@ -1149,12 +1022,6 @@ checkflags(dbref what, struct flgchkdat check)
 			if (check.islinked)
 				return (0);
 		}
-	}
-	if (check.forold) {
-		if (((((time(NULL)) - DBFETCH(what)->ts.lastused) < AGING_TIME) ||
-			 (((time(NULL)) - DBFETCH(what)->ts.modified) < AGING_TIME))
-			!= (!check.isold))
-			return (0);
 	}
 	if (check.size) {
 		if ((size_object(what, check.loadedsize) < check.size)
@@ -1388,7 +1255,6 @@ do_entrances(command_t *cmd)
 					total++;
 				}
 				break;
-			case TYPE_PROGRAM:
 			case TYPE_GARBAGE:
 				break;
 			}
@@ -1443,7 +1309,6 @@ do_contents(command_t *cmd)
 	}
 	switch (Typeof(thing)) {
 	case TYPE_EXIT:
-	case TYPE_PROGRAM:
 	case TYPE_GARBAGE:
 		i = NOTHING;
 		break;
@@ -1463,53 +1328,13 @@ do_contents(command_t *cmd)
 	notify_fmt(player, "%d objects found.", total);
 }
 
-static int
-exit_matches_name(dbref exit, const char *name, int exactMatch)
-{
-	char buf[BUFFER_LEN];
-	char *ptr, *ptr2;
-
-	strlcpy(buf, NAME(exit), sizeof(buf));
-	for (ptr2 = ptr = buf; *ptr; ptr = ptr2) {
-		while (*ptr2 && *ptr2 != ';')
-			ptr2++;
-		if (*ptr2)
-			*ptr2++ = '\0';
-		while (*ptr2 == ';')
-			ptr2++;
-		if ((exactMatch ? !strcasecmp(name, ptr) : string_prefix(name, ptr)) &&
-			DBFETCH(exit)->sp.exit.ndest &&
-			Typeof((DBFETCH(exit)->sp.exit.dest)[0]) == TYPE_PROGRAM)
-			return 1;
-	}
-	return 0;
-}
-
-int
-exit_match_exists(dbref player, dbref obj, const char *name, int exactMatch)
-{
-	dbref exit;
-	char buf[BUFFER_LEN];
-
-	exit = DBFETCH(obj)->exits;
-	while (exit != NOTHING) {
-		if (exit_matches_name(exit, name, exactMatch)) {
-			snprintf(buf, sizeof(buf), "  %ss are trapped on %.2048s", name, unparse_object(player, obj));
-			notify(player, buf);
-			return 1;
-		}
-		exit = DBFETCH(exit)->next;
-	}
-	return 0;
-}
-
 void
 do_sweep(command_t *cmd)
 {
 	dbref player = cmd->player;
 	const char *name = cmd->argv[1];
 	dbref thing, ref, loc;
-	int flag, tellflag, dummy;
+	int flag, tellflag;
 	struct match_data md;
 	char buf[BUFFER_LEN];
 
@@ -1576,12 +1401,6 @@ do_sweep(command_t *cmd)
 				if (tellflag)
 					notify(player, buf);
 			}
-			exit_match_exists(player, ref, "page", 0);
-			exit_match_exists(player, ref, "whisper", 0);
-			dummy = exit_match_exists(player, ref, "pose", 1) ||
-				exit_match_exists(player, ref, "pos", 1) ||
-				exit_match_exists(player, ref, "po", 1);
-			exit_match_exists(player, ref, "say", 0);
 			break;
 		}
 	}
@@ -1599,13 +1418,6 @@ do_sweep(command_t *cmd)
 			snprintf(buf, sizeof(buf), "  %s is a listening room.", unparse_object(player, loc));
 			notify(player, buf);
 		}
-
-		exit_match_exists(player, loc, "page", 0);
-		exit_match_exists(player, loc, "whisper", 0);
-		dummy = exit_match_exists(player, loc, "pose", 1) ||
-			exit_match_exists(player, loc, "pos", 1) ||
-			exit_match_exists(player, loc, "po", 1);
-		exit_match_exists(player, loc, "say", 0);
 
 		loc = getparent(loc);
 	}

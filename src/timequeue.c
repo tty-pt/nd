@@ -14,8 +14,6 @@
 #include "interface.h"
 #include "externs.h"
 #include "interp.h"
-#define NDEBUG
-#include "debug.h"
 
 #include <stdio.h>
 #include <sys/types.h>
@@ -81,8 +79,6 @@ typedef struct timenode {
 extern int top_pid;
 int process_count = 0;
 
-extern char *time_format_2(long dt);
-
 static int propq_level = 0;
 void
 propqueue(command_t *cmd, dbref where, dbref trigger, dbref what, dbref xclude,
@@ -120,19 +116,7 @@ propqueue(command_t *cmd, dbref where, dbref trigger, dbref what, dbref xclude,
 					the_prog = NOTHING;
 			}
 			if (the_prog != AMBIGUOUS) {
-				if (the_prog < 0 || the_prog >= db_top) {
-					the_prog = NOTHING;
-				} else if (Typeof(the_prog) != TYPE_PROGRAM) {
-					the_prog = NOTHING;
-				} else if ((OWNER(the_prog) != OWNER(player)) && !(FLAGS(the_prog) & LINK_OK)) {
-					the_prog = NOTHING;
-				} else if (MLevel(the_prog) < mlev) {
-					the_prog = NOTHING;
-				} else if (MLevel(OWNER(the_prog)) < mlev) {
-					the_prog = NOTHING;
-				} else if (the_prog == xclude) {
-					the_prog = NOTHING;
-				}
+				the_prog = NOTHING;
 			}
 			if (propq_level < 8) {
 				propq_level++;

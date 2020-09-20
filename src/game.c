@@ -18,7 +18,6 @@
 #include "match.h"
 #include "externs.h"
 #include "fbstrings.h"
-#include "debug.h"
 #include "geography.h"
 #include "kill.h"
 #include "view.h"
@@ -63,19 +62,6 @@ do_dump(dbref player, const char *newfile)
 	}
 }
 
-void
-do_shutdown(command_t *cmd)
-{
-	dbref player = cmd->player;
-	if (Wizard(player)) {
-		warn("SHUTDOWN: by %s", unparse_object(player, player));
-		shutdown_flag = 1;
-	} else {
-		notify(player, "Your delusions of grandeur have been duly noted.");
-		warn("ILLEGAL SHUTDOWN: tried by %s", unparse_object(player, player));
-	}
-}
-
 static void
 dump_database_internal(void)
 {
@@ -98,21 +84,6 @@ dump_database_internal(void)
 		perror(tmpfile);
 	}
 
-	/* Write out the macros */
-
-	snprintf(tmpfile, sizeof(tmpfile), "%s.#%d#", MACRO_FILE, epoch - 1);
-	(void) unlink(tmpfile);
-
-	snprintf(tmpfile, sizeof(tmpfile), "%s.#%d#", MACRO_FILE, epoch);
-
-	if ((f = fopen(tmpfile, "wb")) != NULL) {
-		macrodump(macrotop, f);
-		fclose(f);
-		if (rename(tmpfile, MACRO_FILE) < 0)
-			perror(tmpfile);
-	} else {
-		perror(tmpfile);
-	}
 	sync();
 }
 
@@ -151,24 +122,6 @@ panic(const char *message)
 		fclose(f);
 		warn("DUMPING: %s (done)", panicfile);
 		fprintf(stderr, "DUMPING: %s (done)\n", panicfile);
-	}
-
-	/* Write out the macros */
-	snprintf(panicfile, sizeof(panicfile), "%s.PANIC", MACRO_FILE);
-	if ((f = fopen(panicfile, "wb")) != NULL) {
-		macrodump(macrotop, f);
-		fclose(f);
-	} else {
-		perror("CANNOT OPEN MACRO PANIC FILE, YOU LOSE");
-		sync();
-#ifdef NOCOREDUMP
-		exit(135);
-#else							/* !NOCOREDUMP */
-#ifdef SIGIOT
-		signal(SIGIOT, SIG_DFL);
-#endif
-		abort();
-#endif							/* NOCOREDUMP */
 	}
 
 	sync();
@@ -225,12 +178,6 @@ fork_and_dump(void)
 	}
 }
 
-void
-dump_warning(void)
-{
-	wall(DUMPWARN_MESG);
-}
-
 int
 init_game()
 {
@@ -249,7 +196,6 @@ init_game()
 	/* initialize the _sys/startuptime property */
 	add_property((dbref) 0, "_sys/startuptime", NULL, (int) time((time_t *) NULL));
 	add_property((dbref) 0, "_sys/maxpennies", NULL, MAX_PENNIES);
-	add_property((dbref) 0, "_sys/dumpinterval", NULL, DUMP_INTERVAL);
 	add_property((dbref) 0, "_sys/max_connects", NULL, 0);
 
 	return 0;

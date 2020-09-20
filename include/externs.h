@@ -18,6 +18,20 @@
 
 #define warn(fmt, ...) fprintf(stderr, fmt, ## __VA_ARGS__)
 
+#ifdef NDEBUG
+#define debug(...) do {} while (0)
+#define BREAK do {} while (0)
+#define BUG(...) abort()
+#define CBUG(c) if (c) abort()
+#else
+#include <stdio.h>
+#include <signal.h>
+#define debug(fmt, ...) fprintf(stderr, "D %s:%s:%d " fmt "\n", __FILE__, __FUNCTION__, __LINE__, ##__VA_ARGS__)
+#define BUG(fmt, ...) { fprintf(stderr, "BUG! %s:%s:%d " fmt "\n", __FILE__, __FUNCTION__, __LINE__, ##__VA_ARGS__); raise(SIGINT); }
+#define CBUG(c) if (c) { fprintf(stderr, "CBUG! " #c " %s:%s:%d\n", __FILE__, __FUNCTION__, __LINE__); raise(SIGINT); } 
+#define BREAK raise(SIGINT)
+#endif
+
 /* interface.c */
 enum opts {
 	OPT_NOSANITY = 1,
@@ -32,10 +46,6 @@ extern short optflags;
 
 extern char match_args[];
 extern char match_cmdname[];
-
-/* from event.c */
-extern long next_muckevent_time(void);
-extern void next_muckevent(void);
 
 /* from timequeue.c */
 extern void propqueue(command_t *cmd, dbref where, dbref trigger, dbref what,
@@ -65,15 +75,8 @@ extern int number(const char *s);
 extern int ifloat(const char *s);
 extern void putproperties(FILE * f, int obj);
 extern void getproperties(FILE * f, int obj, const char *pdir);
-extern void free_line(struct line *l);
 extern void db_free_object(dbref i);
 extern void db_clear_object(dbref i);
-extern void macrodump(struct macrotable *node, FILE * f);
-extern void macroload(FILE * f);
-extern void free_prog_text(struct line *l);
-extern struct line *read_program(dbref i);
-extern void write_program(struct line *first, dbref i);
-extern dbref db_write_deltas(FILE * f);
 
 /* From create.c */
 extern void do_open(command_t *);
@@ -87,15 +90,8 @@ extern int link_exit(command_t *cmd, dbref exit, char *dest_name, dbref * dest_l
 extern int link_exit_dry(command_t *cmd, dbref exit, char *dest_name, dbref * dest_list);
 extern void do_action(command_t *cmd);
 
-/* from edit.c */
-extern void match_and_list(int descr, dbref player, const char *name, char *linespec);
-extern void do_list(dbref player, dbref program, int *oarg, int argc);
-
 /* From game.c */
 extern void do_dump(dbref player, const char *newfile);
-extern void do_shutdown(command_t *);
-extern void dump_warning(void);
-extern void dump_deltas(void);
 extern void fork_and_dump(void);
 
 /* From hashtab.c */
@@ -285,21 +281,10 @@ extern const char *unparse_boolexp(dbref player, struct boolexp *b, int fullname
 extern void interactive(int descr, dbref player, const char *command);
 
 /* From interp.c */
-extern struct inst *interp_loop(dbref player, dbref program, struct frame *fr, int rettyp);
 extern struct frame *interp(int descr, dbref player, dbref location, dbref program,
 							dbref source, int nosleeping, int whichperms, int forced_pid);
 /* from signal.h */
 extern void set_dumper_signals(void);
-#ifdef WIN32
-extern void set_console(void);
-extern void check_cosole(void);
-#endif
-
-/* From timestamp.c */
-extern void ts_newobject(struct object *thing);
-extern void ts_useobject(dbref thing);
-extern void ts_lastuseobject(dbref thing);
-extern void ts_modifyobject(dbref thing);
 
 /* From smatch.c */
 extern int equalstr(char *s, char *t);
@@ -311,18 +296,8 @@ extern void do_credits(command_t *);
 extern void do_version(command_t *);
 
 /* from random.c */
-void *init_seed(char *seed);
 void delete_seed(void *buffer);
 unsigned long rnd(void *buffer);
-
-    /* dest buffer MUST be at least 24 chars long. */
-void MD5base64(char* dest, const void* orig, int len);
-
-    /* outbuf MUST be at least (((inlen+2)/3)*4)+1 chars long. */
-void Base64Encode(char* outbuf, const void* inbuf, size_t inlen);
-    /* outbuf MUST be at least (((strlen(inbuf)+3)/4)*3)+1 chars long to read
-     * the full set of base64 encoded data in the string. */
-size_t Base64Decode(void* outbuf, size_t outbuflen, const char* inbuf);
 
 /* from diskprop.c */
 extern void dispose_all_oldprops(void);

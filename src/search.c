@@ -1,9 +1,7 @@
 #include "search.h"
 
 #include <db4/db.h>
-
-#undef NDEBUG
-#include "debug.h"
+#include "externs.h"
 
 typedef struct {
 	dbref what;
@@ -119,8 +117,12 @@ next:	ret = cur->c_pget(cur, &key, &pkey, &data, dbflags);
 
 	switch (ret) {
 	case 0: break;
-	case DB_NOTFOUND: ret = 0;
-	default: goto out;
+	case DB_NOTFOUND:
+		ret = 0;
+		goto out;
+	default:
+		BUG("%s", db_strerror(ret));
+		goto out;
 	}
 
 	code = *(morton_t*) key.data;
@@ -261,10 +263,9 @@ map_close()
 		|| ipdb->close(ipdb, 0);
 }
 
-void
-map_put(pos_t p, dbref thing, int flags)
+static void
+_map_put(morton_t code, dbref thing, int flags)
 {
-	morton_t code = pos_morton(p);
 	DBT key;
 	DBT data;
 	int ret;
@@ -283,6 +284,13 @@ map_put(pos_t p, dbref thing, int flags)
 	CBUG(ret);
 }
 
+void
+map_put(pos_t p, dbref thing, int flags)
+{
+	morton_t code = pos_morton(p);
+	_map_put(code, thing, flags);
+}
+
 morton_t
 _map_where(dbref room)
 {
@@ -295,20 +303,9 @@ _map_where(dbref room)
 	key.data = &room;
 	key.size = sizeof(room);
 
-	/* fprintf(stderr, "map_where %d %p %p\n", room, ipdb, ipdb->get); */
 	if ((bad = ipdb->get(ipdb, NULL, &key, &data, 0))) {
-#if 1
 		static morton_t code = 130056652770671ULL;
-		debug("room %d db get: %s", room, db_strerror(bad));
-#else
-		BUG("room %d db get: %s", room, db_strerror(bad));
-#ifdef PRECOVERY
-		if (bad == DB_NOTFOUND) {
-			map_put(code, room, DB_NOOVERWRITE);
-			return code;
-		}
-#endif
-#endif
+		debug("room %d %s", room, db_strerror(bad));
 		return code;
 	}
 
@@ -354,11 +351,15 @@ map_get(pos_t p)
 				cur->c_del(cur, 0);
 				continue;
 			}
+#else
+			CBUG(Typeof(ref) != TYPE_ROOM);
 #endif
 			return ref;
 		case DB_NOTFOUND:
 			cur->close(cur);
 			return NOTHING;
+		default:
+			BUG("%s", db_strerror(res));
 		}
 	}
 }

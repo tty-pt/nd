@@ -2,20 +2,15 @@
 #define _EXTERNS_AUTO_H
 
 void add_property(dbref player, const char *pname, const char *strval, int value);
-int array_delitem(stk_array ** harr, array_iter * item);
-int array_delrange(stk_array ** harr, array_iter * start, array_iter * end);
 int can_move(command_t *cmd, const char *direction, int lev);
 void clear_propnode(PropPtr p);
 void copy_proplist(dbref obj, PropPtr * newer, PropPtr old);
 char * displayprop(dbref player, dbref obj, const char *name, char *buf, size_t bufsiz);
-void do_abort_silent(void);
-void do_post_dlog(int descr, const char *text);
 void do_tune(dbref player, char *parmname, char *parmval);
 void dump_status(void);
 int exit_loop_check(dbref source, dbref dest);
 const char * exit_prefix(register const char *string, register const char *prefix);
 int fetch_propvals(dbref obj, const char *dir);
-dbref find_mlev(dbref prog, struct frame * fr, int st);
 long get_tz_offset(void);
 dbref getparent(dbref obj);
 void kill_resolver(void);
@@ -49,11 +44,6 @@ char * strip_ansi(char *buf, const char *input);
 char * strip_bad_ansi(char *buf, const char *input);
 int test_lock(command_t *cmd, dbref thing, const char *lockprop);
 int test_lock_false_default(command_t *cmd, dbref thing, const char *lockprop);
-char * time_format_2(long dt);
-void ts_lastuseobject(dbref thing);
-void ts_useobject(dbref thing);
-void tune_save_parmsfile(void);
-int tune_setparm(const char *parmname, const char *val);
 void tune_freeparms(void);
 const char * unparse_flags(dbref thing);
 void untouchprops_incremental(int limit);

@@ -47,8 +47,6 @@
 #include "geography.h"
 #include "item.h"
 #include "mob.h"
-#undef NDEBUG
-#include "debug.h"
 #include "noise.h"
 
 #define DESCR_ITER(di_d) \
@@ -131,9 +129,6 @@ core_command_t cmds[] = {
 	}, {
 		.name = "create",
 		.cb = &do_create,
-	}, {
-		.name = "credits",
-		.cb = &do_credits,
 	}, {
 		.name = "describe",
 		.cb = &do_describe,
@@ -238,9 +233,6 @@ core_command_t cmds[] = {
 
 		/* do_showextver(player); */
 	}, {
-		.name = "shutdown",
-		.cb = &do_shutdown,
-	}, {
 		.name = "stats",
 		.cb = &do_stats,
 	}, {
@@ -270,9 +262,6 @@ core_command_t cmds[] = {
 	}, {
 		.name = "usage",
 		.cb = &do_usage,
-	}, {
-		.name = "version",
-		.cb = &do_version,
 	}, {
 		.name = "wall",
 		.cb = &do_wall,
@@ -322,19 +311,11 @@ core_command_t cmds[] = {
 		.name = "kill",
 		.cb = &do_kill,
 	}, {
-		.name = "look_at",
+		.name = "look",
 		.cb = &do_look_at,
 	}, {
 		.name = "leave",
 		.cb = &do_leave,
-	/* }, { */
-	/* 	.name = "move", */
-	/* 	.cb = &do_move, */
-	/* 	/1* do_move(descr, player, arg1, 0); *1/ */
-	/* }, { */
-	/* 	.name = "motd", */
-	/* 	.cb = &do_motd, */
-	/* 	/1* /2* do_motd(player, full_command); *2/ *1/ */
 	}, {
 		.name = "view",
 		.cb = &do_view,
@@ -354,12 +335,6 @@ core_command_t cmds[] = {
 	}, {
 		.name = "pose",
 		.cb = &do_pose,
-	}, {
-		.name = "drop",
-		.cb = &do_drop,
-	}, {
-		.name = "look_at",
-		.cb = &do_look_at,
 	}, {
 		.name = "rob",
 		.cb = &do_rob,
@@ -466,7 +441,6 @@ command_new(descr_t *d, char *input, size_t len)
 
 		cmd.argv[i] = "";
 
-	command_debug(&cmd, "init");
 	return cmd;
 }
 
@@ -673,11 +647,9 @@ notify_nolisten(dbref player, const char *msg, int isprivate)
 {
 	int retval = 0;
 	char buf[BUFFER_LEN + 2];
-	char buf2[BUFFER_LEN + 2];
 	int firstpass = 1;
 	char *ptr1;
 	const char *ptr2;
-	dbref ref;
 	int di;
 	int* darr;
 	int dcount;
@@ -699,52 +671,6 @@ notify_nolisten(dbref player, const char *msg, int isprivate)
 			if (firstpass) retval++;
 		}
 
-#if ZOMBIES
-		if ((Typeof(player) == TYPE_THING) && (FLAGS(player) & ZOMBIE) &&
-		    !(FLAGS(OWNER(player)) & ZOMBIE) &&
-		    (!(FLAGS(player) & DARK) || Wizard(OWNER(player)))) {
-			ref = getloc(player);
-			if (Wizard(OWNER(player)) || ref == NOTHING ||
-			    Typeof(ref) != TYPE_ROOM || !(FLAGS(ref) & ZOMBIE)) {
-				if (isprivate || getloc(player) != getloc(OWNER(player))) {
-					command_t cmd_pp = command_new_null(-1, player);
-					char pbuf[BUFFER_LEN];
-					const char *prefix;
-					char ch = *match_args;
-
-					*match_args = '\0';
-
-					if (notify_nolisten_level <= 0)
-					{
-						notify_nolisten_level++;
-
-						prefix = do_parse_prop(&cmd_pp, player, MESGPROP_PECHO, "(@Pecho)", pbuf, sizeof(pbuf), MPI_ISPRIVATE);
-
-						notify_nolisten_level--;
-					}
-					else
-						prefix = 0;
-
-					*match_args = ch;
-
-					if (!prefix || !*prefix) {
-						prefix = NAME(player);
-						snprintf(buf2, sizeof(buf2), "%s> %.*s", prefix,
-							 (int)(BUFFER_LEN - (strlen(prefix) + 3)), buf);
-					} else {
-						snprintf(buf2, sizeof(buf2), "%s %.*s", prefix,
-							 (int)(BUFFER_LEN - (strlen(prefix) + 2)), buf);
-					}
-
-					darr = get_player_descrs(OWNER(player), &dcount);
-					for (di = 0; di < dcount; di++) {
-						descr_inband(descrdata_by_descr(darr[di]), buf2);
-						if (firstpass) retval++;
-					}
-				}
-			}
-		}
-#endif
 		firstpass = 0;
 	}
 	return retval;
@@ -835,54 +761,7 @@ notify_fmt(dbref player, char *format, ...)
 	va_end(args);
 }
 
-struct timeval
-timeval_sub(struct timeval now, struct timeval then)
-{
-	now.tv_sec -= then.tv_sec;
-	now.tv_usec -= then.tv_usec;
-	if (now.tv_usec < 0) {
-		now.tv_usec += 1000000;
-		now.tv_sec--;
-	}
-	return now;
-}
-
-int
-msec_diff(struct timeval now, struct timeval then)
-{
-	return ((now.tv_sec - then.tv_sec) * 1000 + (now.tv_usec - then.tv_usec) / 1000);
-}
-
-struct timeval
-msec_add(struct timeval t, int x)
-{
-	t.tv_sec += x / 1000;
-	t.tv_usec += (x % 1000) * 1000;
-	if (t.tv_usec >= 1000000) {
-		t.tv_sec += t.tv_usec / 1000000;
-		t.tv_usec = t.tv_usec % 1000000;
-	}
-	return t;
-}
-
-void
-goodbye_user(descr_t *d)
-{
-	descr_inband(d, "\r\n" LEAVE_MESSAGE "\r\n\r\n");
-}
-
 extern void purge_free_frames(void);
-
-static void
-do_tick()
-{
-	if (time_since_combat < 1000)
-		return;
-
-	time_since_combat = 0;
-	mob_update();
-	geo_update();
-}
 
 void
 wall(const char *msg)
@@ -914,7 +793,7 @@ queue_read(descr_t *d, queue_t *q) {
 	q->len += ret;
 	*(q->p = q->buf + q->len) = '\0';
 	ret ++;
-	warn("queue_read %d %ld bytes %ld+%d/%d -- %s\n", d->fd, q->len, q->len - ret, ret, QUEUE_MAX, q->buf);
+	/* warn("queue_read %d %ld bytes %ld+%d/%d -- %s\n", d->fd, q->len, q->len - ret, ret, QUEUE_MAX, q->buf); */
 	return ret;
 }
 
@@ -1050,8 +929,6 @@ announce_connect(command_t *cmd)
 				 "_connect", "Connect", 1, 1);
 	envpropqueue(cmd, getloc(player), NOTHING, player, NOTHING,
 				 "_oconnect", "Oconnect", 1, 0);
-
-	ts_useobject(player);
 	return;
 }
 
@@ -1084,22 +961,21 @@ auth(command_t *cmd)
                         /* if (d->proto.ws.ip) */
                         /*         web_logout(d->fd); */
 
-                        warn("FAILED CREATE %s on fd %d", user, d->fd);
+                        warn("FAILED CREATE %s on fd %d\n", user, d->fd);
                         return 1;
                 }
 
-                warn("CREATED %s(%d) on fd %d",
+                warn("CREATED %s(%d) on fd %d\n",
                            NAME(player), player, d->fd);
                 created = 1;
         } else
-                warn("CONNECTED: %s(%d) on fd %d",
+                warn("CONNECTED: %s(%d) on fd %d\n",
                            NAME(player), player, d->fd);
         d->flags = DF_CONNECTED;
         d->connected_at = time(NULL);
         cmd->player = d->player = player;
         remember_player_descr(player, d->fd);
         /* cks: someone has to initialize this somewhere. */
-        PLAYER_SET_BLOCK(d->player, 0);
         welcome_user(d);
         spit_file(player, MOTD_FILE);
         announce_connect(cmd);
@@ -1164,7 +1040,7 @@ command_process(command_t *cmd)
 	map_where(pos, getloc(cmd->player));
 
 	command_debug(cmd, "command_process");
-	warn("command_process %s", command);
+	/* warn("command_process %s\n", command); */
 
         // set current descriptor (needed for death)
         CBUG(GETLID(player) < 0);
@@ -1224,7 +1100,7 @@ out:
 void
 descr_process(descr_t *d, char *input, size_t input_len)
 {
-	warn("descr_process %d\n", d->fd);
+	/* warn("descr_process %d\n", d->fd); */
 
 	command_t cmd = command_new(d, input, input_len);
 
@@ -1350,7 +1226,6 @@ announce_disconnect(descr_t *d)
 	envpropqueue(&cmd, getloc(player), NOTHING, player, NOTHING,
 				 "_odisconnect", "Odisconnect", 1, 0);
 
-	ts_lastuseobject(player);
 	DBDIRTY(player);
 }
 
@@ -1424,7 +1299,6 @@ make_socket(int port)
 int
 shovechars()
 {
-	time_t now;
 	struct timeval timeout;
 	descr_t *d;
 	int avail_descriptors;
@@ -1438,11 +1312,8 @@ shovechars()
 
 	nextfd = sockfd + 1;
 	FD_SET(sockfd, &readfds_new);
-	warn("shovechars %d\n", sockfd);
 
 	avail_descriptors = sysconf(_SC_OPEN_MAX) - 5;
-
-	(void) time(&now);
 
 	mob_init();
 
@@ -1454,11 +1325,12 @@ shovechars()
 
 	while (shutdown_flag == 0) {
 		/* process_commands(); */
-		do_tick();
+		mob_update();
+		geo_update();
 
 		DESCR_ITER(d) {
 			if (d->flags & DF_BOOTED) {
-				goodbye_user(d);
+				descr_inband(d, "\r\n" LEAVE_MESSAGE "\r\n\r\n");
 				d->flags ^= DF_BOOTED;
 				descr_close(d);
 			}
@@ -1468,7 +1340,6 @@ shovechars()
 			wall(DUMPING_MESG);
 			global_dumpdone = 0;
 		}
-		purge_free_frames();
 		untouchprops_incremental(1);
 
 		if (shutdown_flag)
@@ -1495,8 +1366,6 @@ shovechars()
 			continue;
 		}
 
-		warn("select_n %d\n", select_n);
-
 		for (d = descr_map;
 		     d < descr_map + FD_SETSIZE;
 		     d++) {
@@ -1510,11 +1379,6 @@ shovechars()
 		}
 	}
 
-	/* End of the player processing loop */
-
-	(void) time(&now);
-	add_property((dbref) 0, "_sys/lastdumptime", NULL, (int) now);
-	add_property((dbref) 0, "_sys/shutdowntime", NULL, (int) now);
 	return 0;
 }
 
@@ -1587,68 +1451,6 @@ time_format_1(long dt)
 	else
 		snprintf(buf, sizeof(buf), "%02d:%02d", delta->tm_hour, delta->tm_min);
 	return buf;
-}
-
-void
-dump_users(descr_t *e, char *user)
-{
-	descr_t *d;
-	int wizard;
-	time_t now;
-	char buf[2048];
-	char pbuf[64];
-	char secchar = ' ';
-
-	wizard = (e->flags & DF_CONNECTED) && Wizard(e->player);
-
-	while (*user && (isspace(*user) || *user == '*'))
-		user++;
-
-	if (wizard)
-		/* S/he is connected and not quelled. Okay; log it. */
-		warn("WIZ: %s(%d) in %s(%d):  %s", NAME(e->player),
-					(int) e->player, NAME(DBFETCH(e->player)->location),
-					(int) DBFETCH(e->player)->location, "WHO");
-
-	if (!*user)
-		user = NULL;
-
-	(void) time(&now);
-	if (wizard) {
-		descr_inband(e, "Player Name                Location     On For Idle   Host\r\n");
-	} else {
-		descr_inband(e, "Player Name           On For Idle\r\n");
-	}
-
-	DESCR_ITER(d) if ((
-			   !WHO_HIDES_DARK || wizard
-			   || !(FLAGS(d->player) & DARK))
-			  && (!user || string_prefix(NAME(d->player), user))) {
-
-		secchar = ' ';
-
-		if (wizard) {
-			/* don't print flags, to save space */
-			snprintf(pbuf, sizeof(pbuf), "%.*s(#%d)", PLAYER_NAME_LIMIT + 1,
-				 NAME(d->player), (int) d->player);
-			snprintf(buf, sizeof(buf),
-				 "%-*s [%6d] %10s %c%c\r\n",
-				 PLAYER_NAME_LIMIT + 10, pbuf,
-				 (int) DBFETCH(d->player)->location,
-				 time_format_1(now - d->connected_at),
-				 ((FLAGS(d->player) & INTERACTIVE) ? '*' : ' '),
-				 secchar);
-		} else {
-			snprintf(buf, sizeof(buf), "%-*s %10s %c%c\r\n",
-				 (int)(PLAYER_NAME_LIMIT + 1),
-				 NAME(d->player),
-				 time_format_1(now - d->connected_at),
-				 ((FLAGS(d->player) & INTERACTIVE) ? '*' : ' '),
-				 secchar);
-		}
-	}
-
-	descr_inband(e, buf);
 }
 
 /***** O(1) Connection Optimizations *****/

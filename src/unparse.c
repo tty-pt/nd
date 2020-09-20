@@ -13,8 +13,6 @@
 #include "props.h"
 #include "item.h"
 #include "plant.h"
-#undef NDEBUG
-#include "debug.h"
 
 const char *
 unparse_flags(dbref thing)
@@ -64,20 +62,6 @@ unparse_flags(dbref thing)
                 if (FLAGS(thing) & OVERT)
                         *p++ = 'O';
 #endif
-		if (MLevRaw(thing)) {
-			*p++ = 'M';
-			switch (MLevRaw(thing)) {
-			case 1:
-				*p++ = '1';
-				break;
-			case 2:
-				*p++ = '2';
-				break;
-			case 3:
-				*p++ = '3';
-				break;
-			}
-		}
 	}
 	*p = '\0';
 	return buf;

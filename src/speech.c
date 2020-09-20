@@ -178,9 +178,6 @@ do_page(command_t *cmd)
 void
 notify_listeners(dbref who, dbref xprog, dbref obj, dbref room, const char *msg, int isprivate)
 {
-	char buf[BUFFER_LEN];
-	dbref ref;
-
 	if (obj == NOTHING)
 		return;
 
@@ -195,28 +192,6 @@ notify_listeners(dbref who, dbref xprog, dbref obj, dbref room, const char *msg,
 	}
 #endif
 
-#if ZOMBIES
-	if (Typeof(obj) == TYPE_THING
-	    && !isprivate
-	    && (FLAGS(obj) & VEHICLE)
-	    && getloc(who) == getloc(obj)) {
-		command_t cmd_pp = command_new_null(-1, who);
-		char pbuf[BUFFER_LEN];
-		const char *prefix;
-
-		memset(buf,0,BUFFER_LEN); /* Make sure the buffer is zeroed */
-
-		prefix = do_parse_prop(&cmd_pp, obj, MESGPROP_OECHO, "(@Oecho)", pbuf, sizeof(pbuf), MPI_ISPRIVATE);
-		if (!prefix || !*prefix)
-			prefix = "Outside>";
-		snprintf(buf, sizeof(buf), "%s %.*s", prefix, (int)(BUFFER_LEN - 2 - strlen(prefix)), msg);
-		ref = DBFETCH(obj)->contents;
-		while (ref != NOTHING) {
-			notify_filtered(who, ref, buf, isprivate);
-			ref = DBFETCH(ref)->next;
-		}
-	}
-#endif
 	if (Typeof(obj) == TYPE_PLAYER || Typeof(obj) == TYPE_THING)
 		notify_filtered(who, obj, msg, isprivate);
 }

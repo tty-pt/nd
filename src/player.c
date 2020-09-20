@@ -26,33 +26,12 @@ lookup_player(const char *name)
 	}
 }
 
-
 int
 check_password(dbref player, const char* password)
 {
-	char md5buf[64];
-	const char *processed = password;
 	const char *pword = PLAYER_PASSWORD(player);
-
-	if (password == NULL) {
-		MD5base64(md5buf, "", 0);
-		processed = md5buf;
-	} else {
-		if (*password) {
-			MD5base64(md5buf, password, strlen(password));
-			processed = md5buf;
-		}
-	}
-
-	if (!pword || !*pword)
-		return 1;
-
-	if (!strcmp(pword, processed))
-		return 1;
-
-	return 0;
+	return !crypt_checkpass(password, pword);
 }
-
 
 void
 set_password_raw(dbref player, const char* password)
@@ -61,22 +40,14 @@ set_password_raw(dbref player, const char* password)
 	DBDIRTY(player);
 }
 
-
 void
 set_password(dbref player, const char* password)
 {
-	char md5buf[64];
-	const char *processed = password;
-
-	if (*password) {
-		MD5base64(md5buf, password, strlen(password));
-		processed = md5buf;
+	char hash[64];
+	if (crypt_newhash(password, "bcrypt,4", hash, sizeof(hash))) {
+		perror("crypt_newhash");
 	}
-	
-	if (PLAYER_PASSWORD(player))
-		free((void *) PLAYER_PASSWORD(player));
-
-	set_password_raw(player, alloc_string(processed));
+	set_password_raw(player, alloc_string(hash));
 }
 
 
@@ -123,11 +94,6 @@ create_player(const char *name, const char *password)
 	SETVALUE(player, START_PENNIES);
 	set_password_raw(player, NULL);
 	set_password(player, password);
-	PLAYER_SET_CURR_PROG(player, NOTHING);
-	PLAYER_SET_INSERT_MODE(player, 0);
-	PLAYER_SET_IGNORE_CACHE(player, NULL);
-	PLAYER_SET_IGNORE_COUNT(player, 0);
-	PLAYER_SET_IGNORE_LAST(player, NOTHING);
 
 	/* link him to PLAYER_START */
 	PUSH(player, DBFETCH(PLAYER_START)->contents);
@@ -135,7 +101,7 @@ create_player(const char *name, const char *password)
 	DBDIRTY(player);
 	DBDIRTY(PLAYER_START);
 
-	set_flags_from_tunestr(player, PCREATE_FLAGS);
+	FLAGS(player) |= CHOWN_OK;
 
 	return player;
 }
@@ -219,7 +185,6 @@ delete_player(dbref who)
 					if (NAME(ren)) {
 						free((void *) NAME(ren));
 					}
-					ts_modifyobject(ren);
 					NAME(ren) = alloc_string(namebuf);
 					add_player(ren);
 				} else {

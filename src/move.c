@@ -52,9 +52,6 @@ moveto(dbref what, dbref where)
 		case TYPE_ROOM:
 			where = GLOBAL_ENVIRONMENT;
 			break;
-		case TYPE_PROGRAM:
-			where = OWNER(what);
-			break;
 		}
 		break;
         default:
@@ -73,9 +70,6 @@ moveto(dbref what, dbref where)
 			break;
 		case TYPE_ROOM:
 			where = GLOBAL_ENVIRONMENT;
-			break;
-		case TYPE_PROGRAM:
-			where = OWNER(what);
 			break;
 		}
 	  }
@@ -106,8 +100,7 @@ send_contents(command_t *cmd, dbref dest)
 
 	while (first != NOTHING) {
 		rest = DBFETCH(first)->next;
-		if ((Typeof(first) != TYPE_THING)
-			&& (Typeof(first) != TYPE_PROGRAM)) {
+		if (Typeof(first) != TYPE_THING) {
 			moveto(first, loc);
 		} else {
 			where = FLAGS(first) & STICKY ? HOME : dest;
@@ -218,9 +211,6 @@ parent_loop_check(dbref source, dbref dest)
 		  case TYPE_ROOM:
 			  dest = GLOBAL_ENVIRONMENT;
 			  break;
-		  case TYPE_PROGRAM:
-			  dest = OWNER(source);
-			  break;
 		  default:
 			  return 1;
 	  }
@@ -292,9 +282,6 @@ enter_room(command_t *cmd, dbref loc, dbref exit)
 	    break;
 	  case TYPE_ROOM:
 	    loc = GLOBAL_ENVIRONMENT;
-	    break;
-	  case TYPE_PROGRAM:
-	    loc = OWNER(player);
 	    break;
 	  }
 	}
@@ -403,9 +390,6 @@ send_home(command_t *cmd, int puppethome)
 			break;
 		}
 		moveto(thing, HOME);	/* home */
-		break;
-	case TYPE_PROGRAM:
-		moveto(thing, OWNER(thing));
 		break;
 	default:
 		/* no effect */
@@ -566,7 +550,6 @@ trigger(command_t *cmd, dbref exit, int pflag)
 			}
 			break;
 		case TYPE_EXIT:		/* It's a meta-link(tm)! */
-			ts_useobject(dest);
 			trigger(cmd, (DBFETCH(exit)->sp.exit.dest)[i], 0);
 			if (GETSUCC(exit))
 				succ = 1;
@@ -641,7 +624,6 @@ go_move(command_t *cmd, const char *direction, int lev)
 		default:
 			/* we got one */
 			/* check to see if we got through */
-			ts_useobject(exit);
 			loc = DBFETCH(player)->location;
 
 			if (!can_doit(cmd, exit, "You can't go that way."))
@@ -757,8 +739,6 @@ do_get(command_t *cmd)
 		}
 		switch (Typeof(thing)) {
 		case TYPE_THING:
-			ts_useobject(thing);
-		case TYPE_PROGRAM:
 			if (obj && *obj) {
 				cando = could_doit(cmd, thing);
 				if (!cando)
@@ -815,8 +795,6 @@ do_drop(command_t *cmd)
 	}
 	switch (Typeof(thing)) {
 	case TYPE_THING:
-		ts_useobject(thing);
-	case TYPE_PROGRAM:
 		if (DBFETCH(thing)->location != player) {
 			/* Shouldn't ever happen. */
 			notify(player, "You can't drop that.");
@@ -985,7 +963,6 @@ recycle(command_t *cmd, dbref thing)
 	static int depth = 0;
 	dbref first;
 	dbref rest;
-	char buf[2048];
 	int looplimit;
 
 	depth++;
@@ -1048,10 +1025,6 @@ recycle(command_t *cmd, dbref thing)
 			if (DBFETCH(thing)->sp.exit.ndest != 0)
 				SETVALUE(OWNER(thing), GETVALUE(OWNER(thing)) + LINK_COST);
 		DBDIRTY(OWNER(thing));
-		break;
-	case TYPE_PROGRAM:
-		snprintf(buf, sizeof(buf), "muf/%d.m", (int) thing);
-		unlink(buf);
 		break;
 	}
 
@@ -1117,22 +1090,6 @@ recycle(command_t *cmd, dbref thing)
 			}
 			break;
 		case TYPE_PLAYER:
-			if (Typeof(thing) == TYPE_PROGRAM && (FLAGS(rest) & INTERACTIVE)
-				&& (PLAYER_CURR_PROG(rest) == thing)) {
-				if (FLAGS(rest) & READMODE) {
-					notify(rest,
-						   "The program you were running has been recycled.  Aborting program.");
-				} else {
-					free_prog_text(PROGRAM_FIRST(thing));
-					PROGRAM_SET_FIRST(thing, NULL);
-					PLAYER_SET_INSERT_MODE(rest, 0);
-					FLAGS(thing) &= ~INTERNAL;
-					FLAGS(rest) &= ~INTERACTIVE;
-					PLAYER_SET_CURR_PROG(rest, NOTHING);
-					notify(rest,
-						   "The program you were editing has been recycled.  Exiting Editor.");
-				}
-			}
 			if (PLAYER_HOME(rest) == thing) {
 				PLAYER_SET_HOME(rest, PLAYER_START);
 				DBDIRTY(rest);
@@ -1141,14 +1098,7 @@ recycle(command_t *cmd, dbref thing)
 				DBFETCH(rest)->exits = DBFETCH(thing)->next;
 				DBDIRTY(rest);
 			}
-			if (PLAYER_CURR_PROG(rest) == thing)
-				PLAYER_SET_CURR_PROG(rest, 0);
 			break;
-		case TYPE_PROGRAM:
-			if (OWNER(rest) == thing) {
-				OWNER(rest) = GOD;
-				DBDIRTY(rest);
-			}
 		}
 		/*
 		 *if (DBFETCH(rest)->location == thing)

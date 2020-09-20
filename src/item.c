@@ -9,8 +9,6 @@
 #include "geography.h"
 #include "item.h"
 #include "mob.h"
-#undef NDEBUG
-#include "debug.h"
 
 #define DMG_WEAPON(x) IE(x, DMG_G)
 #define WTS_WEAPON(eq) phys_wts[GETEQT(eq)]

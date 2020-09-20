@@ -3,7 +3,6 @@
 
 /* We need struct inst before anything */
 #include "db.h"
-#include "array.h"
 #include "autoconf.h"
 #include "config.h"
 #include "copyright.h"
