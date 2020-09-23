@@ -78,11 +78,9 @@ typedef struct descr_st {
 	/* int quota; */
 } descr_t;
 
-#define CMDS_HASHED_SIZE 512
+#define CMD_HASH_SIZE 512
 
-core_command_t *cmds_hashed[CMDS_HASHED_SIZE] = {
-	[ 0 ... CMDS_HASHED_SIZE - 1 ] = NULL,
-};
+static hash_tab cmds_hashed[CMD_HASH_SIZE];
 
 core_command_t cmds[] = {
 	{
@@ -106,9 +104,6 @@ core_command_t cmds[] = {
 	}, {
 		.name = "chown",
 		.cb = &do_chown,
-	}, {
-		.name = "chlock",
-		.cb = &do_chlock,
 	}, {
 		.name = "clone",
 		.cb = &do_clone,
@@ -361,14 +356,8 @@ core_command_t cmds[] = {
 };
 
 fd_set readfds, activefds, writefds;
-descr_t *descriptor_list = NULL;
-
-#define MAX_LISTEN_SOCKS 16
 
 int shutdown_flag = 0;
-
-static const char *create_fail =
-		"Either there is already a player with that name, or that name is illegal.\r\n";
 
 static int sockfd, nextfd;
 descr_t descr_map[FD_SETSIZE];
@@ -426,21 +415,12 @@ command_new(descr_t *d, char *input, size_t len)
 
 core_command_t *
 command_match(command_t *cmd) {
-	unsigned idx = hash_idx(cmd->argv[0], CMDS_HASHED_SIZE);
-	core_command_t *cc = cmds_hashed[idx];
-	char *a, *b;
+	hash_data *hd;
 
-	if (!cc)
+	if ((hd = find_hash(cmd->argv[0], cmds_hashed, CMD_HASH_SIZE)) == NULL)
 		return NULL;
 
-	warn("command_match %s\n", cc->name);
-
-	for (a = cc->name, b = cmd->argv[0];
-	     *a && *b; a++, b++)
-		if (*a != *b)
-			return NULL;
-
-	return cc;
+	return (core_command_t *) hd->pval;
 }
 
 command_t command_null(command_t *cmd) {
@@ -465,13 +445,10 @@ commands_init() {
 	int i;
 
 	for (i = 0; i < sizeof(cmds) / sizeof(core_command_t); i++) {
-		const char *name = cmds[i].name;
-		unsigned idx = hash_idx(name, CMDS_HASHED_SIZE);
-		core_command_t *cc = cmds_hashed[idx];
-		if (cc) {
-			warn("%s command collides with %s\n", name, cc->name);
-		}
-		cmds_hashed[idx] = &cmds[i];
+		hash_data hd;
+		hd.pval = &cmds[i];
+
+		add_hash(cmds[i].name, hd, cmds_hashed, CMD_HASH_SIZE);
 	}
 }
 
@@ -899,9 +876,8 @@ auth(command_t *cmd)
                 player = create_player(user, password);
 
                 if (player == NOTHING) {
-                        descr_inband(d, create_fail);
-                        /* if (d->proto.ws.ip) */
-                        /*         web_logout(d->fd); */
+                        descr_inband(d, "Either there is already a player with"
+				     " that name, or that name is illegal.\r\n");
 
                         warn("FAILED CREATE %s on fd %d\n", user, d->fd);
                         return 1;
@@ -1486,24 +1462,6 @@ dbref_first_descr(dbref c)
 	} else {
 		return -1;
 	}
-}
-
-dbref
-partial_pmatch(const char *name)
-{
-	descr_t *d;
-	dbref last = NOTHING;
-
-	d = descriptor_list;
-	DESCR_ITER(d) if (string_prefix(NAME(d->player), name)) {
-		if (last != NOTHING) {
-			last = AMBIGUOUS;
-			break;
-		}
-		last = d->player;
-	}
-
-	return last;
 }
 
 void

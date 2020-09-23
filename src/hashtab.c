@@ -112,29 +112,22 @@ add_hash(register const char *name, hash_data data, hash_tab * table, unsigned i
 
 	hashval = hash(name, size);
 
+#if 1
 	/* an inline find_hash */
 	for (hp = table[hashval]; hp != NULL; hp = hp->next) {
 		if (strcmp(name, hp->name) == 0) {
+			BUG("found %s in hash while inserting\n", name);
 			break;
 		}
 	}
-
-	/* If not found, set up a new entry */
-	if (hp == NULL) {
-		hp = (hash_entry *) malloc(sizeof(hash_entry));
-		if (hp == NULL) {
-			perror("add_hash: out of memory!");
-			abort();			/* can't allocate new entry -- die */
-		}
-		hp->next = table[hashval];
-		table[hashval] = hp;
-		hp->name = (char *) strdup(name);	/* This might be wasteful. */
-		if (hp->name == NULL) {
-			perror("add_hash: out of memory!");
-			abort();			/* can't allocate new entry -- die */
-		}
-	}
-	/* One way or another, the pointer is now valid */
+#endif
+	hp = (hash_entry *) malloc(sizeof(hash_entry));
+	CBUG(hp == NULL);
+	hp->next = table[hashval];
+	table[hashval] = hp;
+	/* hp->name = (char *) strdup(name);	/1* This might be wasteful. *1/ */
+	/* CBUG(hp->name == NULL); */
+	hp->name = name;
 	hp->dat = data;
 	return hp;
 }
@@ -153,7 +146,7 @@ free_hash(register const char *name, hash_tab * table, unsigned int size)
 	for (hp = *lp; hp != NULL; lp = &(hp->next), hp = hp->next) {
 		if (strcmp(name, hp->name) == 0) {
 			*lp = hp->next;		/* got it.  fix the pointers */
-			free((void *) hp->name);
+			/* free((void *) hp->name); */
 			free((void *) hp);
 			return 0;
 		}
@@ -171,7 +164,7 @@ kill_hash(hash_tab * table, unsigned int size, int freeptrs)
 	for (i = 0; i < size; i++) {
 		for (hp = table[i]; hp != NULL; hp = np) {
 			np = hp->next;		/* Don't dereference the pointer after */
-			free((void *) hp->name);
+			/* free((void *) hp->name); */
 			if (freeptrs) {
 				free((void *) hp->dat.pval);
 			}
