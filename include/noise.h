@@ -3,6 +3,7 @@
 
 #include "biome.h"
 #include "plant.h"
+#include "hash.h"
 
 typedef unsigned noise_t;
 typedef long snoise_t; // FIXME
@@ -17,6 +18,5 @@ struct bio {
 
 struct bio * noise_point(pos_t p);
 void noise_view(struct bio to[VIEW_M], pos_t pos);
-noise_t uhash(void *p, size_t l, int seed);
 
 #endif

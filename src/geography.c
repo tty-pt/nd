@@ -13,6 +13,7 @@
 #include "web.h"
 #include "search.h"
 #include "noise.h"
+#include "hash.h"
 #include "view.h"
 #include "mob.h"
 
@@ -266,7 +267,7 @@ exits_infer(command_t *cmd, dbref here)
 static inline void
 others_add(command_t *cmd, dbref where, enum biome b, pos_t p)
 {
-	noise_t v = uhash(&p, sizeof(pos_t), 0);
+	noise_t v = uhash((const char *) &p, sizeof(pos_t), 0);
 	unsigned char n = v & 0x7;
 	static struct obj stone = { "stone", "", "" };
 	if (b == BIOME_WATER)

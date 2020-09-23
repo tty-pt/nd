@@ -33,7 +33,6 @@ void set_source(dbref player, dbref action, dbref source);
 long size_boolexp(struct boolexp *b);
 long size_properties(dbref player, int load);
 long size_proplist(PropPtr avl);
-void spit_file_segment(dbref player, const char *filename, const char *seg);
 void spit_file(dbref player, const char *filename);
 int string_compare(const char *s1, const char *s2);
 int string_prefix(const char *string, const char *prefix);

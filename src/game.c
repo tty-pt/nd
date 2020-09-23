@@ -93,8 +93,7 @@ panic(const char *message)
 	char panicfile[2048];
 	FILE *f;
 
-	warn("PANIC: %s", message);
-	fprintf(stderr, "PANIC: %s\n", message);
+	warn("PANIC: %s\n", message);
 
 	/* shut down interface */
 	if (!forked_dump_process_flag) {
@@ -106,34 +105,16 @@ panic(const char *message)
 	if ((f = fopen(panicfile, "wb")) == NULL) {
 		perror("CANNOT OPEN PANIC FILE, YOU LOSE");
 		sync();
-
-#ifdef NOCOREDUMP
-		exit(135);
-#else							/* !NOCOREDUMP */
-# ifdef SIGIOT
-		signal(SIGIOT, SIG_DFL);
-# endif
 		abort();
-#endif							/* NOCOREDUMP */
 	} else {
-		warn("DUMPING: %s", panicfile);
-		fprintf(stderr, "DUMPING: %s\n", panicfile);
+		warn("DUMPING: %s\n", panicfile);
 		db_write(f);
 		fclose(f);
-		warn("DUMPING: %s (done)", panicfile);
-		fprintf(stderr, "DUMPING: %s (done)\n", panicfile);
+		warn("DUMPING: %s (done)\n", panicfile);
 	}
 
 	sync();
-
-#ifdef NOCOREDUMP
-	exit(136);
-#else							/* !NOCOREDUMP */
-#ifdef SIGIOT
-	signal(SIGIOT, SIG_DFL);
-#endif
 	abort();
-#endif							/* NOCOREDUMP */
 }
 
 void
@@ -141,9 +122,9 @@ dump_database(void)
 {
 	epoch++;
 
-	warn("DUMPING: %s.#%d#", STD_DB, epoch);
+	warn("DUMPING: %s.#%d#\n", STD_DB, epoch);
 	dump_database_internal();
-	warn("DUMPING: %s.#%d# (done)", STD_DB, epoch);
+	warn("DUMPING: %s.#%d# (done)\n", STD_DB, epoch);
 }
 
 /*
@@ -155,7 +136,7 @@ fork_and_dump(void)
 	epoch++;
 
 	last_monolithic_time = time(NULL);
-	warn("CHECKPOINTING: %s.#%d#", STD_DB, epoch);
+	warn("CHECKPOINTING: %s.#%d#\n", STD_DB, epoch);
 
 	wall(DUMPING_MESG);
 
@@ -188,10 +169,10 @@ init_game()
 	SRANDOM(getpid());			/* init random number generator */
 
 	/* ok, read the db in */
-	warn("LOADING: %s", STD_DB);
+	warn("LOADING: %s\n", STD_DB);
 	if (db_read(input_file) < 0)
 		return -1;
-	warn("LOADING: %s (done)", STD_DB);
+	warn("LOADING: %s (done)\n", STD_DB);
 
 	/* initialize the _sys/startuptime property */
 	add_property((dbref) 0, "_sys/startuptime", NULL, (int) time((time_t *) NULL));

@@ -124,10 +124,6 @@ temp(ucoord_t obits, noise_t he, noise_t tm, coord_t pos_y) // fahrenheit * 10
 /* }}} */
 /* }}} */
 
-noise_t uhash(void *p, size_t l, int seed) {
-	return HASH(p, l, seed);
-}
-
 /* gets a (deterministic) random value for point p */
 
 static inline noise_t

@@ -407,17 +407,16 @@ struct object {
 
 	object_flag_type flags;
 
-	unsigned int mpi_prof_use;
-	struct timeval mpi_proftime;
+	/* unsigned int mpi_prof_use; */
+	/* struct timeval mpi_proftime; */
 
 	union specific sp;
 };
 
 /* Possible data types that may be stored in a hash table */
 union u_hash_data {
-	int ival;					/* Store compiler tokens here */
-	dbref dbval;				/* Player hashing will want this */
-	void *pval;					/* compiler $define strings use this */
+	dbref dbval;	/* Player hashing will want this */
+	void *pval;	/* Command hashing wants this */
 };
 
 /* The actual hash entry for each item */
