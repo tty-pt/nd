@@ -19,7 +19,6 @@ int notify_from_echo(dbref from, dbref player, const char *msg, int isprivate);
 int notify_from(dbref from, dbref player, const char *msg);
 int notify(dbref player, const char *msg);
 void notify_fmt(dbref player, char *format, ...);
-void notify_listeners(dbref who, dbref xprog, dbref obj, dbref room, const char *msg, int isprivate);
 void notify_except(dbref first, dbref exception, const char *msg, dbref who);
 int ok_password(const char *password);
 int ok_player_name(const char *name);

@@ -169,21 +169,6 @@
  * by the owner of that room, as well as by the object owner, and Wizards. */
 #define REALMS_CONTROL 0
 
-/* Forbid MCP and MCP-GUI calls at less than given mucker level. 4 = wiz */
-#define MCP_MUF_MLEV 3
-
-/* Allows 'listeners' (see CHANGES file) */
-#define LISTENERS 0
-
-/* Forbid listener programs of less than given mucker level. 4 = wiz */
-#define LISTEN_MLEV 3
-
-/* Allows listeners to be placed on objects. */
-#define LISTENERS_OBJ 1
-
-/* Searches up the room environments for listeners */
-#define LISTENERS_ENV 1
-
 /* Allow only wizards to @set the VEHICLE flag on Thing objects. */
 #define WIZ_VEHICLES 0
 

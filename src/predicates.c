@@ -479,29 +479,6 @@ controls(dbref who, dbref what)
 		return 1;
 	}
 
-#if REALMS_CONTROL
-	{
-		dbref index;
-
-		/* Realm Owner controls everything under his environment. */
-		/* To set up a Realm, a Wizard sets the W flag on a room.  The
-		 * owner of that room controls every Room object contained within
-		 * that room, all the way to the leaves of the tree.
-		 * -winged */
-		for (index = what; index != NOTHING; index = getloc(index)) {
-			if ((OWNER(index) == who) && (Typeof(index) == TYPE_ROOM)
-			    && Wizard(index)) {
-				/* Realm Owner doesn't control other Player objects */
-				if(Typeof(what) == TYPE_PLAYER) {
-					return 0;
-				} else {
-					return 1;
-				}
-			}
-		}
-	}
-#endif
-
 	/* exits are also controlled by the owners of the source and destination */
 	/* ACTUALLY, THEY AREN'T.  IT OPENS A BAD MPI SECURITY HOLE. */
 	/* any MPI on an exit's @succ or @fail would be run in the context

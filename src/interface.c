@@ -74,7 +74,6 @@ typedef struct descr_st {
 	int con_number;
 	dbref player;
 	struct ws ws;
-	long connected_at;
 	/* int quota; */
 } descr_t;
 
@@ -122,9 +121,9 @@ core_command_t cmds[] = {
 	}, {
 		.name = "dig",
 		.cb = &do_dig,
-	/* }, { */
-	/* 	.name = "doing", */
-	/* 	.cb = &do_doing, */
+	}, {
+		.name = "doing",
+		.cb = &do_doing,
 	}, {
 		.name = "drop_message",
 		.cb = &do_drop_message,
@@ -394,14 +393,23 @@ command_new(descr_t *d, char *input, size_t len)
 	cmd.argv[0] = p;
 	cmd.argc++;
 
-	for (; p < input + len; p++) {
-		if (*p != ' ')
-			continue;
+	for (; p < input + len && *p != ' '; p++)
+		;
 
+	if (*p == ' ') {
 		*p = '\0';
-
 		cmd.argv[cmd.argc] = p + 1;
 		cmd.argc ++;
+
+		for (; p < input + len; p++) {
+			if (*p != '=')
+				continue;
+
+			*p = '\0';
+
+			cmd.argv[cmd.argc] = p + 1;
+			cmd.argc ++;
+		}
 	}
 
 	for (int i = cmd.argc;
@@ -574,8 +582,6 @@ main(int argc, char **argv)
 	return 0;
 }
 
-int notify_nolisten_level = 0;
-
 int
 descr_inband(descr_t *d, const char *s)
 {
@@ -628,20 +634,6 @@ notify_filtered(dbref from, dbref player, const char *msg, int isprivate)
 int
 notify_from_echo(dbref from, dbref player, const char *msg, int isprivate)
 {
-
-#if LISTENERS
-	const char *ptr=msg;
-#if !LISTENERS_OBJ
-	if (Typeof(player) == TYPE_ROOM)
-#endif
-		listenqueue(-1, from, getloc(from), player, player, NOTHING,
-			    "_listen", ptr, LISTEN_MLEV, 1, 0);
-	listenqueue(-1, from, getloc(from), player, player, NOTHING,
-		    "~listen", ptr, LISTEN_MLEV, 1, 1);
-	listenqueue(-1, from, getloc(from), player, player, NOTHING,
-		    "~olisten", ptr, LISTEN_MLEV, 0, 1);
-#endif
-
 	if (Typeof(player) == TYPE_THING && (FLAGS(player) & VEHICLE) &&
 		(!(FLAGS(player) & DARK) || Wizard(OWNER(player))))
 	{
@@ -857,7 +849,7 @@ auth(command_t *cmd)
 	int descr = cmd->fd;
 	char *user = cmd->argv[1];
 	char *password = cmd->argv[2];
-	warn("auth %s %sx\n", user, password);
+	warn("auth %s %s\n", user, password);
         int created = 0;
         dbref player = connect_player(user, password);
 	descr_t *d = descrdata_by_descr(descr);
@@ -886,28 +878,24 @@ auth(command_t *cmd)
                 warn("CREATED %s(%d) on fd %d\n",
                            NAME(player), player, d->fd);
                 created = 1;
+                mob_put(player);
         } else
                 warn("CONNECTED: %s(%d) on fd %d\n",
                            NAME(player), player, d->fd);
         d->flags = DF_CONNECTED;
-        d->connected_at = time(NULL);
         cmd->player = d->player = player;
         remember_player_descr(player, d->fd);
         spit_file(player, MOTD_FILE);
         announce_connect(cmd);
-        if (created) {
-                /* TODO do_help(player, "begin", ""); */
-                mob_put(player);
-        } else {
-                if (sanity_violated && Wizard(player))
-                        notify(player,
-                               "#########################################################################\n"
-                               "## WARNING!  The DB appears to be corrupt!  Please repair immediately! ##\n"
-                               "#########################################################################");
+        if (!created && sanity_violated && Wizard(player)) {
+		notify(player,
+		       "#########################################################################\n"
+		       "## WARNING!  The DB appears to be corrupt!  Please repair immediately! ##\n"
+		       "#########################################################################");
         }
         /* if (!(web_support(d->fd) && d->proto.ws.old)) */
 	do_view(cmd);
-        look_room(cmd, getloc(player), 0);
+        /* look_room(cmd, getloc(player), 0); */
 
         return 0;
 }
@@ -1084,7 +1072,6 @@ descr_new()
 	d->flags = 0;
 	d->player = -1;
 	d->con_number = 0;
-	d->connected_at = time(NULL);
 
 	if (fcntl(d->fd, F_SETFL, O_NONBLOCK) == -1) {
 		perror("make_nonblocking: fcntl");
@@ -1121,7 +1108,7 @@ announce_disconnect(descr_t *d)
 	d->flags = 0;
 	d->player = NOTHING;
 
-    forget_player_descr(player, d->fd);
+	forget_player_descr(player, d->fd);
 
 	/* queue up all _connect programs referred to by properties */
 	envpropqueue(&cmd, getloc(player), NOTHING, player, NOTHING,
@@ -1225,7 +1212,7 @@ shovechars()
 	if ((optflags & OPT_DETACH) && daemon(1, 1) != 0)
 		_exit(0);
 
-/* And here, we do the actual player-interaction loop */
+	/* And here, we do the actual player-interaction loop */
 
 	while (shutdown_flag == 0) {
 		/* process_commands(); */

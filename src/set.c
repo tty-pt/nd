@@ -154,10 +154,12 @@ do_idescribe(command_t *cmd)
 }
 
 void
-do_doing(command_t *cmd, const char *name, const char *mesg)
+do_doing(command_t *cmd)
 {
 	dbref player = cmd->player;
 	dbref thing;
+	const char *name = cmd->argv[1];
+	const char *mesg = cmd->argv[2];
 
 	NOGUEST("@doing", player);
 

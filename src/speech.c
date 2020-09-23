@@ -176,27 +176,6 @@ do_page(command_t *cmd)
 }
 
 void
-notify_listeners(dbref who, dbref xprog, dbref obj, dbref room, const char *msg, int isprivate)
-{
-	if (obj == NOTHING)
-		return;
-
-#if LISTENERS
-#if !LISTENERS_OBJ
-	if (Typeof(obj) == TYPE_ROOM)
-#endif
-	{
-		listenqueue(-1, who, room, obj, obj, xprog, "_listen", msg, LISTEN_MLEV, 1, 0);
-		listenqueue(-1, who, room, obj, obj, xprog, "~listen", msg, LISTEN_MLEV, 1, 1);
-		listenqueue(-1, who, room, obj, obj, xprog, "~olisten", msg, LISTEN_MLEV, 0, 1);
-	}
-#endif
-
-	if (Typeof(obj) == TYPE_PLAYER || Typeof(obj) == TYPE_THING)
-		notify_filtered(who, obj, msg, isprivate);
-}
-
-void
 notify_except(dbref first, dbref exception, const char *msg, dbref who)
 {
 	dbref room, srch;
@@ -204,18 +183,6 @@ notify_except(dbref first, dbref exception, const char *msg, dbref who)
 	if (first != NOTHING) {
 
 		srch = room = DBFETCH(first)->location;
-
-#if LISTENERS
-		notify_from_echo(who, srch, msg, 0);
-
-#if LISTENERS_ENV
-		srch = DBFETCH(srch)->location;
-		while (srch != NOTHING) {
-			notify_from_echo(who, srch, msg, 0);
-			srch = getparent(srch);
-		}
-#endif
-#endif
 
 		DOLIST(first, first) {
 			if ((Typeof(first) != TYPE_ROOM) && (first != exception)) {

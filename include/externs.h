@@ -68,7 +68,7 @@ void do_score(command_t *);
 void do_view(command_t *);
 void init_match_remote(command_t *cmd, dbref what, const char *name, int type, struct match_data *md);
 void send_contents(command_t *cmd, dbref dest);
-void do_doing(command_t *cmd, const char *name, const char *mesg);
+void do_doing(command_t *cmd);
 
 /* from db.c */
 extern int number(const char *s);
@@ -225,7 +225,6 @@ extern void do_wall(command_t *cmd);
 extern void do_gripe(command_t *cmd);
 extern void do_say(command_t *cmd);
 extern void do_page(command_t *cmd);
-extern void notify_listeners(dbref who, dbref xprog, dbref obj, dbref room, const char *msg, int isprivate);
 extern void notify_except(dbref first, dbref exception, const char *msg, dbref who);
 extern void notify_except_fmt(dbref first, dbref exception, char *format, ...);
 extern void notify_wts(dbref who, char const *a, char const *b, char *format, ...);
