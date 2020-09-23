@@ -389,12 +389,6 @@ can_doit(command_t *cmd, dbref thing, const char *default_fail_msg)
 
 	}
 
-	if (!Wizard(OWNER(player)) && Typeof(player) == TYPE_THING &&
-			(FLAGS(thing) & ZOMBIE)) {
-		notify(player, "Sorry, but zombies can't do that.");
-		return 0;
-	}
-
 	if (!could_doit(cmd, thing)) {
 		/* can't do it */
 		if (GETFAIL(thing)) {
@@ -511,37 +505,6 @@ restricted(dbref player, dbref thing, object_flag_type flag)
 		return 0;
 		/* NOTREACHED */
 		break;
-        case YIELD:
-                        /* Mucking with the env-chain matching requires TrueWizard */
-                return (!(Wizard(OWNER(player))));
-        case OVERT:
-                        /* Mucking with the env-chain matching requires TrueWizard */
-                return (!(Wizard(OWNER(player))));
-	case ZOMBIE:
-			/* Restricting a player from using zombies requires a wizard. */
-		if (Typeof(thing) == TYPE_PLAYER)
-			return (!(Wizard(OWNER(player))));
-			/* If a player's set Zombie, he's restricted from using them...
-			 * unless he's a wizard, in which case he can do whatever. */
-		if ((Typeof(thing) == TYPE_THING) && (FLAGS(OWNER(player)) & ZOMBIE))
-			return (!(Wizard(OWNER(player))));
-		return (0);
-	case VEHICLE:
-		/* Restricting a player from using vehicles requires a wizard. */
-		if (Typeof(thing) == TYPE_PLAYER)
-			return (!(Wizard(OWNER(player))));
-#if WIZ_VEHICLES
-		/* If only wizards can create vehicles... */
-		/* then only a wizard can create a vehicle. :) */
-		if (Typeof(thing) == TYPE_THING)
-			return (!(Wizard(OWNER(player))));
-#else
-		/* But, if vehicles aren't restricted to wizards, then
-		 * players who have not been restricted can do so */
-		if ((Typeof(thing) == TYPE_THING) && (FLAGS(player) & VEHICLE))
-			return (!(Wizard(OWNER(player))));
-#endif
-		return (0);
 	case DARK:
 		/* Dark can be set on a Program or Room by anyone. */
 		return !Wizard(OWNER(player))

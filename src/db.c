@@ -39,23 +39,13 @@ dbref
 getparent_logic(dbref obj)
 {
         if (obj == NOTHING) return NOTHING;
-	if (Typeof(obj) == TYPE_THING && (FLAGS(obj) & VEHICLE)) {
-		obj = THING_HOME(obj);
-		if (obj != NOTHING && Typeof(obj) == TYPE_PLAYER) {
-			obj = PLAYER_HOME(obj);
-		}
-	} else {
-		obj = getloc(obj);
-	}
+	obj = getloc(obj);
 	return obj;
 }
 
 dbref
 getparent(dbref obj)
 {
-#if SECURE_THING_MOVEMENT
-	return getloc(obj);
-#else
         dbref ptr, oldptr;
 
 	ptr = getparent_logic(obj);
@@ -68,7 +58,6 @@ getparent(dbref obj)
 		obj = GLOBAL_ENVIRONMENT;
 	}
 	return obj;
-#endif
 }
 
 

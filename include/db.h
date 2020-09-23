@@ -281,21 +281,12 @@ enum at { ARMOR_LIGHT, ARMOR_MEDIUM, ARMOR_HEAVY, };
 #define OBJECT_CHANGED 0x400000	/* internal: when an object is dbdirty()ed,
 								 * set this */
 #define SAVED_DELTA    0x800000	/* internal: object last saved to delta file */
-#define VEHICLE       0x1000000	/* Vehicle flag */
-#define VIEWABLE VEHICLE
-#define ZOMBIE        0x2000000	/* Zombie flag */
-#define ZMUF_DEBUGGER ZOMBIE
-#define LISTENER      0x4000000	/* internal: listener flag */
-#define XFORCIBLE     0x8000000	/* externally forcible flag */
-#define XPRESS XFORCIBLE
 #define READMODE     0x10000000	/* internal: when set, player is in a READ */
 #define SANEBIT      0x20000000	/* internal: used to check db sanity */
-#define YIELD	     0x40000000 /* Yield flag */
-#define OVERT        0x80000000 /* Overt flag */
 
 
 /* what flags to NOT dump to disk. */
-#define DUMP_MASK    (INTERACTIVE | SAVED_DELTA | OBJECT_CHANGED | LISTENER | READMODE | SANEBIT)
+#define DUMP_MASK    (INTERACTIVE | SAVED_DELTA | OBJECT_CHANGED | READMODE | SANEBIT)
 
 
 typedef long object_flag_type;

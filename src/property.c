@@ -34,11 +34,6 @@ set_property_nofetch(dbref player, const char *pname, PData * dat)
 
 	while (*pname == PROPDIR_DELIMITER)
 		pname++;
-	if ((!(FLAGS(player) & LISTENER)) &&
-		(string_prefix(pname, "_listen") ||
-		 string_prefix(pname, "~listen") || string_prefix(pname, "~olisten"))) {
-		FLAGS(player) |= LISTENER;
-	}
 
 	strlcpy(buf, pname, sizeof(buf));
 

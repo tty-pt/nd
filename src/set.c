@@ -1025,36 +1025,8 @@ do_set(command_t *cmd)
 			return;
 		}
 		f = WIZARD;
-	} else if (string_prefix("ZOMBIE", p)) {
-		f = ZOMBIE;
-	} else if (string_prefix("VEHICLE", p)
-		|| string_prefix("VIEWABLE", p)) {
-		if (*flag == NOT_TOKEN && Typeof(thing) == TYPE_THING) {
-			dbref obj = DBFETCH(thing)->contents;
-
-			for (; obj != NOTHING; obj = DBFETCH(obj)->next) {
-				if (Typeof(obj) == TYPE_PLAYER) {
-					notify(player, "That vehicle still has players in it!");
-					return;
-				}
-			}
-		}
-		f = VEHICLE;
 	} else if (string_prefix("LINK_OK", p)) {
 		f = LINK_OK;
-
-	} else if (string_prefix("XFORCIBLE", p) || string_prefix("XPRESS", p)) {
-		if (force_level) {
-			notify(player, "Can't set this flag from an @force or {force}.");
-			return;
-		}
-		if (Typeof(thing) == TYPE_EXIT) {
-			if (!Wizard(OWNER(player))) {
-				notify(player, "Permission denied. (Only a Wizard may set the M-level of an exit)");
-				return;
-			}
-		}
-		f = XFORCIBLE;
 
 	} else if (string_prefix("KILL_OK", p)) {
 		f = KILL_OK;
@@ -1076,14 +1048,6 @@ do_set(command_t *cmd)
 	} else if ((string_prefix("ABODE", p)) ||
 			   (string_prefix("AUTOSTART", p)) || (string_prefix("ABATE", p))) {
 		f = ABODE;
-#if ENABLE_MATCH_YIELD
-        } else if (string_prefix("YIELD", p) &&
-                   (Typeof(thing) == TYPE_ROOM || Typeof(thing) == TYPE_THING)) {
-                f = YIELD;
-        } else if (string_prefix("OVERT", p) &&
-                   (Typeof(thing) == TYPE_ROOM || Typeof(thing) == TYPE_THING)) {
-                f = OVERT;
-#endif
 	} else {
 		notify(player, "I don't recognize that flag.");
 		return;
@@ -1254,18 +1218,8 @@ set_flags_from_tunestr(dbref obj, const char* tunestr)
 			f = QUELL;
 		} else if (pcc == 'S') {
 			f = STICKY;
-		} else if (pcc == 'V') {
-			f = VEHICLE;
 		} else if (pcc == 'W') {
 			/* f = WIZARD;     This is very bad to auto-set. */
-		} else if (pcc == 'X') {
-			f = XFORCIBLE;
-                } else if (pcc == 'Y') {
-                        f = YIELD;
-                } else if (pcc == 'O') {
-                        f = OVERT;
-		} else if (pcc == 'Z') {
-			f = ZOMBIE;
 		}
 		FLAGS(obj) |= f;
 		p++;

@@ -230,7 +230,7 @@ match_exits(dbref first, struct match_data *md)
 {
 	dbref exit, absolute;
 	const char *exitname, *p;
-	int exitprog, lev, partial;
+	int exitprog, lev;
 
 	if (first == NOTHING)
 		return;					/* Easy fail match */
@@ -250,12 +250,6 @@ match_exits(dbref first, struct match_data *md)
 		if (FLAGS(exit) & HAVEN) {
 			exitprog = 1;
 		}
-		if (exitprog && md->partial_exits &&
-			(FLAGS(exit) & XFORCIBLE) && FLAGS(OWNER(exit)) & WIZARD) {
-			partial = 1;
-		} else {
-			partial = 0;
-		}
 		exitname = NAME(exit);
 		while (*exitname) {		/* for all exit aliases */
 			int notnull = 0;
@@ -270,7 +264,7 @@ match_exits(dbref first, struct match_data *md)
 				}
 			}
 			/* did we get a match on this alias? */
-			if ((partial && notnull) || ((*p == '\0') || (*p == ' ' && exitprog))) {
+			if (((*p == '\0') || (*p == ' ' && exitprog))) {
 				/* make sure there's nothing afterwards */
 				while (isspace(*exitname))
 					exitname++;
@@ -290,8 +284,8 @@ match_exits(dbref first, struct match_data *md)
 							}
 							md->exact_match = exit;
 							md->longest_match = strlen(md->match_name) - strlen(p);
-							if ((*p == ' ') || (partial && notnull)) {
-								strlcpy(match_args, (partial && notnull)? p : (p + 1), sizeof(match_args));
+							if (*p == ' ') {
+								strlcpy(match_args, (p + 1), sizeof(match_args));
 								{
 									char *pp;
 									int ip;
@@ -313,8 +307,8 @@ match_exits(dbref first, struct match_data *md)
 								md->match_level = lev;
 								md->block_equals = 0;
 							}
-							if ((*p == ' ') || (partial && notnull)) {
-								strlcpy(match_args, (partial && notnull) ? p : (p + 1), sizeof(match_args));
+							if (*p == ' ') {
+								strlcpy(match_args, p + 1, sizeof(match_args));
 								{
 									char *pp;
 									int ip;
@@ -477,7 +471,7 @@ match_all_exits(struct match_data *md)
         while ((loc = DBFETCH(loc)->location) != NOTHING) {
                 /* If we're blocking (because of a yield), only match a room if
                    and only if it has overt set on it. */
-                if ((blocking && FLAGS(loc) & OVERT) || !blocking) {
+                if (!blocking) {
                   if (md->exact_match != NOTHING)
                     md->block_equals = 1;
                   match_room_exits(loc, md);
@@ -485,11 +479,6 @@ match_all_exits(struct match_data *md)
                 if (!limit--)
                         break;
                 /* Does this room have env-chain exit blocking enabled? */
-#if ENABLE_MATCH_YIELD
-                if (!blocking && FLAGS(loc) & YIELD) {
-                  blocking = 1;
-                }
-#endif
         }
 }
 

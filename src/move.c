@@ -104,13 +104,7 @@ send_contents(command_t *cmd, dbref dest)
 			moveto(first, loc);
 		} else {
 			where = FLAGS(first) & STICKY ? HOME : dest;
-			if (SECURE_THING_MOVEMENT && (Typeof(first) == TYPE_THING)) {
-				enter_room(cmd,
-					   parent_loop_check(first, where) ? loc : where,
-					   DBFETCH(first)->location);
-			} else {
-				moveto(first, parent_loop_check(first, where) ? loc : where);
-			}
+			moveto(first, parent_loop_check(first, where) ? loc : where);
 		}
 		first = rest;
 	}
@@ -129,9 +123,7 @@ maybe_dropto(command_t *cmd, dbref dropto)
 
 	/* check for players */
 	DOLIST(thing, DBFETCH(loc)->contents) {
-		/* Make zombies act like players for dropto processing */
-		if (Typeof(thing) == TYPE_PLAYER ||
-		 (Typeof(thing) == TYPE_THING && FLAGS(thing)&ZOMBIE))
+		if (Typeof(thing) == TYPE_PLAYER)
 			return;
 	}
 
@@ -302,8 +294,7 @@ enter_room(command_t *cmd, dbref loc, dbref exit)
 
 			/* notify others unless DARK */
 			if (exit == NOTHING || (!Dark(old) && !Dark(player) &&
-				((Typeof(player) != TYPE_THING) ||
-				 ((Typeof(player) == TYPE_THING) && (FLAGS(player) & (ZOMBIE | VEHICLE))))
+				Typeof(player) != TYPE_THING
 				&& (Typeof(exit) != TYPE_EXIT || !Dark(exit)))) {
 #if !defined(QUIET_MOVES)
 				snprintf(buf, sizeof(buf), "%s has left.", NAME(player));
@@ -323,8 +314,7 @@ enter_room(command_t *cmd, dbref loc, dbref exit)
 
 		/* tell other folks in new location if not DARK */
 		if (loc != NOTHING && !Dark(loc) && !Dark(player) &&
-			 ((Typeof(player) != TYPE_THING) ||
-			 ((Typeof(player) == TYPE_THING) && (FLAGS(player) & (ZOMBIE | VEHICLE))))
+			 Typeof(player) != TYPE_THING
 			&& (exit == NOTHING || Typeof(exit) != TYPE_EXIT || !Dark(exit))) {
 #if !defined(QUIET_MOVES)
 			snprintf(buf, sizeof(buf), "%s has arrived.", NAME(player));
@@ -339,8 +329,7 @@ enter_room(command_t *cmd, dbref loc, dbref exit)
 
 
 	/* autolook */
-	if ((Typeof(player) != TYPE_THING) ||
-		((Typeof(player) == TYPE_THING) && (FLAGS(player) & (ZOMBIE | VEHICLE)))) {
+	if (Typeof(player) != TYPE_THING) {
 		if (donelook < 8) {
 			donelook++;
 			if (can_move(cmd, AUTOLOOK_CMD, 1)) {
@@ -385,10 +374,6 @@ send_home(command_t *cmd, int puppethome)
 	case TYPE_THING:
 		if (puppethome)
 			send_contents(cmd, HOME);
-		if (SECURE_THING_MOVEMENT || (FLAGS(thing) & (ZOMBIE | LISTENER))) {
-			enter_room(cmd, PLAYER_HOME(thing), DBFETCH(thing)->location);
-			break;
-		}
 		moveto(thing, HOME);	/* home */
 		break;
 	default:
@@ -482,15 +467,6 @@ trigger(command_t *cmd, dbref exit, int pflag)
 					notify(player, "That would cause a paradox.");
 					break;
 				}
-				if (!Wizard(OWNER(player)) && Typeof(player) == TYPE_THING
-					&& (FLAGS(dest) & ZOMBIE)) {
-					notify(player, "You can't go that way.");
-					break;
-				}
-				if ((FLAGS(player) & VEHICLE) && ((FLAGS(dest) | FLAGS(exit)) & VEHICLE)) {
-					notify(player, "You can't go that way.");
-					break;
-				}
 				if (GETDROP(exit))
 					exec_or_notify_prop(cmd, exit, MESGPROP_DROP, "(@Drop)");
 				if (GETODROP(exit) && !Dark(player)) {
@@ -502,52 +478,25 @@ trigger(command_t *cmd, dbref exit, int pflag)
 			}
 			break;
 		case TYPE_THING:
-			if (dest == getloc(exit) && (FLAGS(dest) & VEHICLE)) {
-				if (pflag) {
-					if (parent_loop_check(player, dest)) {
-						notify(player, "That would cause a paradox.");
-						break;
-					}
-					if (GETDROP(exit))
-						exec_or_notify_prop(cmd, exit, MESGPROP_DROP, "(@Drop)");
-					if (GETODROP(exit) && !Dark(player)) {
-						parse_oprop(cmd, dest, exit, MESGPROP_ODROP,
-									   NAME(player), "(@Odrop)");
-					}
-					enter_room(cmd, dest, exit);
-					succ = 1;
+			if (Typeof(DBFETCH(exit)->location) == TYPE_THING) {
+				if (parent_loop_check(dest, getloc(getloc(exit)))) {
+					notify(player, "That would cause a paradox.");
+					break;
+				}
+				moveto(dest, DBFETCH(DBFETCH(exit)->location)->location);
+				if (!(FLAGS(exit) & STICKY)) {
+					/* send home source object */
+					sobjact = 1;
 				}
 			} else {
-				if (Typeof(DBFETCH(exit)->location) == TYPE_THING) {
-					if (parent_loop_check(dest, getloc(getloc(exit)))) {
-						notify(player, "That would cause a paradox.");
-						break;
-					}
-#if SECURE_THING_MOVEMENT
-					enter_room(descr, dest,
-						   DBFETCH(DBFETCH(exit)->location)->location,
-						   exit);
-#else
-					moveto(dest, DBFETCH(DBFETCH(exit)->location)->location);
-#endif
-					if (!(FLAGS(exit) & STICKY)) {
-						/* send home source object */
-						sobjact = 1;
-					}
-				} else {
-					if (parent_loop_check(dest, getloc(exit))) {
-						notify(player, "That would cause a paradox.");
-						break;
-					}
-#if SECURE_THING_MOVEMENT
-					enter_room(descr, dest, DBFETCH(exit)->location, exit);
-#else
-					moveto(dest, DBFETCH(exit)->location);
-#endif
+				if (parent_loop_check(dest, getloc(exit))) {
+					notify(player, "That would cause a paradox.");
+					break;
 				}
-				if (GETSUCC(exit))
-					succ = 1;
+				moveto(dest, DBFETCH(exit)->location);
 			}
+			if (GETSUCC(exit))
+				succ = 1;
 			break;
 		case TYPE_EXIT:		/* It's a meta-link(tm)! */
 			trigger(cmd, (DBFETCH(exit)->sp.exit.dest)[i], 0);
@@ -642,47 +591,6 @@ do_move(command_t *cmd)
 }
 
 void
-do_leave(command_t *cmd)
-{
-	dbref player = cmd->player;
-	dbref loc, dest;
-
-	loc = DBFETCH(player)->location;
-	if (loc == NOTHING || Typeof(loc) == TYPE_ROOM) {
-		notify(player, "You can't go that way.");
-		return;
-	}
-
-	if (!(FLAGS(loc) & VEHICLE)) {
-		notify(player, "You can only exit vehicles.");
-		return;
-	}
-
-	dest = DBFETCH(loc)->location;
-	if (Typeof(dest) != TYPE_ROOM && Typeof(dest) != TYPE_THING) {
-		notify(player, "You can't exit a vehicle inside of a player.");
-		return;
-	}
-
-/*
- *  if (Typeof(dest) == TYPE_ROOM && !controls(player, dest)
- *          && !(FLAGS(dest) | JUMP_OK)) {
- *      notify(player, "You can't go that way.");
- *      return;
- *  }
- */
-
-	if (parent_loop_check(player, dest)) {
-		notify(player, "You can't go that way.");
-		return;
-	}
-
-	notify(player, "You exit the vehicle.");
-	enter_room(cmd, dest, loc);
-}
-
-
-void
 do_get(command_t *cmd)
 {
 	dbref player = cmd->player;
@@ -747,12 +655,7 @@ do_get(command_t *cmd)
 				cando = can_doit(cmd, thing, "You can't pick that up.");
 			}
 			if (cando) {
-				if (SECURE_THING_MOVEMENT && (Typeof(thing) == TYPE_THING)) {
-					command_t cmd_er = command_new_null(cmd->fd, thing);
-					enter_room(&cmd_er, thing, DBFETCH(thing)->location);
-				} else {
-					moveto(thing, player);
-				}
+				moveto(thing, player);
 				notify(player, "Taken.");
 			}
 			break;
@@ -824,12 +727,7 @@ do_drop(command_t *cmd)
 
 									&& !(FLAGS(cont) & STICKY));
 
-			if (SECURE_THING_MOVEMENT && (Typeof(thing) == TYPE_THING)) {
-				command_t cmd_er = command_new_null(cmd->fd, thing);
-				enter_room(&cmd_er, immediate_dropto ? DBFETCH(cont)->sp.room.dropto : cont, player);
-			} else {
-				moveto(thing, immediate_dropto ? DBFETCH(cont)->sp.room.dropto : cont);
-			}
+			moveto(thing, immediate_dropto ? DBFETCH(cont)->sp.room.dropto : cont);
 		}
 		if (Typeof(cont) == TYPE_THING) {
 			notify(player, "Put away.");
@@ -1112,10 +1010,7 @@ recycle(command_t *cmd, dbref thing)
 
 	looplimit = db_top;
 	while ((looplimit-- > 0) && ((first = DBFETCH(thing)->contents) != NOTHING)) {
-		if (Typeof(first) == TYPE_PLAYER ||
-			(Typeof(first) == TYPE_THING &&
-			 (SECURE_THING_MOVEMENT || FLAGS(first) & (ZOMBIE | VEHICLE)))
-		) {
+		if (Typeof(first) == TYPE_PLAYER) {
 			command_t cmd_er = command_new_null(cmd->fd, first);
 			enter_room(&cmd_er, HOME, DBFETCH(thing)->location);
 			/* If the room is set to drag players back, there'll be no

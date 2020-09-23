@@ -111,13 +111,8 @@ do_teleport(command_t *cmd) {
 				notify(player, "Permission denied. (must control victim, dest, victim's loc, and dest's loc)");
 				break;
 			}
-			if (Typeof(destination) != TYPE_ROOM && Typeof(destination) != TYPE_THING) {
+			if (Typeof(destination) != TYPE_ROOM) {
 				notify(player, "Bad destination.");
-				break;
-			}
-			if (!Wizard(victim) &&
-				(Typeof(destination) == TYPE_THING && !(FLAGS(destination) & VEHICLE))) {
-				notify(player, "Destination object is not a vehicle.");
 				break;
 			}
 			if (parent_loop_check(victim, destination)) {
@@ -149,12 +144,7 @@ do_teleport(command_t *cmd) {
 				&& DBFETCH(destination)->sp.room.dropto != NOTHING
 				&& !(FLAGS(destination) & STICKY))
 						destination = DBFETCH(destination)->sp.room.dropto;
-			if (SECURE_THING_MOVEMENT && (Typeof(victim) == TYPE_THING)) {
-				command_t cmd_er = command_new_null(cmd->fd, victim);
-				enter_room(&cmd_er, destination, DBFETCH(victim)->location);
-			} else {
-				moveto(victim, destination);
-			}
+			moveto(victim, destination);
 			notify(player, "Teleported.");
 			break;
 		case TYPE_ROOM:

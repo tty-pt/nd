@@ -73,7 +73,6 @@
 
 /* Information needed for SSL */
 #define SSL_KEYFILE_PASSWD ""
-#define STARTTLS_ALLOW 0
 
 /* amount of object endowment, based on cost */
 #define MAX_OBJECT_ENDOWMENT 100
@@ -204,19 +203,6 @@
 
 /* Enable or diable the global 'HOME' command. */
 #define ALLOW_HOME 1
-
-/* Enable or disable the server's ability to 'skip' rooms in the environment */
-/* chain when trying to match a player's exit or command request.  Turning */
-/* this on allows the 'Y'ield and 'O'vert flags to function on things or */
-/* rooms, changing the way in which command or exit names are found. */
-#define ENABLE_MATCH_YIELD 0
-
-/* Enable or disable triggering of movement propqueues when any type of */
-/* object moves, not just objects set ZOMBIE or VEHICLE.  This can vastly */
-/* increase the amount of processing done, but does allow servers to be */
-/* able to programmatically track all movement, so people can't MPI force */
-/* an object past a lock, then set it Z or V on the other side. */
-#define SECURE_THING_MOVEMENT 0
 
 /* With this defined to 1, exits that aren't on TYPE_THING objects will */
 /* always act as if they have at least a Priority Level of 1.  */

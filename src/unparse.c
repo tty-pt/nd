@@ -50,18 +50,6 @@ unparse_flags(dbref thing)
 			*p++ = 'H';
 		if (FLAGS(thing) & ABODE)
 			*p++ = 'A';
-		if (FLAGS(thing) & VEHICLE)
-			*p++ = 'V';
-		if (FLAGS(thing) & XFORCIBLE)
-			*p++ = 'X';
-		if (FLAGS(thing) & ZOMBIE)
-			*p++ = 'Z';
-#if ENABLE_MATCH_YIELD
-                if (FLAGS(thing) & YIELD)
-                        *p++ = 'Y';
-                if (FLAGS(thing) & OVERT)
-                        *p++ = 'O';
-#endif
 	}
 	*p = '\0';
 	return buf;

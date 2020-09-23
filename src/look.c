@@ -371,23 +371,6 @@ flag_description(dbref thing)
 			strlcat(buf, (Typeof(thing) == TYPE_PLAYER) ? " COLOR" : " CHOWN_OK", sizeof(buf));
 		if (FLAGS(thing) & JUMP_OK)
 			strlcat(buf, " JUMP_OK", sizeof(buf));
-		if (FLAGS(thing) & VEHICLE)
-			strlcat(buf, " VEHICLE", sizeof(buf));
-#if ENABLE_MATCH_YIELD
-                if (FLAGS(thing) & YIELD)
-                        strlcat(buf, " YIELD", sizeof(buf));
-                if (FLAGS(thing) & OVERT)
-                        strlcat(buf, " OVERT", sizeof(buf));
-#endif
-		if (FLAGS(thing) & XFORCIBLE) {
-			if (Typeof(thing) == TYPE_EXIT) {
-				strlcat(buf, " XPRESS", sizeof(buf));
-			} else {
-				strlcat(buf, " XFORCIBLE", sizeof(buf));
-			}
-		}
-		if (FLAGS(thing) & ZOMBIE)
-			strlcat(buf, " ZOMBIE", sizeof(buf));
 		if (FLAGS(thing) & HAVEN)
 			strlcat(buf, Typeof(thing) == TYPE_THING ? " HIDE" : " HAVEN", sizeof(buf));
 		if (FLAGS(thing) & ABODE)
@@ -919,14 +902,6 @@ init_checkflags(dbref player, const char *flags, struct flgchkdat *check)
 			else
 				check->setflags |= LINK_OK;
 			break;
-#if ENABLE_MATCH_YIELD
-                case 'O':
-                          if (mode)
-                            check->clearflags |= OVERT;
-                          else
-                            check->setflags |= OVERT;
-                        break;
-#endif
 		case 'Q':
 			if (mode)
 				check->clearflags |= QUELL;
@@ -939,37 +914,11 @@ init_checkflags(dbref player, const char *flags, struct flgchkdat *check)
 			else
 				check->setflags |= STICKY;
 			break;
-		case 'V':
-			if (mode)
-				check->clearflags |= VEHICLE;
-			else
-				check->setflags |= VEHICLE;
-			break;
-#if ENABLE_MATCH_YIELD
-                case 'Y':
-			if (mode)
-				check->clearflags |= YIELD;
-			else
-				check->setflags |= YIELD;
-                        break;
-#endif
-		case 'Z':
-			if (mode)
-				check->clearflags |= ZOMBIE;
-			else
-				check->setflags |= ZOMBIE;
-			break;
 		case 'W':
 			if (mode)
 				check->clearflags |= WIZARD;
 			else
 				check->setflags |= WIZARD;
-			break;
-		case 'X':
-			if (mode)
-				check->clearflags |= XFORCIBLE;
-			else
-				check->setflags |= XFORCIBLE;
 			break;
 		case ' ':
 			if (mode)
@@ -1334,7 +1283,7 @@ do_sweep(command_t *cmd)
 	dbref player = cmd->player;
 	const char *name = cmd->argv[1];
 	dbref thing, ref, loc;
-	int flag, tellflag;
+	int flag;
 	struct match_data md;
 	char buf[BUFFER_LEN];
 
@@ -1377,31 +1326,6 @@ do_sweep(command_t *cmd)
 				notify(player, buf);
 			}
 			break;
-		case TYPE_THING:
-			if (FLAGS(ref) & (ZOMBIE | LISTENER)) {
-				tellflag = 0;
-				snprintf(buf, sizeof(buf), "  %.255s is a", unparse_object(player, ref));
-				if (FLAGS(ref) & ZOMBIE) {
-					tellflag = 1;
-					if (!PLAYER_DESCRCOUNT(OWNER(ref))) {
-						tellflag = 0;
-						strlcat(buf, " sleeping", sizeof(buf));
-					}
-					strlcat(buf, " zombie", sizeof(buf));
-				}
-				if ((FLAGS(ref) & LISTENER) &&
-					(get_property(ref, "_listen") ||
-					 get_property(ref, "~listen") || get_property(ref, "~olisten"))) {
-					strlcat(buf, " listener", sizeof(buf));
-					tellflag = 1;
-				}
-				strlcat(buf, " object owned by ", sizeof(buf));
-				strlcat(buf, unparse_object(player, OWNER(ref)), sizeof(buf));
-				strlcat(buf, ".", sizeof(buf));
-				if (tellflag)
-					notify(player, buf);
-			}
-			break;
 		}
 	}
 	flag = 0;
@@ -1410,13 +1334,6 @@ do_sweep(command_t *cmd)
 		if (!flag) {
 			notify(player, "Listening rooms down the environment:");
 			flag = 1;
-		}
-
-		if ((FLAGS(loc) & LISTENER) &&
-			(get_property(loc, "_listen") ||
-				get_property(loc, "~listen") || get_property(loc, "~olisten"))) {
-			snprintf(buf, sizeof(buf), "  %s is a listening room.", unparse_object(player, loc));
-			notify(player, buf);
 		}
 
 		loc = getparent(loc);

@@ -294,9 +294,6 @@ core_command_t cmds[] = {
 		.name = "look",
 		.cb = &do_look_at,
 	}, {
-		.name = "leave",
-		.cb = &do_leave,
-	}, {
 		.name = "view",
 		.cb = &do_view,
 	/* }, { */
@@ -634,38 +631,6 @@ notify_filtered(dbref from, dbref player, const char *msg, int isprivate)
 int
 notify_from_echo(dbref from, dbref player, const char *msg, int isprivate)
 {
-	if (Typeof(player) == TYPE_THING && (FLAGS(player) & VEHICLE) &&
-		(!(FLAGS(player) & DARK) || Wizard(OWNER(player))))
-	{
-		dbref ref;
-
-		ref = getloc(player);
-		if (Wizard(OWNER(player)) || ref == NOTHING ||
-			Typeof(ref) != TYPE_ROOM || !(FLAGS(ref) & VEHICLE)
-				) {
-			if (!isprivate && getloc(from) == getloc(player)) {
-				char buf[BUFFER_LEN];
-				char pbuf[BUFFER_LEN];
-				const char *prefix;
-				char ch = *match_args;
-				command_t cmd_pp = command_new_null(-1, from);
-
-				*match_args = '\0';
-				prefix = do_parse_prop(&cmd_pp, player, MESGPROP_OECHO, "(@Oecho)", pbuf, sizeof(pbuf), MPI_ISPRIVATE);
-				*match_args = ch;
-
-				if (!prefix || !*prefix)
-					prefix = "Outside>";
-				snprintf(buf, sizeof(buf), "%s %.*s", prefix, (int)(BUFFER_LEN - (strlen(prefix) + 2)), msg);
-				ref = DBFETCH(player)->contents;
-				while (ref != NOTHING) {
-					notify_filtered(from, ref, buf, isprivate);
-					ref = DBFETCH(ref)->next;
-				}
-			}
-		}
-	}
-
 	return notify_filtered(from, player, msg, isprivate);
 }
 
@@ -766,29 +731,6 @@ welcome_user(descr_t *d)
 }
 
 void
-announce_puppets(dbref player, const char *msg, const char *prop)
-{
-	dbref what, where;
-	const char *ptr, *msg2;
-	char buf[BUFFER_LEN];
-
-	for (what = 0; what < db_top; what++) {
-		if (Typeof(what) == TYPE_THING && (FLAGS(what) & ZOMBIE)) {
-			if (OWNER(what) == player) {
-				where = getloc(what);
-				if ((!Dark(where)) && (!Dark(player)) && (!Dark(what))) {
-					msg2 = msg;
-					if ((ptr = (char *) get_property_class(what, prop)) && *ptr)
-						msg2 = ptr;
-					snprintf(buf, sizeof(buf), "%.512s %.3000s", NAME(what), msg2);
-					notify_except(DBFETCH(where)->contents, what, buf, what);
-				}
-			}
-		}
-	}
-}
-
-void
 announce_connect(command_t *cmd)
 {
 	dbref player = cmd->player;
@@ -830,10 +772,6 @@ announce_connect(command_t *cmd)
 
 	if (exit != NOTHING)
 		go_move(cmd, "connect", 1);
-
-	if (PLAYER_DESCRCOUNT(player) == 1) {
-		announce_puppets(player, "wakes up.", "_/pcon");
-	}
 
 	/* queue up all _connect programs referred to by properties */
 	envpropqueue(cmd, getloc(player), NOTHING, player, NOTHING,
@@ -1085,7 +1023,6 @@ descr_new()
 void
 announce_disconnect(descr_t *d)
 {
-	command_t cmd = command_new_null(d->fd, d->player);
 	dbref player = d->player;
 	dbref loc;
 	char buf[BUFFER_LEN];
@@ -1098,23 +1035,10 @@ announce_disconnect(descr_t *d)
 		notify_except(DBFETCH(loc)->contents, player, buf, player);
 	}
 
-	/* trigger local disconnect action */
-	if (PLAYER_DESCRCOUNT(player) == 1) {
-		if (can_move(&cmd, "disconnect", 1))
-			go_move(&cmd, "disconnect", 1);
-		announce_puppets(player, "falls asleep.", "_/pdcon");
-	}
-
 	d->flags = 0;
 	d->player = NOTHING;
 
 	forget_player_descr(player, d->fd);
-
-	/* queue up all _connect programs referred to by properties */
-	envpropqueue(&cmd, getloc(player), NOTHING, player, NOTHING,
-				 "_disconnect", "Disconnect", 1, 1);
-	envpropqueue(&cmd, getloc(player), NOTHING, player, NOTHING,
-				 "_odisconnect", "Odisconnect", 1, 0);
 
 	DBDIRTY(player);
 }
