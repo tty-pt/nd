@@ -134,7 +134,7 @@ dr_v(char *b, view_tile_t *t, enum exit exit,
 static char *
 dr_vs(char *b, int descr, dbref player, view_tile_t *t)
 {
-	view_tile_t * const t_max = &t[VIEW_SIZE - 1];
+	view_tile_t * const t_max = &t[VIEW_SIZE];
 	const char *bg, *wp;
 	view_tile_t *tp;
 	unsigned floor;
@@ -213,7 +213,7 @@ static inline char *
 dr_hs_n(char *b, int descr, dbref player,
 		view_tile_t *t)
 {
-	view_tile_t * const t_max = &t[VIEW_SIZE - 1];
+	view_tile_t * const t_max = &t[VIEW_SIZE];
 	const char *wp, *bg;
 	char wb[32], *w;
 	unsigned floor;
@@ -265,7 +265,7 @@ dr_hs_n(char *b, int descr, dbref player,
 
 		if (!(t->exits & E_SOUTH) || !(tn->exits & E_NORTH))
 			w = (char *) h_closed;
-		else if (t->doors & E_SOUTH) {
+		else if ((t->doors & E_SOUTH) || (tn->doors & E_NORTH)) {
 			snprintf(wb, sizeof(wb), "-"ANSI_FG_WHITE"+%s-", wp);
 			w = wb;
 		} else
