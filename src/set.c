@@ -755,9 +755,9 @@ do_relink(command_t *cmd)
 				}
 			} else {
 				if(!Wizard(OWNER(player)) && (GETVALUE(player) < (LINK_COST + EXIT_COST))) {
-					notify_fmt(player, "It costs %d %s to link this exit.",
-							   (LINK_COST + EXIT_COST),
-							   (LINK_COST + EXIT_COST == 1) ? PENNY : PENNIES);
+					notifyf(player, "It costs %d %s to link this exit.",
+						(LINK_COST + EXIT_COST),
+						(LINK_COST + EXIT_COST == 1) ? PENNY : PENNIES);
 					return;
 				} else if (!Builder(player)) {
 					notify(player, "Only authorized builders may seize exits.");
@@ -873,13 +873,6 @@ do_chown(command_t *cmd)
 			}
 		}
 	}
-
-#if REALMS_CONTROL
-	if (!Wizard(OWNER(player)) && TrueWizard(thing) && Typeof(thing) == TYPE_ROOM) {
-		notify(player, "You can't take possession of that.");
-		return;
-	}
-#endif
 
 	switch (Typeof(thing)) {
 	case TYPE_ROOM:

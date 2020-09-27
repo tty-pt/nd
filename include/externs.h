@@ -124,11 +124,6 @@ extern void do_owned(command_t *);
 extern void do_trace(command_t *);
 extern void do_entrances(command_t *);
 extern void do_contents(command_t *);
-extern void exec_or_notify_prop(command_t *cmd, dbref thing,
-						   const char *propname, const char *whatcalled);
-extern const char * exec_or_notify(command_t *cmd, dbref thing,
-						   const char *message, const char *whatcalled,
-						   int mpiflags);
 
 /* from item.c */
 extern void do_select(command_t *);

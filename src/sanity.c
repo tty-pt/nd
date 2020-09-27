@@ -45,7 +45,7 @@ SanPrint(dbref player, const char *format, ...)
 	} else if (player == AMBIGUOUS) {
 		fprintf(stderr, "%s\n", buf);
 	} else {
-		notify_nolisten(player, buf, 1);
+		notify(player, buf);
 	}
 
 	va_end(args);
@@ -1013,11 +1013,11 @@ sanfix(dbref player)
 
 	if (player > NOTHING) {
 		if (!sanity_violated) {
-			notify_nolisten(player, "Database repair complete, please re-run"
-							" @sanity.  For details of repairs, check logs/sanfixed.", 1);
+			notify(player, "Database repair complete, please re-run"
+			       " @sanity.  For details of repairs, check logs/sanfixed.");
 		} else {
-			notify_nolisten(player, "Database repair complete, however the "
-							"database is still corrupt.  Please re-run @sanity.", 1);
+			notify(player, "Database repair complete, however the "
+			       "database is still corrupt.  Please re-run @sanity.");
 		}
 	} else {
 		fprintf(stderr, "Database repair complete, ");

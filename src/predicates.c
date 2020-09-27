@@ -306,23 +306,6 @@ could_doit(command_t *cmd, dbref thing)
 			 * set BUILDER this will also return failure) */
 			if ((Typeof(dest) == TYPE_ROOM || Typeof(dest) == TYPE_PLAYER) &&
 				(FLAGS(source) & BUILDER)) return 0;
-
-			/* If secure_teleport is true, and if the destination is a room */
-#if SECURE_TELEPORT
-			/* if player doesn't control the source and the source isn't
-			 * set Jump_OK, then if the destination isn't HOME,
-			 * can't do it.  (Should this include getlink(owner)?  Not
-			 * everyone knows that 'home' or '#-3' can be linked to and
-			 * be treated specially. -winged) */
-			if (Typeof(dest) == TYPE_ROOM
-			    && dest != HOME
-			    && !controls(owner, source)
-			    && (FLAGS(source) & JUMP_OK) == 0)
-				return 0;
-
-			/* FIXME: Add support for in-server banishment from rooms
-			 * and environments here. */
-#endif
 		}
 	}
 
@@ -392,9 +375,9 @@ can_doit(command_t *cmd, dbref thing, const char *default_fail_msg)
 	if (!could_doit(cmd, thing)) {
 		/* can't do it */
 		if (GETFAIL(thing)) {
-			exec_or_notify_prop(cmd, thing, MESGPROP_FAIL, "(@Fail)");
+			notify(player, GETFAIL(thing));
 		} else if (door) {
-			notify_fmt(player, "That %s is locked.", dwts);
+			notifyf(player, "That %s is locked.", dwts);
 		} else if (default_fail_msg) {
 			notify(player, default_fail_msg);
 		}
@@ -407,19 +390,19 @@ can_doit(command_t *cmd, dbref thing, const char *default_fail_msg)
 		do_stand_silent(player);
 
 		if (door)
-			notify_fmt(player, "You open the %s.", dwts);
+			notifyf(player, "You open the %s.", dwts);
 
 		/* can do it */
 		if (GETSUCC(thing)) {
-			exec_or_notify_prop(cmd, thing, MESGPROP_SUCC, "(@Succ)");
+			notify(player, GETSUCC(thing));
 		} else if (Typeof(thing) == TYPE_EXIT && e_exit_is(thing))
-			notify_fmt(player, "You go %s.", e_name(exit_e(thing)));
+			notifyf(player, "You go %s.", e_name(exit_e(thing)));
 		if (GETOSUCC(thing) && !Dark(player)) {
 			parse_oprop(cmd, getloc(player), thing, MESGPROP_OSUCC,
 						   NAME(player), "(@Osucc)");
 		}
 		if (door)
-			notify_fmt(player, "You close the %s.", dwts);
+			notifyf(player, "You close the %s.", dwts);
 		return 1;
 	}
 }
@@ -432,15 +415,8 @@ can_see(dbref player, dbref thing, int can_see_loc)
 		return 0;
 
 	if (can_see_loc) {
-		switch (Typeof(thing)) {
-#if DARK_SLEEPERS
-		case TYPE_PLAYER:
-			return (!Dark(thing) && online(thing));
-#endif
-		default:
-			return (!Dark(thing) || (controls(player, thing) && 
-						!(FLAGS(player) & STICKY)));
-		}
+		return (!Dark(thing) ||
+			(controls(player, thing) && !(FLAGS(player) & STICKY)));
 	} else {
 		/* can't see loc */
 		return (controls(player, thing) && !(FLAGS(player) & STICKY));

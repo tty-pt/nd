@@ -79,7 +79,7 @@ cannot_equip(dbref who, dbref eq)
 	DBFETCH(eq)->flags |= DARK;
 	DBDIRTY(eq);
 
-	notify_fmt(who, "You equip %s.", NAME(eq));
+	notifyf(who, "You equip %s.", NAME(eq));
 	return 0;
 }
 
@@ -91,7 +91,7 @@ do_select(command_t *cmd)
 	unsigned n = strtoul(n_s, NULL, 0);
 	mobi_t *liv = MOBI(player);
 	liv->select = n;
-	notify_fmt(player, "You select %u.", n);
+	notifyf(player, "You select %u.", n);
 }
 
 void
@@ -163,5 +163,5 @@ do_unequip(command_t *cmd)
 		return;
 	}
 
-	notify_fmt(player, "You unequip %s.", NAME(eq));
+	notifyf(player, "You unequip %s.", NAME(eq));
 }

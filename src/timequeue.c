@@ -132,7 +132,7 @@ propqueue(command_t *cmd, dbref where, dbref trigger, dbref what, dbref xclude,
 					do_parse_mesg(cmd, what, tmpchar + 1, "(MPIqueue)", cbuf, sizeof(cbuf), ival);
 					if (*cbuf) {
 						if (mt) {
-							notify_filtered(player, player, cbuf, 1);
+							notify(player, cbuf);
 						} else {
 							char bbuf[BUFFER_LEN];
 							dbref plyr;
@@ -142,7 +142,7 @@ propqueue(command_t *cmd, dbref where, dbref trigger, dbref what, dbref xclude,
 							plyr = DBFETCH(where)->contents;
 							while (plyr != NOTHING) {
 								if (Typeof(plyr) == TYPE_PLAYER && plyr != player)
-									notify_filtered(player, plyr, bbuf, 0);
+									notify(plyr, bbuf);
 								plyr = DBFETCH(plyr)->next;
 							}
 						}
@@ -150,7 +150,7 @@ propqueue(command_t *cmd, dbref where, dbref trigger, dbref what, dbref xclude,
 				}
 				propq_level--;
 			} else {
-				notify_nolisten(player, "Propqueue stopped to prevent infinite loop.", 1);
+				notify(player, "Propqueue stopped to prevent infinite loop.");
 			}
 		}
 	}

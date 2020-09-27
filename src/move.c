@@ -348,7 +348,7 @@ enter_room(command_t *cmd, dbref loc, dbref exit)
 	if (!controls(player, loc)
 	    && GETVALUE(OWNER(player)) <= MAX_PENNIES 
 	    && RANDOM() % PENNY_RATE == 0) {
-		notify_fmt(player, "You found one %s!", PENNY);
+		notifyf(player, "You found one %s!", PENNY);
 		SETVALUE(OWNER(player), GETVALUE(OWNER(player)) + 1);
 		DBDIRTY(OWNER(player));
 	}
@@ -468,7 +468,7 @@ trigger(command_t *cmd, dbref exit, int pflag)
 					break;
 				}
 				if (GETDROP(exit))
-					exec_or_notify_prop(cmd, exit, MESGPROP_DROP, "(@Drop)");
+					notify(player, GETDROP(exit));
 				if (GETODROP(exit) && !Dark(player)) {
 					parse_oprop(cmd, dest, exit, MESGPROP_ODROP,
 								   NAME(player), "(@Odrop)");
@@ -512,7 +512,7 @@ trigger(command_t *cmd, dbref exit, int pflag)
 				succ = 1;
 				if (FLAGS(dest) & JUMP_OK) {
 					if (GETDROP(exit)) {
-						exec_or_notify_prop(cmd, exit, MESGPROP_DROP, "(@Drop)");
+						notify(player, GETDROP(exit));
 					}
 					if (GETODROP(exit) && !Dark(player)) {
 						parse_oprop(cmd, getloc(dest), exit,
@@ -733,18 +733,18 @@ do_drop(command_t *cmd)
 			notify(player, "Put away.");
 			return;
 		} else if (Typeof(cont) == TYPE_PLAYER) {
-			notify_fmt(cont, "%s hands you %s", NAME(player), NAME(thing));
-			notify_fmt(player, "You hand %s to %s", NAME(thing), NAME(cont));
+			notifyf(cont, "%s hands you %s", NAME(player), NAME(thing));
+			notifyf(player, "You hand %s to %s", NAME(thing), NAME(cont));
 			return;
 		}
 
 		if (GETDROP(thing))
-			exec_or_notify_prop(cmd, thing, MESGPROP_DROP, "(@Drop)");
+			notify(player, GETDROP(thing));
 		else
 			notify(player, "Dropped.");
 
 		if (GETDROP(loc))
-			exec_or_notify_prop(cmd, loc, MESGPROP_DROP, "(@Drop)");
+			notify(player, GETDROP(loc));
 
 		if (GETODROP(thing)) {
 			parse_oprop(cmd, loc, thing, MESGPROP_ODROP,
@@ -1017,7 +1017,7 @@ recycle(command_t *cmd, dbref thing)
 			 * reasoning with it.  DRAG the player out.
 			 */
 			if (DBFETCH(first)->location == thing) {
-				notify_fmt(player, "Escaping teleport loop!  Going home.");
+				notifyf(player, "Escaping teleport loop!  Going home.");
 				moveto(first, HOME);
 			}
 		} else {

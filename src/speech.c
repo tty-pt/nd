@@ -63,7 +63,7 @@ do_whisper(command_t *cmd)
 		break;
 	default:
 		snprintf(buf, sizeof(buf), "%s whispers, \"%s\"", NAME(player), arg2);
-		if (!notify_from(player, who, buf)) {
+		if (!notify(who, buf)) {
 			snprintf(buf, sizeof(buf), "%s is not connected.", NAME(who));
 			notify(player, buf);
 			break;
@@ -103,7 +103,7 @@ do_wall(command_t *cmd)
 		snprintf(buf, sizeof(buf), "%s shouts, \"%s\"", NAME(player), message);
 		for (i = 0; i < db_top; i++) {
 			if (Typeof(i) == TYPE_PLAYER) {
-				notify_from(player, i, buf);
+				notify(i, buf);
 			}
 		}
 	} else {
@@ -150,7 +150,7 @@ do_page(command_t *cmd)
 	dbref target;
 
 	if (!payfor(player, LOOKUP_COST)) {
-		notify_fmt(player, "You don't have enough %s.", PENNIES);
+		notifyf(player, "You don't have enough %s.", PENNIES);
 		return;
 	}
 	if ((target = lookup_player(arg1)) == NOTHING) {
@@ -167,7 +167,7 @@ do_page(command_t *cmd)
 	else
 		snprintf(buf, sizeof(buf), "%s pages from %s: \"%s\"", NAME(player),
 				NAME(DBFETCH(player)->location), arg2);
-	if (notify_from(player, target, buf))
+	if (notify(target, buf))
 		notify(player, "Your message has been sent.");
 	else {
 		snprintf(buf, sizeof(buf), "%s is not connected.", NAME(target));
@@ -187,7 +187,7 @@ notify_except(dbref first, dbref exception, const char *msg, dbref who)
 		DOLIST(first, first) {
 			if ((Typeof(first) != TYPE_ROOM) && (first != exception)) {
 				/* don't want excepted player or child rooms to hear */
-				notify_from_echo(who, first, msg, 0);
+				notify(first, msg);
 			}
 		}
 	}
@@ -211,7 +211,7 @@ notify_wts(dbref who, char const *a, char const *b, char *format, ...)
 	char buf[BUFFER_LEN];
 	va_start(args, format);
 	vsnprintf(buf, sizeof(buf), format, args);
-	notify_fmt(who, "You %s%s.", a, buf);
+	notifyf(who, "You %s%s.", a, buf);
 	ONOTIFYF(who, "%s %s%s.", NAME(who), b, buf);
 	va_end(args);
 }
@@ -223,7 +223,7 @@ notify_wts_to(dbref who, dbref tar, char const *a, char const *b, char *format, 
 	char buf[BUFFER_LEN];
 	va_start(args, format);
 	vsnprintf(buf, sizeof(buf), format, args);
-	notify_fmt(who, "You %s %s%s.", a, NAME(tar), buf);
+	notifyf(who, "You %s %s%s.", a, NAME(tar), buf);
 	ONOTIFYF(who, "%s %s %s%s.", NAME(who), b, NAME(tar), buf);
 	va_end(args);
 }

@@ -45,64 +45,6 @@ print_owner(dbref player, dbref thing)
 	notify(player, buf);
 }
 
-void
-exec_or_notify_prop(command_t *cmd, dbref thing,
-					const char *propname, const char *whatcalled)
-{
-	const char *message = get_property_class(thing, propname);
-	int mpiflags = Prop_Blessed(thing, propname)? MPI_ISBLESSED : 0;
-
-	if (message)
-		notify(cmd->player, exec_or_notify(cmd, thing, message, whatcalled, mpiflags));
-}
-
-const char *
-exec_or_notify(command_t *cmd, dbref thing,
-			   const char *message, const char *whatcalled,
-			   int mpiflags)
-{
-	static char buf[BUFFER_LEN];
-	const char *p;
-	char *p2;
-	char *p3;
-
-	p = message;
-
-	if (*p == EXEC_SIGNAL) {
-		int i;
-
-		if (*(++p) == REGISTERED_TOKEN) {
-			strlcpy(buf, p, sizeof(buf));
-			for (p2 = buf; *p && !isspace(*p); p++) ;
-			if (*p)
-				p++;
-
-			for (p3 = buf; *p3 && !isspace(*p3); p3++) ;
-			if (*p3)
-				*p3 = '\0';
-
-			if (*p2) {
-				i = (dbref) find_registered_obj(thing, p2);
-			} else {
-				i = 0;
-			}
-		} else {
-			i = atoi(p);
-			for (; *p && !isspace(*p); p++) ;
-			if (*p)
-				p++;
-		}
-		if (*p) {
-			return p;
-		} else {
-			return "You see nothing special.";
-		}
-	} else {
-		p = do_parse_mesg(cmd, thing, p, whatcalled, buf, sizeof(buf), MPI_ISPRIVATE | mpiflags);
-		return p;
-	}
-}
-
 static void
 look_contents(command_t *cmd, dbref loc, const char *contents_name)
 {
@@ -127,7 +69,7 @@ look_contents(command_t *cmd, dbref loc, const char *contents_name)
 
         buf[buf_l] = '\0';
 
-        notify_fmt(player, "%s%s", contents_name, buf);
+        notifyf(player, "%s%s", contents_name, buf);
 }
 
 extern void art(dbref descr, const char *arts);
@@ -142,8 +84,7 @@ look_simple(command_t *cmd, dbref thing)
 		art(cmd->fd, art_str);
 
 	if (GETDESC(thing)) {
-		notify(player, exec_or_notify(cmd, thing, GETDESC(thing), "(@Desc)",
-				Prop_Blessed(thing, MESGPROP_DESC)? MPI_ISBLESSED : 0));
+		notify(player, GETDESC(thing));
 	} else if (!art_str) {
 		notify(player, "You see nothing special.");
 	}
@@ -159,15 +100,13 @@ look_room(command_t *cmd, dbref loc, int verbose)
 	/* tell him the description */
 	if (Typeof(loc) == TYPE_ROOM) {
 		if (GETDESC(loc)) {
-			description = exec_or_notify(cmd, loc, GETDESC(loc), "(@Desc)",
-				Prop_Blessed(loc, MESGPROP_DESC)? MPI_ISBLESSED : 0);
+			description = GETDESC(loc);
 		}
 		/* tell him the appropriate messages if he has the key */
 		can_doit(cmd, loc, 0);
 	} else {
 		if (GETIDESC(loc)) {
-			description = exec_or_notify(cmd, loc, GETIDESC(loc), "(@Idesc)",
-				Prop_Blessed(loc, MESGPROP_IDESC)? MPI_ISBLESSED : 0);
+			description = GETIDESC(loc);
 		}
 	}
 
@@ -177,13 +116,6 @@ look_room(command_t *cmd, dbref loc, int verbose)
 		/* tell him the contents */
 		look_contents(cmd, loc, "You see:");
 	/* } */
-#if LOOK_PROPQUEUES
-	{
-		char obj_num[20];
-		snprintf(obj_num, sizeof(obj_num), "#%d", loc);
-		envpropqueue(descr, player, loc, player, loc, NOTHING, "_lookq", obj_num, 1, 1);
-	}
-#endif
 }
 
 void
@@ -206,9 +138,6 @@ do_look_at(command_t *cmd)
 	struct match_data md;
 	/* int res; */
 	char buf[BUFFER_LEN];
-#if LOOK_PROPQUEUES
-	char obj_num[20];
-#endif
 
 	if (*name == '\0' || !strcmp(name, "here")) {
 		if ((thing = getloc(player)) != NOTHING) {
@@ -245,11 +174,6 @@ do_look_at(command_t *cmd)
 				} else {
 					look_simple(cmd, thing);
 					look_contents(cmd, thing, "Carrying:");
-#if LOOK_PROPQUEUES
-					snprintf(obj_num, sizeof(obj_num), "#%d", thing);
-					envpropqueue(descr, player, thing, player, thing,
-									 NOTHING, "_lookq", obj_num, 1, 1);
-#endif
 				}
 				break;
 			case TYPE_THING:
@@ -261,20 +185,10 @@ do_look_at(command_t *cmd)
 					if (!(FLAGS(thing) & HAVEN)) {
 						look_contents(cmd, thing, "Contains:");
 					}
-#if LOOK_PROPQUEUES
-					snprintf(obj_num, sizeof(obj_num), "#%d", thing);
-					envpropqueue(descr, player, thing, player, thing,
-						     NOTHING, "_lookq", obj_num, 1, 1);
-#endif
 				}
 				break;
 			default:
 				look_simple(cmd, thing);
-#if LOOK_PROPQUEUES
-				snprintf(obj_num, sizeof(obj_num), "#%d", thing);
-				envpropqueue(descr, player, thing, player, thing,
-					     NOTHING, "_lookq", obj_num, 1, 1);
-#endif
 				break;
 			}
 		} else if (thing == NOTHING || (*detail && thing != AMBIGUOUS)) {
@@ -305,8 +219,7 @@ do_look_at(command_t *cmd)
 				propadr = next_prop(pptr, propadr, propname, sizeof(propname));
 			}
 			if (lastmatch && PropType(lastmatch) == PROP_STRTYP) {
-				notify(player, exec_or_notify(cmd, thing, PropDataStr(lastmatch), "(@detail)",
-					(PropFlags(lastmatch) & PROP_BLESSED)? MPI_ISBLESSED : 0));
+				notify(player, PropDataStr(lastmatch));
 			} else if (ambig_flag) {
 				notify(player, AMBIGUOUS_MESSAGE);
 			} else if (*detail) {
@@ -1058,7 +971,7 @@ do_find(command_t *cmd)
 	strlcat(buf, "*", sizeof(buf));
 
 	if (!payfor(player, LOOKUP_COST)) {
-		notify_fmt(player, "You don't have enough %s.", PENNIES);
+		notifyf(player, "You don't have enough %s.", PENNIES);
 	} else {
 		for (i = 0; i < db_top; i++) {
 			if ((Wizard(OWNER(player)) || OWNER(i) == OWNER(player)) &&
@@ -1068,7 +981,7 @@ do_find(command_t *cmd)
 			}
 		}
 		notify(player, "***End of List***");
-		notify_fmt(player, "%d objects found.", total);
+		notifyf(player, "%d objects found.", total);
 	}
 }
 
@@ -1085,7 +998,7 @@ do_owned(command_t *cmd)
 	int output_type = init_checkflags(player, flags, &check);
 
 	if (!payfor(player, LOOKUP_COST)) {
-		notify_fmt(player, "You don't have enough %s.", PENNIES);
+		notifyf(player, "You don't have enough %s.", PENNIES);
 		return;
 	}
 	if (Wizard(OWNER(player)) && *name) {
@@ -1103,7 +1016,7 @@ do_owned(command_t *cmd)
 		}
 	}
 	notify(player, "***End of List***");
-	notify_fmt(player, "%d objects found.", total);
+	notifyf(player, "%d objects found.", total);
 }
 
 void
@@ -1210,7 +1123,7 @@ do_entrances(command_t *cmd)
 		}
 	}
 	notify(player, "***End of List***");
-	notify_fmt(player, "%d objects found.", total);
+	notifyf(player, "%d objects found.", total);
 }
 
 void
@@ -1274,7 +1187,7 @@ do_contents(command_t *cmd)
 		}
 	}
 	notify(player, "***End of List***");
-	notify_fmt(player, "%d objects found.", total);
+	notifyf(player, "%d objects found.", total);
 }
 
 void

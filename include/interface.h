@@ -11,8 +11,6 @@
 
 /* these symbols must be defined by the interface */
 extern int notify(dbref player, const char *msg);
-extern int notify_nolisten(dbref player, const char *msg, int ispriv);
-extern int notify_filtered(dbref from, dbref player, const char *msg, int ispriv);
 extern void wall(const char *msg);
 extern void wall_wizards(const char *msg);
 extern int shutdown_flag;		/* if non-zero, interface should shut down */

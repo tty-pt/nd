@@ -317,14 +317,6 @@ has_property(command_t *cmd, dbref what, const char *pname, const char *strval,
 		if (has_property(cmd, things, pname, strval, value))
 			return 1;
 	}
-#if LOCK_ENVCHECK
-	things = getparent(what);
-	while (things != NOTHING) {
-		if (has_property_strict(descr, player, things, pname, strval, value))
-			return 1;
-		things = getparent(things);
-	}
-#endif
 	return 0;
 }
 

@@ -512,16 +512,16 @@ do_stats(command_t *cmd) {
 			}
 		}
 
-		notify_fmt(player, "%7d room%s        %7d exit%s        %7d thing%s",
-				   rooms, (rooms == 1) ? " " : "s",
-				   exits, (exits == 1) ? " " : "s", things, (things == 1) ? " " : "s");
+		notifyf(player, "%7d room%s        %7d exit%s        %7d thing%s",
+			rooms, (rooms == 1) ? " " : "s",
+			exits, (exits == 1) ? " " : "s", things, (things == 1) ? " " : "s");
 
-		notify_fmt(player, "%7d player%s      %7d garbage",
-				   players, (players == 1) ? " " : "s", garbage);
+		notifyf(player, "%7d player%s      %7d garbage",
+			   players, (players == 1) ? " " : "s", garbage);
 
-		notify_fmt(player,
-				   "%7d total object%s",
-				   total, (total == 1) ? " " : "s");
+		notifyf(player,
+			"%7d total object%s",
+			total, (total == 1) ? " " : "s");
 
 	}
 }
@@ -760,27 +760,27 @@ do_usage(command_t *cmd) {
 	getrusage(RUSAGE_SELF, &usage);
 #endif
 
-	notify_fmt(player, "Compiled on: %s", UNAME_VALUE);
-	notify_fmt(player, "Process ID: %d", pid);
-	notify_fmt(player, "Max descriptors/process: %ld", sysconf(_SC_OPEN_MAX));
+	notifyf(player, "Compiled on: %s", UNAME_VALUE);
+	notifyf(player, "Process ID: %d", pid);
+	notifyf(player, "Max descriptors/process: %ld", sysconf(_SC_OPEN_MAX));
 
 #ifdef HAVE_GETRUSAGE
-	notify_fmt(player, "Performed %d input servicings.", usage.ru_inblock);
-	notify_fmt(player, "Performed %d output servicings.", usage.ru_oublock);
-	notify_fmt(player, "Sent %d messages over a socket.", usage.ru_msgsnd);
-	notify_fmt(player, "Received %d messages over a socket.", usage.ru_msgrcv);
-	notify_fmt(player, "Received %d signals.", usage.ru_nsignals);
-	notify_fmt(player, "Page faults NOT requiring physical I/O: %d", usage.ru_minflt);
-	notify_fmt(player, "Page faults REQUIRING physical I/O: %d", usage.ru_majflt);
-	notify_fmt(player, "Swapped out of main memory %d times.", usage.ru_nswap);
-	notify_fmt(player, "Voluntarily context switched %d times.", usage.ru_nvcsw);
-	notify_fmt(player, "Involuntarily context switched %d times.", usage.ru_nivcsw);
-	notify_fmt(player, "User time used: %d sec.", usage.ru_utime.tv_sec);
-	notify_fmt(player, "System time used: %d sec.", usage.ru_stime.tv_sec);
-	notify_fmt(player, "Pagesize for this machine: %d", psize);
-	notify_fmt(player, "Maximum resident memory: %ldk",
+	notifyf(player, "Performed %d input servicings.", usage.ru_inblock);
+	notifyf(player, "Performed %d output servicings.", usage.ru_oublock);
+	notifyf(player, "Sent %d messages over a socket.", usage.ru_msgsnd);
+	notifyf(player, "Received %d messages over a socket.", usage.ru_msgrcv);
+	notifyf(player, "Received %d signals.", usage.ru_nsignals);
+	notifyf(player, "Page faults NOT requiring physical I/O: %d", usage.ru_minflt);
+	notifyf(player, "Page faults REQUIRING physical I/O: %d", usage.ru_majflt);
+	notifyf(player, "Swapped out of main memory %d times.", usage.ru_nswap);
+	notifyf(player, "Voluntarily context switched %d times.", usage.ru_nvcsw);
+	notifyf(player, "Involuntarily context switched %d times.", usage.ru_nivcsw);
+	notifyf(player, "User time used: %d sec.", usage.ru_utime.tv_sec);
+	notifyf(player, "System time used: %d sec.", usage.ru_stime.tv_sec);
+	notifyf(player, "Pagesize for this machine: %d", psize);
+	notifyf(player, "Maximum resident memory: %ldk",
 			   (long) (usage.ru_maxrss * (psize / 1024)));
-	notify_fmt(player, "Integral resident memory: %ldk",
+	notifyf(player, "Integral resident memory: %ldk",
 			   (long) (usage.ru_idrss * (psize / 1024)));
 #endif							/* HAVE_GETRUSAGE */
 

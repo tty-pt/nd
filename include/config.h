@@ -23,7 +23,6 @@
  are compiled in.
  ************************************************************************/
 
-#define GAME_DIR "/var/db/neverdark"
 #define STD_DB "std.db"
 #define GEO_DB "geo.db"
 
@@ -138,9 +137,6 @@
  * (if your realloc is clever, this option will cause you to waste space).
  * SunOS requires DB_DOUBLING.  ULTRIX doesn't.  */
 #define  DB_DOUBLING
-
-/* Prevent Many Fine Cores. */
-#undef NOCOREDUMP
 
 /* if do_usage() in wiz.c gives you problems compiling, define this */
 #undef NO_USAGE_COMMAND

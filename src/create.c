@@ -139,7 +139,7 @@ do_open(command_t *cmd)
 		notify(player, "Permission denied. (you don't control the location)");
 		return;
 	} else if (!payfor(player, EXIT_COST)) {
-		notify_fmt(player, "Sorry, you don't have enough %s to open an exit.", PENNIES);
+		notifyf(player, "Sorry, you don't have enough %s to open an exit.", PENNIES);
 		return;
 	} else {
 		/* create the exit */
@@ -165,7 +165,7 @@ do_open(command_t *cmd)
 		if (*qname != '\0') {
 			notify(player, "Trying to link...");
 			if (!payfor(player, LINK_COST)) {
-				notify_fmt(player, "You don't have enough %s to link.", PENNIES);
+				notifyf(player, "You don't have enough %s to link.", PENNIES);
 			} else {
 				ndest = link_exit(cmd, exit, (char *) qname, good_dest);
 				DBFETCH(exit)->sp.exit.ndest = ndest;
@@ -371,13 +371,13 @@ do_link(command_t *cmd)
 		/* handle costs */
 		if (OWNER(thing) == OWNER(player)) {
 			if (!payfor(player, LINK_COST)) {
-				notify_fmt(player, "It costs %d %s to link this exit.",
+				notifyf(player, "It costs %d %s to link this exit.",
 						   LINK_COST, (LINK_COST == 1) ? PENNY : PENNIES);
 				return;
 			}
 		} else {
 			if (!payfor(player, LINK_COST + EXIT_COST)) {
-				notify_fmt(player, "It costs %d %s to link this exit.",
+				notifyf(player, "It costs %d %s to link this exit.",
 						   (LINK_COST + EXIT_COST),
 						   (LINK_COST + EXIT_COST == 1) ? PENNY : PENNIES);
 				return;
@@ -506,7 +506,7 @@ do_dig(command_t *cmd)
 		return;
 	}
 	if (!payfor(player, ROOM_COST)) {
-		notify_fmt(player, "Sorry, you don't have enough %s to dig a room.", PENNIES);
+		notifyf(player, "Sorry, you don't have enough %s to dig a room.", PENNIES);
 		return;
 	}
 	room = new_object();
@@ -637,15 +637,6 @@ copy_props(dbref player, dbref source, dbref destination, const char *dir)
 		/* generate name for current property */
 		snprintf(buf, sizeof(buf), "%s%c%s", dir, PROPDIR_DELIMITER, propname);
 
-		/* notify player */
-#if VERBOSE_CLONE
-		if(Wizard(OWNER(player))) {
-			char buf2[BUFFER_LEN];
-			snprintf(buf2, sizeof(buf2), "copying property %s", buf);
-			notify(player, buf2);
-		}
-#endif
-
 		/* copy this property */
 		copy_one_prop(player, source, destination, buf);
 		
@@ -735,13 +726,9 @@ do_clone(command_t *cmd)
 	}
 	
 	if (!payfor(player, cost)) {
-		notify_fmt(player, "Sorry, you don't have enough %s.", PENNIES);
+		notifyf(player, "Sorry, you don't have enough %s.", PENNIES);
 		return;
 	} else {
-#if VERBOSE_CLONE
-		snprintf(buf, sizeof(buf), "Now cloning %s...", unparse_object(player, thing));
-		notify(player, buf);
-#endif
 		/* create the object */
 		clonedthing = new_object();
 
@@ -830,7 +817,7 @@ do_create(command_t *cmd)
 		cost = OBJECT_COST;
 	}
 	if (!payfor(player, cost)) {
-		notify_fmt(player, "Sorry, you don't have enough %s.", PENNIES);
+		notifyf(player, "Sorry, you don't have enough %s.", PENNIES);
 		return;
 	} else {
 		/* create the object */
@@ -1026,7 +1013,7 @@ do_action(command_t *cmd)
 	if (((source = parse_source(cmd, qname)) == NOTHING))
 		return;
         if (!payfor(player, EXIT_COST)) {
-                notify_fmt(player, "Sorry, you don't have enough %s to make an action.", PENNIES);
+                notifyf(player, "Sorry, you don't have enough %s to make an action.", PENNIES);
                 return;
         }
 

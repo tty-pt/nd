@@ -55,7 +55,7 @@ do_rob(command_t *cmd)
 			DBDIRTY(player);
 			SETVALUE(thing, GETVALUE(thing) - 1);
 			DBDIRTY(thing);
-			notify_fmt(player, "You stole a %s.", PENNY);
+			notifyf(player, "You stole a %s.", PENNY);
 			snprintf(buf, sizeof(buf), "%s stole one of your %s!", NAME(player), PENNIES);
 			notify(thing, buf);
 		}
@@ -78,7 +78,7 @@ do_give(command_t *cmd)
 		notify(player, "Try using the \"rob\" command.");
 		return;
 	} else if (amount == 0) {
-		notify_fmt(player, "You must specify a positive number of %s.", PENNIES);
+		notifyf(player, "You must specify a positive number of %s.", PENNIES);
 		return;
 	}
 	/* check recipient */
@@ -102,7 +102,7 @@ do_give(command_t *cmd)
 				notify(player, "You can only give to other players.");
 				return;
 			} else if (GETVALUE(who) + amount > MAX_PENNIES) {
-				notify_fmt(player, "That player doesn't need that many %s!", PENNIES);
+				notifyf(player, "That player doesn't need that many %s!", PENNIES);
 				return;
 			}
 		}
@@ -111,7 +111,7 @@ do_give(command_t *cmd)
 
 	/* try to do the give */
 	if (!payfor(player, amount)) {
-		notify_fmt(player, "You don't have that many %s to give!", PENNIES);
+		notifyf(player, "You don't have that many %s to give!", PENNIES);
 	} else {
 		/* he can do it */
 		switch (Typeof(who)) {
@@ -141,7 +141,7 @@ do_give(command_t *cmd)
 			notify(player, buf);
 			break;
 		default:
-			notify_fmt(player, "You can't give %s to that!", PENNIES);
+			notifyf(player, "You can't give %s to that!", PENNIES);
 			break;
 		}
 		DBDIRTY(who);

@@ -35,7 +35,7 @@ drink(dbref who, dbref source)
 	assert(liv);
 
 	if (!n) {
-		notify_fmt(who, "%s is empty.", NAME(source));
+		notifyf(who, "%s is empty.", NAME(source));
 		return 1;
 	}
 
@@ -93,13 +93,13 @@ do_fill(command_t *cmd)
 
 	m = GETCONSUM(vial);
 	if (!m) {
-		notify_fmt(player, "You can't fill %s.", NAME(vial));
+		notifyf(player, "You can't fill %s.", NAME(vial));
 		return;
 	}
 
 	n = GETCONSUN(vial);
 	if (n) {
-		notify_fmt(player, "%s is not empty.", NAME(vial));
+		notifyf(player, "%s is not empty.", NAME(vial));
 		return;
 	}
 

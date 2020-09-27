@@ -62,7 +62,7 @@ geo_update()
 
 	for (i = 0; i < db_top; i++)
 		if (Typeof(i) == TYPE_PLAYER)
-			notify_from(1, i, msg);
+			notify(i, msg);
 }
 
 /* OPS {{{ */
@@ -130,7 +130,7 @@ static inline void
 reward(dbref player, const char *msg, int amount)
 {
 	SETVALUE(player, GETVALUE(player) + amount);
-	notify_fmt(player, "You %s. (+%dp)", msg, amount);
+	notifyf(player, "You %s. (+%dp)", msg, amount);
 }
 
 static inline int
@@ -138,11 +138,11 @@ fee_fail(dbref player, char *desc, char *info, int cost)
 {
 	int v = GETVALUE(player);
 	if (v < cost) {
-		notify_fmt(player, "You can't afford to %s. (%dp)", desc, cost);
+		notifyf(player, "You can't afford to %s. (%dp)", desc, cost);
 		return 1;
 	} else {
 		SETVALUE(player, v - cost);
-		notify_fmt(player, "%s (-%dp). %s",
+		notifyf(player, "%s (-%dp). %s",
 			   desc, cost, info);
 		return 0;
 	}
@@ -462,7 +462,7 @@ uncarve(command_t *cmd, enum exit e)
 	}
 
 	if (GETTMP(there) || OWNER(there) != player) {
-		notify_fmt(player, "You don't own th%s room.", s0);
+		notifyf(player, "You don't own th%s room.", s0);
 		return;
 	}
 
@@ -621,7 +621,7 @@ tell_pos(command_t *cmd, struct cmd_dir cd) {
 	}
 
 	map_where(pos, getloc(who));
-	notify_fmt(cmd->player, "0x%llx", MORTON_READ(pos));
+	notifyf(cmd->player, "0x%llx", MORTON_READ(pos));
 	return ret;
 }
 
@@ -646,7 +646,7 @@ teleport(command_t *cmd, struct cmd_dir cd)
 	if (there < 0)
 		there = geo_room_at(cmd, pos);
 	CBUG(there < 0);
-	notify_fmt(cmd->player, "Teleporting to 0x%llx.", cd.rep);
+	notifyf(cmd->player, "Teleporting to 0x%llx.", cd.rep);
 	enter_room(cmd, there, NOTHING);
 	return ret;
 }

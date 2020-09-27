@@ -587,7 +587,7 @@ descr_inband(descr_t *d, const char *s)
 }
 
 int
-notify_nolisten(dbref player, const char *msg, int isprivate)
+notify(dbref player, const char *msg)
 {
 	int retval = 0;
 	char buf[BUFFER_LEN + 2];
@@ -620,37 +620,11 @@ notify_nolisten(dbref player, const char *msg, int isprivate)
 	return retval;
 }
 
-int
-notify_filtered(dbref from, dbref player, const char *msg, int isprivate)
-{
-	if (msg == 0)
-		return 0;
-	return notify_nolisten(player, msg, isprivate);
-}
-
-int
-notify_from_echo(dbref from, dbref player, const char *msg, int isprivate)
-{
-	return notify_filtered(from, player, msg, isprivate);
-}
-
-int
-notify_from(dbref from, dbref player, const char *msg)
-{
-	return notify_from_echo(from, player, msg, 1);
-}
-
-int
-notify(dbref player, const char *msg)
-{
-	return notify_from_echo(player, player, msg, 1);
-}
-
 void
-notify_fmt(dbref player, char *format, ...)
+notifyf(dbref player, char *format, ...)
 {
 	va_list args;
-	char bufr[BUFFER_LEN];
+	static char bufr[BUFFER_LEN];
 
 	va_start(args, format);
 	vsnprintf(bufr, sizeof(bufr), format, args);
@@ -658,8 +632,6 @@ notify_fmt(dbref player, char *format, ...)
 	notify(player, bufr);
 	va_end(args);
 }
-
-extern void purge_free_frames(void);
 
 void
 wall(const char *msg)
@@ -976,14 +948,9 @@ descr_read(descr_t *d)
 }
 
 descr_t *
-descr_next() {
-	return &descr_map[nextfd];
-}
-
-descr_t *
 descr_new()
 {
-	descr_t *d = descr_next();
+	descr_t *d = &descr_map[nextfd];
 
 	if (!d)
 		return NULL;

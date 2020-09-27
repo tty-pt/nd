@@ -169,7 +169,7 @@ static inline void
 _xp_award(dbref who, unsigned const xp)
 {
 	unsigned cxp = GETCXP(who);
-	notify_fmt(who, "You gain %u xp!", xp);
+	notifyf(who, "You gain %u xp!", xp);
 	cxp += xp;
 	while (cxp >= 1000) {
 		notify(who, "You level up!");
@@ -302,11 +302,6 @@ do_kill(command_t *cmd)
 	if (FLAGS(here) & HAVEN
 	    || target == NOTHING
 	    || player == target
-#if RESTRICT_KILL
-	    || ( Typeof(target) == TYPE_PLAYER
-		 && !((FLAGS(target) & KILL_OK)
-		      && (FLAGS(player) & KILL_OK)))
-#endif
 	    || !(tar = MOBI(target)))
 	{
 		notify(player, "You can't target that.");
@@ -347,16 +342,16 @@ do_status(command_t *cmd)
 	dbref player = cmd->player;
 	// TODO optimize MOBI_EV / MOBI_EM
 	mobi_t *liv = MOBI(player);
-	notify_fmt(player, "hp %u/%u\tmp %u/%u\tstuck 0x%x\n"
-		   "dodge %d\tcombo 0x%x \tdebuf_mask 0x%x\n"
-		   "damage %d\tmdamage %d\tmdmg_mask 0x%x\n"
-		   "defense %d\tmdefense %d\tmdef_mask 0x%x\n"
-		   "klock   %u\thunger %u\tthirst %u",
-		   liv->hp, HP_MAX(player), liv->mp, MP_MAX(player), MOBI_EM(liv, MOV),
-		   MOBI_EV(liv, DODGE), liv->combo, liv->debuf_mask,
-		   MOBI_EV(liv, DMG), MOBI_EV(liv, MDMG), MOBI_EM(liv, MDMG),
-		   MOBI_EV(liv, DEF), MOBI_EV(liv, MDEF), MOBI_EM(liv, MDEF),
-		   liv->klock, liv->hunger, liv->thirst);
+	notifyf(player, "hp %u/%u\tmp %u/%u\tstuck 0x%x\n"
+		"dodge %d\tcombo 0x%x \tdebuf_mask 0x%x\n"
+		"damage %d\tmdamage %d\tmdmg_mask 0x%x\n"
+		"defense %d\tmdefense %d\tmdef_mask 0x%x\n"
+		"klock   %u\thunger %u\tthirst %u",
+		liv->hp, HP_MAX(player), liv->mp, MP_MAX(player), MOBI_EM(liv, MOV),
+		MOBI_EV(liv, DODGE), liv->combo, liv->debuf_mask,
+		MOBI_EV(liv, DMG), MOBI_EV(liv, MDMG), MOBI_EM(liv, MDMG),
+		MOBI_EV(liv, DEF), MOBI_EV(liv, MDEF), MOBI_EM(liv, MDEF),
+		liv->klock, liv->hunger, liv->thirst);
 }
 
 void
@@ -406,7 +401,7 @@ do_advitam(command_t *cmd)
 	}
 
 	mob_put(target);
-	notify_fmt(player, "You infuse %s with life.", NAME(target));
+	notifyf(player, "You infuse %s with life.", NAME(target));
 }
 
 void
@@ -463,7 +458,7 @@ do_train(command_t *cmd) {
 	}
 
 	SETSPEND(player, avail - amount);
-	notify_fmt(player, "Your %s increases %d time(s).", attrib, amount);
+	notifyf(player, "Your %s increases %d time(s).", attrib, amount);
 }
 
 int
@@ -475,7 +470,7 @@ kill_v(command_t *cmd, char const *opcs)
 		unsigned combo = strtol(opcs, &end, 0);
 		SETCOMBO(player, combo);
 		MOBI(player)->combo = combo;
-		notify_fmt(player, "Set combo to 0x%x.", combo);
+		notifyf(player, "Set combo to 0x%x.", combo);
 		return end - opcs;
 	} else if (*opcs == 'c' && isdigit(opcs[1])) {
 		mobi_t *p = MOBI(player);

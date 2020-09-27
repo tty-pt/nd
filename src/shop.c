@@ -34,18 +34,18 @@ do_shop(command_t *cmd)
 		return;
 	}
 
-	notify_fmt(player, "%s shows you what's for sale.", NAME(npc));
+	notifyf(player, "%s shows you what's for sale.", NAME(npc));
 	dbref tmp = DBFETCH(npc)->contents;
 
 	while (tmp > 0) {
 		int stock = GETSTACK(tmp);
 
 		if (stock)
-			notify_fmt(player, "%-13s %5dP (%d)",
-				   NAME(tmp), GETVALUE(tmp), stock);
+			notifyf(player, "%-13s %5dP (%d)",
+				NAME(tmp), GETVALUE(tmp), stock);
 		else
-			notify_fmt(player, "%-13s %5dP (Inf)",
-				   NAME(tmp), GETVALUE(tmp));
+			notifyf(player, "%-13s %5dP (Inf)",
+				NAME(tmp), GETVALUE(tmp));
 
 		tmp = DBFETCH(tmp)->next;
 	}
@@ -68,7 +68,7 @@ do_buy(command_t *cmd)
 	dbref item = contents_find(cmd, npc, name);
 
 	if (item == NOTHING) {
-		notify_fmt(player, "%s does not sell %s.", NAME(npc), name);
+		notifyf(player, "%s does not sell %s.", NAME(npc), name);
 		return;
 	}
 
@@ -83,7 +83,7 @@ do_buy(command_t *cmd)
 	int stock = GETSTACK(item);
 
 	if (stock && stock < amount) {
-		notify_fmt(player, "Not enough %s for sale.", NAME(item));
+		notifyf(player, "Not enough %s for sale.", NAME(item));
 		return;
 	}
 
@@ -122,7 +122,7 @@ do_buy(command_t *cmd)
 	DBDIRTY(player);
 	DBDIRTY(item);
 
-	notify_fmt(player, "You bought %d %s for %dP.", amount, NAME(item), cost);
+	notifyf(player, "You bought %d %s for %dP.", amount, NAME(item), cost);
 }
 
 void
@@ -147,7 +147,7 @@ do_sell(command_t *cmd)
 		int npchas = GETVALUE(npc);
 
 		if (cost > npchas) {
-			notify_fmt(player, "%s can't afford to buy %d %s from you.",
+			notifyf(player, "%s can't afford to buy %d %s from you.",
 				   NAME(npc), a, NAME(item));
 			return;
 		}
@@ -166,7 +166,7 @@ do_sell(command_t *cmd)
 		SETVALUE(player, GETVALUE(player) + cost);
 		SETVALUE(npc, npchas - cost);
 
-		notify_fmt(player, "You sold %s for %dP.",
+		notifyf(player, "You sold %s for %dP.",
 			   NAME(item), cost);
 
 		DBDIRTY(nu);
@@ -178,7 +178,7 @@ do_sell(command_t *cmd)
 	DBDIRTY(player);
 
 	if (a) {
-		notify_fmt(player, "You don't have %d %s.", a, name);
+		notifyf(player, "You don't have %d %s.", a, name);
 		return;
 	}
 }
