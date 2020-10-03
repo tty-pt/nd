@@ -127,9 +127,6 @@ core_command_t cmds[] = {
 	}, {
 		.name = "drop_message",
 		.cb = &do_drop_message,
-	/* }, { */
-	/* 	.name = "dump", */
-	/* 	.cb = &do_dump, */
 	}, {
 		.name = "entrances",
 		.cb = &do_entrances,
@@ -355,7 +352,7 @@ fd_set readfds, activefds, writefds;
 
 int shutdown_flag = 0;
 
-static int sockfd, nextfd;
+static int sockfd;
 descr_t descr_map[FD_SETSIZE];
 
 void
@@ -465,8 +462,6 @@ void    forget_player_descr(dbref player, int);
 descr_t * descrdata_by_descr(int i);
 
 short optflags = 0;
-pid_t global_dumper_pid=0;
-short global_dumpdone=0;
 
 void
 show_program_usage(char *prog)
@@ -483,11 +478,7 @@ show_program_usage(char *prog)
 	exit(1);
 }
 
-/* NOTE: Will need to think about this more for unicode */
-#define isinput( q ) isprint( (q) & 127 )
-
 extern int sanity_violated;
-int time_since_combat = 0;
 
 void
 close_sockets(const char *msg) {
@@ -501,14 +492,35 @@ close_sockets(const char *msg) {
 	}
 }
 
+void sig_shutdown(int i)
+{
+	warn("SHUTDOWN: via SIGNAL");
+	shutdown_flag = 1;
+}
+
+int
+init_game()
+{
+	FILE *f = fopen(STD_DB, "rb");
+
+	if (f == NULL)
+		return -1;
+
+	db_free();
+	srand(getpid());			/* init random number generator */
+
+	if (db_read(f) < 0)
+		return -1;
+
+	return 0;
+}
+
 int
 main(int argc, char **argv)
 {
 	register char c;
 
-	int i;
-	for (i = 0; i < FD_SETSIZE; i++)
-		memset(&descr_map[i], 0, sizeof(descr_t));
+	memset(descr_map, 0, sizeof(descr_map));
 
 	while ((c = getopt(argc, argv, "dsyvSC:")) != -1) {
 		switch (c) {
@@ -548,14 +560,17 @@ main(int argc, char **argv)
 	warn("%s PID is: %d", argv[0], getpid());
 
 	if (init_game() < 0) {
-		warn("Couldn't load " STD_DB "!");
+		warn("Couldn't load " STD_DB "!\n");
 		return 2;
 	}
 
 	CBUG(map_init());
 	commands_init();
 
-	set_signals();
+	signal(SIGPIPE, SIG_IGN);
+	signal(SIGHUP, SIG_IGN);
+	signal(SIGUSR1, SIG_DFL);
+	signal(SIGTERM, sig_shutdown);
 
 	sanity(AMBIGUOUS);
 	errno = 0; // TODO why? sanity fails to access file
@@ -574,7 +589,16 @@ main(int argc, char **argv)
 
 	close_sockets("\r\nServer shutting down.\r\n");
 
-	dump_database();
+	FILE *f = fopen(STD_DB, "wb");
+
+	if (f == NULL) {
+		perror("fopen");
+		return 1;
+	}
+
+	db_write(f);
+	fclose(f);
+	sync();
 
 	return 0;
 }
@@ -648,6 +672,7 @@ wall(const char *msg)
 void
 mob_welcome(descr_t *d)
 {
+	warn("mob_welcome fd %d\n", d->fd);
 	struct obj const *o = mob_obj_random();
 	if (o) {
 		CBUG(*o->name == '\0');
@@ -702,57 +727,6 @@ welcome_user(descr_t *d)
 #endif
 }
 
-void
-announce_connect(command_t *cmd)
-{
-	dbref player = cmd->player;
-	dbref loc;
-	char buf[BUFFER_LEN];
-	struct match_data md;
-	dbref exit;
-
-	if ((loc = getloc(player)) == NOTHING)
-		return;
-
-	if ((!Dark(player)) && (!Dark(loc))) {
-		snprintf(buf, sizeof(buf), "%s has connected.", NAME(player));
-		notify_except(DBFETCH(loc)->contents, player, buf, player);
-	}
-
-	exit = NOTHING;
-	if (PLAYER_DESCRCOUNT(player)) {
-		init_match(cmd, "connect", TYPE_EXIT, &md);	/* match for connect */
-		md.match_level = 1;
-		match_all_exits(&md);
-		exit = match_result(&md);
-		if (exit == AMBIGUOUS)
-			exit = NOTHING;
-	}
-
-	if (exit == NOTHING || !(FLAGS(exit) & STICKY)) {
-		if (can_move(cmd, AUTOLOOK_CMD, 1))
-			go_move(cmd, AUTOLOOK_CMD, 1);
-		else
-			do_look_around(cmd);
-	}
-
-	/*
-	 * See if there's a connect action.  If so, and the player is the first to
-	 * connect, send the player through it.  If the connect action is set
-	 * sticky, then suppress the normal look-around.
-	 */
-
-	if (exit != NOTHING)
-		go_move(cmd, "connect", 1);
-
-	/* queue up all _connect programs referred to by properties */
-	envpropqueue(cmd, getloc(player), NOTHING, player, NOTHING,
-				 "_connect", "Connect", 1, 1);
-	envpropqueue(cmd, getloc(player), NOTHING, player, NOTHING,
-				 "_oconnect", "Oconnect", 1, 0);
-	return;
-}
-
 int
 auth(command_t *cmd)
 {
@@ -796,7 +770,7 @@ auth(command_t *cmd)
         cmd->player = d->player = player;
         remember_player_descr(player, d->fd);
         spit_file(player, MOTD_FILE);
-        announce_connect(cmd);
+	do_look_around(cmd);
         if (!created && sanity_violated && Wizard(player)) {
 		notify(player,
 		       "#########################################################################\n"
@@ -810,48 +784,29 @@ auth(command_t *cmd)
         return 0;
 }
 
-static inline int
+static inline void
 do_v(command_t *cmd, char const *cmdstr)
 {
 	int ofs = 1;
 	char const *s = cmdstr;
 
 	for (; *s && ofs > 0; s += ofs) {
-		switch (*s) {
-		case COMMAND_TOKEN:
-			return s - cmdstr;
-		/* case SAY_TOKEN: */
-		/* 	do_say(player, s + 1); */
-		/* 	return s + strlen(s) - cmd; */
-		/* case POSE_TOKEN: */
-		/* 	do_pose(player, s + 1); */
-		/* 	return s + strlen(s) - cmd; */
-		}
-
 		ofs = geo_v(cmd, s);
 		if (ofs < 0)
 			ofs = - ofs;
 		s += ofs;
 		ofs = kill_v(cmd, s);
 	}
-
-	return s - cmdstr;
 }
 
 void
 command_process(command_t *cmd)
 {
-	if (cmd->argc < 1) {
+	if (cmd->argc < 1)
 		return;
-	}
 
-	char *command = cmd->argv[0];
-	size_t command_n = 0;
 	dbref player = cmd->player;
 	int descr = cmd->fd;
-
-	pos_t pos;
-	map_where(pos, getloc(cmd->player));
 
 	command_debug(cmd, "command_process");
 	/* warn("command_process %s\n", command); */
@@ -861,52 +816,20 @@ command_process(command_t *cmd)
         mobi_t *liv = MOBI(player);
         liv->descr = descr;
 
-	/* robustify player */
-	if (player < 0 || player >= db_top ||
-		(Typeof(player) != TYPE_PLAYER && Typeof(player) != TYPE_THING)) {
-		warn("process_command: bad player %d", player);
-		return;
-	}
+	core_command_t *cmd_i = command_match(cmd);
 
-	/* if player is a wizard, and uses overide token to start line... */
-	/* ... then do NOT run actions, but run the command they specify. */
-	if (!(TrueWizard(OWNER(player)) && (*command == OVERIDE_TOKEN))
-	    && can_move(cmd, command, 0))
-	{
-		go_move(cmd, command, 0);	/* command is exact match for exit */
-		*match_args = 0;
-		*match_cmdname = 0;
-		goto out;
-	}
+	pos_t pos;
+	map_where(pos, getloc(player));
 
-	for (; command_n < cmd->argc; command_n ++)
-	{
-		command = cmd->argv[command_n];
-		core_command_t *cmd_i = command_match(cmd);
+	if (cmd_i)
+		cmd_i->cb(cmd);
+	else
+		do_v(cmd, cmd->argv[0]);
 
-		if (cmd_i) {
-			cmd_i->cb(cmd);
-			// TODO get next command
-			break;
-		}
-
-		command += do_v(cmd, command);
-		if (*command == COMMAND_TOKEN) {
-			command++;
-			CBUG(1);
-		} else if (*command == '\0') {
-			continue;
-		} else
-			break;
-			/* goto bad; */
-	}
-out:
-	{
-		pos_t pos2;
-		map_where(pos2, getloc(player));
-		if (MORTON_READ(pos2) != MORTON_READ(pos))
-			do_view(cmd);
-	}
+	pos_t pos2;
+	map_where(pos2, getloc(player));
+	if (MORTON_READ(pos2) != MORTON_READ(pos))
+		do_view(cmd);
 }
 
 int
@@ -920,7 +843,8 @@ descr_read(descr_t *d)
 		if (errno == EAGAIN)
 			return 0;
 
-		perror("descr_read");
+		/* perror("descr_read"); */
+		BUG("descr_read %s", strerror(errno));
 	case 0:
 	case 1:
 		return -1;
@@ -950,27 +874,24 @@ descr_read(descr_t *d)
 descr_t *
 descr_new()
 {
-	descr_t *d = &descr_map[nextfd];
-
-	if (!d)
-		return NULL;
-
-	nextfd++;
-	memset(d, 0, sizeof(descr_t));
-
 	struct sockaddr_in addr;
-	socklen_t addr_len;
+	socklen_t addr_len = (socklen_t)sizeof(addr);
+	int fd = accept(sockfd, (struct sockaddr *) &addr, &addr_len);
+	descr_t *d;
 
-	addr_len = (socklen_t)sizeof(addr);
-	d->fd = accept(sockfd, (struct sockaddr *) &addr, &addr_len);
-
-	warn("accept %d\n", d->fd);
-
-	/* FIXME */
-	if (d->fd <= 0) {
+	if (fd <= 0) {
 		perror("descr_new");
 		return NULL;
 	}
+
+	warn("accept %d\n", fd);
+
+	d = &descr_map[fd];
+	memset(d, 0, sizeof(descr_t));
+	d->fd = fd;
+
+
+	/* FIXME */
 
 	FD_SET(d->fd, &activefds);
 
@@ -988,36 +909,17 @@ descr_new()
 }
 
 void
-announce_disconnect(descr_t *d)
-{
-	dbref player = d->player;
-	dbref loc;
-	char buf[BUFFER_LEN];
-
-	if ((loc = getloc(player)) == NOTHING)
-		return;
-
-	if ((!Dark(player)) && (!Dark(loc))) {
-		snprintf(buf, sizeof(buf), "%s has disconnected.", NAME(player));
-		notify_except(DBFETCH(loc)->contents, player, buf, player);
-	}
-
-	d->flags = 0;
-	d->player = NOTHING;
-
-	forget_player_descr(player, d->fd);
-
-	DBDIRTY(player);
-}
-
-void
 descr_close(descr_t *d)
 {
 	if (d->flags & DF_CONNECTED) {
-		warn("%d disconnects", d->fd);
-		announce_disconnect(d);
+		warn("%s(%d) disconnects on fd %d\n",
+		     NAME(d->player), d->player, d->fd);
+		forget_player_descr(d->player, d->fd);
+		DBDIRTY(d->player);
+		d->flags = 0;
+		d->player = NOTHING;
 	} else
-		warn("%d never connected", d->fd);
+		warn("%d never connected\n", d->fd);
 
 	shutdown(d->fd, 2);
 	close(d->fd);
@@ -1050,14 +952,6 @@ make_socket(int port)
 		perror("setsockopt");
 		exit(1);
 	}
-
-	/*
-	opt = 240;
-	if (setsockopt(sockfd, SOL_TCP, TCP_KEEPIDLE, (char *) &opt, sizeof(opt)) < 0) {
-		perror("setsockopt");
-		exit(1);
-	}
-	*/
 
 	server.sin_family = AF_INET;
 	server.sin_addr.s_addr = INADDR_ANY;
@@ -1092,7 +986,6 @@ shovechars()
 		return sockfd;
 	}
 
-	nextfd = sockfd + 1;
 	FD_SET(sockfd, &activefds);
 
 	avail_descriptors = sysconf(_SC_OPEN_MAX) - 5;
@@ -1110,18 +1003,13 @@ shovechars()
 		mob_update();
 		geo_update();
 
-		DESCR_ITER(d) {
+		DESCR_ITER(d)
 			if (d->flags & DF_BOOTED) {
-				descr_inband(d, "\r\n" LEAVE_MESSAGE "\r\n\r\n");
+				descr_inband(d, "\r\nCome back later!\r\n\r\n");
 				d->flags ^= DF_BOOTED;
 				descr_close(d);
 			}
-		}
 
-		if (global_dumpdone != 0) {
-			wall(DUMPING_MESG);
-			global_dumpdone = 0;
-		}
 		untouchprops_incremental(1);
 
 		if (shutdown_flag)
@@ -1221,20 +1109,6 @@ emergency_shutdown(void)
 	close_sockets("\r\nEmergency shutdown due to server crash.");
 }
 
-char *
-time_format_1(long dt)
-{
-	register struct tm *delta;
-	static char buf[64];
-
-	delta = gmtime((time_t *) &dt);
-	if (delta->tm_yday > 0)
-		snprintf(buf, sizeof(buf), "%dd %02d:%02d", delta->tm_yday, delta->tm_hour, delta->tm_min);
-	else
-		snprintf(buf, sizeof(buf), "%02d:%02d", delta->tm_hour, delta->tm_min);
-	return buf;
-}
-
 /***** O(1) Connection Optimizations *****/
 
 int*
@@ -1328,20 +1202,6 @@ descrdata_by_descr(int c)
 
 /*** JME ***/
 
-int
-dbref_first_descr(dbref c)
-{
-	int dcount;
-	int* darr;
-
-	darr = get_player_descrs(c, &dcount);
-	if (dcount > 0) {
-		return darr[dcount - 1];
-	} else {
-		return -1;
-	}
-}
-
 void
 art(int descr, const char *art)
 {
@@ -1359,6 +1219,7 @@ art(int descr, const char *art)
 	
         d = descrdata_by_descr(descr);
 
+	warn("art fd %d\n", d->fd);
 	/* descr_inband(d, "\r\n"); */
 
         /* if (!web_art(descr, art, buf, sizeof(buf))) */
@@ -1381,20 +1242,6 @@ art(int descr, const char *art)
 
 	fclose(f);
 	descr_inband(d, "\r\n");
-}
-
-void
-dump_status(void)
-{
-	descr_t *d;
-	time_t now;
-	char buf[BUFFER_LEN];
-
-	(void) time(&now);
-	warn("STATUS REPORT:");
-	DESCR_ITER(d) snprintf(buf, sizeof(buf),
-			       "PLAYING fd %d player %s(%d).\n",
-			       d->fd, NAME(d->player), d->player);
 }
 
 static const char *interface_c_version = "$RCSfile$ $Revision: 1.127 $";

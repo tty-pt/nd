@@ -440,11 +440,6 @@ do_flock(command_t *cmd)
 		break;
 	}
 
-	if (force_level) {
-		notify(player, "You can't use @flock from an @force or {force}.");
-		return;
-	}
-
 	if (!*keyname) {
 		mydat.flags = PROP_LOKTYP;
 		mydat.data.lok = TRUE_BOOLEXP;
@@ -1013,10 +1008,6 @@ do_set(command_t *cmd)
 		notify(player, "You must specify a flag to set.");
 		return;
 	} else if (string_prefix("WIZARD", p)) {
-		if (force_level) {
-			notify(player, "Can't set this flag from an @force or {force}.");
-			return;
-		}
 		f = WIZARD;
 	} else if (string_prefix("LINK_OK", p)) {
 		f = LINK_OK;

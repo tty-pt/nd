@@ -1,7 +1,7 @@
 #!/bin/make -f
 
 srcdir := ${PWD}
-subdirs := src/ game/data/
+subdirs := src/ game/data/ client/
 
 include scripts/Makefile.common
 

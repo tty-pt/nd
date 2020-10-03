@@ -864,13 +864,6 @@ recycle(command_t *cmd, dbref thing)
 	int looplimit;
 
 	depth++;
-	if (force_level) {
-		if(thing == force_prog) {
-			warn("SANITYCHECK: Was about to recycle FORCEing object #%d!", thing);
-			notify(player, "ERROR: Cannot recycle an object FORCEing you!");
-			return;
-		}
-	}
 	switch (Typeof(thing)) {
 	case TYPE_ROOM:
 		if (!Wizard(OWNER(thing)))

@@ -120,8 +120,6 @@ tno <esc>k <c-w>:call Kill()<cr>
 tno <esc>kk <c-w>:call FullQuit()<cr>
 tno <esc>q <c-w>:call Quit()<cr>
 
-set efm +=%Dmake\ -C\ %f\ %.%#
-set efm +=%Xcd\ ..
 " jsc
 set efm +=%E%f:%l:\ ERROR\ \-\ %m,%-Z%p^
 set efm +=%W%f:%l:\ WARNING\ \-\ %m,%-Z%p^

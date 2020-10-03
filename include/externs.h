@@ -90,10 +90,6 @@ extern int link_exit(command_t *cmd, dbref exit, char *dest_name, dbref * dest_l
 extern int link_exit_dry(command_t *cmd, dbref exit, char *dest_name, dbref * dest_list);
 extern void do_action(command_t *cmd);
 
-/* From game.c */
-extern void do_dump(dbref player, const char *newfile);
-extern void fork_and_dump(void);
-
 /* From hashtab.c */
 extern unsigned int hash(const char *s, unsigned int hash_size);
 extern hash_data *find_hash(const char *s, hash_tab * table, unsigned size);
@@ -297,15 +293,10 @@ unsigned long rnd(void *buffer);
 extern void dispose_all_oldprops(void);
 
 /* from interface.c */
-extern void do_armageddon(dbref player, const char *msg);
-extern pid_t global_dumper_pid;
-extern short global_dumpdone;
 void do_flock(command_t *);
 
 /* from tune.c */
 extern void tune_load_parmsfile(dbref player);
-
-void dump_status(void);
 
 /* version-getting functions */
 

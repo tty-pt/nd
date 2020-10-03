@@ -18,13 +18,13 @@ fbmuck-obj-y := geometry.o plant.o biome.o noise.o search.o \
 	view.o item.o spell.o drink.o mob.o kill.o geography.o \
 	shop.o
 fbmuck-obj-y += boolexp.o create.o db.o \
-	game.o hashtab.o help.o \
+	hashtab.o help.o \
 	look.o match.o \
 	move.o msgparse.o \
 	player.o \
 	predicates.o propdirs.o property.o \
 	props.o rob.o sanity.o set.o \
-	signal.o smatch.o speech.o stringutil.o \
+	smatch.o speech.o stringutil.o \
 	timequeue.o unparse.o utils.o wiz.o \
 	copyright.o interface.o web.o
 

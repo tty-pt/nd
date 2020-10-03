@@ -29,4 +29,8 @@ deps: # ${deps}
 	@[[ -z "${real-obj-y}" ]] || \
 		mkdep ${CFLAGS} ${real-obj-y:%.o=%.c}
 
+.c.o:
+	@echo CC ${@:%=${RELDIR}/%}
+	@cd ${srcdir} && ${COMPILE.c} -o ${@:%=${RELDIR}/%} ${.IMPSRC:%=${RELDIR}/%}
+
 include Makefile.common

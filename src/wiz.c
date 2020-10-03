@@ -284,12 +284,6 @@ do_bless(command_t *cmd) {
 	char buf[BUFFER_LEN];
 	int cnt;
 
-	if (force_level) {
-		notify(player, "Can't @force an @bless.");
-		return;
-	}
-
-
 	if (!Wizard(player) || Typeof(player) != TYPE_PLAYER) {
 		notify(player, "Only Wizard players may use this command.");
 		return;
@@ -323,101 +317,6 @@ do_bless(command_t *cmd) {
 	snprintf(buf, sizeof(buf), "%d propert%s blessed.", cnt, (cnt == 1)? "y" : "ies");
 	notify(player, buf);
 }
-
-#if 0
-void
-do_force(int descr, dbref player, const char *what, char *command)
-{
-	dbref victim, loc;
-	struct match_data md;
-
-	assert(what != NULL);
-	assert(command != NULL);
-	assert(player > 0);
-
-	if (force_level) {
-		notify(player, "Can't force from within a force.");
-		return;
-	}
-
-	/* get victim */
-	init_match(descr, player, what, NOTYPE, &md);
-	match_neighbor(&md);
-	match_possession(&md);
-	match_me(&md);
-	match_here(&md);
-	match_absolute(&md);
-	match_registered(&md);
-	match_player(&md);
-
-	if ((victim = noisy_match_result(&md)) == NOTHING)
-		return;
-
-	if (Typeof(victim) != TYPE_PLAYER && Typeof(victim) != TYPE_THING) {
-		notify(player, "Permission Denied -- Target not a player or thing.");
-		return;
-	}
-#ifdef GOD_PRIV
-	if (God(victim)) {
-		notify(player, "You cannot force God to do anything.");
-		return;
-	}
-#endif							/* GOD_PRIV */
-
-/*    if (!controls(player, victim)) {
- *	notify(player, "Permission denied. (you're not a wizard!)");
- *	return;
- *    }
- */
-
-	if (!Wizard(player) && !(FLAGS(victim) & XFORCIBLE)) {
-		notify(player, "Permission denied: forced object not @set Xforcible.");
-		return;
-	}
-	if (!Wizard(player) && !test_lock_false_default(descr, player, victim, "@/flk")) {
-		notify(player, "Permission denied: Object not force-locked to you.");
-		return;
-	}
-
-	loc = getloc(victim);
-	if (!Wizard(player) && Typeof(victim) == TYPE_THING && loc != NOTHING &&
-		(FLAGS(loc) & ZOMBIE) && Typeof(loc) == TYPE_ROOM) {
-		notify(player, "Sorry, but that's in a no-puppet zone.");
-		return;
-	}
-
-	if (!Wizard(OWNER(player)) && Typeof(victim) == TYPE_THING) {
-		const char *ptr = NAME(victim);
-		char objname[BUFFER_LEN], *ptr2;
-
-		if ((FLAGS(player) & ZOMBIE)) {
-			notify(player, "Permission denied -- you cannot use zombies.");
-			return;
-		}
-		if (FLAGS(victim) & DARK) {
-			notify(player, "Permission denied -- you cannot force dark zombies.");
-			return;
-		}
-		for (ptr2 = objname; *ptr && !isspace(*ptr);)
-			*(ptr2++) = *(ptr++);
-		*ptr2 = '\0';
-		if (lookup_player(objname) != NOTHING) {
-			notify(player, "Puppet cannot share the name of a player.");
-			return;
-		}
-	}
-
-	warn("FORCED: %s(%d) by %s(%d): %s", NAME(victim),
-			   victim, NAME(player), player, command);
-	/* force victim to do command */
-	force_prog=NOTHING;
-	/* Technically, force_level must be 0 at this point, regardless. */
-	force_level++;
-	process_command(dbref_first_descr(victim), victim, command);
-	force_level--;
-	force_prog=NOTHING;
-}
-#endif
 
 void
 do_stats(command_t *cmd) {

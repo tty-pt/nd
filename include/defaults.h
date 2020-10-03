@@ -22,9 +22,6 @@
 /* message seen when a player enters a line the server doesn't understand */
 #define HUH_MESSAGE "Huh?  (Type \"help\" for help.)"
 
-/*  Goodbye message.  */
-#define LEAVE_MESSAGE "Come back later!"
-
 /*  Idleboot message.  */
 #define IDLEBOOT_MESSAGE "Autodisconnecting for inactivity."
 
