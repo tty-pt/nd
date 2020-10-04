@@ -643,8 +643,6 @@ do_inventory(command_t *cmd)
 	do_score(cmd);
 }
 
-#define UPCASE(x) (toupper(x))
-
 int
 init_checkflags(dbref player, const char *flags, struct flgchkdat *check)
 {
@@ -704,7 +702,7 @@ init_checkflags(dbref player, const char *flags, struct flgchkdat *check)
 	check->size = 0;
 
 	while (*flags) {
-		switch (UPCASE(*flags)) {
+		switch (toupper(*flags)) {
 		case '!':
 			if (mode)
 				mode = 0;
@@ -1233,9 +1231,9 @@ do_sweep(command_t *cmd)
 	for (; ref != NOTHING; ref = DBFETCH(ref)->next) {
 		switch (Typeof(ref)) {
 		case TYPE_PLAYER:
-			if (!Dark(thing) || PLAYER_DESCRCOUNT(ref)) {
+			if (!Dark(thing)) {
 				snprintf(buf, sizeof(buf), "  %s is a %splayer.",
-						unparse_object(player, ref), PLAYER_DESCRCOUNT(ref) ? "" : "sleeping ");
+						unparse_object(player, ref), PLAYER_SP(ref)->fd > 0 ? "" : "sleeping ");
 				notify(player, buf);
 			}
 			break;

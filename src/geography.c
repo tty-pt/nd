@@ -421,7 +421,7 @@ carve(command_t *cmd, enum exit e)
 			there = geo_room(cmd, exit);
 			e_exit_dest_set(exit, there);
 		}
-		wall_around(cmd, exit);
+		/* wall_around(cmd, exit); */
 		wall = 1;
 	}
 

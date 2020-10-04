@@ -464,11 +464,6 @@ db_free_object(dbref i)
         if (PLAYER_PASSWORD(i)) {
 			free((void*)PLAYER_PASSWORD(i));
         }
-        if (PLAYER_DESCRS(i)){ 
-			free(PLAYER_DESCRS(i));
-			PLAYER_SET_DESCRS(i, NULL);
-			PLAYER_SET_DESCRCOUNT(i, 0);
-        }
     }
 	if (Typeof(i) == TYPE_THING) {
 		FREE_THING_SP(i);
@@ -621,8 +616,7 @@ db_read_object_foxen(FILE * f, struct object *o, dbref objno)
 		o->exits = getref(f);
 		password = getstring(f);
 		set_password_raw(objno, password);
-		PLAYER_SET_DESCRS(objno, NULL);
-		PLAYER_SET_DESCRCOUNT(objno, 0);
+		PLAYER_SP(objno)->fd = -1;
 		break;
 	case TYPE_GARBAGE:
 		break;

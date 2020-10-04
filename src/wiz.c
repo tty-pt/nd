@@ -558,12 +558,6 @@ do_toad(command_t *cmd) {
 
 		boot_player_off(victim); /* Disconnect the toad */
 
-		if (PLAYER_DESCRS(victim)) {
-			free(PLAYER_DESCRS(victim));
-			PLAYER_SET_DESCRS(victim, NULL);
-			PLAYER_SET_DESCRCOUNT(victim, 0);
-		}
-
 		FREE_PLAYER_SP(victim);
 		ALLOC_THING_SP(victim);
 		THING_SET_HOME(victim, PLAYER_HOME(player));

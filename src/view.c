@@ -436,8 +436,8 @@ do_view(command_t *cmd)
 		pos[1] = opos[1];
 	}
 
+	/* binary_notify(player, BIN_VIEW, view, sizeof(view)); */
 	view_draw(descr, player, view);
-	/* if (web_geo_view(descr, view_buf)) */
-		notify(player, view_buf);
+	notify(player, view_buf);
 }
 

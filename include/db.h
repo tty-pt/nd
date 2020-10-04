@@ -340,8 +340,7 @@ struct boolexp {
 struct player_specific {
 	dbref home;
 	const char *password;
-	int *descrs;
-	int descr_count;
+	int fd;
 };
 
 #define THING_SP(x)		(DBFETCH(x)->sp.player.sp)
@@ -358,13 +357,9 @@ struct player_specific {
 
 #define PLAYER_HOME(x)		(PLAYER_SP(x)->home)
 #define PLAYER_PASSWORD(x)	(PLAYER_SP(x)->password)
-#define PLAYER_DESCRS(x)    (PLAYER_SP(x)->descrs)
-#define PLAYER_DESCRCOUNT(x)    (PLAYER_SP(x)->descr_count)
 
 #define PLAYER_SET_HOME(x,y)		(PLAYER_SP(x)->home = y)
 #define PLAYER_SET_PASSWORD(x,y)	(PLAYER_SP(x)->password = y)
-#define PLAYER_SET_DESCRS(x,y)		(PLAYER_SP(x)->descrs = y)
-#define PLAYER_SET_DESCRCOUNT(x,y)	(PLAYER_SP(x)->descr_count = y)
 
 /* union of type-specific fields */
 
