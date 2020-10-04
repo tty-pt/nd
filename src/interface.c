@@ -672,7 +672,6 @@ wall(const char *msg)
 void
 mob_welcome(descr_t *d)
 {
-	warn("mob_welcome fd %d\n", d->fd);
 	struct obj const *o = mob_obj_random();
 	if (o) {
 		CBUG(*o->name == '\0');
@@ -1219,26 +1218,13 @@ art(int descr, const char *art)
 	
         d = descrdata_by_descr(descr);
 
-	warn("art fd %d\n", d->fd);
-	/* descr_inband(d, "\r\n"); */
-
-        /* if (!web_art(descr, art, buf, sizeof(buf))) */
-        /*         return; */
-
 	snprintf(buf, sizeof(buf), "../art/%s.txt", art);
 
 	if ((f = fopen(buf, "rb")) == NULL) 
 		return;
 
-	while (fgets(buf, sizeof(buf) - 3, f)) {
-		ptr = index(buf, '\n');
-		if (ptr && ptr > buf && *(ptr - 1) != '\r') {
-			*ptr++ = '\r';
-			*ptr++ = '\n';
-			*ptr++ = '\0';
-		}
+	while (fgets(buf, sizeof(buf) - 3, f))
 		descr_inband(d, buf);
-	}
 
 	fclose(f);
 	descr_inband(d, "\r\n");
