@@ -21,7 +21,7 @@ typedef struct {
 } vtf_t;
 
 typedef struct view_tile {
-	ref_t players[ROOM_MAX]; /* dbref actually */
+	/* ref_t players[ROOM_MAX]; /1* dbref actually *1/ */
 	enum biome bio_idx;
 	ref_t room;
 	ucoord_t flags, exits, doors;

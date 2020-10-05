@@ -111,6 +111,7 @@ static inline const char *
 wall_paint(int floor)
 {
 	switch (floor) {
+	case 11: /* desert */
 	case -8:
 		return ANSI_FG_RED;
 	default:
@@ -144,7 +145,7 @@ dr_vs(char *b, int descr, dbref player, view_tile_t *t)
 		floor = t->bio_idx;
 		wp = "";
 	} else {
-		floor = floor_get(t->room);
+		floor = t->bio_idx;
 		wp = wall_paint(floor);
 	}
 
@@ -152,14 +153,7 @@ dr_vs(char *b, int descr, dbref player, view_tile_t *t)
 	b = stpcpy(b, " ");
 	for (;;) {
 		b = stpcpy(b, bg);
-
-		if (t->room >= 0)
-			b = dr_room(descr, player, t, b, bg);
-		else {
-			b = dr_tree(t->pd, 0, b);
-			b = dr_tree(t->pd, 1, b);
-			b = dr_tree(t->pd, 2, b);
-		}
+		b = dr_room(descr, player, t, b, bg);
 
 		tp = t;
 		t++;
@@ -167,11 +161,11 @@ dr_vs(char *b, int descr, dbref player, view_tile_t *t)
 		if (t >= t_max)
 			break;
 
-		if (t->room < 0 || GETTMP(t->room)) {
+		if (t->room < 0) {
 			floor = t->bio_idx;
 			bg = BIOME_BG(floor);
 		} else {
-			floor = floor_get(t->room);
+			floor = t->bio_idx;
 			wp = wall_paint(floor);
 			bg = BIOME_BG(floor);
 			b = stpcpy(b, bg);
@@ -235,20 +229,10 @@ dr_hs_n(char *b, int descr, dbref player,
 
 		floor = t->bio_idx;
 		if (next >= 0) {
-			if (GETTMP(next)) {
-				if (curr < 0 || GETTMP(curr)) {
-					floor = t->bio_idx;
-					toggle = 1;
-				} else {
-					floor = floor_get(curr);
-					toggle = 0;
-				}
-			} else {
-				floor = floor_get(next);
-				toggle = 0;
-			}
-		} else if (curr >= 0 && !GETTMP(curr)) {
-			floor = floor_get(curr);
+			floor = tn->bio_idx;
+			toggle = 0;
+		} else if (curr >= 0) {
+			floor = t->bio_idx;
 			toggle = 0;
 		} else {
 			floor = t->bio_idx;
@@ -373,6 +357,7 @@ view_build_tile(command_t *cmd,
 		struct bio *n, dbref loc,
 		view_tile_t *t, pos_t p)
 {
+	t->room = loc;
 	if (loc > 0) {
 		view_build_exit(cmd, t, loc, E_EAST);
 		view_build_exit(cmd, t, loc, E_NORTH);
@@ -381,6 +366,9 @@ view_build_tile(command_t *cmd,
 		view_build_exit_z(cmd, t, loc, E_UP);
 		view_build_exit_z(cmd, t, loc, E_DOWN);
 		t->flags = view_build_flags(loc);
+		t->bio_idx = floor_get(loc);
+		if (GETTMP(loc))
+			t->room = -1;
 	} else {
 		view_build_exit_s(cmd, t, loc, p, E_EAST);
 		view_build_exit_s(cmd, t, loc, p, E_NORTH);
@@ -388,10 +376,9 @@ view_build_tile(command_t *cmd,
 		view_build_exit_s(cmd, t, loc, p, E_SOUTH);
 		/* view_build_exit_sz(t, descr, player, loc, E_UP); */
 		/* view_build_exit_sz(t, descr, player, loc, E_DOWN); */
+		t->bio_idx = n->bio_idx;
 	}
 
-	t->room = loc;
-	t->bio_idx = n->bio_idx;
 	memcpy(&t->pd, &n->pd, sizeof(n->pd));
 }
 
