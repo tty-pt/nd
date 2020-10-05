@@ -124,19 +124,6 @@ tno <esc>q <c-w>:call Quit()<cr>
 set efm +=%E%f:%l:\ ERROR\ \-\ %m,%-Z%p^
 set efm +=%W%f:%l:\ WARNING\ \-\ %m,%-Z%p^
 
-fu! Ctof(c)
-	let l:r = a:c * 9 / 6 + 32
-	return l:r
-endfu
-
-fu! Ictof()
-	call inputsave()
-	let l:c = input('Celsius ')
-	call inputrestore()
-	let l:r = Ctof(l:c)
-	echo "\n" . l:r
-endfu
-
 set path=$PWD/src,$PWD/include
 set grepprg=ag\ --nogroup\ --nocolor
 nnoremap gr :grep <cword> src/*.c include/*.h<cr>

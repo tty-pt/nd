@@ -17,7 +17,6 @@
 		? ANSI_RESET : biomes[i].bg)
 
 // global buffer for map? // FIXME d bio_limit
-static char view_buf[8 * BUFSIZ];
 static const char * v = "|";
 static const char * l = ANSI_FG_WHITE "+";
 static const char *h_open	= "   ";
@@ -57,7 +56,7 @@ dr_tree(struct plant_data pd, int n, char *b) {
 // TODO remove phantom trees
 
 static inline char *
-dr_room(int descr, dbref player, view_tile_t *t, char *buf, const char *bg)
+dr_room(char *buf, view_tile_t *t, const char *bg)
 {
 	register char *b = buf;
 	vtf_t *vtf = NULL;
@@ -133,7 +132,7 @@ dr_v(char *b, view_tile_t *t, enum exit exit,
 }
 
 static char *
-dr_vs(char *b, int descr, dbref player, view_tile_t *t)
+dr_vs(char *b, view_tile_t *t)
 {
 	view_tile_t * const t_max = &t[VIEW_SIZE];
 	const char *bg, *wp;
@@ -153,7 +152,7 @@ dr_vs(char *b, int descr, dbref player, view_tile_t *t)
 	b = stpcpy(b, " ");
 	for (;;) {
 		b = stpcpy(b, bg);
-		b = dr_room(descr, player, t, b, bg);
+		b = dr_room(b, t, bg);
 
 		tp = t;
 		t++;
@@ -204,8 +203,7 @@ dr_h(char *b, char const *bg, char const *wp, char *w, int toggle)
 }
 
 static inline char *
-dr_hs_n(char *b, int descr, dbref player,
-		view_tile_t *t)
+dr_hs_n(char *b, view_tile_t *t)
 {
 	view_tile_t * const t_max = &t[VIEW_SIZE];
 	const char *wp, *bg;
@@ -260,21 +258,23 @@ dr_hs_n(char *b, int descr, dbref player,
         return b;
 }
 
-static void
-view_draw(int descr, dbref player, view_t view) {
+static char *
+view_draw(view_t view) {
+	static char view_buf[8 * BUFSIZ];
 	view_tile_t * const t_max = &view[VIEW_BDI];
 	view_tile_t *t = view;
 	char *p = view_buf;
         memset(view_buf, 0, sizeof(view_buf));
 
-	p = dr_vs(p, descr, player, t);
+	p = dr_vs(p, t);
 
 	for (; t < t_max;) {
-		p = dr_hs_n(p, descr, player, t);
+		p = dr_hs_n(p, t);
 		t += VIEW_SIZE;
-		p = dr_vs(p, descr, player, t);
+		p = dr_vs(p, t);
 	}
 
+	return view_buf;
 }
 
 static inline void
@@ -399,7 +399,6 @@ _view_build(command_t *cmd,
 void
 do_view(command_t *cmd)
 {
-	int descr = cmd->fd;
 	dbref player = cmd->player;
 	struct bio bd[VIEW_M], *n_p = bd,
 		   *n_max = &bd[VIEW_BDI + 1];
@@ -424,7 +423,5 @@ do_view(command_t *cmd)
 	}
 
 	/* binary_notify(player, BIN_VIEW, view, sizeof(view)); */
-	view_draw(descr, player, view);
-	notify(player, view_buf);
+	notify(player, view_draw(view));
 }
-
