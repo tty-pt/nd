@@ -178,8 +178,6 @@ do_page(command_t *cmd)
 void
 notify_except(dbref first, dbref exception, const char *msg, dbref who)
 {
-	dbref room = DBFETCH(first)->location;
-
 	DOLIST(first, first) {
 		if (Typeof(first) == TYPE_PLAYER && first != exception)
 			notify(first, msg);

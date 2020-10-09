@@ -112,25 +112,6 @@ send_contents(command_t *cmd, dbref dest)
 	DBSTORE(loc, contents, reverse(DBFETCH(loc)->contents));
 }
 
-void
-maybe_dropto(command_t *cmd, dbref dropto)
-{
-	dbref loc = cmd->player;
-	dbref thing;
-
-	if (loc == dropto)
-		return;					/* bizarre special case */
-
-	/* check for players */
-	DOLIST(thing, DBFETCH(loc)->contents) {
-		if (Typeof(thing) == TYPE_PLAYER)
-			return;
-	}
-
-	/* no players, send everything to the dropto */
-	send_contents(cmd, dropto);
-}
-
 /* What are we doing here?  Quick explanation - we want to prevent
    environment loops from happening.  Any item should always be able
    to 'find' its way to room #0.  Since the loop check is recursive,
@@ -243,121 +224,35 @@ parent_loop_check(dbref source, dbref dest)
   return 1;
 }
 
-static int donelook = 0;
 void
 enter_room(command_t *cmd, dbref loc, dbref exit)
 {
 	dbref player = cmd->player;
 	dbref old;
-	dbref dropto;
 	char buf[BUFFER_LEN];
-
-	/* check for room == HOME */
-	if (loc == HOME)
-		loc = PLAYER_HOME(player);	/* home */
 
 	/* get old location */
 	old = DBFETCH(player)->location;
 
-	if (parent_loop_check(player, loc)) {
-	  switch (Typeof(player)) {
-	  case TYPE_PLAYER:
-	    loc = PLAYER_HOME(player);
-	    break;
-	  case TYPE_THING:
-	    loc = THING_HOME(player);
-	    if (parent_loop_check(player, loc)) {
-	      loc = PLAYER_HOME(OWNER(player));
-	      if (parent_loop_check(player, loc))
-		loc = (dbref) PLAYER_START;
-	    }
-	    break;
-	  case TYPE_ROOM:
-	    loc = GLOBAL_ENVIRONMENT;
-	    break;
-	  }
-	}
+	CBUG(loc == old);
 
-	/* check for self-loop */
-	/* self-loops don't do move or other player notification */
-	/* but you still get autolook and penny check */
-	if (loc != old) {
-		/* go there */
-		moveto(player, loc);
+	/* go there */
+	moveto(player, loc);
 
-		if (old != NOTHING) {
-			propqueue(cmd, old, exit, player, NOTHING, "_depart", "Depart", 1, 1);
-			envpropqueue(cmd, old, exit, old, NOTHING, "_depart", "Depart", 1, 1);
+	CBUG(old == NOTHING);
 
-			propqueue(cmd, old, exit, player, NOTHING, "_odepart", "Odepart", 1, 0);
-			envpropqueue(cmd, old, exit, old, NOTHING, "_odepart", "Odepart", 1, 0);
+	snprintf(buf, sizeof(buf), "%s has left.", NAME(player));
+	notify_except(DBFETCH(old)->contents, player, buf, player);
 
-			/* notify others unless DARK */
-			if (exit == NOTHING || (!Dark(old) && !Dark(player) &&
-				Typeof(player) != TYPE_THING
-				&& (Typeof(exit) != TYPE_EXIT || !Dark(exit)))) {
-#if !defined(QUIET_MOVES)
-				snprintf(buf, sizeof(buf), "%s has left.", NAME(player));
-				notify_except(DBFETCH(old)->contents, player, buf, player);
-#endif
-			}
-		}
+	geo_clean(cmd, old);
 
-		/* if old location has STICKY dropto, send stuff through it */
-		if (old != NOTHING && Typeof(old) == TYPE_ROOM
-			&& (dropto = DBFETCH(old)->sp.room.dropto) != NOTHING && (FLAGS(old) & STICKY)) {
-			command_t cmd_dt = command_new_null(cmd->fd, old);
-			maybe_dropto(&cmd_dt, dropto);
-		}
+	snprintf(buf, sizeof(buf), "%s has arrived.", NAME(player));
+	notify_except(DBFETCH(loc)->contents, player, buf, player);
 
-		geo_clean(cmd, old);
+	mobs_aggro(cmd);
+	/* TODO geo_notify(descr, player); */
 
-		/* tell other folks in new location if not DARK */
-		if (loc != NOTHING && !Dark(loc) && !Dark(player) &&
-			 Typeof(player) != TYPE_THING
-			&& (exit == NOTHING || Typeof(exit) != TYPE_EXIT || !Dark(exit))) {
-#if !defined(QUIET_MOVES)
-			snprintf(buf, sizeof(buf), "%s has arrived.", NAME(player));
-			notify_except(DBFETCH(loc)->contents, player, buf, player);
-#endif
-		}
-
-		mobs_aggro(cmd);
-		/* TODO geo_notify(descr, player); */
-	}
-
-
-
-	/* autolook */
-	if (Typeof(player) != TYPE_THING) {
-		if (donelook < 8) {
-			donelook++;
-			if (can_move(cmd, AUTOLOOK_CMD, 1)) {
-				go_move(cmd, AUTOLOOK_CMD, 1);
-			} else {
-				do_look_around(cmd);
-			}
-			donelook--;
-		} else {
-			notify(player, "Look aborted because of look action loop.");
-		}
-	}
-
-#if PENNY_RATE != 0
-	/* check for pennies */
-	if (!controls(player, loc)
-	    && GETVALUE(OWNER(player)) <= MAX_PENNIES 
-	    && RANDOM() % PENNY_RATE == 0) {
-		notifyf(player, "You found one %s!", PENNY);
-		SETVALUE(OWNER(player), GETVALUE(OWNER(player)) + 1);
-		DBDIRTY(OWNER(player));
-	}
-#endif
-
-	if (loc != old) {
-		envpropqueue(cmd, loc, exit, player, NOTHING, "_arrive", "Arrive", 1, 1);
-		envpropqueue(cmd, loc, exit, player, NOTHING, "_oarrive", "Oarrive", 1, 0);
-	}
+	do_look_around(cmd);
 }
 
 void
@@ -400,138 +295,27 @@ can_move(command_t *cmd, const char *direction, int lev)
 	return (last_match_result(&md) != NOTHING);
 }
 
-/*
- * trigger()
- *
- * This procedure triggers a series of actions, or meta-actions
- * which are contained in the 'dest' field of the exit.
- * Locks other than the first one are over-ridden.
- *
- * `player' is the player who triggered the exit
- * `exit' is the exit triggered
- * `pflag' is a flag which indicates whether player and room exits
- * are to be used (non-zero) or ignored (zero).  Note that
- * player/room destinations triggered via a meta-link are
- * ignored.
- *
- */
-
 void
-trigger(command_t *cmd, dbref exit, int pflag)
+trigger(command_t *cmd, dbref exit)
 {
-	dbref player = cmd->player;
-	int i;
 	dbref dest;
-	int sobjact;				/* sticky object action flag, sends home
 
-								   * source obj */
-	int succ;
-
-	sobjact = 0;
-	succ = 0;
-
+	CBUG(!e_exit_is(exit));
 	// quickfix for gexits
-	if (e_exit_is(exit)) {
-		union specific sp
-			= DBFETCH(exit)->sp;
-		if (sp.exit.ndest && sp.exit.dest[0] != NOTHING)
-			dest = sp.exit.dest[0];
-		else
-			dest = geo_there(getloc(exit), exit_e(exit));
+	union specific sp
+		= DBFETCH(exit)->sp;
 
-		if (dest > 0) {
-			enter_room(cmd, dest, exit);
-			succ = 1;
-		} else {
-			dest = geo_room(cmd, exit);
-			enter_room(cmd, dest, exit);
-			succ = 1;
-		}
+	if (sp.exit.ndest && sp.exit.dest[0] != NOTHING)
+		dest = sp.exit.dest[0];
+	else
+		dest = geo_there(getloc(exit), exit_e(exit));
 
-	} else for (i = 0; i < DBFETCH(exit)->sp.exit.ndest; i++) {
-		dest = (DBFETCH(exit)->sp.exit.dest)[i];
-		if (dest == HOME) {
-			dest = PLAYER_HOME(player);
-
-			/* fix #1112946 temporarily -- premchai21 */
-			if (Typeof(dest) == TYPE_THING) {
-				notify(player, "That would be an undefined operation.");
-				continue;
-			}
-		}
-
-		switch (Typeof(dest)) {
-		case TYPE_ROOM:
-			if (pflag) {
-				if (parent_loop_check(player, dest)) {
-					notify(player, "That would cause a paradox.");
-					break;
-				}
-				if (GETDROP(exit))
-					notify(player, GETDROP(exit));
-				if (GETODROP(exit) && !Dark(player)) {
-					parse_oprop(cmd, dest, exit, MESGPROP_ODROP,
-								   NAME(player), "(@Odrop)");
-				}
-				enter_room(cmd, dest, exit);
-				succ = 1;
-			}
-			break;
-		case TYPE_THING:
-			if (Typeof(DBFETCH(exit)->location) == TYPE_THING) {
-				if (parent_loop_check(dest, getloc(getloc(exit)))) {
-					notify(player, "That would cause a paradox.");
-					break;
-				}
-				moveto(dest, DBFETCH(DBFETCH(exit)->location)->location);
-				if (!(FLAGS(exit) & STICKY)) {
-					/* send home source object */
-					sobjact = 1;
-				}
-			} else {
-				if (parent_loop_check(dest, getloc(exit))) {
-					notify(player, "That would cause a paradox.");
-					break;
-				}
-				moveto(dest, DBFETCH(exit)->location);
-			}
-			if (GETSUCC(exit))
-				succ = 1;
-			break;
-		case TYPE_EXIT:		/* It's a meta-link(tm)! */
-			trigger(cmd, (DBFETCH(exit)->sp.exit.dest)[i], 0);
-			if (GETSUCC(exit))
-				succ = 1;
-			break;
-		case TYPE_PLAYER:
-			if (pflag && DBFETCH(dest)->location != NOTHING) {
-				if (parent_loop_check(player, dest)) {
-					notify(player, "That would cause a paradox.");
-					break;
-				}
-				succ = 1;
-				if (FLAGS(dest) & JUMP_OK) {
-					if (GETDROP(exit)) {
-						notify(player, GETDROP(exit));
-					}
-					if (GETODROP(exit) && !Dark(player)) {
-						parse_oprop(cmd, getloc(dest), exit,
-									   MESGPROP_ODROP, NAME(player), "(@Odrop)");
-					}
-					enter_room(cmd, DBFETCH(dest)->location, exit);
-				} else {
-					notify(player, "That player does not wish to be disturbed.");
-				}
-			}
-			break;
-		}
+	if (dest > 0) {
+		enter_room(cmd, dest, exit);
+	} else {
+		dest = geo_room(cmd, exit);
+		enter_room(cmd, dest, exit);
 	}
-	if (sobjact) {
-		command_t cmd_sh = command_new_null(cmd->fd, DBFETCH(exit)->location);
-		send_home(&cmd_sh, 0);
-	}
-	if (!succ && pflag)
-		notify(player, "Done.");
 }
 
 void
@@ -540,47 +324,30 @@ go_move(command_t *cmd, const char *direction, int lev)
 	dbref player = cmd->player;
 	dbref loc;
 
-#if ALLOW_HOME
-	if (!strcmp(direction, "home")) {
-		char buf[BUFFER_LEN];
+	struct match_data md;
+	dbref exit;
 
-		/* send him home */
-		/* but steal all his possessions */
-		if ((loc = DBFETCH(player)->location) != NOTHING) {
-			/* tell everybody else */
-			snprintf(buf, sizeof(buf), "%s goes home.", NAME(player));
-			notify_except(DBFETCH(loc)->contents, player, buf, player);
-		}
-		/* give the player the messages */
-		send_home(cmd, 1);
-	} else
-#endif
-	{
-		struct match_data md;
-		dbref exit;
+	/* find the exit */
+	init_match_check_keys(cmd, direction, TYPE_EXIT, &md);
+	md.match_level = lev;
+	match_all_exits(&md);
+	switch (exit = match_result(&md)) {
+	case NOTHING:
+		notify(player, "You can't go that way.");
+		break;
+	case AMBIGUOUS:
+		notify(player, "I don't know which way you mean!");
+		break;
+	default:
+		/* we got one */
+		/* check to see if we got through */
+		loc = DBFETCH(player)->location;
 
-		/* find the exit */
-		init_match_check_keys(cmd, direction, TYPE_EXIT, &md);
-		md.match_level = lev;
-		match_all_exits(&md);
-		switch (exit = match_result(&md)) {
-		case NOTHING:
-			notify(player, "You can't go that way.");
+		if (!can_doit(cmd, exit, "You can't go that way."))
 			break;
-		case AMBIGUOUS:
-			notify(player, "I don't know which way you mean!");
-			break;
-		default:
-			/* we got one */
-			/* check to see if we got through */
-			loc = DBFETCH(player)->location;
 
-			if (!can_doit(cmd, exit, "You can't go that way."))
-				break;
-
-			trigger(cmd, exit, 1);
-			break;
-		}
+		trigger(cmd, exit);
+		break;
 	}
 }
 

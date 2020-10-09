@@ -94,7 +94,7 @@ void
 look_room(command_t *cmd, dbref loc, int verbose)
 {
 	dbref player = cmd->player;
-	char const *description = NULL;
+	char const *description = "";
 	/* tell him the name, and the number if he can link to it */
 
 	/* tell him the description */

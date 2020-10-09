@@ -79,9 +79,6 @@ extern void db_free_object(dbref i);
 extern void db_clear_object(dbref i);
 
 /* From create.c */
-extern void do_open(command_t *);
-extern void do_link(command_t *);
-extern void do_dig(command_t *);
 extern void do_create(command_t *);
 extern void do_clone(command_t *);
 extern void do_attach(command_t *cmd);
@@ -201,7 +198,6 @@ extern void do_odrop(command_t *);
 extern int setlockstr(command_t *, dbref thing, const char *keyname);
 extern void do_lock(command_t *);
 extern void do_unlock(command_t *);
-extern void do_relink(command_t *);
 extern void do_unlink(command_t *);
 extern void do_unlink_quiet(command_t *cmd, const char *name);
 extern void do_chown(command_t *);

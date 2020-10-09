@@ -115,9 +115,6 @@ core_command_t cmds[] = {
 		.name = "describe",
 		.cb = &do_describe,
 	}, {
-		.name = "dig",
-		.cb = &do_dig,
-	}, {
 		.name = "doing",
 		.cb = &do_doing,
 	}, {
@@ -147,9 +144,6 @@ core_command_t cmds[] = {
 		.name = "idescribe",
 		.cb = &do_idescribe,
 	}, {
-		.name = "link",
-		.cb = &do_link,
-	}, {
 		.name = "lock",
 		.cb = &do_lock,
 	}, {
@@ -167,9 +161,6 @@ core_command_t cmds[] = {
 	/* }, { */
 	/* 	.name = "ofail", */
 	/* 	.cb = &do_ofail, */
-	}, {
-		.name = "open",
-		.cb = &do_open,
 	}, {
 		.name = "osuccess",
 		.cb = &do_osuccess,
@@ -191,9 +182,6 @@ core_command_t cmds[] = {
 	}, {
 		.name = "recycle",
 		.cb = &do_recycle,
-	}, {
-		.name = "relink",
-		.cb = &do_relink,
 	/* }, { */
 	/* 	.name = "restrict", */
 	/* 	.cb = &do_restrict, */
@@ -229,9 +217,6 @@ core_command_t cmds[] = {
 	}, {
 		.name = "unbless",
 		.cb = &do_unbless,
-	}, {
-		.name = "unlink",
-		.cb = &do_unlink,
 	}, {
 		.name = "unlock",
 		.cb = &do_unlock,
@@ -614,6 +599,9 @@ notify(dbref player, const char *msg)
 	fd = PLAYER_FD(player);
 	if (fd <= 0)
 		return 0;
+
+	/* descr_inband(fd, msg); */
+	/* retval++; */
 
 	ptr2 = msg;
 	while (ptr2 && *ptr2) {
