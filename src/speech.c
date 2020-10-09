@@ -219,43 +219,6 @@ notify_wts_to(dbref who, dbref tar, char const *a, char const *b, char *format, 
 	va_end(args);
 }
 
-void
-parse_oprop(command_t *cmd, dbref dest, dbref exit, const char *propname,
-			   const char *prefix, const char *whatcalled)
-{
-	const char* msg = get_property_class(exit, propname);
-	int ival = 0;
-	if (Prop_Blessed(exit, propname))
-		ival |= MPI_ISBLESSED;
-
-	if (msg)
-		parse_omessage(cmd, dest, exit, msg, prefix, whatcalled, ival);
-}
-
-void
-parse_omessage(command_t *cmd, dbref dest, dbref exit, const char *msg,
-			   const char *prefix, const char *whatcalled, int mpiflags)
-{
-	char buf[BUFFER_LEN];
-	char *ptr;
-
-	do_parse_mesg(cmd, exit, msg, whatcalled, buf, sizeof(buf), MPI_ISPUBLIC | mpiflags);
-	ptr = pronoun_substitute(cmd, buf);
-	if (!*ptr)
-		return;
-
-	/*
-		TODO: Find out if this should be prefixing with NAME(player), or if
-		it should use the prefix argument...  The original code just ignored
-		the prefix argument...
-	*/
-
-	prefix_message(buf, ptr, prefix, BUFFER_LEN, 1);
-
-	notify_except(DBFETCH(dest)->contents, cmd->player, buf, cmd->player);
-}
-
-
 int
 blank(const char *s)
 {

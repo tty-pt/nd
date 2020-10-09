@@ -13,7 +13,6 @@
 #include "interp.h"
 #include "match.h"
 #include "mpi.h"
-#include "msgparse.h"
 #include "params.h"
 #include "patchlevel.h"
 #include "props.h"

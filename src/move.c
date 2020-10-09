@@ -22,21 +22,16 @@ moveto(dbref what, dbref where)
 {
 	dbref loc;
 
-	/* do NOT move garbage */
-	if (what != NOTHING && Typeof(what) == TYPE_GARBAGE) {
-		return;
-	}
+	CBUG(what == NOTHING || Typeof(what) == TYPE_GARBAGE);
+	CBUG(where == NOTHING || where == HOME);
 
 	/* remove what from old loc */
 	if ((loc = DBFETCH(what)->location) != NOTHING) {
 		DBSTORE(loc, contents, remove_first(DBFETCH(loc)->contents, what));
 	}
+
 	/* test for special cases */
-	switch (where) {
-	case NOTHING:
-		DBSTORE(what, location, NOTHING);
-		return;					/* NOTHING doesn't have contents */
-	case HOME:
+	if (parent_loop_check(what, where)) {
 		switch (Typeof(what)) {
 		case TYPE_PLAYER:
 			where = PLAYER_HOME(what);
@@ -44,35 +39,15 @@ moveto(dbref what, dbref where)
 		case TYPE_THING:
 			where = THING_HOME(what);
 			if (parent_loop_check(what, where)) {
-			  where = PLAYER_HOME(OWNER(what));
-			  if (parent_loop_check(what, where))
-			    where = (dbref) PLAYER_START;
+				where = PLAYER_HOME(OWNER(what));
+				if (parent_loop_check(what, where))
+					where = (dbref) PLAYER_START;
 			}
 			break;
 		case TYPE_ROOM:
 			where = GLOBAL_ENVIRONMENT;
 			break;
 		}
-		break;
-        default:
-	  if (parent_loop_check(what, where)) {
-	    switch (Typeof(what)) {
-		case TYPE_PLAYER:
-			where = PLAYER_HOME(what);
-			break;
-		case TYPE_THING:
-			where = THING_HOME(what);
-			if (parent_loop_check(what, where)) {
-			  where = PLAYER_HOME(OWNER(what));
-			  if (parent_loop_check(what, where))
-			    where = (dbref) PLAYER_START;
-			}
-			break;
-		case TYPE_ROOM:
-			where = GLOBAL_ENVIRONMENT;
-			break;
-		}
-	  }
 	}
 
 	/* now put what in where */
@@ -392,14 +367,6 @@ do_get(command_t *cmd)
 				return;
 			}
 		}
-		if (Typeof(player) != TYPE_PLAYER) {
-			if (Typeof(DBFETCH(thing)->location) != TYPE_ROOM) {
-				if (OWNER(player) != OWNER(thing)) {
-					notify(player, "Zombies aren't allowed to be thieves!");
-					return;
-				}
-			}
-		}
 		if (DBFETCH(thing)->location == player) {
 			notify(player, "You already have that!");
 			return;
@@ -465,11 +432,8 @@ do_drop(command_t *cmd)
 	}
 	switch (Typeof(thing)) {
 	case TYPE_THING:
-		if (DBFETCH(thing)->location != player) {
-			/* Shouldn't ever happen. */
-			notify(player, "You can't drop that.");
-			break;
-		}
+		CBUG(DBFETCH(thing)->location != player);
+
 		if (Typeof(cont) != TYPE_ROOM && Typeof(cont) != TYPE_PLAYER &&
 			Typeof(cont) != TYPE_THING) {
 			notify(player, "You can't put anything in that.");
@@ -513,17 +477,9 @@ do_drop(command_t *cmd)
 		if (GETDROP(loc))
 			notify(player, GETDROP(loc));
 
-		if (GETODROP(thing)) {
-			parse_oprop(cmd, loc, thing, MESGPROP_ODROP,
-						   NAME(player), "(@Odrop)");
-		} else {
-			snprintf(buf, sizeof(buf), "%s drops %s.", NAME(player), NAME(thing));
-			notify_except(DBFETCH(loc)->contents, player, buf, player);
-		}
+		snprintf(buf, sizeof(buf), "%s drops %s.", NAME(player), NAME(thing));
+		notify_except(DBFETCH(loc)->contents, player, buf, player);
 
-		if (GETODROP(loc)) {
-			parse_oprop(cmd, loc, loc, MESGPROP_ODROP, NAME(thing), "(@Odrop)");
-		}
 		break;
 	default:
 		notify(player, "You can't drop that.");

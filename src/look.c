@@ -233,67 +233,6 @@ do_look_at(command_t *cmd)
 	}
 }
 
-#ifdef VERBOSE_EXAMINE
-static const char *
-flag_description(dbref thing)
-{
-	static char buf[BUFFER_LEN];
-
-	strlcpy(buf, "Type: ", sizeof(buf));
-	switch (Typeof(thing)) {
-	case TYPE_ROOM:
-		strlcat(buf, "ROOM", sizeof(buf));
-		break;
-	case TYPE_EXIT:
-		strlcat(buf, "EXIT/ACTION", sizeof(buf));
-		break;
-	case TYPE_THING:
-		strlcat(buf, "THING", sizeof(buf));
-		break;
-	case TYPE_PLAYER:
-		strlcat(buf, "PLAYER", sizeof(buf));
-		break;
-	case TYPE_GARBAGE:
-		strlcat(buf, "GARBAGE", sizeof(buf));
-		break;
-	default:
-		strlcat(buf, "***UNKNOWN TYPE***", sizeof(buf));
-		break;
-	}
-
-	if (FLAGS(thing) & ~TYPE_MASK) {
-		/* print flags */
-		strlcat(buf, "  Flags:", sizeof(buf));
-		if (FLAGS(thing) & WIZARD)
-			strlcat(buf, " WIZARD", sizeof(buf));
-		if (FLAGS(thing) & QUELL)
-			strlcat(buf, " QUELL", sizeof(buf));
-		if (FLAGS(thing) & STICKY)
-			strlcat(buf, Typeof(thing) == TYPE_PLAYER ? " SILENT" : " STICKY", sizeof(buf));
-		if (FLAGS(thing) & DARK)
-			strlcat(buf, " DARK", sizeof(buf));
-		if (FLAGS(thing) & LINK_OK)
-			strlcat(buf, " LINK_OK", sizeof(buf));
-
-		if (FLAGS(thing) & KILL_OK)
-			strlcat(buf, " KILL_OK", sizeof(buf));
-
-		if (FLAGS(thing) & BUILDER)
-			strlcat(buf, " BUILDER", sizeof(buf));
-		if (FLAGS(thing) & CHOWN_OK)
-			strlcat(buf, (Typeof(thing) == TYPE_PLAYER) ? " COLOR" : " CHOWN_OK", sizeof(buf));
-		if (FLAGS(thing) & JUMP_OK)
-			strlcat(buf, " JUMP_OK", sizeof(buf));
-		if (FLAGS(thing) & HAVEN)
-			strlcat(buf, Typeof(thing) == TYPE_THING ? " HIDE" : " HAVEN", sizeof(buf));
-		if (FLAGS(thing) & ABODE)
-			strlcat(buf, Typeof(thing) != TYPE_EXIT ? " ABODE" : " ABATE", sizeof(buf));
-	}
-	return buf;
-}
-
-#endif							/* VERBOSE_EXAMINE */
-
 int
 listprops_wildcard(dbref player, dbref thing, const char *dir, const char *wild)
 {
@@ -440,10 +379,6 @@ do_examine(command_t *cmd)
 		break;
 	}
 	notify(player, buf);
-
-#ifdef VERBOSE_EXAMINE
-	notify(player, flag_description(thing));
-#endif							/* VERBOSE_EXAMINE */
 
 	if (GETDESC(thing))
 		notify(player, GETDESC(thing));

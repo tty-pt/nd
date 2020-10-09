@@ -339,14 +339,9 @@ has_property_strict(command_t *cmd, dbref what, const char *pname, const char *s
 		    case PROP_STRTYP:
 			str = DoNull(PropDataStr(p));
 
-			if (has_prop_recursion_limit-->0) {
-				ptr = do_parse_mesg(cmd, what, str, "(Lock)", buf, sizeof(buf),
-									(MPI_ISPRIVATE | MPI_ISLOCK |
-									((PropFlags(p) & PROP_BLESSED)? MPI_ISBLESSED : 0)));
-			} else {
-				strlcpy(buf, str, sizeof(buf)); 
-				ptr = buf;
-			}
+			strlcpy(buf, str, sizeof(buf));
+			ptr = buf;
+
 			has_prop_recursion_limit++;
 			return (equalstr((char *) strval, ptr));
 

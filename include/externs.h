@@ -222,7 +222,6 @@ extern void parse_omessage(command_t *cmd, dbref dest, dbref exit, const char *m
 /* From stringutil.c */
 extern int string_prefix(const char *string, const char *prefix);
 extern const char *string_match(const char *src, const char *sub);
-extern char *pronoun_substitute(command_t *cmd, const char *str);
 extern char *intostr(int i);
 extern int prepend_string(char** before, char* start, const char* what);
 extern void prefix_message(char* Dest, const char* Src, const char* Prefix, int BufferLength, int SuppressIfPresent);

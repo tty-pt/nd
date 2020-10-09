@@ -381,10 +381,6 @@ can_doit(command_t *cmd, dbref thing, const char *default_fail_msg)
 		} else if (default_fail_msg) {
 			notify(player, default_fail_msg);
 		}
-		if (GETOFAIL(thing) && !Dark(player)) {
-			parse_oprop(cmd, getloc(player), thing, MESGPROP_OFAIL,
-						   NAME(player), "(@Ofail)");
-		}
 		return 0;
 	} else {
 		do_stand_silent(player);
@@ -397,10 +393,6 @@ can_doit(command_t *cmd, dbref thing, const char *default_fail_msg)
 			notify(player, GETSUCC(thing));
 		} else if (Typeof(thing) == TYPE_EXIT && e_exit_is(thing))
 			notifyf(player, "You go %s.", e_name(exit_e(thing)));
-		if (GETOSUCC(thing) && !Dark(player)) {
-			parse_oprop(cmd, getloc(player), thing, MESGPROP_OSUCC,
-						   NAME(player), "(@Osucc)");
-		}
 		if (door)
 			notifyf(player, "You close the %s.", dwts);
 		return 1;

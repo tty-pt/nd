@@ -20,12 +20,12 @@ fbmuck-obj-y := geometry.o plant.o biome.o noise.o search.o \
 fbmuck-obj-y += boolexp.o create.o db.o \
 	hashtab.o help.o \
 	look.o match.o \
-	move.o msgparse.o \
+	move.o \
 	player.o \
 	predicates.o propdirs.o property.o \
 	props.o rob.o sanity.o set.o \
 	smatch.o speech.o stringutil.o \
-	timequeue.o unparse.o utils.o wiz.o \
+	unparse.o utils.o wiz.o \
 	copyright.o interface.o web.o
 
 exe-obj-y := ${fbmuck-obj-y} ${prochelp-obj-y}
