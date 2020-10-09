@@ -22,15 +22,22 @@ moveto(dbref what, dbref where)
 {
 	dbref loc;
 
+	/* do NOT move garbage */
 	CBUG(what == NOTHING || Typeof(what) == TYPE_GARBAGE);
-	CBUG(where == NOTHING || where == HOME);
+	CBUG(where == HOME);
 
 	/* remove what from old loc */
-	if ((loc = DBFETCH(what)->location) != NOTHING) {
-		DBSTORE(loc, contents, remove_first(DBFETCH(loc)->contents, what));
-	}
+	loc = DBFETCH(what)->location;
+	CBUG(loc == NOTHING);
+	DBSTORE(loc, contents, remove_first(DBFETCH(loc)->contents, what));
 
 	/* test for special cases */
+	switch (where) {
+	case NOTHING:
+		DBSTORE(what, location, NOTHING);
+		return;					/* NOTHING doesn't have contents */
+	}
+
 	if (parent_loop_check(what, where)) {
 		switch (Typeof(what)) {
 		case TYPE_PLAYER:
