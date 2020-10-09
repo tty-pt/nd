@@ -357,6 +357,7 @@ struct player_specific {
 
 #define PLAYER_HOME(x)		(PLAYER_SP(x)->home)
 #define PLAYER_PASSWORD(x)	(PLAYER_SP(x)->password)
+#define PLAYER_FD(x)		PLAYER_SP(x)->fd
 
 #define PLAYER_SET_HOME(x,y)		(PLAYER_SP(x)->home = y)
 #define PLAYER_SET_PASSWORD(x,y)	(PLAYER_SP(x)->password = y)

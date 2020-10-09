@@ -178,18 +178,11 @@ do_page(command_t *cmd)
 void
 notify_except(dbref first, dbref exception, const char *msg, dbref who)
 {
-	dbref room, srch;
+	dbref room = DBFETCH(first)->location;
 
-	if (first != NOTHING) {
-
-		srch = room = DBFETCH(first)->location;
-
-		DOLIST(first, first) {
-			if ((Typeof(first) != TYPE_ROOM) && (first != exception)) {
-				/* don't want excepted player or child rooms to hear */
-				notify(first, msg);
-			}
-		}
+	DOLIST(first, first) {
+		if (Typeof(first) == TYPE_PLAYER && first != exception)
+			notify(first, msg);
 	}
 }
 

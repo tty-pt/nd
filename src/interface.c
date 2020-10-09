@@ -70,10 +70,7 @@ struct ws {
 
 typedef struct descr_st {
 	int fd, flags;
-	int con_number;
 	dbref player;
-	struct ws ws;
-	/* int quota; */
 } descr_t;
 
 #define CMD_HASH_SIZE 512
@@ -598,20 +595,25 @@ main(int argc, char **argv)
 }
 
 int
-descr_inband(descr_t *d, const char *s)
+descr_inband(int fd, const char *s)
 {
 	/* warn("descr_inband %d %s", d->fd, s); */
-	return write(d->fd, s, strlen(s));
+	return write(fd, s, strlen(s));
 }
 
 int
 notify(dbref player, const char *msg)
 {
-	int retval = 0;
+	int retval = 0, fd;
 	char buf[BUFFER_LEN + 2];
 	int firstpass = 1;
 	char *ptr1;
 	const char *ptr2;
+
+	/* CBUG(Typeof(player) != TYPE_PLAYER); */
+	fd = PLAYER_FD(player);
+	if (fd <= 0)
+		return 0;
 
 	ptr2 = msg;
 	while (ptr2 && *ptr2) {
@@ -624,7 +626,7 @@ notify(dbref player, const char *msg)
 		if (*ptr2 == '\r')
 			ptr2++;
 
-		descr_inband(&descr_map[PLAYER_SP(player)->fd], buf);
+		descr_inband(fd, buf);
 		if (firstpass)
 			retval++;
 
@@ -655,28 +657,28 @@ wall(const char *msg)
 	strlcpy(buf, msg, sizeof(buf));
 	strlcat(buf, "\r\n", sizeof(buf));
 
-	DESCR_ITER(d) descr_inband(d, buf);
+	DESCR_ITER(d) descr_inband(d->fd, buf);
 }
 
 void
-mob_welcome(descr_t *d)
+mob_welcome(int fd)
 {
 	struct obj const *o = mob_obj_random();
 	if (o) {
 		CBUG(*o->name == '\0');
-		descr_inband(d, o->name);
-		descr_inband(d, "\r\n\r\n");
-		art(d->fd, o->art);
+		descr_inband(fd, o->name);
+		descr_inband(fd, "\r\n\r\n");
+		art(fd, o->art);
                 if (*o->description) {
                         if (*o->description != '\0')
-                                descr_inband(d, o->description);
-                        descr_inband(d, "\r\n\r\n");
+                                descr_inband(fd, o->description);
+                        descr_inband(fd, "\r\n\r\n");
                 }
 	}
 }
 
 void
-welcome_user(descr_t *d)
+welcome_user(int fd)
 {
 	FILE *f;
 	char *ptr;
@@ -684,7 +686,7 @@ welcome_user(descr_t *d)
 
         /* if (!web_support(d->fd)) { */
                 if ((f = fopen(WELC_FILE, "rb")) == NULL) {
-                        descr_inband(d, DEFAULT_WELCOME_MESSAGE);
+                        descr_inband(fd, DEFAULT_WELCOME_MESSAGE);
                         perror("spit_file: welcome.txt");
                 } else {
                         while (fgets(buf, sizeof(buf) - 3, f)) {
@@ -694,22 +696,22 @@ welcome_user(descr_t *d)
                                         *ptr++ = '\n';
                                         *ptr++ = '\0';
                                 }
-                                descr_inband(d, buf);
+                                descr_inband(fd, buf);
                         }
                         fclose(f);
                 }
         /* } */
 
-        mob_welcome(d);
+        mob_welcome(fd);
 
 	if (optflags & OPT_WIZONLY) {
-		descr_inband(d, "## The game is currently in maintenance mode, and only wizards will be able to connect.\r\n");
+		descr_inband(fd, "## The game is currently in maintenance mode, and only wizards will be able to connect.\r\n");
 	}
 #if PLAYERMAX
 	else if (con_players_curr >= PLAYERMAX_LIMIT) {
 		if (PLAYERMAX_WARNMESG && *PLAYERMAX_WARNMESG) {
-			descr_inband(d, PLAYERMAX_WARNMESG);
-			descr_inband(d, "\r\n");
+			descr_inband(fd, PLAYERMAX_WARNMESG);
+			descr_inband(fd, "\r\n");
 		}
 	}
 #endif
@@ -718,18 +720,18 @@ welcome_user(descr_t *d)
 int
 auth(command_t *cmd)
 {
-	int descr = cmd->fd;
+	int fd = cmd->fd;
 	char *user = cmd->argv[1];
 	char *password = cmd->argv[2];
         int created = 0;
         dbref player = connect_player(user, password);
-	descr_t *d = &descr_map[descr];
+	descr_t *d = &descr_map[fd];
 
         if (player == NOTHING) {
                 player = create_player(user, password);
 
                 if (player == NOTHING) {
-                        descr_inband(d, "Either there is already a player with"
+                        descr_inband(fd, "Either there is already a player with"
 				     " that name, or that name is illegal.\r\n");
                         return 1;
                 }
@@ -737,15 +739,16 @@ auth(command_t *cmd)
                 created = 1;
                 mob_put(player);
         } else {
-		if (PLAYER_SP(player)->fd > 0) {
-			descr_inband(d, "That player is already connected.\r\n");
+		if (PLAYER_FD(player) > 0) {
+			descr_inband(fd, "That player is already connected.\r\n");
 			return 1;
 		}
 	}
 
         d->flags = DF_CONNECTED;
-        cmd->player = d->player = player;
-	PLAYER_SP(player)->fd = d->fd;
+        d->player = cmd->player = player;
+	CBUG(d->fd != fd);
+	PLAYER_FD(player) = fd;
         spit_file(player, MOTD_FILE);
 	do_look_around(cmd);
 	do_view(cmd);
@@ -854,25 +857,19 @@ descr_new()
 
 	warn("accept %d\n", fd);
 
+	FD_SET(fd, &activefds);
+
 	d = &descr_map[fd];
 	memset(d, 0, sizeof(descr_t));
 	d->fd = fd;
-
-
-	/* FIXME */
-
-	FD_SET(d->fd, &activefds);
-
-	d->flags = 0;
 	d->player = -1;
-	d->con_number = 0;
 
-	if (fcntl(d->fd, F_SETFL, O_NONBLOCK) == -1) {
+	if (fcntl(fd, F_SETFL, O_NONBLOCK) == -1) {
 		perror("make_nonblocking: fcntl");
 		abort();
 	}
 
-	welcome_user(d);
+	welcome_user(fd);
 	return d;
 }
 
@@ -1024,7 +1021,7 @@ wall_wizards(const char *msg)
 
 	DESCR_ITER(d)
 		if (Wizard(d->player))
-			descr_inband(d, buf);
+			descr_inband(d->fd, buf);
 }
 
 int
@@ -1053,11 +1050,10 @@ emergency_shutdown(void)
 }
 
 void
-art(int descr, const char *art)
+art(int fd, const char *art)
 {
 	FILE *f;
 	char buf[BUFFER_LEN];
-	descr_t *d;
 
 	if (*art == '/' || strstr(art, "..")
 	    || (!(string_prefix(art, "bird/")
@@ -1066,18 +1062,16 @@ art(int descr, const char *art)
 
 		return;
 	
-        d = &descr_map[descr];
-
 	snprintf(buf, sizeof(buf), "../art/%s.txt", art);
 
 	if ((f = fopen(buf, "rb")) == NULL) 
 		return;
 
 	while (fgets(buf, sizeof(buf) - 3, f))
-		descr_inband(d, buf);
+		descr_inband(fd, buf);
 
 	fclose(f);
-	descr_inband(d, "\r\n");
+	descr_inband(fd, "\r\n");
 }
 
 static const char *interface_c_version = "$RCSfile$ $Revision: 1.127 $";
