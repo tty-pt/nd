@@ -9,7 +9,7 @@
 plant_t plant_map[] = {{
 	// taiga
 	{ "pinus silvestris", "", "" }, ANSI_BOLD ANSI_FG_GREEN, 'x', 'X', ANSI_RESET_BOLD,
-	-65, 70, 50, 200, 1,
+	-65, 70, 600, 900, 1,
 	{ "fruit", "", "" }, 1,
 }, {	// temperate rainforest
 	{ "pseudotsuga menziesii", "", "" }, ANSI_BOLD ANSI_FG_GREEN, 't', 'T', ANSI_RESET_BOLD,
