@@ -14,6 +14,7 @@ exe := fbmuck prochelp
 src = ChangeLog COPYING ${real-obj-y:%.o=%.c}
 
 prochelp-obj-y := prochelp.o
+ws-server-obj-y := ws-server.o
 fbmuck-obj-y := geometry.o plant.o biome.o noise.o search.o \
 	view.o item.o spell.o drink.o mob.o kill.o geography.o \
 	shop.o
@@ -28,7 +29,7 @@ fbmuck-obj-y += boolexp.o create.o db.o \
 	unparse.o utils.o wiz.o \
 	copyright.o interface.o web.o
 
-exe-obj-y := ${fbmuck-obj-y} ${prochelp-obj-y}
+exe-obj-y := ${fbmuck-obj-y} ${prochelp-obj-y} ${ws-server-obj-y}
 
 HELPFILES := man.txt help.txt mpihelp.txt
 

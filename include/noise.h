@@ -5,8 +5,8 @@
 #include "plant.h"
 #include "hash.h"
 
-typedef unsigned noise_t;
-typedef long snoise_t; // FIXME
+typedef uint32_t noise_t;
+typedef int32_t snoise_t;
 
 struct bio {
 	coord_t tmp;

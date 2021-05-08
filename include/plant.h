@@ -31,7 +31,7 @@ extern plant_t plant_map[];
 
 void
 plants_noise(struct plant_data *,
-		morton_t ty,
+		unsigned ty,
 		coord_t tmp, ucoord_t rn,
 		unsigned n);
 

@@ -77,6 +77,8 @@ typedef struct descr_st {
 
 static hash_tab cmds_hashed[CMD_HASH_SIZE];
 
+void do_bio(command_t *cmd);
+
 core_command_t cmds[] = {
 	{
 		.name = "action",
@@ -90,6 +92,9 @@ core_command_t cmds[] = {
 	}, {
 		.name = "bless",
 		.cb = &do_bless,
+	}, {
+		.name = "bio",
+		.cb = &do_bio,
 	}, {
 		.name = "boot",
 		.cb = &do_boot,
@@ -362,7 +367,7 @@ command_new(descr_t *d, char *input, size_t len)
 	cmd.fd = d->fd;
 	cmd.argc = 0;
 
-	if (!*p)
+	if (!*p || !isprint(*p))
 		return cmd;
 
 	cmd.argv[0] = p;

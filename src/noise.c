@@ -72,10 +72,8 @@ static noise_t n_he[CHUNK_M],
 static coord_t tmp_max = 170,
 	       tmp_min = -41;
 
-static ucoord_t rn_max = 1000,
-	       rn_min = 50;
-
-static const size_t tmp_vary = BIOME_VOLCANIC / 3;
+#define RAIN_DIV (NOISE_MAX >> 9)
+static noise_t rn_max = NOISE_MAX / RAIN_DIV;
 
 /* }}} */
 
@@ -88,15 +86,9 @@ water_level(ucoord_t obits)
 }
 
 static inline unsigned
-rain(ucoord_t obits, noise_t w, noise_t he, noise_t cl)
+rain(ucoord_t obits, noise_t w, noise_t he, noise_t cl, noise_t tmp)
 {
-	snoise_t x;
-	x = w - he;
-	x += cl / 50;
-	// change 300 to affect how
-	// terrain height decreases rain
-	x /= UCOORD_MAX * 290;
-	x -= 100;
+	noise_t x = cl / RAIN_DIV;
 	return x;
 }
 
@@ -370,19 +362,15 @@ noise_oct(noise_t *m, point_t s, size_t oct_n, octave_t *oct, unsigned seed)
 static inline unsigned
 bio_idx(ucoord_t rn, coord_t tmp)
 {
-	if (tmp > tmp_max)
-		return 1 + 3 * tmp_vary;
-	else if (tmp < tmp_min)
-		return 1;
+	if (tmp < tmp_min)
+		return BIOME_PERMANENT_ICE;
+	else if (tmp >= tmp_max)
+		return BIOME_VOLCANIC;
 
-	if (rn > rn_max)
-		rn = rn_max;
-	else if (rn < rn_min)
-		rn = rn_min;
-
-	ucoord_t rn_bit = 3 * (rn - rn_min) / (rn_max - rn_min);
-	coord_t tmp_bit = 3 * tmp_vary * (tmp - tmp_min) / (tmp_max - tmp_min);
-	return 1 + rn_bit + tmp_bit;
+	ucoord_t rn_bit = (4 * rn / rn_max) & 3;
+	coord_t tmp_bit = (4 * (tmp - tmp_min) / (tmp_max - tmp_min)) & 3;
+	unsigned result = 2 + rn_bit + (tmp_bit << 2);
+	return result;
 }
 
 static inline void
@@ -391,27 +379,35 @@ noise_full(size_t i, point_t s, ucoord_t obits)
 	struct bio *bio = &chunks_bio_raw[i];
 	static octave_t
 		x1[] = {{ 7, 2 }, { 6, 2 }, { 5, 2 }, { 4, 3 }, { 3, 3 }, { 2, 3 }},
-		x2[] = {{ 5, 1 }, { 3, 3 }, { 1, 2 }, { 2, 3 }},
+		/* x2[] = {{ 8, 1 }, { 7, 2 }, { 6, 2 }, { 5, 3 }, { 3, 3 }}, */
+		x4[] = {{ 5, 1 }, { 2, 1 }},
 		x3[] = {{ 5, 1 }, { 8, 1 }};
 
 	int j;
 
 	NOISE_OCT(n_he, x1, 55 + obits);
-	NOISE_OCT(n_cl, x2, 1 + obits);
+	NOISE_OCT(n_cl, x4, 1 + obits);
 	NOISE_OCT(n_tm, x3, 53 + obits);
+
+	/* fprintf(stderr, "noise max: %u, rain max: %u\n", NOISE_MAX, rn_max); */
 
 	for (j = 0; j < CHUNK_M; j++) {
 		/* x_pos s[1] + (j % (1 << CHUNK_Y)); */
 		struct bio *r = &bio[j];
 		noise_t _cl = n_cl[j], _tm = n_tm[j];
 		register noise_t _he = n_he[j], w = water_level(obits);
-		r->rn = rain(obits, w, _he, _cl);
 		r->tmp = temp(obits, _he, _tm, s[Y_COORD] + (j >> CHUNK_Y));
-		r->ty = HASH(&_tm, sizeof(noise_t), PLANTS_SEED);
+		r->rn = rain(obits, w, _he, _cl, r->tmp);
 		r->bio_idx = _he < w ? 0 : bio_idx(r->rn, r->tmp);
 		r->pd.max = 0;
-		plants_noise(&r->pd, r->ty, r->tmp, r->rn, 3);
-		plants_shuffle(&r->pd, ~(r->ty >> 8));
+		if (_he > w) {
+			r->ty = HASH(&_tm, sizeof(noise_t), PLANTS_SEED);
+			plants_noise(&r->pd, r->ty, r->tmp, r->rn, 3);
+			plants_shuffle(&r->pd, ~(r->ty >> 8));
+		} else {
+			memset(r->pd.id, 0, 3);
+			r->pd.n = 0;
+		}
 	}
 }
 

@@ -1,4 +1,4 @@
-#include "plant.h"
+#include "noise.h"
 
 #include "params.h"
 
@@ -9,7 +9,7 @@
 plant_t plant_map[] = {{
 	// taiga
 	{ "pinus silvestris", "", "" }, ANSI_BOLD ANSI_FG_GREEN, 'x', 'X', ANSI_RESET_BOLD,
-	-65, 70, 600, 900, 1,
+	30, 70, 50, 1024, 1,
 	{ "fruit", "", "" }, 1,
 }, {	// temperate rainforest
 	{ "pseudotsuga menziesii", "", "" }, ANSI_BOLD ANSI_FG_GREEN, 't', 'T', ANSI_RESET_BOLD,
@@ -17,23 +17,23 @@ plant_t plant_map[] = {{
 	{ "fruit", "", "" }, 1,
 }, {	// woodland / grassland / shrubland
 	{ "betula pendula", "", "" }, ANSI_FG_YELLOW, 'x', 'X', "",
-	-4, 86, 400, 700, 1,
+	30, 86, 0, 341, 1,
 	{ "fruit", "", "" }, 1,
 }, {	// woodland / grassland?
 	{ "betula pubescens", "", "" }, ANSI_FG_WHITE, 'x', 'X', "",
-	0, 96, 500, 900, 1,
+	50, 146, 500, 900, 1,
 	{ "fruit", "", "" }, 1,
 }, {	// temperate forest
-	{ "abies alba", "", "" }, ANSI_BOLD ANSI_FG_GREEN, 'x', 'X', ANSI_RESET_BOLD,
+	{ "abies alba", "", "" }, ANSI_BOLD ANSI_FG_GREEN, 'a', 'A', ANSI_RESET_BOLD,
 	-40, 86, 100, 200, 1,
 	{ "fruit", "", "" }, 1,
 }, {	// desert
 	{ "arthrocereus rondonianus", "", "" }, ANSI_BOLD ANSI_FG_GREEN, 'i', 'I', "",
-	110, 130, 10, 150, 1,
+	110, 190, 10, 180, 1,
 	{ "fruit", "", "" }, 1,
 }, {	// savannah
 	{ "acacia senegal", "", "" }, ANSI_BOLD ANSI_FG_GREEN, 't', 'T', "",
-	40, 120, 20, 120, 1,
+	40, 150, 20, 345, 1,
 	{ "fruit", "", "" }, 1,
 }, {
 	{ "daucus carota", "", "" }, ANSI_FG_WHITE, 'x', 'X', "",
@@ -52,11 +52,10 @@ plant_noise(unsigned char *plid, coord_t tmp, ucoord_t rn, morton_t v, unsigned 
 
 	CBUG(n >= PLANT_MAX);
 
-	if (((v >> 6) ^ (v >> 3) ^ v) & 1)
-		return 0;
+	/* if (((v >> 6) ^ (v >> 3) ^ v) & 1) */
+	/* 	return 0; */
 
-	if (v & 0x18
-	    && tmp < pl->tmp_max && tmp > pl->tmp_min
+	if (tmp < pl->tmp_max && tmp > pl->tmp_min
 	    && rn < pl->rn_max && rn > pl->rn_min) {
 		*plid = n;
 		v = (v >> 1) & PLANT_MASK;
@@ -69,9 +68,9 @@ plant_noise(unsigned char *plid, coord_t tmp, ucoord_t rn, morton_t v, unsigned 
 }
 
 void
-plants_noise(struct plant_data *pd, morton_t ty, coord_t tmp, ucoord_t rn, unsigned n)
+plants_noise(struct plant_data *pd, noise_t ty, coord_t tmp, ucoord_t rn, unsigned n)
 {
-	morton_t v = ty;
+	noise_t v = ty;
 	register int i, cpln;
 	unsigned char *idc = pd->id;
 
@@ -82,12 +81,12 @@ plants_noise(struct plant_data *pd, morton_t ty, coord_t tmp, ucoord_t rn, unsig
 	     i < PLANT_MAX && idc < pd->id + n;
 	     i++, v >>= 8) {
 		if (!v)
-			v = ~ty >> 4;
+			v = uhash((const char *) &ty, sizeof(ty), i);
 
                 cpln = plant_noise(idc, tmp, rn, v, i);
 		if (cpln) {
+                        pd->n |= cpln << ((idc - pd->id) * 2);
 			idc++;
-                        pd->n |= cpln << (i * 2);
 		}
 	}
 

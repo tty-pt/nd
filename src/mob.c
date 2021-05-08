@@ -306,7 +306,6 @@ mob_put(dbref who)
 static inline dbref
 mob_add(enum mob mid, dbref where, enum biome biome, long long pdn) {
 	mob_t *mob = MOB(mid);
-	drop_t *drop[8];
 	mobi_t *liv;
 	dbref nu;
 
@@ -316,7 +315,6 @@ mob_add(enum mob mid, dbref where, enum biome biome, long long pdn) {
 		return NOTHING;
 
 	nu = obj_add(mob->o, where);
-	memset(drop, 0, sizeof(drop));
 
 	SETMID(nu, mid);
 	SETAGGRO(nu, mob->flags & MF_AGGRO);
@@ -327,26 +325,10 @@ mob_add(enum mob mid, dbref where, enum biome biome, long long pdn) {
 
 	mob_inventory(liv, (drop_t **) mob->drop);
 
-	if (bird_is(mob)) {
-		drop_t feather = { {{ "%s's feather", "", "" }}, 1 };
-		char name[32];
-		snprintf(name, sizeof(name), feather.i.o.name, NAME(nu));
-		feather.i.o.name = name;
-		drop[0] = &feather;
-	}
-	/* else if (fish_is(mob)) { */
-		/* drop_t scale = { {{ "%s's scale", "", "" }}, 1 }; */
-		/* char name[32]; */
-		/* snprintf(name, sizeof(name), scale.i.o.name, NAME(nu)); */
-		/* feather.i.o.name = name; */
-		/* drop[0] = &feather; */
-	/* } */
-
-	mob_inventory(liv, drop);
-
 	return nu;
 }
 
+/*
 void
 mobs_add(dbref w, enum biome biome, long long pdn) {
 	unsigned mid,
@@ -399,6 +381,7 @@ mobs_add(dbref w, enum biome biome, long long pdn) {
 	for (mid = o; mid < o + n; mid++)
 		mob_add(mid, w, biome, pdn);
 }
+*/
 
 struct obj const *
 mob_obj_random()

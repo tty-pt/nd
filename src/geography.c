@@ -303,7 +303,7 @@ geo_room_at(command_t *cmd, pos_t pos)
 
 	SETTREE(there, bio->pd.n);
 	SETFLOOR(there, bio->bio_idx);
-	mobs_add(there, bio->bio_idx, bio->pd.n);
+	/* mobs_add(there, bio->bio_idx, bio->pd.n); */
 	others_add(cmd, there, bio->bio_idx, pos);
 	plants_add(cmd, there,
 			&bio->pd, bio->ty,
@@ -311,6 +311,16 @@ geo_room_at(command_t *cmd, pos_t pos)
 	DBDIRTY(there);
 	DBDIRTY(loc);
 	return there;
+}
+
+void
+do_bio(command_t *cmd) {
+	struct bio *bio;
+	pos_t pos;
+	map_where(pos, getloc(cmd->player));
+	bio = noise_point(pos);
+	notifyf(cmd->player, "tmp %d rn %u bio %s(%d)",
+		bio->tmp, bio->rn, biomes[bio->bio_idx].name, bio->bio_idx);
 }
 
 static void
@@ -352,7 +362,7 @@ geo_clean(command_t *cmd, dbref here)
 	tmp = DBFETCH(here)->contents;
 	DOLIST(tmp, tmp)
 		if (Typeof(tmp) == TYPE_PLAYER) {
-			CBUG(tmp == cmd->player);
+			/* CBUG(tmp == cmd->player); */
 			return here;
 		}
 
@@ -583,7 +593,8 @@ e_wall(command_t *cmd, enum exit e)
 	if (gexit_claim_walk(cmd, &exit, &exit_there, e))
 		return;
 	recycle(cmd, exit_there);
-	recycle(cmd, exit);
+	if (Typeof(exit) != TYPE_GARBAGE)
+		recycle(cmd, exit);
 	notify(cmd->player, "You build a wall.");
 }
 

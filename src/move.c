@@ -23,7 +23,10 @@ moveto(dbref what, dbref where)
 	dbref loc;
 
 	/* do NOT move garbage */
-	CBUG(what == NOTHING || Typeof(what) == TYPE_GARBAGE);
+	CBUG(what == NOTHING);
+	CBUG(Typeof(what) == TYPE_GARBAGE);
+	/* if (Typeof(what) == TYPE_GARBAGE) */
+	/* 	return; */
 	CBUG(where == HOME);
 
 	/* remove what from old loc */
@@ -216,7 +219,7 @@ enter_room(command_t *cmd, dbref loc, dbref exit)
 	/* get old location */
 	old = DBFETCH(player)->location;
 
-	CBUG(loc == old);
+	/* CBUG(loc == old); */
 
 	/* go there */
 	moveto(player, loc);
@@ -231,7 +234,7 @@ enter_room(command_t *cmd, dbref loc, dbref exit)
 	snprintf(buf, sizeof(buf), "%s has arrived.", NAME(player));
 	notify_except(DBFETCH(loc)->contents, player, buf, player);
 
-	mobs_aggro(cmd);
+	/* mobs_aggro(cmd); */
 	/* TODO geo_notify(descr, player); */
 
 	do_look_around(cmd);
