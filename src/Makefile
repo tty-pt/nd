@@ -10,7 +10,7 @@ ldlibs-y := -lpcre -lm -lxxhash -ldb
 ldlibs-$(CONFIG_SSL) += -lssl -lcrypto
 cflags-y := -g -Wall -Wno-initializer-overrides
 
-exe := fbmuck prochelp
+exe := fbmuck prochelp ws-server
 src = ChangeLog COPYING ${real-obj-y:%.o=%.c}
 
 prochelp-obj-y := prochelp.o
@@ -21,7 +21,7 @@ fbmuck-obj-y := geometry.o plant.o biome.o noise.o search.o \
 fbmuck-obj-y += boolexp.o create.o db.o \
 	hashtab.o help.o \
 	look.o match.o \
-	move.o \
+	move.o mcp.o \
 	player.o \
 	predicates.o propdirs.o property.o \
 	props.o rob.o sanity.o set.o \

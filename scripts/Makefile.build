@@ -31,6 +31,6 @@ deps: # ${deps}
 
 .c.o:
 	@echo CC ${@:%=${RELDIR}/%}
-	@cd ${srcdir} && ${COMPILE.c} -o ${@:%=${RELDIR}/%} ${.IMPSRC:%=${RELDIR}/%}
+	cd ${srcdir} && ${COMPILE.c} -o ${@:%=${RELDIR}/%} ${.IMPSRC:%=${RELDIR}/%}
 
 include Makefile.common

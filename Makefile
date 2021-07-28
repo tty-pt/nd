@@ -1,15 +1,20 @@
 #!/bin/make -f
 
 srcdir := ${PWD}
-subdirs := src/ game/data/ client/
+subdirs := src/ vss/ game/data/ client/
 
 include scripts/Makefile.common
+include ${METAL_PATH}/mk/hjs.mk
 
 all: index.html main.js vim.css
+
+main.js: client/
 
 inline-js := main.js
 index.html: pre-index.html ${inline-js}
 	${scripts}/html_tool.sh pre-index.html ${inline-js} > $@
+
+vim.css: vss/
 
 subdirs-cleaner := ${subdirs:%=%-cleaner}
 $(subdirs-cleaner):

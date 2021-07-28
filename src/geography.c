@@ -806,3 +806,27 @@ int gexits(command_t *cmd, dbref where) {
         }
         return ret;
 }
+
+void geo_notify(int descr, dbref player) {
+
+        dbref o[GEON_M], *o_p;
+	pos_t pos;
+	char buf[BUFFER_LEN + 2];
+	McpMesg msg;
+
+	map_where(pos, getloc(player));
+        map_search(o, pos, GEON_RADIUS);
+	mcp_mesg_init(&msg, MCP_WEB_PKG, "enter");
+	snprintf(buf, sizeof(buf), "0x%llx", MORTON_READ(pos));
+	mcp_mesg_arg_append(&msg, "x", buf);
+
+	for (o_p = o; o_p < o + GEON_BDI; o_p++) {
+		dbref loc = *o_p;
+		if (loc < 0 || Typeof(loc) != TYPE_ROOM)
+			continue;
+
+		web_room_mcp(loc, &msg);
+	}
+
+	mcp_mesg_clear(&msg);
+}

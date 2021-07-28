@@ -39,6 +39,7 @@
 #include "params.h"
 #include "defaults.h"
 #include "props.h"
+#include "mcp.h"
 #include "externs.h"
 #include "interp.h"
 #include "kill.h"
@@ -71,6 +72,7 @@ struct ws {
 typedef struct descr_st {
 	int fd, flags;
 	dbref player;
+	McpFrame mcpframe;
 } descr_t;
 
 #define CMD_HASH_SIZE 512
@@ -540,6 +542,7 @@ main(int argc, char **argv)
 	warn("INIT: TinyMUCK %s starting.", "version");
 	warn("%s PID is: %d", argv[0], getpid());
 
+	mcp_initialize();
 	if (init_game() < 0) {
 		warn("Couldn't load " STD_DB "!\n");
 		return 2;
@@ -720,6 +723,7 @@ auth(command_t *cmd)
         dbref player = connect_player(user, password);
 	descr_t *d = &descr_map[fd];
 
+	warn("auth '%s' '%s'", user, password);
         if (player == NOTHING) {
                 player = create_player(user, password);
 
@@ -807,8 +811,8 @@ descr_read(descr_t *d)
 		if (errno == EAGAIN)
 			return 0;
 
-		/* perror("descr_read"); */
-		BUG("descr_read %s", strerror(errno));
+		perror("descr_read");
+		/* BUG("descr_read %s", strerror(errno)); */
 	case 0:
 	case 1:
 		return -1;
@@ -862,8 +866,38 @@ descr_new()
 		abort();
 	}
 
+	mcp_frame_init(&d->mcpframe, d);
+	mcp_negotiation_start(&d->mcpframe);
 	welcome_user(fd);
 	return d;
+}
+
+void
+SendText(McpFrame * mfr, const char *text)
+{
+	descr_t *d = mfr->descriptor;
+	descr_inband(d->fd, text);
+}
+
+void
+FlushText(McpFrame * mfr)
+{
+	/* struct descriptor_data *d = (struct descriptor_data *)mfr->descriptor; */
+	/* if (d && !process_output(d)) { */
+	/* 	d->booted = 1; */
+	/* } */
+}
+
+int
+mcpframe_to_descr(McpFrame * ptr)
+{
+	return ((descr_t *) ptr->descriptor)->fd;
+}
+
+int
+mcpframe_to_user(McpFrame * ptr)
+{
+	return ((descr_t *) ptr->descriptor)->player;
 }
 
 void
@@ -1065,6 +1099,13 @@ art(int fd, const char *art)
 
 	fclose(f);
 	descr_inband(fd, "\r\n");
+}
+
+McpFrame *
+descr_mcpframe(int fd)
+{
+	descr_t *d = &descr_map[fd];
+	return &d->mcpframe;
 }
 
 static const char *interface_c_version = "$RCSfile$ $Revision: 1.127 $";

@@ -110,12 +110,12 @@ look_room(command_t *cmd, dbref loc, int verbose)
 		}
 	}
 
-	/* if (web_look(descr, player, loc, description)) { */
+	if (web_look(cmd, loc, description)) {
 		notify(player, unparse_object(player, loc));
 		notify(player, description);
 		/* tell him the contents */
 		look_contents(cmd, loc, "You see:");
-	/* } */
+	}
 }
 
 void

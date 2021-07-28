@@ -423,5 +423,8 @@ do_view(command_t *cmd)
 	}
 
 	/* binary_notify(player, BIN_VIEW, view, sizeof(view)); */
-	notify(player, view_draw(view));
+	char *view_buf = view_draw(view);
+        if (web_geo_view(cmd->fd, view_buf))
+		notify(player, view_buf);
+	/* notify(player, view_draw(view)); */
 }

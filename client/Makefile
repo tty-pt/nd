@@ -1,6 +1,7 @@
-CFLAGS += -g -DCLIENT -Wno-initializer-overrides -I/usr/X11R6/include -Iinclude
-LDFLAGS += -lncurses -lX11 -L/usr/X11R6/lib -lGL -lGLU -lglut
-exe := neverdarkc
-
-obj-y := view.o tty.o main.o tee.o gl.o
-obj-y += drivers/
+include ${METAL_PATH}/mk/wasm.mk
+# LDLIBS = ${PROG_LDLIBS}
+# LDFLAGS = --allow-undefined
+obj-y := view.o tty.o mcp.o main.o
+CFLAGS += -DCLIENT
+exe := client.wasm
+all: client.js

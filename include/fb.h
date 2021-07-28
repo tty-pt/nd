@@ -12,6 +12,8 @@
 #include "interface.h"
 #include "interp.h"
 #include "match.h"
+#include "mcp.h"
+#include "mcppkg.h"
 #include "mpi.h"
 #include "params.h"
 #include "patchlevel.h"

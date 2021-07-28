@@ -6,13 +6,10 @@
 #include <ctype.h>
 /* #include <stdlib.h> */
 #include "tty.h"
-/* #include <syslog.h> */
 
 #define GET_FLAG(x)	( mcp.flags & x )
 #define SET_FLAGS(x)	{ mcp.flags |= x ; }
 #define UNSET_FLAGS(x)	( mcp.flags &= ~(x) )
-
-#define BUFSIZE 156000
 
 enum mcp_flags {
 	MCP_ON = 1,
@@ -45,11 +42,11 @@ struct {
         struct mcp_arg args[8];
         int args_l;
 	char name[32];
-	char cache[BUFSIZE], *cache_p;
+	char cache[2048], *cache_p;
 } mcp;
 
-static char in_buf[BUFSIZE];
-static char out_buf[BUFSIZE];
+static char in_buf[4096];
+static char out_buf[8282];
 char *out_p, *last_p;
 
 static inline void mcp_set(char *buf) {
@@ -101,8 +98,6 @@ mcp_arg() {
 	return &mcp.args[mcp.args_l];
 }
 
-/* extern void console_log(char *ptr, size_t len); */
-
 static inline void
 mcp_proc_ch(char *p) {
 	if (GET_FLAG(MCP_SKIP)) {
@@ -113,7 +108,6 @@ mcp_proc_ch(char *p) {
 		return;
 	}
 
-	/* console_log("asdf", 4); */
 	switch (*p) {
 	case '#':
 		switch (mcp.state) {
@@ -219,17 +213,15 @@ mcp_proc_ch(char *p) {
 		mcp.state = 0;
 	}
 
-	if (!GET_FLAG(MCP_NOECHO)) {
+	if (!GET_FLAG(MCP_NOECHO))
 		*mcp.cache_p++ = *p;
-	}
 }
 
-MEXPORT char *
+export char *
 mcp_proc() {
 	char *in;
 
         for (in = in_buf; *in != '\0'; in++)
-		/* *out_p++ = *in; */
 		mcp_proc_ch(in);
 
 	if (GET_FLAG(MCP_MULTI))
@@ -246,33 +238,22 @@ mcp_proc() {
 	}
 
 	return NULL;
-	/* return out_buf; */
 }
 
-/* MEXPORT char * */
-/* mcp_cache() { */
-/*         return mcp.cache; */
-/* } */
-
-MEXPORT char *
+export char *
 mcp_input() {
 	return in_buf;
 }
 
-MEXPORT void
+export void
 mcp_reset() {
 	last_p = out_p = out_buf;
 	*out_p++ = '[';
 	*out_p = '\0';
-	/* mcp.flags = MCP_INBAND; */
 }
 
-MEXPORT void
+export void
 mcp_init() {
         mcp.state = 1;
-	mcp.flags = MCP_INBAND;
 	mcp_reset();
-	mcp_clear();
-	/* printf("printf mcp_init\n"); */
-	/* syslog(0, "printf mcp_init\n"); */
 }

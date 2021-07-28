@@ -9,6 +9,7 @@
 /* Definition of 'dbref' */
 #include "db.h"
 /* Definition of 'McpFrame' */
+#include "mcp.h"
 #include "props.h"
 /* Definition of match_data */
 #include "match.h"
@@ -277,6 +278,8 @@ extern void dispose_all_oldprops(void);
 
 /* from interface.c */
 void do_flock(command_t *);
+int mcpframe_to_user(McpFrame * ptr);
+int mcpframe_to_descr(McpFrame * ptr);
 
 /* from tune.c */
 extern void tune_load_parmsfile(dbref player);
@@ -298,6 +301,7 @@ const char *get_interp_c_version(void);
 const char *get_log_c_version(void);
 const char *get_look_c_version(void);
 const char *get_match_c_version(void);
+const char *get_mcp_c_version(void);
 const char *get_move_c_version(void);
 const char *get_msgparse_c_version(void);
 const char *get_mufevent_c_version(void);

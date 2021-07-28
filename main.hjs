@@ -1,14 +1,19 @@
 #define METAL_IMPORT "metal"
-#define METAL_NAME "mcp"
+#define METAL_NAME "prog"
 #include "./client/client.js"
 
 #define CONFIG_PROTO "ws"
 
 var ws = new WebSocket(CONFIG_PROTO + "://" + window.location.hostname + ':4202', 'text');
 
-mcp.mcp_init();
+prog.mcp_init();
 
 var target = null;
+
+function console_log(ptr, len) {
+        var str = env.strout(prog.memory, ptr, len);
+        console.log(str);
+}
 
 var dir_lbl = [ 'h', 'j', 'k', 'l', 'down', 'up' ],
         term = document.querySelector('#term'),
@@ -33,7 +38,7 @@ function actions_reset() {
 
 function cmd(str) {
 	console.log("CMD", str);
-        ws.send(str);
+        ws.send(str + "\n");
         actions_reset();
 }
 
@@ -50,7 +55,8 @@ var password = localStorage.getItem('password');
 function login() {
 	// localStorage.setItem('username', username);
 	// localStorage.setItem('password', password);
-        ws.send(username + ' ' + password);
+        console.log('login', 'c ' + username + '=' + password + "\n");
+        ws.send('c ' + username + '=' + password + "\n");
         forgetbtn.style.display = 'inline-block';
 }
 
@@ -172,17 +178,22 @@ function mcp_handler(j) {
         }
 }
 
+var BUFSIZE = 156000;
+
 ws.onmessage = function (e) {
         console.log("inserted", e.data);
-        env.strin(mcp.memory, mcp.mcp_input(), e.data, 4096);
-        var ptr = mcp.mcp_proc();
+        env.strin(prog.memory, prog.mcp_input(), e.data, BUFSIZE);
+        var ptr = prog.mcp_proc();
+
+        // var cachestr = env.strout(prog.memory, prog.mcp_cache(), 2048);
+        // console.log("cache", cachestr);
 
 	if (!ptr) {
                 console.log('waiting');
 		return;
 	}
 
-	var str = env.strout(mcp.memory, ptr, 8282);
+	var str = env.strout(prog.memory, ptr, BUFSIZE);
 	var jsons = null;
 
 	try {
@@ -197,7 +208,7 @@ ws.onmessage = function (e) {
 		for (var i = 0; i < jsons.length; i++)
 			mcp_handler(jsons[i]);
 
-	mcp.mcp_reset();
+	prog.mcp_reset();
 };
 
 var cmd_str = "";
@@ -209,7 +220,7 @@ input.onchange = function (e) {
 function input_send(e) {
         if (input.value.match("http")) {
                 var url = cmd_str.substr(cmd_str.indexOf("h"));
-                cmd_str = ":meme " + url; 
+                cmd_str = "meme " + url; 
         }
         cmd(cmd_str);
         input.blur();
@@ -271,16 +282,9 @@ window.onkeydown = function(e) {
 
         switch (e.keyCode) {
                 case 83:
-                        input.value = ":say ";
+                        input.value = "say ";
                         focus();
                         e.preventDefault();
-                        break;
-                case 186: // ":"
-			if (e.shiftKey) {
-				input.value = ":";
-				focus();
-				e.preventDefault();
-			}
                         break;
 		case 65: // "a":
                         focus();
