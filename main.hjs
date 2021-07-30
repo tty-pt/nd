@@ -1,19 +1,21 @@
-#define METAL_IMPORT "metal"
-#define METAL_NAME "prog"
-#include "./client/client.js"
+// #define METAL_IMPORT "metal"
+// #define METAL_NAME "prog"
+// #include "./client/client.js"
+#include "mcp.hjs"
 
 #define CONFIG_PROTO "ws"
 
 var ws = new WebSocket(CONFIG_PROTO + "://" + window.location.hostname + ':4202', 'text');
 
-prog.mcp_init();
+// prog.mcp_init();
+mcp_init();
 
 var target = null;
 
-function console_log(ptr, len) {
-        var str = env.strout(prog.memory, ptr, len);
-        console.log(str);
-}
+// function console_log(ptr, len) {
+//         var str = env.strout(prog.memory, ptr, len);
+//         console.log(str);
+// }
 
 var dir_lbl = [ 'h', 'j', 'k', 'l', 'down', 'up' ],
         term = document.querySelector('#term'),
@@ -109,6 +111,7 @@ if (!username)
 var actionable = {};
 
 #include "canvas.hjs"
+#include "tty.hjs"
 
 function dir_init(mask) {
         for (var i = 0; i < dir_lbl.length; i++)
@@ -117,23 +120,27 @@ function dir_init(mask) {
 }
 
 function mcp_handler(j) {
-	// console.log('mcp_handler', j);
+	console.log('mcp_handler', j);
         if (j.key == 'inband')
-                output(j.data);
+                output(tty_proc(j.data));
+                // output(j.data);
         if (j.key == "com-qnixsoft-web-auth-error")
                 forget();
         else if (j.key == "com-qnixsoft-web-view") {
-		var b64 = j.data;
+		// var b64 = j.data;
 		// TODO improve strin or make specific mapping
 		// env.strin(mcp.memory, mcp.view_input(), b64, mcp.view_buf_l);
 		// mcp.view_build();
-                map.innerHTML = j.data;
+                const tp = tty_proc(j.data);
+                console.log("map", tp);
+                // map.innerHTML = tty_proc(j.data);
+                map.innerHTML = tp;
 	} else if (j.key == "com-qnixsoft-web-art")
                 output('<img class="ah" src="' + j.src + '">');
         else if (j.key == "com-qnixsoft-web-look-content") {
                 actionable[j.name] = j;
                 var className = "";
-                var str = j.icon;
+                var str = tty_proc(j.icon);
                 var idx = str.indexOf("\"");
 
                 if (idx >= 0) {
@@ -182,18 +189,24 @@ var BUFSIZE = 156000;
 
 ws.onmessage = function (e) {
         console.log("inserted", e.data);
-        env.strin(prog.memory, prog.mcp_input(), e.data, BUFSIZE);
-        var ptr = prog.mcp_proc();
+        // env.strin(prog.memory, prog.mcp_input(), e.data, BUFSIZE);
+        // var ptr = prog.mcp_proc();
+        const str = mcp_proc(e.data);
+
+        if (!str) {
+                console.log('waiting');
+		return;
+        }
 
         // var cachestr = env.strout(prog.memory, prog.mcp_cache(), 2048);
         // console.log("cache", cachestr);
 
-	if (!ptr) {
-                console.log('waiting');
-		return;
-	}
+// 	if (!ptr) {
+//                 console.log('waiting');
+// 		return;
+// 	}
 
-	var str = env.strout(prog.memory, ptr, BUFSIZE);
+	// var str = env.strout(prog.memory, ptr, BUFSIZE);
 	var jsons = null;
 
 	try {

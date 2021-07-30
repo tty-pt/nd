@@ -30,3 +30,4 @@
 /vim.css
 /vss/*.h
 /game/data/mpihelp.txt
+.*.sw?

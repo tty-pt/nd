@@ -14,10 +14,10 @@ function tilemap_icon_cache(p, data) {
 	var a = document.createElement("a");
 	var id = actions_lbl[p];
 	a.style.backgroundImage = "url(" + data + ")";
-	a.classList.add("sh", "sv", "pxs");
+	a.classList.add("s_", "sv", "pxs");
 	a.style.display = 'none';
 	a.onclick = function () {
-		cmd(":" + id + " " + target.name);
+		cmd(id + " " + target.name);
 	};
 	act.appendChild(a);
 	return a;
