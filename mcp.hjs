@@ -215,22 +215,12 @@ function mcp_proc(data) {
                 mcp_proc_ch(data.charAt(in_i));
         }
 
-        // console.log(mcp.cache);
-        // console.log(mcp);
-
 	if (GET_FLAG(MCP_MULTI))
 		;
 	else if (GET_FLAG(MCP_ON))
 		mcp_emit();
 	else if (GET_FLAG(MCP_INBAND))
 		inband_emit();
-
-	// if (last_i != out_buf) {
-                // out_buf = out_buf.replaceAt(last_i, "]");
-                // last_i++;
-                // out_buf = out_buf.substr(0, last_i);
-	// 	return out_buf;
-	// }
 
 	return null;
 }

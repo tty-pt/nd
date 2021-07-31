@@ -394,7 +394,6 @@ do_advitam(command_t *cmd)
 
 	if (!(FLAGS(player) & WIZARD)
 	    || target == NOTHING
-	    || MOBI(target)
 	    || OWNER(target) != player) {
 		notify(player, "You can't do that.");
 		return;
