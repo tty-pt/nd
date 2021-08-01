@@ -519,7 +519,7 @@ mobi_update(mobi_t *n)
 			respawn(who);
 
 		return;
-	} else {
+	} else if (n->flags & MF_SITTING){
 		int y = 9 - 2 * (n->flags | MF_SITTING);
 
 		int max = HP_MAX(who);
