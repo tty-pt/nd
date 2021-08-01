@@ -281,10 +281,9 @@ core_command_t cmds[] = {
 	}, {
 		.name = "view",
 		.cb = &do_view,
-	/* }, { */
-	/* 	.name = "meme", */
-	/* 	.cb = &do_meme, */
-	/* 	/1* /2* do_meme(descr, player, arg1); *2/ *1/ */
+	}, {
+		.name = "meme",
+		.cb = &do_meme,
 	}, {
 		.name = "man",
 		.cb = &do_man,

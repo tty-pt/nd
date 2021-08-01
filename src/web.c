@@ -158,7 +158,9 @@ void web_room_mcp(dbref room, void *msg) {
 	}
 }
 
-void do_meme(int descr, dbref player, char const *url) {
+void do_meme(command_t *cmd) {
+        dbref player = cmd->player;
+        const char *url = cmd->argv[1];
 	McpMesg msg;
         // FIXME should also work in the terminal
         mcp_mesg_init(&msg, MCP_WEB_PKG, "meme");

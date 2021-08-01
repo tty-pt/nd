@@ -529,6 +529,9 @@ unwall(command_t *cmd, enum exit e)
 	if (here == there)
 		return;
 
+        if (Typeof(here) != TYPE_ROOM)
+                here = NOTHING;
+
 	gexit(cmd, there, here, e_simm(e));
 	notify(player, "You tear down the wall.");
 }

@@ -55,6 +55,7 @@ void do_pecho(command_t *);
 void do_pose(command_t *);
 void do_score(command_t *);
 void do_view(command_t *);
+void do_meme(command_t *);
 void init_match_remote(command_t *cmd, dbref what, const char *name, int type, struct match_data *md);
 void send_contents(command_t *cmd, dbref dest);
 void do_doing(command_t *cmd);

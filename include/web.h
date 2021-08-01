@@ -12,5 +12,5 @@ int web_support(int descr);
 int web_look(command_t *cmd, dbref loc, char const *description);
 void web_room_mcp(dbref room, void *msg);
 void * web_frame(int descr);
-void do_meme(int descr, dbref player, char const *url);
+void do_meme(command_t *cmd);
 #endif
