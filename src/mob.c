@@ -496,7 +496,7 @@ huth_notify(dbref who, unsigned v, unsigned char y, char const *m[4])
 }
 
 static inline void
-mobi_update(mobi_t *n)
+mobi_update(mobi_t *n, long long unsigned tick)
 {
 	static char const *thirst_msg[] = {
 		"You are thirsty.",
@@ -519,15 +519,15 @@ mobi_update(mobi_t *n)
 			respawn(who);
 
 		return;
-	} else if (n->flags & MF_SITTING){
-		int y = 9 - 2 * (n->flags | MF_SITTING);
+	} else if (tick % 16 == 0) {
+		int div = 10 - 5 * (n->flags & MF_SITTING);
 
 		int max = HP_MAX(who);
-		int cur = n->hp + (max >> y);
+		int cur = n->hp + (max / div);
 		n->hp = cur > max ? max : cur;
 
 		max = MP_MAX(who);
-		cur = n->mp + (max >> y);
+		cur = n->mp + (max / div);
 		n->mp = cur > max ? max : cur;
 
 		huth_notify(n->who, n->thirst += THIRST_INC,
@@ -542,7 +542,7 @@ mobi_update(mobi_t *n)
 }
 
 void
-mob_update()
+mob_update(long long unsigned tick)
 {
 	register mobi_t *n, *e;
 
@@ -551,6 +551,6 @@ mob_update()
 	     n++) {
 
 		if (n->who > 0)
-			mobi_update(n);
+			mobi_update(n, tick);
 	}
 }

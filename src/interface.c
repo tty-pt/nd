@@ -78,6 +78,7 @@ typedef struct descr_st {
 #define CMD_HASH_SIZE 512
 
 static hash_tab cmds_hashed[CMD_HASH_SIZE];
+long long unsigned tick = 0;
 
 void do_bio(command_t *cmd);
 
@@ -991,8 +992,9 @@ shovechars()
 
 	while (shutdown_flag == 0) {
 		/* process_commands(); */
-		mob_update();
+		mob_update(tick);
 		geo_update();
+                tick ++;
 
 		untouchprops_incremental(1);
 
