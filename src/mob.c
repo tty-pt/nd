@@ -466,6 +466,9 @@ respawn(dbref who)
 		return;
 	dbref where = THING_HOME(who);
 	moveto(who, where);
+        mobi_t *mob = MOBI(who);
+        mob->hp = HP_MAX(who);
+        mob->mp = MP_MAX(who);
 	notify_except_fmt(DBFETCH(where)->contents, who,
 			  "%s appears.", NAME(who));
 }

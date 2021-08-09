@@ -49,6 +49,7 @@
 #include "item.h"
 #include "mob.h"
 #include "hash.h"
+#include "ws.h"
 
 #define DESCR_ITER(di_d) \
 	for (di_d = &descr_map[sockfd + 1]; \
@@ -61,6 +62,7 @@
 
 enum descr_flags {
 	DF_CONNECTED = 1,
+	DF_WEBSOCKET = 4,
 };
 
 struct ws {
@@ -68,6 +70,7 @@ struct ws {
 	unsigned ip;
 	unsigned old;
 };
+
 
 typedef struct descr_st {
 	int fd, flags;
@@ -81,9 +84,19 @@ static hash_tab cmds_hashed[CMD_HASH_SIZE];
 long long unsigned tick = 0;
 
 void do_bio(command_t *cmd);
+extern void do_auth(command_t *cmd);
+extern void do_httpget(command_t *cmd);
 
 core_command_t cmds[] = {
 	{
+		.name = "auth",
+		.cb = &do_auth,
+		.flags = CF_NOAUTH,
+	}, {
+		.name = "GET",
+		.cb = &do_httpget,
+		.flags = CF_NOAUTH | CF_NOARGS,
+	}, {
 		.name = "action",
 		.cb = &do_action,
 	}, {
@@ -381,7 +394,11 @@ command_new(descr_t *d, char *input, size_t len)
 	if (*p == ' ') {
 		*p = '\0';
 		cmd.argv[cmd.argc] = p + 1;
+		core_command_t *cmd_i = command_match(&cmd);
 		cmd.argc ++;
+
+		if (cmd_i && cmd_i->flags & CF_NOARGS)
+			goto cleanup;
 
 		for (; p < input + len; p++) {
 			if (*p != '=')
@@ -394,6 +411,7 @@ command_new(descr_t *d, char *input, size_t len)
 		}
 	}
 
+cleanup:
 	for (int i = cmd.argc;
 	     i < sizeof(cmd.argv) / sizeof(char *);
 	     i++)
@@ -590,8 +608,14 @@ main(int argc, char **argv)
 int
 descr_inband(int fd, const char *s)
 {
-	/* warn("descr_inband %d %s", d->fd, s); */
-	return write(fd, s, strlen(s));
+	/* return write(fd, s, strlen(s)); */
+	size_t len = strlen(s);
+	descr_t *d = &descr_map[fd];
+	/* warn("descr_inband %d %s %d", d->fd, s, d->flags & DF_WEBSOCKET); */
+	if (d->flags & DF_WEBSOCKET)
+		return ws_write(d->fd, s, len);
+	else
+		return write(d->fd, s, len);
 }
 
 int
@@ -713,8 +737,21 @@ welcome_user(int fd)
 #endif
 }
 
-int
-auth(command_t *cmd)
+void
+do_httpget(command_t *cmd)
+{
+	descr_t *d = &descr_map[cmd->fd];
+	warn("httpget %d argc %d", cmd->fd, cmd->argc);
+	if (ws_handshake(cmd->fd, cmd->argv[cmd->argc - 1])) {
+		warn("websocket connection closed");
+		return;
+	}
+	d->flags |= DF_WEBSOCKET;
+	d->mcpframe.enabled = 1;
+}
+
+void
+do_auth(command_t *cmd)
 {
 	int fd = cmd->fd;
 	char *user = cmd->argv[1];
@@ -730,7 +767,7 @@ auth(command_t *cmd)
                 if (player == NOTHING) {
                         descr_inband(fd, "Either there is already a player with"
 				     " that name, or that name is illegal.\r\n");
-                        return 1;
+			return;
                 }
 
                 created = 1;
@@ -738,18 +775,17 @@ auth(command_t *cmd)
         } else {
 		if (PLAYER_FD(player) > 0) {
 			descr_inband(fd, "That player is already connected.\r\n");
-			return 1;
+			return;
 		}
 	}
 
-        d->flags = DF_CONNECTED;
+        d->flags |= DF_CONNECTED;
         d->player = cmd->player = player;
 	CBUG(d->fd != fd);
 	PLAYER_FD(player) = fd;
         spit_file(player, MOTD_FILE);
 	do_look_around(cmd);
 	do_view(cmd);
-        return 0;
 }
 
 static inline void
@@ -773,8 +809,20 @@ command_process(command_t *cmd)
 	if (cmd->argc < 1)
 		return;
 
-	dbref player = cmd->player;
+	core_command_t *cmd_i = command_match(cmd);
 	int descr = cmd->fd;
+
+	descr_t *d = &descr_map[descr];
+
+	if (!(d->flags & DF_CONNECTED)) {
+		if (cmd_i && (cmd_i->flags & CF_NOAUTH))
+			cmd_i->cb(cmd);
+		return;
+	}
+
+	dbref player = cmd->player;
+
+	warn("command_process player %d", player);
 
 	command_debug(cmd, "command_process");
 	/* warn("command_process %s\n", command); */
@@ -783,8 +831,6 @@ command_process(command_t *cmd)
         CBUG(GETLID(player) < 0);
         mobi_t *liv = MOBI(player);
         liv->descr = descr;
-
-	core_command_t *cmd_i = command_match(cmd);
 
 	pos_t pos;
 	map_where(pos, getloc(player));
@@ -804,20 +850,34 @@ int
 descr_read(descr_t *d)
 {
 	char buf[BUFFER_LEN];
+	int ret;
 
-	int ret = read(d->fd, buf, BUFFER_LEN);
-	switch (ret) {
-	case -1:
-		if (errno == EAGAIN)
-			return 0;
+	if (d->flags & DF_WEBSOCKET) {
+		ret = ws_read(d->fd, buf, sizeof(buf));
+		switch (ret) {
+		case -1:
+			if (errno == EAGAIN)
+				return 0;
 
-		perror("descr_read");
-		/* BUG("descr_read %s", strerror(errno)); */
-	case 0:
-	case 1:
-		return -1;
+			perror("descr_read ws ");
+		case 0: return -1;
+		}
+		ret -= 1;
+	} else {
+		ret = read(d->fd, buf, BUFFER_LEN);
+		switch (ret) {
+		case -1:
+			if (errno == EAGAIN)
+				return 0;
+
+			perror("descr_read");
+			/* BUG("descr_read %s", strerror(errno)); */
+		case 0:
+		case 1:
+			return -1;
+		}
+		ret -= 2;
 	}
-	ret -= 2;
 	buf[ret] = '\0';
 
 	command_t cmd = command_new(d, buf, ret);
@@ -825,16 +885,13 @@ descr_read(descr_t *d)
 	if (!cmd.argc)
 		return 0;
 
-	if (d->flags & DF_CONNECTED) {
-		command_process(&cmd);
-		return 0;
-	}
+	command_process(&cmd);
 
-	if (cmd.argc != 3)
-		return 0;
+	/* if (cmd.argc != 3) */
+	/* 	return 0; */
 
-	if (*cmd.argv[0] == 'c')
-		auth(&cmd);
+	/* if (*cmd.argv[0] == 'c') */
+	/* 	auth(&cmd); */
 
 	return ret;
 }
@@ -867,8 +924,8 @@ descr_new()
 	}
 
 	mcp_frame_init(&d->mcpframe, d);
-	mcp_negotiation_start(&d->mcpframe);
-	welcome_user(fd);
+	/* mcp_negotiation_start(&d->mcpframe); */
+	/* welcome_user(fd); */
 	return d;
 }
 

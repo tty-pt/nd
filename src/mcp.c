@@ -209,7 +209,7 @@ void
 mcp_initialize(void)
 {
 	McpVer oneoh = { 1, 0 };
-	mcp_package_register("com-qnixsoft-web", oneoh, oneoh, mcppkg_web, NULL, NULL);
+	/* mcp_package_register("com-qnixsoft-web", oneoh, oneoh, mcppkg_web, NULL, NULL); */
 	mcp_package_register("org-fuzzball-help", oneoh, oneoh, mcppkg_help_request, NULL, NULL);
 }
 

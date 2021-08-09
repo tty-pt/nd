@@ -4,7 +4,7 @@
 
 #define CONFIG_PROTO "ws"
 
-var ws = new WebSocket(CONFIG_PROTO + "://" + window.location.hostname + ':4202', 'text');
+var ws = new WebSocket(CONFIG_PROTO + "://" + window.location.hostname + ':4201', 'text');
 
 mcp_init();
 
@@ -50,8 +50,7 @@ var password = localStorage.getItem('password');
 function login() {
 	// localStorage.setItem('username', username);
 	// localStorage.setItem('password', password);
-        console.log('login', 'c ' + username + '=' + password + "\n");
-        ws.send('c ' + username + '=' + password + "\n");
+        ws.send('auth ' + username + '=' + password + "\n");
         forgetbtn.style.display = 'inline-block';
 }
 
@@ -66,7 +65,7 @@ forgetbtn.onclick = forget;
 ws.binaryType = 'arraybuffer';
 
 ws.onopen = function () {
-        cmd("c wtf=ignored\n");
+        // cmd("c wtf=ignored\n");
         if (username && password) {
                 login();
                 help_hide();
@@ -112,9 +111,10 @@ function dir_init(mask) {
 
 function mcp_handler(j) {
 	console.log('mcp_handler', j);
-        if (j.key == 'inband')
-                output(tty_proc(j.data));
-        if (j.key == "com-qnixsoft-web-auth-error")
+        if (j.key == 'inband') {
+                if (j.data != "\n\r")
+                        output(tty_proc(j.data));
+        } if (j.key == "com-qnixsoft-web-auth-error")
                 forget();
         else if (j.key == "com-qnixsoft-web-view") {
                 map.innerHTML = tty_proc(j.data);

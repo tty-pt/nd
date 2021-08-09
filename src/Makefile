@@ -10,14 +10,13 @@ ldlibs-y := -lpcre -lm -lxxhash -ldb
 ldlibs-$(CONFIG_SSL) += -lssl -lcrypto
 cflags-y := -g -Wall -Wno-initializer-overrides
 
-exe := fbmuck prochelp ws-server
+exe := fbmuck prochelp
 src = ChangeLog COPYING ${real-obj-y:%.o=%.c}
 
 prochelp-obj-y := prochelp.o
-ws-server-obj-y := ws-server.o
 fbmuck-obj-y := geometry.o plant.o biome.o noise.o search.o \
 	view.o item.o spell.o drink.o mob.o kill.o geography.o \
-	shop.o
+	shop.o ws.o
 fbmuck-obj-y += boolexp.o create.o db.o \
 	hashtab.o help.o \
 	look.o match.o \
@@ -29,7 +28,7 @@ fbmuck-obj-y += boolexp.o create.o db.o \
 	unparse.o utils.o wiz.o \
 	copyright.o interface.o web.o
 
-exe-obj-y := ${fbmuck-obj-y} ${prochelp-obj-y} ${ws-server-obj-y}
+exe-obj-y := ${fbmuck-obj-y} ${prochelp-obj-y}
 
 HELPFILES := man.txt help.txt mpihelp.txt
 

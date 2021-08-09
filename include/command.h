@@ -11,10 +11,16 @@ typedef struct {
 
 typedef void core_command_cb_t(command_t *);
 
+enum command_flags {
+	CF_NOAUTH = 1,
+	/* CF_EOL = 2, */
+        CF_NOARGS = 4,
+};
 typedef struct {
 	char *name;
 	/* size_t nargs; */
 	core_command_cb_t *cb;
+	int flags;
 } core_command_t;
 
 extern core_command_t cmds[];

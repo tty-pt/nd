@@ -27,10 +27,9 @@ counting with Jesus. Gots some combat, spells, bufs, etc.
 
   It is quite pre-alpha but I'll keep working on it when I can.
 
-  Check out the code at https://qnixsoft.com/src.
+  Check out the code at https://github.com/tty-pt/neverdark
 
-  All vanilla fbmuck commands are preceded with ":". Typing ":say hello"
-would result in your character saying hello, "'hello" has the same result.
+  I have removed the @ from all commands.
 
 Thanks and have fun.
 Q
@@ -42,13 +41,13 @@ Q
 startingout|starting_out|starting out
 
 The word 'me' refers to yourself. Some things to do when starting out:
-1) give yourself a description with "@describe me=<description>", then
+1) give yourself a description with "describe me=<description>", then
     look at yourself with "look me".
 2) prevent anyone else from robbing you with "@lock me=me".
 3) set your gender, if you wish it known, with "@set me=sex:male" or
-    "@set me=sex:female" (or "@set me=sex:neuter" to be an 'it').
+    "set me=sex:female" (or "set me=sex:neuter" to be an 'it').
 
-~~alsosee geo,walking,kill,@desc,look,@lock,rob,@set,gender
+~~alsosee geo,walking,kill,desc,look,lock,rob,set,gender
 ~
 ~
 say
@@ -258,7 +257,7 @@ kill|combat
 KILL <target>
 
   Starts combat with target, as long at it is living. This includes a set
-of mechanics you can inspect in https://qnixsoft.com/kill-math.pdf.
+of mechanics you can inspect in https://tty.pt/kill-math.pdf.
 This includes equipment, spells, stats, bufs, etc.
 
   A successful kill sends the player home, sends all objects in the

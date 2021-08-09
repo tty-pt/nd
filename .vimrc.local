@@ -57,7 +57,7 @@ func s:Connect()
 				\ "term_kill": "int",
 				\ "curwin": 1,
 				\ })
-	call term_sendkeys(muckt, "c One=qovmjbl\<cr>")
+	call term_sendkeys(muckt, "auth One=qovmjbl\<cr>")
 	let s:muckw = win_getid()
 	let s:muckb = bufnr('%')
 	call win_gotoid(id)
@@ -128,6 +128,6 @@ set path=$PWD/src,$PWD/include
 set grepprg=ag\ --nogroup\ --nocolor
 nnoremap gr :grep <cword> src/*.c include/*.h<cr>
 " nnoremap gr :exe "grep /\\<" . expand("<cword>") . "\\>/gj src/*.c include/*.h"<cr>
-call job_start('./src/ws-server')
+" call job_start('./src/ws-server')
 " term doas make web
 autocmd BufNewFile,BufRead *.hjs setf javascript.preproc
