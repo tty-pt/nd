@@ -23,7 +23,7 @@
 #define BIRD(s, d) .o = { #s, "bird/" #s, d }, \
 	.wt = PECK, .type = ELM_AIR
 #define FISH(s, d) .o = { #s, "fish/" #s, d }, \
-	.wt = BITE, .type = ELM_ICE
+	.wt = BITE, .type = ELM_ICE, .biomes = (1<<BIOME_WATER)
 
 bodypart_t bodypart_map[] = {
 	[BP_HEAD] = {
@@ -103,20 +103,42 @@ mob_t mob_map[] = {
 		FISH(rainbowfish, ""), .y = 14, .flags = MF_AGGRO
 	},
 	[MOB_ICEBIRD] = {
-		BIRD(icebird, ""), .y = 14, .type = ELM_ICE, .flags = MF_AGGRO
+		BIRD(icebird, ""), .y = 14, .type = ELM_ICE, .flags = MF_AGGRO,
+		.biomes = (1 << BIOME_PERMANENT_ICE)
+			| (1 << BIOME_TUNDRA)
+			| (1 << BIOME_TUNDRA2)
+			| (1 << BIOME_TUNDRA3)
+			| (1 << BIOME_TUNDRA4)
+			| (1 << BIOME_COLD_DESERT)
+
 	},
 	[MOB_PARROT] = {
-		.y = 1, BIRD(parrot, ""),
+		.y = 4, BIRD(parrot, ""),
+		.biomes = (1 << BIOME_TEMPERATE_RAINFOREST)
 	},
 	[MOB_BANDIT] = {
 		MOB_DEFINE(bandit, ""),
 		{ &dagger_drop, ARMORSET_LIST(padded),
 			ARMORSET_LIST(hide),
 			ARMORSET_LIST(chainmail), NULL },
-		4, FIGHTER, 20, 0x7, .flags = MF_AGGRO
+		4, FIGHTER, 5, 0x7, .flags = MF_AGGRO,
+		.biomes = (1 << BIOME_SHRUBLAND)
+			| (1 << BIOME_CONIFEROUS_FOREST)
+			| (1 << BIOME_BOREAL_FOREST)
+			| (1 << BIOME_TEMPERATE_GRASSLAND)
+			| (1 << BIOME_WOODLAND)
+			| (1 << BIOME_TEMPERATE_SEASONAL_FOREST)
+			| (1 << BIOME_TEMPERATE_RAINFOREST)
 	},
 	[MOB_SWALLOW] = {
 		BIRD(swallow, ""), .y = 4,
+		.biomes = (1 << BIOME_SHRUBLAND)
+			| (1 << BIOME_CONIFEROUS_FOREST)
+			| (1 << BIOME_BOREAL_FOREST)
+			| (1 << BIOME_TEMPERATE_GRASSLAND)
+			| (1 << BIOME_WOODLAND)
+			| (1 << BIOME_TEMPERATE_SEASONAL_FOREST)
+			| (1 << BIOME_TEMPERATE_RAINFOREST)
 	},
 	[MOB_SKELETON] = {
 		MOB_DEFINE(skeleton, "Bones that almost shine with a white polish that never seems to dull."),
@@ -130,12 +152,33 @@ mob_t mob_map[] = {
 	},
 	[MOB_WOODPECKER] = {
 		BIRD(woodpecker, ""), .y = 2,
+		.biomes = (1 << BIOME_SHRUBLAND)
+			| (1 << BIOME_CONIFEROUS_FOREST)
+			| (1 << BIOME_BOREAL_FOREST)
+			| (1 << BIOME_TEMPERATE_GRASSLAND)
+			| (1 << BIOME_WOODLAND)
+			| (1 << BIOME_TEMPERATE_SEASONAL_FOREST)
+			| (1 << BIOME_TEMPERATE_RAINFOREST)
 	},
 	[MOB_SPARROW] = {
 		BIRD(sparrow, ""), .y = 3,
+		.biomes = (1 << BIOME_SHRUBLAND)
+			| (1 << BIOME_CONIFEROUS_FOREST)
+			| (1 << BIOME_BOREAL_FOREST)
+			| (1 << BIOME_TEMPERATE_GRASSLAND)
+			| (1 << BIOME_WOODLAND)
+			| (1 << BIOME_TEMPERATE_SEASONAL_FOREST)
+			| (1 << BIOME_TEMPERATE_RAINFOREST)
 	},
 	[MOB_OWL] = {
 		BIRD(owl, ""), .y = 7, .type = ELM_DARK,
+		.biomes = (1 << BIOME_SHRUBLAND)
+			| (1 << BIOME_CONIFEROUS_FOREST)
+			| (1 << BIOME_BOREAL_FOREST)
+			| (1 << BIOME_TEMPERATE_GRASSLAND)
+			| (1 << BIOME_WOODLAND)
+			| (1 << BIOME_TEMPERATE_SEASONAL_FOREST)
+			| (1 << BIOME_TEMPERATE_RAINFOREST)
 	},
 	[MOB_EAGLE] = {
 		BIRD(eagle, ""), .y = 7,
@@ -314,6 +357,9 @@ mob_add(enum mob mid, dbref where, enum biome biome, long long pdn) {
 	    || random() >= (RAND_MAX >> mob->y))
 		return NOTHING;
 
+	if (!((1 << biome) & mob->biomes))
+		return NOTHING;
+
 	nu = obj_add(mob->o, where);
 
 	SETMID(nu, mid);
@@ -328,60 +374,18 @@ mob_add(enum mob mid, dbref where, enum biome biome, long long pdn) {
 	return nu;
 }
 
-/*
 void
 mobs_add(dbref w, enum biome biome, long long pdn) {
+	/* int o = MOFS_ICE; */
+	int o = 1;
 	unsigned mid,
-		 n = 0;
-	int o = 0;
+		 n = MOB_MAX - o;
 	CBUG(w <= 0);
 
-	// TODO more consistent logic that doesn't need
-	// me to mess around with this index stuff
-
-	switch (biome) {
-	case BIOME_WATER:
-		o = MOFS_WATER;
-		n = MOFS_ICE;
-		break;
-
-	case BIOME_COLD_DRY:
-	case BIOME_COLD:
-	case BIOME_COLD_WET:
-	case BIOME_TUNDRA:
-		o = MOFS_ICE;
-		n = MOFS_JUNGLE - o;
-		break;
-
-	case BIOME_RAIN_FOREST:
-		o = MOFS_JUNGLE;
-		n = MOFS_TEMPERATE_DESERT - o;
-		break;
-
-	case BIOME_TAIGA:
-	case BIOME_SHRUBLAND: // / grassland / woodland
-	case BIOME_WOODLAND: // yellow tree
-	case BIOME_FOREST: // temperate
-		o = MOFS_TEMPERATE;
-		n = MOFS_DESERT - MOFS_JUNGLE;
-		break;
-
-	case BIOME_DESERT:
-	case BIOME_SAVANNAH:
-		o = MOFS_DESERT;
-		n = MOFS_FIRE - o;
-		break;
-
-	case BIOME_SEASONAL_FOREST:
-	case BIOME_VOLCANIC:
-		o = MOFS_FIRE;
-		n = MOFS_END - o;
-	}
-
-	for (mid = o; mid < o + n; mid++)
+	for (mid = o; mid < o + n; mid++) {
 		mob_add(mid, w, biome, pdn);
+	}
 }
-*/
 
 struct obj const *
 mob_obj_random()
@@ -522,7 +526,9 @@ mobi_update(mobi_t *n, long long unsigned tick)
 			respawn(who);
 
 		return;
-	} else if (tick % 16 == 0) {
+	}
+
+	if (tick % 16 == 0) {
 		int div = 10 - 5 * (n->flags & MF_SITTING);
 
 		int max = HP_MAX(who);
@@ -533,12 +539,13 @@ mobi_update(mobi_t *n, long long unsigned tick)
 		cur = n->mp + (max / div);
 		n->mp = cur > max ? max : cur;
 
-		huth_notify(n->who, n->thirst += THIRST_INC,
-			    THIRST_Y, thirst_msg);
-
-		huth_notify(n->who, n->hunger += HUNGER_INC,
-			    HUNGER_Y, hunger_msg);
 	}
+
+	huth_notify(n->who, n->thirst += THIRST_INC,
+		    THIRST_Y, thirst_msg);
+
+	huth_notify(n->who, n->hunger += HUNGER_INC,
+		    HUNGER_Y, hunger_msg);
 
 	debufs_process(n->who);
 	kill_update(n);

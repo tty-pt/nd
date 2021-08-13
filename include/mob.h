@@ -98,6 +98,7 @@ typedef struct {
 	// y max 63 (6 bit) 
 	unsigned char y, stat, lvl, lvl_v, wt, flags;
 	enum element type;
+	unsigned biomes;
 } mob_t;
 
 /* instance of mob */

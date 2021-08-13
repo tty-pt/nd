@@ -234,7 +234,7 @@ enter_room(command_t *cmd, dbref loc, dbref exit)
 	snprintf(buf, sizeof(buf), "%s has arrived.", NAME(player));
 	notify_except(DBFETCH(loc)->contents, player, buf, player);
 
-	/* mobs_aggro(cmd); */
+	mobs_aggro(cmd);
 	/* TODO geo_notify(descr, player); */
 
 	do_look_around(cmd);

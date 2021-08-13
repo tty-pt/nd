@@ -303,7 +303,7 @@ geo_room_at(command_t *cmd, pos_t pos)
 
 	SETTREE(there, bio->pd.n);
 	SETFLOOR(there, bio->bio_idx);
-	/* mobs_add(there, bio->bio_idx, bio->pd.n); */
+	mobs_add(there, bio->bio_idx, bio->pd.n);
 	others_add(cmd, there, bio->bio_idx, pos);
 	plants_add(cmd, there,
 			&bio->pd, bio->ty,
