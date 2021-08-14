@@ -4,7 +4,12 @@ srcdir := ${PWD}
 subdirs := src/ vss/ game/data/ client/
 
 include scripts/Makefile.common
-include ${METAL_PATH}/mk/hjs.mk
+
+GCC_JS := gcc -E -P -nostdinc -undef -x c
+.SUFFIXES: .js .hjs
+
+.hjs.js:
+	${GCC_JS} -o $@ $<
 
 all: index.html main.js vim.css
 
