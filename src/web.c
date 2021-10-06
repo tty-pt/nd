@@ -90,6 +90,8 @@ web_look(command_t *cmd, dbref loc, char const *description)
                 if (can_see(player, thing, can_see_loc)) {
                         struct icon ico = icon(thing);
                         mcp_mesg_init(&msg, MCP_WEB_PKG, "look-content");
+                        snprintf(buf, sizeof(buf), "%d", thing);
+                        mcp_mesg_arg_append(&msg, "dbref", buf);
                         mcp_mesg_arg_append(&msg, "name", NAME(thing));
                         mcp_mesg_arg_append(&msg, "pname", unparse_object(player, thing));
                         mcp_mesg_arg_append(&msg, "icon", ico.icon);
@@ -131,5 +133,39 @@ void do_meme(command_t *cmd) {
         mcp_mesg_arg_append(&msg, "who", NAME(player));
         mcp_mesg_arg_append(&msg, "url", url);
         web_room_mcp(getloc(player), &msg);
+        mcp_mesg_clear(&msg);
+}
+
+void
+web_content_out(dbref thing) {
+	dbref loc = DBFETCH(thing)->location;
+	char buf[BUFSIZ];
+	McpMesg msg;
+
+        mcp_mesg_init(&msg, MCP_WEB_PKG, "out");
+	snprintf(buf, BUFSIZ, "%d", thing);
+        mcp_mesg_arg_append(&msg, "dbref", buf);
+        /* mcp_mesg_arg_append(&msg, "name", unparse_object(player, thing)); */
+        web_room_mcp(loc, &msg);
+        mcp_mesg_clear(&msg);
+}
+
+void
+web_content_in(dbref thing) {
+	dbref loc = DBFETCH(thing)->location;
+	struct icon ico = icon(thing);
+	char buf[BUFSIZ];
+	McpMesg msg;
+
+        mcp_mesg_init(&msg, MCP_WEB_PKG, "in");
+	snprintf(buf, BUFSIZ, "%d", thing);
+        mcp_mesg_arg_append(&msg, "dbref", buf);
+	mcp_mesg_arg_append(&msg, "name", NAME(thing));
+	mcp_mesg_arg_append(&msg, "pname", unparse_object(HUMAN_BEING, thing));
+	mcp_mesg_arg_append(&msg, "icon", ico.icon);
+	snprintf(buf, sizeof(buf), "%d", ico.actions);
+	mcp_mesg_arg_append(&msg, "actions", buf);
+
+        web_room_mcp(loc, &msg);
         mcp_mesg_clear(&msg);
 }

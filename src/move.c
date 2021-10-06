@@ -16,6 +16,7 @@
 #include "mob.h"
 #include "kill.h"
 #include "search.h"
+#include "web.h"
 
 void
 moveto(dbref what, dbref where)
@@ -32,6 +33,9 @@ moveto(dbref what, dbref where)
 	/* remove what from old loc */
 	loc = DBFETCH(what)->location;
 	CBUG(loc == NOTHING);
+	if (Typeof(loc) == TYPE_ROOM)
+		web_content_out(what);
+
 	DBSTORE(loc, contents, remove_first(DBFETCH(loc)->contents, what));
 
 	/* test for special cases */
@@ -64,6 +68,8 @@ moveto(dbref what, dbref where)
 	PUSH(what, DBFETCH(where)->contents);
 	DBDIRTY(where);
 	DBSTORE(what, location, where);
+	if (Typeof(where) == TYPE_ROOM)
+		web_content_in(what);
 }
 
 dbref reverse(dbref);

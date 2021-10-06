@@ -43,9 +43,9 @@ function tilemap_cache() {
 	// forgetbtn.style.backgroundImage
 	// 	= action_btns[p].style.backgroundImage;
 
-	actions_init =  function (name) {
+	actions_init =  function (dbref) {
 		act.style.display = 'block';
-		target = actionable[name];
+		target = actionable[dbref];
 		// target_lbl.innerHTML = target.pname;
 		for (var i = 0; i < action_btns.length; i++)
 			action_btns[i].style.display

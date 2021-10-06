@@ -109,6 +109,19 @@ function dir_init(mask) {
                         = (mask & 1 << i) ? 1 : nop_opacity;
 }
 
+function renderActionable(dbref, j) {
+        var className = "";
+        var str = tty_proc(j.icon);
+        var a = document.createElement("a");
+        a.onclick = actions_init.bind(null, dbref);
+        var icon = document.createElement("span");
+        icon.innerHTML = str;
+        icon.className = className;
+        a.appendChild(icon);
+        a.innerHTML += " " + tty_proc(j.pname);
+        contents_btns.appendChild(a);
+}
+
 function mcp_handler(j) {
 	console.log('mcp_handler', j);
         if (j.key == 'inband') {
@@ -121,17 +134,9 @@ function mcp_handler(j) {
 	} else if (j.key == "com-qnixsoft-web-art")
                 output('<img class="ah" src="' + j.src + '">');
         else if (j.key == "com-qnixsoft-web-look-content") {
-                actionable[j.name] = j;
-                var className = "";
-                var str = tty_proc(j.icon);
-                var a = document.createElement("a");
-                a.onclick = actions_init.bind(null, j.name);
-                var icon = document.createElement("span");
-                icon.innerHTML = str;
-                icon.className = className;
-                a.appendChild(icon);
-                a.innerHTML += " " + tty_proc(j.pname);
-                contents_btns.appendChild(a);
+                const dbref = parseInt(j.dbref);
+                actionable[dbref] = j;
+                renderActionable(dbref, j);
         } else if (j.key == "com-qnixsoft-web-look") {
                 if (j.room) {
                         rtitle.innerHTML = j.name;
@@ -151,6 +156,19 @@ function mcp_handler(j) {
                 a.appendChild(img);
                 term.appendChild(a);
                 output("\n");
+        } else if (j.key == "com-qnixsoft-web-out") {
+                const dbref = parseInt(j.dbref);
+                delete actionable[dbref];
+                contents_btns.innerHTML = '';
+                for (key in actionable) {
+                        const dbref = key;
+                        const j = actionable[key];
+                        renderActionable(dbref, j);
+                }
+        } else if (j.key == "com-qnixsoft-web-in") {
+                const dbref = parseInt(j.dbref);
+                actionable[dbref] = j;
+                renderActionable(dbref, j);
         }
 }
 
