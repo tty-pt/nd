@@ -402,6 +402,13 @@ do_get(command_t *cmd)
 				if (!cando)
 					notify(player, "You can't get that.");
 			} else {
+                                if (OWNER(thing) != player
+                                    && (GETLID(thing) >= 0 || GETPLID(thing) >= 0))
+                                {
+                                        notify(player, "You can't pick that up.");
+                                        break;
+                                }
+
 				cando = can_doit(cmd, thing, "You can't pick that up.");
 			}
 			if (cando) {

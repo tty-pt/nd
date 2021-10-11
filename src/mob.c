@@ -530,10 +530,8 @@ mobi_update(mobi_t *n, long long unsigned tick)
 
 	if (tick % 16 == 0) {
 		int div = 10 - 5 * (n->flags & MF_SITTING);
-
-		int max = HP_MAX(who);
-		int cur = n->hp + (max / div);
-		n->hp = cur > max ? max : cur;
+		int max, cur;
+		cspell_heal(NOTHING, who, HP_MAX(who) / div);
 
 		max = MP_MAX(who);
 		cur = n->mp + (max / div);

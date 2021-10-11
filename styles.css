@@ -58,10 +58,11 @@ form {
 
 #term > pre.small { max-height: 30pt; }
 #term > pre img.ah { height: 256px; }
-#right {
-        width: 16.5em;
-}
 /* #term > pre img { margin: 6pt auto; display: block; } */
 
 pre { margin-top: -1em; }
-#map { margin-bottom: -1em; margin-left: -1em; }
+#map {
+        font-size: 30px;
+        margin-bottom: -1em;
+        margin-left: -1em;
+}

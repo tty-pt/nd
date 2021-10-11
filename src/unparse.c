@@ -72,6 +72,7 @@ enum actions {
         ACT_OPEN = 16,
         ACT_CHOP = 32,
         ACT_FILL = 64,
+        ACT_GET = 128,
 };
 
 struct icon
@@ -92,6 +93,7 @@ icon(dbref what)
                 ret.icon = ANSI_BOLD ANSI_FG_BLUE "#";
                 break;
         case TYPE_THING:
+                ret.actions |= ACT_GET;
                 if (GETSHOP(what)) {
                         ret.actions |= ACT_SHOP;
                         ret.icon = ANSI_BOLD ANSI_FG_GREEN "$";

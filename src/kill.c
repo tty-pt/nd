@@ -205,7 +205,8 @@ kill_target(dbref attacker, dbref target)
 		moveto(target, PLAYER_HOME(target));
 		geo_clean(&cmd_new, loc);
 		tar->klock = 0;
-		/* TODO do_view(tar->descr, target); */
+                do_look_around(&cmd_new);
+                do_view(&cmd_new);
 	} else {
 		if (tar->target && GETAGGRO(target))
 			tar->target->klock --;
