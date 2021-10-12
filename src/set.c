@@ -11,7 +11,7 @@
 #include <string.h>
 #include "fbstrings.h"
 
-#include "db.h"
+#include "mdb.h"
 #include "params.h"
 #include "defaults.h"
 #include "props.h"

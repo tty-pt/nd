@@ -2,7 +2,7 @@
 #define _FB_H
 
 /* We need struct inst before anything */
-#include "db.h"
+#include "mdb.h"
 #include "autoconf.h"
 #include "config.h"
 #include "copyright.h"

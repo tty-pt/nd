@@ -2,6 +2,15 @@ srcdir	:= ../${srcdir}
 
 -include Makefile
 
+cflags-y	+= -I/Users/quirinpa/opt/usr/include
+ldflags-y += -L/Users/quirinpa/opt/usr/lib
+
+cflags-y	+= -I/usr/local/opt/berkeley-db@4/include
+ldflags-y += -L/usr/local/opt/berkeley-db@4/lib
+
+cflags-y += -I/usr/local/opt/openssl@3/include
+ldflags-y += -L/usr/local/opt/openssl@3/lib
+
 cflags-y	+= -I/usr/local/include -I${srcdir}/include --pedantic -Wall -Wno-gnu-zero-variadic-macro-arguments -Wno-gnu-designator
 ldflags-y	+= -L/usr/local/lib
 #ldlibs-y ommited

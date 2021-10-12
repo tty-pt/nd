@@ -4,7 +4,7 @@
 #include "props.h"
 #include "externs.h"
 #include "kill.h"
-#include "db.h"
+#include "mdb.h"
 #include "interface.h"
 #include "geography.h"
 #include "item.h"

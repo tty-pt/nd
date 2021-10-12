@@ -4,7 +4,7 @@
 #include "config.h"
 #include "params.h"
 
-#include "db.h"
+#include "mdb.h"
 #include "defaults.h"
 #include "mpi.h"
 #include "props.h"

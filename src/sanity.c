@@ -11,7 +11,7 @@
 #include <stdarg.h>
 #include <string.h>
 
-#include "db.h"
+#include "mdb.h"
 #include "defaults.h"
 #include "externs.h"
 

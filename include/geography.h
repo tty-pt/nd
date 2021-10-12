@@ -1,7 +1,7 @@
 #ifndef GEO_H
 #define GEO_H
 
-#include "db.h"
+#include "mdb.h"
 #include "geometry.h"
 
 // adds 2^DAYTICK_Y to day tick until it reaches DAYSIZE

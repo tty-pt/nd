@@ -6,7 +6,7 @@
 
 #include <string.h>
 
-#include "db.h"
+#include "mdb.h"
 #include "params.h"
 #include "defaults.h"
 #include "interface.h"
@@ -30,7 +30,10 @@ int
 check_password(dbref player, const char* password)
 {
 	const char *pword = PLAYER_PASSWORD(player);
-	return !crypt_checkpass(password, pword);
+  char *enc;
+  enc = crypt(password, "k?");
+  CBUG(!enc);
+	return strcmp(enc, pword);
 }
 
 void
@@ -43,11 +46,10 @@ set_password_raw(dbref player, const char* password)
 void
 set_password(dbref player, const char* password)
 {
-	char hash[64];
-	if (crypt_newhash(password, "bcrypt,4", hash, sizeof(hash))) {
-		perror("crypt_newhash");
-	}
-	set_password_raw(player, alloc_string(hash));
+  char *enc;
+  enc = crypt(password, "k?");
+  CBUG(!enc);
+	set_password_raw(player, alloc_string(enc));
 }
 
 

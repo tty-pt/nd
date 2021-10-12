@@ -2,7 +2,7 @@
 #include "params.h"
 #ifndef CLIENT
 #include "externs.h"
-#include "db.h"
+#include "mdb.h"
 #endif
 
 biome_t biomes[] = {

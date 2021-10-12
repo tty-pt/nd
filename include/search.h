@@ -1,6 +1,6 @@
 #ifndef MAP_H
 #define MAP_H
-#include "db.h"
+#include "mdb.h"
 #include "geometry.h"
 /* #include "noise.h" */
 int map_init();

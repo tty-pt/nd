@@ -5,7 +5,7 @@
 #include <stdlib.h>
 #include <ctype.h>
 #include <string.h>
-#include "db.h"
+#include "mdb.h"
 #include "externs.h"
 #include "mcp.h"
 #include "mcppkg.h"

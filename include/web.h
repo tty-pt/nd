@@ -1,7 +1,7 @@
 #ifndef WEB_H
 #define WEB_H
 #include <sys/types.h>
-#include <db.h>
+#include "mdb.h"
 #include "command.h"
 #define MCP_WEB_PKG "com-qnixsoft-web"
 

@@ -5,7 +5,7 @@
 #include "config.h"
 
 #include <string.h>
-#include "db.h"
+#include "mdb.h"
 #include "externs.h"
 #include "params.h"
 #include "defaults.h"

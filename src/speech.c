@@ -4,7 +4,7 @@
 #include "copyright.h"
 #include "config.h"
 
-#include "db.h"
+#include "mdb.h"
 #include "mpi.h"
 #include "interface.h"
 #include "match.h"

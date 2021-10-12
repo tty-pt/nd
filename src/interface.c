@@ -33,7 +33,7 @@
 #include <sys/select.h>
 #include <openssl/ssl.h>
 
-#include "db.h"
+#include "mdb.h"
 #include "interface.h"
 #include "command.h"
 #include "params.h"

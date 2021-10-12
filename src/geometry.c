@@ -1,6 +1,6 @@
 #include "geometry.h"
 #ifndef CLIENT
-#include "db.h"
+#include "mdb.h"
 #include "props.h"
 #include "externs.h"
 #include "search.h"

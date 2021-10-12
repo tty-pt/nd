@@ -7,7 +7,7 @@
 /* Routines for parsing arguments */
 #include <ctype.h>
 
-#include "db.h"
+#include "mdb.h"
 #include "props.h"
 #include "params.h"
 #include "defaults.h"

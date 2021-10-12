@@ -10,7 +10,7 @@
 #include <ctype.h>
 #include <string.h>
 
-#include "db.h"
+#include "mdb.h"
 #include "defaults.h"
 #include "mpi.h"
 #include "props.h"

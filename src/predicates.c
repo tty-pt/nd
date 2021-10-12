@@ -167,7 +167,7 @@
 #include <ctype.h>
 #include <string.h>
 
-#include "db.h"
+#include "mdb.h"
 #include "props.h"
 #include "interface.h"
 #include "params.h"

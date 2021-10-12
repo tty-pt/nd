@@ -1,5 +1,5 @@
 #include "geography.h"
-#include "db.h"
+#include "mdb.h"
 #include "props.h"
 #include "match.h"
 #include "params.h"
@@ -7,7 +7,8 @@
 #include "interface.h"
 #include "externs.h"
 #include <stdlib.h>
-#include <db4/db.h>
+#include <db.h>
+/* #include <db4/db.h> */
 #include "kill.h"
 #include "externs.h"
 #include "web.h"

@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+#include <stdint.h>
 /* #include <arpa/inet.h> */
 #include <sys/select.h>
 #include <openssl/sha.h>
@@ -25,8 +26,8 @@
 #define OPCODE(head) ((unsigned char) (head[0] & 0x0f))
 #define PAYLOAD_LEN(head) ((unsigned char) (head[1] & 0x7f))
 
-int __b64_ntop(unsigned char const *src, size_t srclength,
-	       char *target, size_t targsize);
+/* int __b64_ntop(unsigned char const *src, size_t srclength, */
+/* 	       char *target, size_t targsize); */
 
 struct ws_frame {
 	char head[2];
@@ -47,6 +48,46 @@ struct ws {
 };
 
 static struct ws wss[FD_SETSIZE];
+
+// https://github.com/yasuoka/base64/blob/master/b64_ntop.c
+
+int
+b64_ntop(u_char *src, size_t srclength, char *target, size_t target_size)
+{
+  int		 i, j, expect_siz;
+  uint32_t	 bit24;
+  const char	 b64str[] =
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+
+  expect_siz = ((srclength + 2) / 3) * 4 + 1;
+
+  if (target == NULL)
+    return (expect_siz);
+  if (target_size < expect_siz)
+    return (-1);
+
+  for (i = 0, j = 0; i < srclength; i += 3) {
+    bit24 = src[i] << 16;
+    if (i + 1 < srclength)
+      bit24 |= src[i + 1] << 8;
+    if (i + 2 < srclength)
+      bit24 |= src[i + 2];
+
+    target[j++] = b64str[(bit24 & 0xfc0000) >> 18];
+    target[j++] = b64str[(bit24 & 0x03f000) >> 12];
+    if (i + 1 < srclength)
+      target[j++] = b64str[(bit24 & 0x000fc0) >> 6];
+    else
+      target[j++] = '=';
+    if (i + 2 < srclength)
+      target[j++] = b64str[(bit24 & 0x00003f)];
+    else
+      target[j++] = '=';
+  }
+  target[j] = '\0';
+
+  return j;
+}
 
 int
 ws_handshake(int cfd, char *buf) {
@@ -73,12 +114,11 @@ ws_handshake(int cfd, char *buf) {
                         SHA1_Update(&c, s, s2 - s);
                         SHA1_Update(&c, "258EAFA5-E914-47DA-95CA-C5AB0DC85B11", 36);
                         SHA1_Final(hash, &c);
-                        __b64_ntop(hash, sizeof(hash), result, sizeof(result));
+                        b64_ntop(hash, sizeof(hash), result, sizeof(result));
                         WS_WRITE(cfd, common_resp, sizeof(common_resp) - 1);
                         WS_WRITE(cfd, result, sizeof(result) - 1);
                         wss[cfd].hash = * (unsigned long *) result;
                         WS_WRITE(cfd, "\r\n\r\n", 4);
-			warn("handshake complete");
                         return 0;
                 }
 

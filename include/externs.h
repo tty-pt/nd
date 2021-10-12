@@ -7,7 +7,7 @@
 #include <sys/types.h>
 
 /* Definition of 'dbref' */
-#include "db.h"
+#include "mdb.h"
 /* Definition of 'McpFrame' */
 #include "mcp.h"
 #include "props.h"

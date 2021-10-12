@@ -1,6 +1,6 @@
 #include "search.h"
 
-#include <db4/db.h>
+#include <db.h>
 #include "externs.h"
 
 typedef struct {

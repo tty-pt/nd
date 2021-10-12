@@ -1,6 +1,6 @@
 #include "kill.h"
 #include <math.h>
-#include "db.h"
+#include "mdb.h"
 #include "props.h"
 #include "externs.h"
 #include "item.h"

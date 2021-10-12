@@ -6,7 +6,7 @@
 #ifndef CLIENT
 #include <stddef.h>
 #include <string.h>
-#include "db.h"
+#include "mdb.h"
 #include "command.h"
 #endif
 

@@ -4,7 +4,7 @@
 #define ITEM_H
 
 #include "geometry.h"
-/* #include "db.h" */
+/* #include "mdb.h" */
 
 #define ARMORSET_LIST(s) & s ## _helmet, \
 	& s ## _chest, & s ## _pants

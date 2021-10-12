@@ -9,7 +9,7 @@
 #include "copyright.h"
 #include "config.h"
 #include "params.h"
-#include "db.h"
+#include "mdb.h"
 #include "props.h"
 #include "externs.h"
 

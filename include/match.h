@@ -5,7 +5,7 @@
 
 #include "copyright.h"
 #include "command.h"
-#include "db.h"
+#include "mdb.h"
 
 struct match_data {
 	dbref exact_match;			/* holds result of exact match */

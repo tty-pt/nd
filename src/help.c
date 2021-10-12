@@ -5,7 +5,7 @@
 
 /* commands for giving help */
 
-#include "db.h"
+#include "mdb.h"
 #include "props.h"
 #include "params.h"
 #include "interface.h"

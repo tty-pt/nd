@@ -8,7 +8,7 @@
 #include <string.h>
 
 #include "fbstrings.h"
-#include "db.h"
+#include "mdb.h"
 #include "props.h"
 #include "match.h"
 #include "externs.h"

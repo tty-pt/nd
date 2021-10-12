@@ -6,7 +6,7 @@
 #include "item.h"
 
 #ifndef CLIENT
-#include "db.h"
+#include "mdb.h"
 #include "externs.h"
 #include "props.h"
 #include "params.h"

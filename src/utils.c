@@ -46,7 +46,7 @@
 #include "copyright.h"
 #include "config.h"
 
-#include "db.h"
+#include "mdb.h"
 
 /* remove the first occurence of what in list headed by first */
 dbref
