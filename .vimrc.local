@@ -36,6 +36,8 @@ let g:GdbOut = function('s:GdbOut')
 
 packadd qgdb
 
+let g:gdb_prog = "gdb"
+
 func MuckBuffer()
 	if s:muckw != 0
 		call win_gotoid(s:muckw)
