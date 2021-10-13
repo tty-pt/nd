@@ -2,7 +2,7 @@
 #define CONFIG_ROUND
 #include "vss/vss.h"
 
-/* CALL(TEXT_SIZE, TS) */
+CALL(TEXT_SIZE, TS)
 CALL(BG_COLOR, CS)
 CALL(COLOR, CS)
 /* CALL(BO_COLOR, CS) */

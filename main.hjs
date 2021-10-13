@@ -110,15 +110,24 @@ function dir_init(mask) {
 }
 
 function renderActionable(dbref, j) {
-        var className = "";
         var str = tty_proc(j.icon);
         var a = document.createElement("a");
         a.onclick = actions_init.bind(null, dbref);
-        var icon = document.createElement("span");
-        icon.innerHTML = str;
-        icon.className = className;
+        let icon = null;
+        if (j.avatar) {
+                icon = document.createElement("img");
+                icon.src = "art/" + j.avatar;
+                icon.className = "";
+        } else {
+                icon = document.createElement("span");
+                icon.innerHTML = str;
+                icon.className = "sxl txl tcv";
+        }
         a.appendChild(icon);
-        a.innerHTML += " " + tty_proc(j.pname);
+        let span = document.createElement("span");
+        span.innerHTML = tty_proc(j.pname);
+        a.appendChild(span);
+        a.className = "f fic pxs _s";
         contents_btns.appendChild(a);
 }
 
@@ -202,6 +211,7 @@ function gotPassword() {
 
         login();
         form.onsubmit = input_send;
+        input.blur();
         return false;
 }
 

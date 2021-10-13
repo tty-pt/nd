@@ -233,6 +233,10 @@ enum at { ARMOR_LIGHT, ARMOR_MEDIUM, ARMOR_HEAVY, };
 #define GETART(x)	envpropstr(x, MESGPROP_ART)
 #define SETART(x, y)	SETMESG(x, MESGPROP_ART, y)
 
+#define MESGPROP_AVATAR	"_/avatar"
+#define GETAVATAR(x)	GETMESG(x, MESGPROP_AVATAR)
+#define SETAVATAR(x, y)	SETMESG(x, MESGPROP_AVATAR, y)
+
 #define ISGUEST(x)	(get_property(x, MESGPROP_GUEST) != NULL)
 #define NOGUEST(_cmd,x) if(ISGUEST(x)) { char tmpstr[BUFFER_LEN]; warn("Guest %s(#%d) failed attempt to %s.\n",NAME(x),x,_cmd); snprintf(tmpstr, sizeof(tmpstr), "Guests are not allowed to %s.\r", _cmd); notify(x,tmpstr); return; }
 

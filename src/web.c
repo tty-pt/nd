@@ -96,6 +96,7 @@ web_look(command_t *cmd, dbref loc, char const *description)
                         mcp_mesg_arg_append(&msg, "pname", unparse_object(player, thing));
                         mcp_mesg_arg_append(&msg, "icon", ico.icon);
                         snprintf(buf, sizeof(buf), "%d", ico.actions);
+                        mcp_mesg_arg_append(&msg, "avatar", GETAVATAR(thing));
                         mcp_mesg_arg_append(&msg, "actions", buf);
                         mcp_frame_output_mesg(mfr, &msg);
                         mcp_mesg_clear(&msg);
