@@ -1,6 +1,10 @@
 #include "search.h"
 
+#ifdef __OPENBSD__
+#include <db4/db.h>
+#else
 #include <db.h>
+#endif
 #include "externs.h"
 
 typedef struct {

@@ -3,7 +3,6 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
-#include <stdint.h>
 /* #include <arpa/inet.h> */
 #include <sys/select.h>
 #include <openssl/sha.h>
@@ -26,9 +25,6 @@
 #define OPCODE(head) ((unsigned char) (head[0] & 0x0f))
 #define PAYLOAD_LEN(head) ((unsigned char) (head[1] & 0x7f))
 
-/* int __b64_ntop(unsigned char const *src, size_t srclength, */
-/* 	       char *target, size_t targsize); */
-
 struct ws_frame {
 	char head[2];
 	char mk[4];
@@ -48,6 +44,14 @@ struct ws {
 };
 
 static struct ws wss[FD_SETSIZE];
+
+#ifdef __OPENBSD__
+int __b64_ntop(unsigned char const *src, size_t srclength,
+	       char *target, size_t targsize);
+#define b64_ntop(...) __b64_ntop(__VA_ARGS__)
+#else
+
+#include <stdint.h>
 
 // https://github.com/yasuoka/base64/blob/master/b64_ntop.c
 
@@ -88,6 +92,8 @@ b64_ntop(u_char *src, size_t srclength, char *target, size_t target_size)
 
   return j;
 }
+
+#endif
 
 int
 ws_handshake(int cfd, char *buf) {

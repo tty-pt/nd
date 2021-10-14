@@ -7,8 +7,11 @@
 #include "interface.h"
 #include "externs.h"
 #include <stdlib.h>
+#ifdef __OPENBSD__
+#include <db4/db.h>
+#else
 #include <db.h>
-/* #include <db4/db.h> */
+#endif
 #include "kill.h"
 #include "externs.h"
 #include "web.h"

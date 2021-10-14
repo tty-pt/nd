@@ -756,34 +756,33 @@ do_auth(command_t *cmd)
 	int fd = cmd->fd;
 	char *user = cmd->argv[1];
 	char *password = cmd->argv[2];
-        int created = 0;
-        dbref player = connect_player(user, password);
+	int created = 0;
+	dbref player = connect_player(user, password);
 	descr_t *d = &descr_map[fd];
 
-	warn("auth '%s' '%s'", user, password);
-        if (player == NOTHING) {
-                player = create_player(user, password);
+	if (player == NOTHING) {
+		player = create_player(user, password);
 
-                if (player == NOTHING) {
-                        descr_inband(fd, "Either there is already a player with"
-				     " that name, or that name is illegal.\r\n");
+		if (player == NOTHING) {
+			descr_inband(fd, "Either there is already a player with"
+					" that name, or that name is illegal.\r\n");
 			return;
-                }
+		}
 
-                created = 1;
-                mob_put(player);
-        } else {
+		created = 1;
+		mob_put(player);
+	} else {
 		if (PLAYER_FD(player) > 0) {
 			descr_inband(fd, "That player is already connected.\r\n");
 			return;
 		}
 	}
 
-        d->flags |= DF_CONNECTED;
-        d->player = cmd->player = player;
+	d->flags |= DF_CONNECTED;
+	d->player = cmd->player = player;
 	CBUG(d->fd != fd);
 	PLAYER_FD(player) = fd;
-        spit_file(player, MOTD_FILE);
+	spit_file(player, MOTD_FILE);
 	do_look_around(cmd);
 	do_view(cmd);
 }

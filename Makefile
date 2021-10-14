@@ -30,7 +30,7 @@ cleaner: ${subdirs-cleaner}
 web: src
 	${srcdir}/src/ws-server
 
-game/data/: ${subdirs}
+game/data/: src/ vss/
 
 backup-date != date +%s
 backup := neverdark-${backup-date}.tar.gz
@@ -61,5 +61,7 @@ install: ${artdir} ${art-install}
 	${INSTALL_DATA} styles.css ${datadir}/
 	${INSTALL_SCRIPT} ${srcdir}/src/fbmuck ${PREFIX}/bin/neverdark
 
-.PHONY: cleaner ${subdirs-cleaner} web \
-	${mt-phony-${mt}} backup
+run: all
+	./src/fbmuck -C ./game
+
+.PHONY: cleaner ${subdirs-cleaner} web backup run

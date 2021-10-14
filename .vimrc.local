@@ -36,8 +36,6 @@ let g:GdbOut = function('s:GdbOut')
 
 packadd qgdb
 
-let g:gdb_prog = "gdb"
-
 func MuckBuffer()
 	if s:muckw != 0
 		call win_gotoid(s:muckw)
@@ -103,13 +101,21 @@ func Restart()
 	Run
 endfunc
 
-autocmd! QuickfixCmdPost make call Restart()
+let g:os = substitute(system('uname'), '\n', '', '')
 
-File ./src/fbmuck
-Args -C ./game
-GdbStart
-Gdb handle SIGPIPE noprint nostop
-Run
+if !has('macunix')
+	autocmd! QuickfixCmdPost make call Restart()
+
+	File ./src/fbmuck
+	Args \-C ./game
+	GdbStart
+	Gdb handle SIGPIPE noprint nostop
+	Run
+endif
+
+if g:os != "OpenBSD"
+	set makeprg=bmake
+endif
 
 nmap <leader>d :StartRun<cr>
 nmap <leader>c :call ConnectIgnore()<cr>
