@@ -27,14 +27,14 @@ var dir_lbl = [ 'h', 'j', 'k', 'l', 'down', 'up' ],
         target_lbl = act.children[0];
 
 function actions_reset() {
-        act.style.display = 'none';
-        target = null;
+	act.style.display = 'none';
+	target = null;
 }
 
 function cmd(str) {
 	console.log("CMD", str);
-        ws.send(str + "\n");
-        actions_reset();
+	ws.send(str + "\n");
+	actions_reset();
 }
 
 var nop_opacity = 0.2;
@@ -50,14 +50,14 @@ var password = localStorage.getItem('password');
 function login() {
 	// localStorage.setItem('username', username);
 	// localStorage.setItem('password', password);
-        ws.send('auth ' + username + '=' + password + "\n");
-        forgetbtn.style.display = 'inline-block';
+	ws.send('auth ' + username + '=' + password + "\n");
+	forgetbtn.style.display = 'inline-block';
 }
 
 function forget() {
-        localStorage.removeItem('username');
-        localStorage.removeItem('password');
-        location.reload();
+	localStorage.removeItem('username');
+	localStorage.removeItem('password');
+	location.reload();
 }
 
 forgetbtn.onclick = forget;
@@ -65,126 +65,126 @@ forgetbtn.onclick = forget;
 ws.binaryType = 'arraybuffer';
 
 ws.onopen = function () {
-        // cmd("c wtf=ignored\n");
-        if (username && password) {
-                login();
-                help_hide();
-        }
+	// cmd("c wtf=ignored\n");
+	if (username && password) {
+		login();
+		help_hide();
+	}
 };
 
 function scroll_reset() {
-        term.scrollTop = term.scrollHeight;
+	term.scrollTop = term.scrollHeight;
 }
 
 function help_show() {
-        modal.classList.add("f");
-        modal.classList.remove("dn");
+	modal.classList.add("f");
+	modal.classList.remove("dn");
 }
 
 function help_hide() {
-        modal.classList.add("dn");
-        modal.classList.remove("f");
+	modal.classList.add("dn");
+	modal.classList.remove("f");
 }
 
 function output(stuff) {
-        // term.append(stuff);
-        term.innerHTML += stuff;
-        scroll_reset();
+	// term.append(stuff);
+	term.innerHTML += stuff;
+	scroll_reset();
 }
 
 ws.onclose = function () {
-        output("Socket connection closed\n");
-        // input.disabled = true;
-        forgetbtn.style.display = 'none';
+	output("Socket connection closed\n");
+	// input.disabled = true;
+	forgetbtn.style.display = 'none';
 };
 
 if (!username)
-        promptUsername();
+	promptUsername();
 
 var actionable = {};
 
 function dir_init(mask) {
-        for (var i = 0; i < dir_lbl.length; i++)
-                dir_btns[i].style.opacity
-                        = (mask & 1 << i) ? 1 : nop_opacity;
+	for (var i = 0; i < dir_lbl.length; i++)
+		dir_btns[i].style.opacity
+			= (mask & 1 << i) ? 1 : nop_opacity;
 }
 
 function renderActionable(dbref, j) {
-        var str = tty_proc(j.icon);
-        var a = document.createElement("a");
-        a.onclick = actions_init.bind(null, dbref);
-        let icon = null;
-        if (j.avatar) {
-                icon = document.createElement("img");
-                icon.src = "art/" + j.avatar;
-                icon.className = "";
-        } else {
-                icon = document.createElement("span");
-                icon.innerHTML = str;
-                icon.className = "sxl txl tcv";
-        }
-        a.appendChild(icon);
-        let span = document.createElement("span");
-        span.innerHTML = tty_proc(j.pname);
-        a.appendChild(span);
-        a.className = "f fic pxs _s";
-        contents_btns.appendChild(a);
+	var str = tty_proc(j.icon);
+	var a = document.createElement("a");
+	a.onclick = actions_init.bind(null, dbref);
+	let icon = null;
+	if (j.avatar) {
+		icon = document.createElement("img");
+		icon.src = "art/" + j.avatar;
+		icon.className = "";
+	} else {
+		icon = document.createElement("span");
+		icon.innerHTML = str;
+		icon.className = "sxl txl tcv";
+	}
+	a.appendChild(icon);
+	let span = document.createElement("span");
+	span.innerHTML = tty_proc(j.pname);
+	a.appendChild(span);
+	a.className = "f fic pxs _s";
+	contents_btns.appendChild(a);
 }
 
 function mcp_handler(j) {
 	console.log('mcp_handler', j);
-        if (j.key == 'inband') {
-                if (j.data != "\n\r")
-                        output(tty_proc(j.data));
-        } if (j.key == "com-qnixsoft-web-auth-error")
-                forget();
-        else if (j.key == "com-qnixsoft-web-view") {
-                map.innerHTML = tty_proc(j.data);
+	if (j.key == 'inband') {
+		if (j.data != "\n\r")
+			output(tty_proc(j.data));
+	} if (j.key == "com-qnixsoft-web-auth-error")
+		forget();
+	else if (j.key == "com-qnixsoft-web-view") {
+		map.innerHTML = tty_proc(j.data);
 	} else if (j.key == "com-qnixsoft-web-art")
-                output('<img class="ah" src="' + j.src + '">');
-        else if (j.key == "com-qnixsoft-web-look-content") {
-                const dbref = parseInt(j.dbref);
-                actionable[dbref] = j;
-                renderActionable(dbref, j);
-        } else if (j.key == "com-qnixsoft-web-look") {
-                if (j.room) {
-                        rtitle.innerHTML = j.name;
-                        rdesc.innerHTML = j.description;
-                        contents_btns.innerHTML = '';
-                        dir_init(j.exits);
-                        actionable = {};
-                }
-        } else if (j.key == "com-qnixsoft-web-meme") {
-                var a = document.createElement("a");
-                output("\n" + j.who + " says:\n");
-                a.href = j.url;
-                var img = document.createElement("img");
-                img.src = j.url;
-                img.alt = j.url;
-                img.onload = scroll_reset;
-                a.appendChild(img);
-                term.appendChild(a);
-                output("\n");
-        } else if (j.key == "com-qnixsoft-web-out") {
-                const dbref = parseInt(j.dbref);
-                delete actionable[dbref];
-                contents_btns.innerHTML = '';
-                for (key in actionable) {
-                        const dbref = key;
-                        const j = actionable[key];
-                        renderActionable(dbref, j);
-                }
-        } else if (j.key == "com-qnixsoft-web-in") {
-                const dbref = parseInt(j.dbref);
-                actionable[dbref] = j;
-                renderActionable(dbref, j);
-        }
+		output('<img class="ah" src="' + j.src + '">');
+	else if (j.key == "com-qnixsoft-web-look-content") {
+		const dbref = parseInt(j.dbref);
+		actionable[dbref] = j;
+		renderActionable(dbref, j);
+	} else if (j.key == "com-qnixsoft-web-look") {
+		if (j.room) {
+			rtitle.innerHTML = j.name;
+			rdesc.innerHTML = j.description;
+			contents_btns.innerHTML = '';
+			dir_init(j.exits);
+			actionable = {};
+		}
+	} else if (j.key == "com-qnixsoft-web-meme") {
+		var a = document.createElement("a");
+		output("\n" + j.who + " says:\n");
+		a.href = j.url;
+		var img = document.createElement("img");
+		img.src = j.url;
+		img.alt = j.url;
+		img.onload = scroll_reset;
+		a.appendChild(img);
+		term.appendChild(a);
+		output("\n");
+	} else if (j.key == "com-qnixsoft-web-out") {
+		const dbref = parseInt(j.dbref);
+		delete actionable[dbref];
+		contents_btns.innerHTML = '';
+		for (key in actionable) {
+			const dbref = key;
+			const j = actionable[key];
+			renderActionable(dbref, j);
+		}
+	} else if (j.key == "com-qnixsoft-web-in") {
+		const dbref = parseInt(j.dbref);
+		actionable[dbref] = j;
+		renderActionable(dbref, j);
+	}
 }
 
 var BUFSIZE = 156000;
 
 ws.onmessage = function (e) {
-        mcp_proc(e.data);
+	mcp_proc(e.data);
 };
 
 var cmd_str = "";
@@ -194,102 +194,102 @@ input.onchange = function (e) {
 };
 
 function input_send(e) {
-        if (input.value.match("http")) {
-                var url = cmd_str.substr(cmd_str.indexOf("h"));
-                cmd_str = "meme " + url; 
-        }
-        cmd(cmd_str);
-        input.blur();
-        input.value = "";
-        return false;
+	if (input.value.match("http")) {
+		var url = cmd_str.substr(cmd_str.indexOf("h"));
+		cmd_str = "meme " + url; 
+	}
+	cmd(cmd_str);
+	input.blur();
+	input.value = "";
+	return false;
 };
 
 function gotPassword() {
-        password = input.value;
-        input.type = 'text';
-        input.placeholder = input.value = "";
+	password = input.value;
+	input.type = 'text';
+	input.placeholder = input.value = "";
 
-        login();
-        form.onsubmit = input_send;
-        input.blur();
-        return false;
+	login();
+	form.onsubmit = input_send;
+	input.blur();
+	return false;
 }
 
 function gotUsername() {
-        username = input.value;
-        input.value = "";
-        input.placeholder = input.type = 'password';
-        form.onsubmit = gotPassword;
-        output("Thanks. What would your password be?\n");
-        return false;
+	username = input.value;
+	input.value = "";
+	input.placeholder = input.type = 'password';
+	form.onsubmit = gotPassword;
+	output("Thanks. What would your password be?\n");
+	return false;
 }
 
 function focus() {
-        input.focus();
-        scroll_reset();
+	input.focus();
+	scroll_reset();
 }
 
 function promptUsername() {
-        input.placeholder = "username";
-        focus();
-        form.onsubmit = gotUsername;
-        output("Please insert username to login/register\n");
-        return false;
+	input.placeholder = "username";
+	focus();
+	form.onsubmit = gotUsername;
+	output("Please insert username to login/register\n");
+	return false;
 }
 
 if (username) {
-        forgetbtn.style.display = 'inline-block';
-        form.onsubmit = input_send;
+	forgetbtn.style.display = 'inline-block';
+	form.onsubmit = input_send;
 } else {
-        forgetbtn.style.display = 'none';
-        form.onsubmit = gotUsername;
+	forgetbtn.style.display = 'none';
+	form.onsubmit = gotUsername;
 }
 
 window.onkeydown = function(e) {
 	// console.log('onkeydown', e.keyCode, e);
-        help_hide();
+	help_hide();
 
-        if (document.activeElement == input) {
-                switch (e.keyCode) {
-                        case 27:
-                                input.blur();
-                }
-                return;
-        }
+	if (document.activeElement == input) {
+		switch (e.keyCode) {
+			case 27:
+				input.blur();
+		}
+		return;
+	}
 
-        switch (e.keyCode) {
-                case 83:
-                        input.value = "say ";
-                        focus();
-                        e.preventDefault();
-                        break;
+	switch (e.keyCode) {
+		case 83:
+			input.value = "say ";
+			focus();
+			e.preventDefault();
+			break;
 		case 65: // "a":
-                        focus();
-                        e.preventDefault();
-                        break;
+			focus();
+			e.preventDefault();
+			break;
 		case 75:
 		case 38: // "ArrowUp":
 			if (e.shiftKey)
 				cmd("K");
 			else
 				cmd("k");
-                        break;
+			break;
 		case 74:
 		case 49: // "ArrowDown":
 			if (e.shiftKey)
 				cmd("J");
 			else
 				cmd("j");
-                        break;
+			break;
 		case 72:
 		case 37: // "ArrowLeft":
 			cmd("h");
-                        break;
+			break;
 		case 76:
 		case 39: // "ArrowRight":
 			cmd("l");
-                        break;
-        }
+			break;
+	}
 };
 
 window.onorientationchange = scroll_reset;

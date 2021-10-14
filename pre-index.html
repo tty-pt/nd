@@ -1,82 +1,84 @@
 <html lang="en">
-        <head>
-                <meta charset="utf8"/>
-                <title>Neverdark</title>
-                <meta name="viewport" content="width=device-width, user-scalable=no">
-                <!-- <link rel="manifest" href="./manifest.json"> -->
+	<head>
+		<meta charset="utf8"/>
+		<title>Neverdark</title>
+		<meta name="viewport" content="width=device-width, user-scalable=no">
+		<!-- <link rel="manifest" href="./manifest.json"> -->
 		<link rel="stylesheet"  href="./vim.css" />
 		<link rel="stylesheet" href="./styles.css" />
 		<link rel="preload" href="./art/tilemap.png" as="image" />
 		<!-- <script src="./lib/text.min.js"></script> -->
-                <link rel="shortcut icon" type="image/png" href="./nd256.png"/>
-        </head>
-        <body class="cf cb sfv vn f">
-                <div class="hxs f c">
-                        <span id="title" class="fg">Neverdark - welcome</span>
+		<link rel="shortcut icon" type="image/png" href="./nd256.png"/>
+	</head>
+	<body class="cf cb sfv vn f">
+		<div class="hxs f c">
+			<span id="title" class="fg">Neverdark - welcome</span>
 			<span class="_n f">
 				<a class="tac sh sv pxs" id="help" onclick="help_show()">?</a>
-				<canvas id="forget" class="sh sv pxs" height=16 width=16></canvas>
+				<canvas id="forget" class="sh sv pxs" height=32 width=32></canvas>
 			</span>
-                </div>
-                <div id="main" class="_n f fg">
-                        <form id="left" class="vn f fg">
-                                <pre id="term" class="fg"></pre>
-                                <input name="cmd" class="cf" autocomplete="new-password" autocapitalize="off">
-                        </form>
-                        <div id="right" class="vn ts f">
-                                <pre id="map"></pre>
-                                <div class="_n f">
-                                        <div class="vn fg">
-                                                <div id="description"></div>
-                                                <div id="contents" class="vn"></div>
-                                        </div>
-                                        <div id="dir" class="vn tar tnow">
-                                                <div class="_n">
-                                                        <a class="round t pxs"></a><a id="k" class="round t pxs c0">k</a><a id="up" class="round t pxs c0">K</a>
-                                                </div>
-                                                <div class="_n">
-                                                        <a id="h" class="round t pxs c0">h</a><a class="round t pxs"></a><a id="l" class="round t pxs c0">l</a>
-                                                </div>
-                                                <div class="_n">
-                                                        <a class="round t pxs"></a><a id="j" class="round t pxs c0">j</a><a id="down" class="round t pxs c0">J</a>
-                                                </div>
-                                                <div id="act" class="_n">
-                                                </div>
-                                        </div>
-                                </div>
-                        </div>
-                </div>
-                <div class="modal abs sfv vn c fcc oh f">
-                        <span class="r c0 p">
-                                <h4>Help</h4>
-                                <p><b>s</b> To chat.</p>
-                                <p><b>a</b> to interact with the muck directly.</p>
-                                <p><b>:</b> to use muck commands.</p>
-                                <p>
-					This game is very early stage, and it still requires a<br />
-					lot of work. But i might not be able to provide it full-time.<br />
-                                        <br />
-					You can use it freely to chat with your friends.<br />
-					I don't keep logs and you are protected by SSL. <br />
-					Meme at will.<br />
-                                        <br />
-                                        The project is fully <a href="src/game.c">live</a> and <a href="github.com/quirinpa/neverdark">open-source</a>.<br />
-                                        <br />
-                                        These 2^16 worlds are all running inside Gdb, so if you <br />
-                                        cause a segfault, i can debug it.<br />
-                                        <br />
-                                        The contents and art were done by chivas. But you too <br />
-                                        can customize game content.<br />
-                                        <br />
-                                        But if you do a bad job, you might be attacked at <br />
-                                        night by his minions.<br />
-                                        <br />
-                                        You can find donation instructions <a href="http://www.vim.org/sponsor">here</a>.<br />
-                                </p>
-                                <p><b>:help startingout</b> will get you further.</p>
-                                <p><b>:help walk</b> is helpful starting out.</p>
-                        </span>
-                </div>
+		</div>
+		<div id="main" class="_n f fg">
+			<form id="left" class="vn f fg">
+				<pre id="term" class="fg"></pre>
+				<input name="cmd" class="cf" autocomplete="new-password" autocapitalize="off">
+			</form>
+			<div id="right" class="vn ts f">
+				<pre id="map"></pre>
+
+				<div class="_n f fg oa">
+					<div class="vn fg">
+						<div id="description"></div>
+						<div id="contents" class="vn"></div>
+					</div>
+					<div id="dir" class="vn tar tnow">
+						<div class="_n">
+							<a class="round t pxs"></a><a id="k" class="round t pxs c0">k</a><a id="up" class="round t pxs c0">K</a>
+						</div>
+						<div class="_n">
+							<a id="h" class="round t pxs c0">h</a><a class="round t pxs"></a><a id="l" class="round t pxs c0">l</a>
+						</div>
+						<div class="_n">
+							<a class="round t pxs"></a><a id="j" class="round t pxs c0">j</a><a id="down" class="round t pxs c0">J</a>
+						</div>
+					</div>
+				</div>
+
+				<div id="act" class="_n">
+				</div>
+			</div>
+		</div>
+		<div class="modal abs sfv vn c fcc oh f">
+			<span class="r c0 p">
+				<h4>Help</h4>
+				<p><b>s</b> To chat.</p>
+				<p><b>a</b> to interact with the muck directly.</p>
+				<p><b>:</b> to use muck commands.</p>
+				<p>
+				This game is very early stage, and it still requires a<br />
+				lot of work. But i might not be able to provide it full-time.<br />
+				<br />
+				You can use it freely to chat with your friends.<br />
+				I don't keep logs and you are protected by SSL. <br />
+				Meme at will.<br />
+				<br />
+				The project is fully <a href="src/game.c">live</a> and <a href="github.com/quirinpa/neverdark">open-source</a>.<br />
+				<br />
+				These 2^16 worlds are all running inside Gdb, so if you <br />
+				cause a segfault, i can debug it.<br />
+				<br />
+				The contents and art were done by chivas. But you too <br />
+				can customize game content.<br />
+				<br />
+				But if you do a bad job, you might be attacked at <br />
+				night by his minions.<br />
+				<br />
+				You can find donation instructions <a href="http://www.vim.org/sponsor">here</a>.<br />
+				</p>
+				<p><b>:help startingout</b> will get you further.</p>
+				<p><b>:help walk</b> is helpful starting out.</p>
+			</span>
+		</div>
 		<!-- DEPS -->
-        </body>
+	</body>
 </html>

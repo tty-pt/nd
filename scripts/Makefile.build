@@ -4,9 +4,6 @@ srcdir	:= ../${srcdir}
 
 uname != uname
 
-cflags-Darwin	+= -I/Users/quirinpa/opt/usr/include
-ldflags-Darwin += -L/Users/quirinpa/opt/usr/lib
-
 cflags-Darwin	+= -I/usr/local/opt/berkeley-db@4/include
 ldflags-Darwin += -L/usr/local/opt/berkeley-db@4/lib
 

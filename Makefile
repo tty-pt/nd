@@ -13,7 +13,7 @@ GCC_JS := gcc -E -P -nostdinc -undef -x c
 
 all: index.html main.js vim.css
 
-main.js:
+main.js: main.hjs canvas.hjs
 
 inline-js := main.js
 index.html: pre-index.html ${inline-js}
