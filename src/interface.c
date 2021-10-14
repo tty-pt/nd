@@ -821,15 +821,12 @@ command_process(command_t *cmd)
 
 	dbref player = cmd->player;
 
-	warn("command_process player %d", player);
-
 	command_debug(cmd, "command_process");
-	/* warn("command_process %s\n", command); */
 
-        // set current descriptor (needed for death)
-        CBUG(GETLID(player) < 0);
-        mobi_t *liv = MOBI(player);
-        liv->descr = descr;
+	// set current descriptor (needed for death)
+	CBUG(GETLID(player) < 0);
+	mobi_t *liv = MOBI(player);
+	liv->descr = descr;
 
 	pos_t pos;
 	map_where(pos, getloc(player));
