@@ -45,7 +45,7 @@ struct ws {
 
 static struct ws wss[FD_SETSIZE];
 
-#ifdef __OPENBSD__
+#ifdef __OpenBSD__
 int __b64_ntop(unsigned char const *src, size_t srclength,
 	       char *target, size_t targsize);
 #define b64_ntop(...) __b64_ntop(__VA_ARGS__)

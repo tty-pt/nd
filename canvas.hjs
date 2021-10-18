@@ -12,10 +12,13 @@ var actions_lbl = [
 
 function tilemap_icon_cache(p, data) {
 	var a = document.createElement("a");
+	var img = document.createElement("img");
 	var id = actions_lbl[p];
-	a.style.backgroundImage = "url(" + data + ")";
-	a.classList.add("s_", "sv", "pxs");
+	// a.style.backgroundImage = "url(" + data + ")";
+	a.classList.add("ps", "round", "c0");
 	a.style.display = 'none';
+        img.src = data;
+        a.appendChild(img);
 	a.onclick = function () {
 		cmd(id + " " + target.name);
 	};

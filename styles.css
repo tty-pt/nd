@@ -13,7 +13,7 @@ canvas { vertical-align: inherit; }
 
 #term {
 	overflow: auto;
-	max-height: calc(100% - 60px);
+	/* max-height: calc(100% - 60px); */
 	white-space: break-spaces;
 	margin-bottom: 0;
 }
@@ -62,9 +62,37 @@ form {
 
 pre { margin-top: -1em; }
 #map {
-        font-size: 1.7vh;
+        /* font-size: 3vh; */
+	font-size: 20px;
         margin-bottom: -1em;
         margin-left: -1em;
+}
+
+#dir {
+	position: absolute;
+	right: 8px;
+	top: 32px;
+}
+
+/* and (min-device-width: 320px) */ 
+/* and (max-device-width: 480px) */
+/* and (-webkit-min-device-pixel-ratio: 2) */
+/* and (orientation: landscape) { */
+@media only screen and (max-height: 600px) {
+        #map { font-size: 12px; }
+}
+
+@media only screen and (max-width: 760px) {
+        #term { font-size: 10px; }
+        #map { font-size: 12px; }
+}
+
+@media only screen and (max-height: 400px) {
+	#map { font-size: 8px; }
+}
+
+@media only screen and (max-width: 500px) {
+	#map { font-size: 8px; }
 }
 
 #contents img {

@@ -38,6 +38,7 @@ function cmd(str) {
 }
 
 var nop_opacity = 0.2;
+var op_opacity = 0.7;
 
 dir_btns.forEach(function(el) {
         el.onclick = cmd.bind(null, el.id);
@@ -48,8 +49,8 @@ var username = localStorage.getItem('username');
 var password = localStorage.getItem('password');
 
 function login() {
-	// localStorage.setItem('username', username);
-	// localStorage.setItem('password', password);
+	localStorage.setItem('username', username);
+	localStorage.setItem('password', password);
 	ws.send('auth ' + username + '=' + password + "\n");
 	forgetbtn.style.display = 'inline-block';
 }
@@ -86,6 +87,10 @@ function help_hide() {
 	modal.classList.remove("f");
 }
 
+modal.addEventListener("click", function (evt) {
+        help_hide();
+});
+
 function output(stuff) {
 	// term.append(stuff);
 	term.innerHTML += stuff;
@@ -106,7 +111,7 @@ var actionable = {};
 function dir_init(mask) {
 	for (var i = 0; i < dir_lbl.length; i++)
 		dir_btns[i].style.opacity
-			= (mask & 1 << i) ? 1 : nop_opacity;
+			= (mask & 1 << i) ? op_opacity : nop_opacity;
 }
 
 function renderActionable(dbref, j) {

@@ -30,7 +30,7 @@ int
 check_password(dbref player, const char* password)
 {
 	const char *pword = PLAYER_PASSWORD(player);
-#ifdef __OPENBSD__
+#ifdef __OpenBSD__
 	return !crypt_checkpass(password, pword);
 #else
 	char *enc;
@@ -50,7 +50,7 @@ set_password_raw(dbref player, const char* password)
 void
 set_password(dbref player, const char* password)
 {
-#ifdef __OPENBSD__
+#ifdef __OpenBSD__
 	char hash[64];
 	if (crypt_newhash(password, "bcrypt,4", hash, sizeof(hash))) {
 		perror("crypt_newhash");

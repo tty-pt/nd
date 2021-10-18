@@ -2,7 +2,9 @@
 	<head>
 		<meta charset="utf8"/>
 		<title>Neverdark</title>
-		<meta name="viewport" content="width=device-width, user-scalable=no">
+		<meta name="viewport" content="width=device-width, user-scalable=no viewport-fit=cover">
+		<meta name="mobile-web-app-capable" content="yes">
+		<meta name="apple-mobile-web-app-capable" content="yes">
 		<!-- <link rel="manifest" href="./manifest.json"> -->
 		<link rel="stylesheet"  href="./vim.css" />
 		<link rel="stylesheet" href="./styles.css" />
@@ -15,32 +17,33 @@
 			<span id="title" class="fg">Neverdark - welcome</span>
 			<span class="_n f">
 				<a class="tac sh sv pxs" id="help" onclick="help_show()">?</a>
-				<canvas id="forget" class="sh sv pxs" height=32 width=32></canvas>
+				<canvas id="forget" class="sh sv pxs" height=16 width=16></canvas>
 			</span>
 		</div>
 		<div id="main" class="_n f fg">
 			<form id="left" class="vn f fg">
 				<pre id="term" class="fg"></pre>
-				<input name="cmd" class="cf" autocomplete="new-password" autocapitalize="off">
+				<input name="cmd" class="cf" autocomplete="please-dont" autocapitalize="off">
 			</form>
 			<div id="right" class="vn ts f">
-				<pre id="map"></pre>
+				<div class="faj"><pre id="map"></pre></div>
+
+				<div id="dir" class="vn tar tnow">
+					<div class="_n">
+						<a class="round tm ps"></a><a id="k" class="round tm ps c0">k</a><a id="up" class="round tm ps c0">K</a>
+					</div>
+					<div class="_n">
+						<a id="h" class="round tm ps c0">h</a><a class="round tm ps"></a><a id="l" class="round tm ps c0">l</a>
+					</div>
+					<div class="_n">
+						<a class="round tm ps"></a><a id="j" class="round tm ps c0">j</a><a id="down" class="round tm ps c0">J</a>
+					</div>
+				</div>
 
 				<div class="_n f fg oa">
 					<div class="vn fg">
 						<div id="description"></div>
 						<div id="contents" class="vn"></div>
-					</div>
-					<div id="dir" class="vn tar tnow">
-						<div class="_n">
-							<a class="round t pxs"></a><a id="k" class="round t pxs c0">k</a><a id="up" class="round t pxs c0">K</a>
-						</div>
-						<div class="_n">
-							<a id="h" class="round t pxs c0">h</a><a class="round t pxs"></a><a id="l" class="round t pxs c0">l</a>
-						</div>
-						<div class="_n">
-							<a class="round t pxs"></a><a id="j" class="round t pxs c0">j</a><a id="down" class="round t pxs c0">J</a>
-						</div>
 					</div>
 				</div>
 

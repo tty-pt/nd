@@ -17,7 +17,7 @@ prochelp-obj-y := prochelp.o
 fbmuck-obj-y := geometry.o plant.o biome.o noise.o search.o \
 	view.o item.o spell.o drink.o mob.o kill.o geography.o \
 	shop.o ws.o
-fbmuck-obj-y += boolexp.o create.o db.o \
+fbmuck-obj-y += boolexp.o create.o mdb.o \
 	hashtab.o help.o \
 	look.o match.o \
 	move.o mcp.o \

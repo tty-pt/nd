@@ -1,6 +1,6 @@
 #include "search.h"
 
-#ifdef __OPENBSD__
+#ifdef __OpenBSD__
 #include <db4/db.h>
 #else
 #include <db.h>
