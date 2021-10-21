@@ -93,6 +93,7 @@ struct obj {
 	char const *name;
 	char const *art;
 	char const *description;
+        char const *avatar;
 };
 
 extern enum exit e_map[];

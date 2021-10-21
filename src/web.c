@@ -40,20 +40,15 @@ web_geo_view(int descr, char *buf)
 }
 
 int
-web_art(int descr, char const *art, char *buf, size_t n)
+web_art(int descr, char const *art)
 {
 	McpMesg msg;
 	McpFrame *mfr = web_frame(descr);
 	if (!mfr)
                 return 1;
 
-        snprintf(buf, n, "../art/%s.png", art);
-        if (access(buf, F_OK) == -1)
-                return 1;
-
-        snprintf(buf, n, "./art/%s.png", art);
         mcp_mesg_init(&msg, MCP_WEB_PKG, "art");
-        mcp_mesg_arg_append(&msg, "src", buf);
+        mcp_mesg_arg_append(&msg, "src", art);
         mcp_frame_output_mesg(mfr, &msg);
         mcp_mesg_clear(&msg);
         return 0;
@@ -169,4 +164,20 @@ web_content_in(dbref thing) {
 
         web_room_mcp(loc, &msg);
         mcp_mesg_clear(&msg);
+}
+
+int
+web_auth_fail(int descr, int reason) {
+	McpMesg msg;
+	McpFrame *mfr = web_frame(descr);
+	char buf[BUFSIZ];
+	if (!mfr)
+                return 1;
+
+        mcp_mesg_init(&msg, MCP_WEB_PKG, "auth-fail");
+	snprintf(buf, sizeof(buf), "%d", reason);
+        mcp_mesg_arg_append(&msg, "reason", buf);
+        mcp_frame_output_mesg(mfr, &msg);
+        mcp_mesg_clear(&msg);
+        return 0;
 }

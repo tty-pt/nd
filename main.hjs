@@ -4,13 +4,34 @@
 
 #define CONFIG_PROTO "ws"
 
-var ws = new WebSocket(CONFIG_PROTO + "://" + window.location.hostname + ':4201', 'text');
+let ws = null;
 
+function ws_init() {
+        ws = new WebSocket(CONFIG_PROTO + "://" + window.location.hostname + ':4201', 'text');
+        ws.binaryType = 'arraybuffer';
+        ws.onopen = function () {
+                if (username && password) {
+                        login();
+                        help_hide();
+                }
+        };
+        ws.onclose = function () {
+                output("\nSocket connection closed");
+                // input.disabled = true;
+                forgetbtn.style.display = 'none';
+        };
+        ws.onmessage = function (e) {
+                console.log("input", e.data);
+                mcp_proc(e.data);
+        };
+}
+
+ws_init();
 mcp_init();
 
-var target = null;
+let target = null;
 
-var dir_lbl = [ 'h', 'j', 'k', 'l', 'down', 'up' ],
+const dir_lbl = [ 'h', 'j', 'k', 'l', 'down', 'up' ],
         term = document.querySelector('#term'),
         form = document.querySelector('form'),
         input = document.querySelector('input'),
@@ -26,6 +47,8 @@ var dir_lbl = [ 'h', 'j', 'k', 'l', 'down', 'up' ],
         act = document.getElementById('act'),
         target_lbl = act.children[0];
 
+let connected = 0;
+
 function actions_reset() {
 	act.style.display = 'none';
 	target = null;
@@ -37,40 +60,36 @@ function cmd(str) {
 	actions_reset();
 }
 
-var nop_opacity = 0.2;
-var op_opacity = 0.7;
+let nop_opacity = 0.2;
+let op_opacity = 0.7;
 
 dir_btns.forEach(function(el) {
         el.onclick = cmd.bind(null, el.id);
         el.style.opacity = nop_opacity;
 });
 
-var username = localStorage.getItem('username');
-var password = localStorage.getItem('password');
+let username = localStorage.getItem('username');
+let password = localStorage.getItem('password');
 
 function login() {
 	localStorage.setItem('username', username);
 	localStorage.setItem('password', password);
 	ws.send('auth ' + username + '=' + password + "\n");
 	forgetbtn.style.display = 'inline-block';
+        connected = 1;
 }
 
 function forget() {
 	localStorage.removeItem('username');
 	localStorage.removeItem('password');
-	location.reload();
+        promptUsername();
 }
 
-forgetbtn.onclick = forget;
-
-ws.binaryType = 'arraybuffer';
-
-ws.onopen = function () {
-	// cmd("c wtf=ignored\n");
-	if (username && password) {
-		login();
-		help_hide();
-	}
+forgetbtn.onclick = function() {
+        forget();
+	location.reload();
+        ws.close();
+        ws_init();
 };
 
 function scroll_reset() {
@@ -97,32 +116,26 @@ function output(stuff) {
 	scroll_reset();
 }
 
-ws.onclose = function () {
-	output("Socket connection closed\n");
-	// input.disabled = true;
-	forgetbtn.style.display = 'none';
-};
-
 if (!username)
 	promptUsername();
 
-var actionable = {};
+let actionable = {};
 
 function dir_init(mask) {
-	for (var i = 0; i < dir_lbl.length; i++)
+	for (let i = 0; i < dir_lbl.length; i++)
 		dir_btns[i].style.opacity
 			= (mask & 1 << i) ? op_opacity : nop_opacity;
 }
 
 function renderActionable(dbref, j) {
-	var str = tty_proc(j.icon);
-	var a = document.createElement("a");
+	let str = tty_proc(j.icon);
+	let a = document.createElement("a");
 	a.onclick = actions_init.bind(null, dbref);
 	let icon = null;
 	if (j.avatar) {
 		icon = document.createElement("img");
 		icon.src = "art/" + j.avatar;
-		icon.className = "";
+                icon.classList.add("s_xl", "svxl");
 	} else {
 		icon = document.createElement("span");
 		icon.innerHTML = str;
@@ -141,17 +154,25 @@ function mcp_handler(j) {
 	if (j.key == 'inband') {
 		if (j.data != "\n\r")
 			output(tty_proc(j.data));
-	} if (j.key == "com-qnixsoft-web-auth-error")
+	} if (j.key == "web-auth-fail")
 		forget();
-	else if (j.key == "com-qnixsoft-web-view") {
+	else if (j.key == "web-view") {
 		map.innerHTML = tty_proc(j.data);
-	} else if (j.key == "com-qnixsoft-web-art")
-		output('<img class="ah" src="' + j.src + '">');
-	else if (j.key == "com-qnixsoft-web-look-content") {
+	} else if (j.key == "web-art") {
+                let img = document.createElement("img");
+                img.className = "ah sk_f";
+                img.src = "art/" + j.src;
+                img.addEventListener("load", function () {
+                        scroll_reset();
+                });
+                output('\n');
+                term.appendChild(img);
+                // output('\n<img class="ah sk_f" src="art/' + j.src + '">');
+        } else if (j.key == "web-look-content") {
 		const dbref = parseInt(j.dbref);
 		actionable[dbref] = j;
 		renderActionable(dbref, j);
-	} else if (j.key == "com-qnixsoft-web-look") {
+	} else if (j.key == "web-look") {
 		if (j.room) {
 			rtitle.innerHTML = j.name;
 			rdesc.innerHTML = j.description;
@@ -159,18 +180,18 @@ function mcp_handler(j) {
 			dir_init(j.exits);
 			actionable = {};
 		}
-	} else if (j.key == "com-qnixsoft-web-meme") {
-		var a = document.createElement("a");
+	} else if (j.key == "web-meme") {
+		let a = document.createElement("a");
 		output("\n" + j.who + " says:\n");
 		a.href = j.url;
-		var img = document.createElement("img");
+		let img = document.createElement("img");
 		img.src = j.url;
 		img.alt = j.url;
 		img.onload = scroll_reset;
 		a.appendChild(img);
 		term.appendChild(a);
 		output("\n");
-	} else if (j.key == "com-qnixsoft-web-out") {
+	} else if (j.key == "web-out") {
 		const dbref = parseInt(j.dbref);
 		delete actionable[dbref];
 		contents_btns.innerHTML = '';
@@ -179,20 +200,16 @@ function mcp_handler(j) {
 			const j = actionable[key];
 			renderActionable(dbref, j);
 		}
-	} else if (j.key == "com-qnixsoft-web-in") {
+	} else if (j.key == "web-in") {
 		const dbref = parseInt(j.dbref);
 		actionable[dbref] = j;
 		renderActionable(dbref, j);
 	}
 }
 
-var BUFSIZE = 156000;
+let BUFSIZE = 156000;
 
-ws.onmessage = function (e) {
-	mcp_proc(e.data);
-};
-
-var cmd_str = "";
+let cmd_str = "";
 
 input.onchange = function (e) {
 	cmd_str = e.target.value;
@@ -200,7 +217,7 @@ input.onchange = function (e) {
 
 function input_send(e) {
 	if (input.value.match("http")) {
-		var url = cmd_str.substr(cmd_str.indexOf("h"));
+		let url = cmd_str.substr(cmd_str.indexOf("h"));
 		cmd_str = "meme " + url; 
 	}
 	cmd(cmd_str);
@@ -225,7 +242,7 @@ function gotUsername() {
 	input.value = "";
 	input.placeholder = input.type = 'password';
 	form.onsubmit = gotPassword;
-	output("Thanks. What would your password be?\n");
+	output("\nThanks. What would your password be?");
 	return false;
 }
 
@@ -238,7 +255,7 @@ function promptUsername() {
 	input.placeholder = "username";
 	focus();
 	form.onsubmit = gotUsername;
-	output("Please insert username to login/register\n");
+	output("\nPlease insert username to login/register");
 	return false;
 }
 

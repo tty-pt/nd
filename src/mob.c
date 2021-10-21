@@ -117,7 +117,12 @@ mob_t mob_map[] = {
 		.biomes = (1 << BIOME_TEMPERATE_RAINFOREST)
 	},
 	[MOB_BANDIT] = {
-		MOB_DEFINE(bandit, ""),
+		{
+			.name = "bandit",
+			.art = "bandit.jpg",
+			.description = "A shady person under some robes",
+			.avatar = "bandit_avatar.jpg"
+		},
 		{ &dagger_drop, ARMORSET_LIST(padded),
 			ARMORSET_LIST(hide),
 			ARMORSET_LIST(chainmail), NULL },
@@ -131,7 +136,10 @@ mob_t mob_map[] = {
 			| (1 << BIOME_TEMPERATE_RAINFOREST)
 	},
 	[MOB_SWALLOW] = {
-		BIRD(swallow, ""), .y = 4,
+		{ "swallow", "bird/swallow.txt", "", "" },
+		.wt = PECK,
+		.type = ELM_AIR,
+		.y = 4,
 		.biomes = (1 << BIOME_SHRUBLAND)
 			| (1 << BIOME_CONIFEROUS_FOREST)
 			| (1 << BIOME_BOREAL_FOREST)
@@ -151,7 +159,15 @@ mob_t mob_map[] = {
 		.o.name = "vampire spawn",
 	},
 	[MOB_WOODPECKER] = {
-		BIRD(woodpecker, ""), .y = 2,
+		{
+			.name = "woodpecker",
+			.art = "woodpecker.jpg",
+			.description = "",
+			.avatar = "woodpecker_avatar.jpg"
+		},
+		.wt = PECK,
+		.type = ELM_AIR,
+		.y = 2,
 		.biomes = (1 << BIOME_SHRUBLAND)
 			| (1 << BIOME_CONIFEROUS_FOREST)
 			| (1 << BIOME_BOREAL_FOREST)
@@ -161,7 +177,14 @@ mob_t mob_map[] = {
 			| (1 << BIOME_TEMPERATE_RAINFOREST)
 	},
 	[MOB_SPARROW] = {
-		BIRD(sparrow, ""), .y = 3,
+		{
+			.name = "sparrow",
+			.art = "sparrow.jpg",
+			.description = "",
+			.avatar = "sparrow_avatar.jpg"
+		},
+		.wt = PECK, .type = ELM_AIR,
+		.y = 3,
 		.biomes = (1 << BIOME_SHRUBLAND)
 			| (1 << BIOME_CONIFEROUS_FOREST)
 			| (1 << BIOME_BOREAL_FOREST)

@@ -273,7 +273,12 @@ others_add(command_t *cmd, dbref where, enum biome b, pos_t p)
 {
 	noise_t v = uhash((const char *) p, sizeof(pos_t), 0);
 	unsigned char n = v & 0x7;
-	static struct obj stone = { "stone", "", "" };
+	static struct obj stone = {
+                .name = "stone",
+                .art = "stones.jpg",
+                .description = "Solid stone(s)",
+                .avatar = "stones_avatar.jpg"
+        };
 	if (b == BIOME_WATER)
 		return;
 	if (n && (v & 0x18))

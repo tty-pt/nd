@@ -8,15 +8,30 @@
 /* TODO calculate water needs */
 plant_t plant_map[] = {{
 	// taiga
-	{ "pinus silvestris", "", "" }, ANSI_BOLD ANSI_FG_GREEN, 'x', 'X', ANSI_RESET_BOLD,
+	{
+                .name = "pinus sylvestris",
+                .art = "pinus_sylvestris.png",
+                .description = "",
+                .avatar = "pinus_sylvestris_avatar.png"
+        }, ANSI_BOLD ANSI_FG_GREEN, 'x', 'X', ANSI_RESET_BOLD,
 	30, 70, 50, 1024, 1,
 	{ "fruit", "", "" }, 1,
 }, {	// temperate rainforest
-	{ "pseudotsuga menziesii", "", "" }, ANSI_BOLD ANSI_FG_GREEN, 't', 'T', ANSI_RESET_BOLD,
+	{
+                .name = "pseudotsuga menziesii",
+                .art = "pseudotsuga_menziesii.jpg",
+                .description = "",
+                .avatar = "pseudotsuga_menziesii_avatar.jpg"
+        }, ANSI_BOLD ANSI_FG_GREEN, 't', 'T', ANSI_RESET_BOLD,
 	32, 100, 180, 350, 1,
 	{ "fruit", "", "" }, 1,
 }, {	// woodland / grassland / shrubland
-	{ "betula pendula", "", "" }, ANSI_FG_YELLOW, 'x', 'X', "",
+	{
+                .name = "betula pendula",
+                .art = "betula_pendula.jpg",
+                .description = "",
+                .avatar = "betula_pendula_avatar.jpg"
+        }, ANSI_FG_YELLOW, 'x', 'X', "",
 	30, 86, 0, 341, 1,
 	{ "fruit", "", "" }, 1,
 }, {	// woodland / grassland?
@@ -32,7 +47,12 @@ plant_t plant_map[] = {{
 	110, 190, 10, 180, 1,
 	{ "fruit", "", "" }, 1,
 }, {	// savannah
-	{ "acacia senegal", "", "" }, ANSI_BOLD ANSI_FG_GREEN, 't', 'T', "",
+	{
+                .name = "acacia senegal",
+                .art = "acacia_senegal.jpg",
+                .description = "",
+                .avatar = "acacia_senegal_avatar.jpg"
+        }, ANSI_BOLD ANSI_FG_GREEN, 't', 'T', "",
 	40, 150, 20, 345, 1,
 	{ "fruit", "", "" }, 1,
 }, {

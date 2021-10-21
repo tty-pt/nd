@@ -4,6 +4,7 @@
 #include "props.h"
 #include "externs.h"
 #include "search.h"
+#include "web.h"
 #endif
 
 enum exit e_map[] = {
@@ -133,6 +134,7 @@ obj_add(struct obj o, dbref where)
 	dbref nu = new_object();
 	NAME(nu) = alloc_string(o.name);
 	SETART(nu, alloc_string(o.art));
+        SETAVATAR(nu, o.avatar);
 	SETDESC(nu, alloc_string(o.description));
 	ALLOC_THING_SP(nu);
 	DBFETCH(nu)->location = where;
@@ -141,6 +143,7 @@ obj_add(struct obj o, dbref where)
 	THING_SET_HOME(nu, where);
 	PUSH(nu, DBFETCH(where)->contents);
 	DBDIRTY(where);
+        web_content_in(nu);
 	return nu;
 }
 

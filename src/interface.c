@@ -766,17 +766,17 @@ do_auth(command_t *cmd)
 		if (player == NOTHING) {
 			descr_inband(fd, "Either there is already a player with"
 					" that name, or that name is illegal.\r\n");
+                        web_auth_fail(fd, 1);
 			return;
 		}
 
 		created = 1;
 		mob_put(player);
-	} else {
-		if (PLAYER_FD(player) > 0) {
-			descr_inband(fd, "That player is already connected.\r\n");
-			return;
-		}
-	}
+	} else if (PLAYER_FD(player) > 0) {
+                descr_inband(fd, "That player is already connected.\r\n");
+                web_auth_fail(fd, 2);
+                return;
+        }
 
 	d->flags |= DF_CONNECTED;
 	d->player = cmd->player = player;
@@ -1143,16 +1143,21 @@ art(int fd, const char *art)
 
 		return;
 	
-	snprintf(buf, sizeof(buf), "../art/%s.txt", art);
+        size_t len = strlen(art);
 
-	if ((f = fopen(buf, "rb")) == NULL) 
-		return;
+        if (!strcmp(art + len - 3, "txt")) {
+                snprintf(buf, sizeof(buf), "../art/%s", art);
 
-	while (fgets(buf, sizeof(buf) - 3, f))
-		descr_inband(fd, buf);
+                if ((f = fopen(buf, "rb")) == NULL) 
+                        return;
 
-	fclose(f);
-	descr_inband(fd, "\r\n");
+                while (fgets(buf, sizeof(buf) - 3, f))
+                        descr_inband(fd, buf);
+
+                fclose(f);
+                descr_inband(fd, "\r\n");
+        } else
+                web_art(fd, art);
 }
 
 McpFrame *
