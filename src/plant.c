@@ -39,7 +39,13 @@ plant_t plant_map[] = {{
 	50, 146, 500, 900, 1,
 	{ "fruit", "", "" }, 1,
 }, {	// temperate forest
-	{ "abies alba", "", "" }, ANSI_BOLD ANSI_FG_GREEN, 'a', 'A', ANSI_RESET_BOLD,
+        {
+                .name = "abies alba",
+                .art = "abies_alba.jpg",
+                .description = "",
+                .avatar = "abies_alba_avatar.jpg"
+        },
+	ANSI_BOLD ANSI_FG_GREEN, 'a', 'A', ANSI_RESET_BOLD,
 	-40, 86, 100, 200, 1,
 	{ "fruit", "", "" }, 1,
 }, {	// desert

@@ -136,7 +136,12 @@ mob_t mob_map[] = {
 			| (1 << BIOME_TEMPERATE_RAINFOREST)
 	},
 	[MOB_SWALLOW] = {
-		{ "swallow", "bird/swallow.txt", "", "" },
+		{
+			.name = "swallow",
+			.art = "swallow.png",
+			.description = "",
+			.avatar = "swallow_avatar.png"
+		},
 		.wt = PECK,
 		.type = ELM_AIR,
 		.y = 4,
