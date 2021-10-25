@@ -60,6 +60,7 @@ web_look(command_t *cmd, dbref loc, char const *description)
 	dbref player = cmd->player;
 	int descr = cmd->fd;
         char buf[BUFSIZ];
+        char buf2[BUFSIZ];
         dbref thing, can_see_loc;
 	McpMesg msg;
 	McpFrame *mfr = web_frame(descr);
@@ -67,16 +68,26 @@ web_look(command_t *cmd, dbref loc, char const *description)
                 return 1;
 
         mcp_mesg_init(&msg, MCP_WEB_PKG, "look");
+        snprintf(buf2, sizeof(buf2), "%d", loc);
+        mcp_mesg_arg_append(&msg, "dbref", buf2);
+
         if (Typeof(loc) == TYPE_ROOM) {
                 mcp_mesg_arg_append(&msg, "room", "1");
                 snprintf(buf, sizeof(buf), "%d", gexits(cmd, loc));
                 mcp_mesg_arg_append(&msg, "exits", buf);
 
         }
+        mcp_mesg_arg_append(&msg, "art", GETMESG(loc, MESGPROP_ART));
         mcp_mesg_arg_append(&msg, "name", unparse_object(player, loc));
         mcp_mesg_arg_append(&msg, "description", description);
         mcp_frame_output_mesg(mfr, &msg);
         mcp_mesg_clear(&msg);
+
+        if (Typeof(loc) == TYPE_EXIT)
+                return 0;
+
+        if (loc != player && Typeof(loc) == TYPE_PLAYER && !Wizard(player))
+                return 0;
 
 	can_see_loc = (!Dark(loc) || controls(player, loc));
 
@@ -85,6 +96,7 @@ web_look(command_t *cmd, dbref loc, char const *description)
                 if (can_see(player, thing, can_see_loc)) {
                         struct icon ico = icon(thing);
                         mcp_mesg_init(&msg, MCP_WEB_PKG, "look-content");
+                        mcp_mesg_arg_append(&msg, "loc", buf2);
                         snprintf(buf, sizeof(buf), "%d", thing);
                         mcp_mesg_arg_append(&msg, "dbref", buf);
                         mcp_mesg_arg_append(&msg, "name", NAME(thing));
@@ -139,6 +151,8 @@ web_content_out(dbref thing) {
 	McpMesg msg;
 
         mcp_mesg_init(&msg, MCP_WEB_PKG, "out");
+	snprintf(buf, BUFSIZ, "%d", loc);
+        mcp_mesg_arg_append(&msg, "loc", buf);
 	snprintf(buf, BUFSIZ, "%d", thing);
         mcp_mesg_arg_append(&msg, "dbref", buf);
         /* mcp_mesg_arg_append(&msg, "name", unparse_object(player, thing)); */
@@ -154,12 +168,15 @@ web_content_in(dbref thing) {
 	McpMesg msg;
 
         mcp_mesg_init(&msg, MCP_WEB_PKG, "in");
+	snprintf(buf, BUFSIZ, "%d", loc);
+        mcp_mesg_arg_append(&msg, "loc", buf);
 	snprintf(buf, BUFSIZ, "%d", thing);
         mcp_mesg_arg_append(&msg, "dbref", buf);
 	mcp_mesg_arg_append(&msg, "name", NAME(thing));
 	mcp_mesg_arg_append(&msg, "pname", unparse_object(HUMAN_BEING, thing));
 	mcp_mesg_arg_append(&msg, "icon", ico.icon);
 	snprintf(buf, sizeof(buf), "%d", ico.actions);
+        mcp_mesg_arg_append(&msg, "avatar", GETAVATAR(thing));
 	mcp_mesg_arg_append(&msg, "actions", buf);
 
         web_room_mcp(loc, &msg);

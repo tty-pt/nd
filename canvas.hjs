@@ -20,7 +20,7 @@ function tilemap_icon_cache(p, data) {
         img.src = data;
         a.appendChild(img);
 	a.onclick = function () {
-		cmd(id + " " + target.name);
+		cmd(id + " " + room_target.name);
 	};
 	act.appendChild(a);
 	return a;
@@ -48,11 +48,11 @@ function tilemap_cache() {
 
 	actions_init =  function (dbref) {
 		act.style.display = 'block';
-		target = actionable[dbref];
-		// target_lbl.innerHTML = target.pname;
+		room_target = actionable[here][dbref];
+		// target_lbl.innerHTML = room_target.pname;
 		for (var i = 0; i < action_btns.length; i++)
 			action_btns[i].style.display
-				= (target.actions & (1 << i)) ? '' : 'none';
+				= (room_target.actions & (1 << i)) ? '' : 'none';
 	};
 }
 

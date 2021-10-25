@@ -74,17 +74,31 @@ pre { margin-top: -1em; }
 	top: 32px;
 }
 
+.sr1 {
+        width: 256px;
+        height: 256px;
+}
+
 /* and (min-device-width: 320px) */ 
 /* and (max-device-width: 480px) */
 /* and (-webkit-min-device-pixel-ratio: 2) */
 /* and (orientation: landscape) { */
 @media only screen and (max-height: 600px) {
         #map { font-size: 12px; }
+        .sr1 {
+                width: 128px;
+                height: 128px;
+        }
+
 }
 
 @media only screen and (max-width: 760px) {
         #term { font-size: 10px; }
         #map { font-size: 12px; }
+        .sr1 {
+                width: 128px;
+                height: 128px;
+        }
 }
 
 @media only screen and (max-height: 400px) {

@@ -68,6 +68,7 @@ moveto(dbref what, dbref where)
 	PUSH(what, DBFETCH(where)->contents);
 	DBDIRTY(where);
 	DBSTORE(what, location, where);
+
 	if (Typeof(where) == TYPE_ROOM)
 		web_content_in(what);
 }

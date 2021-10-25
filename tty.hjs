@@ -71,6 +71,12 @@ esc_state_0(tty, ch) {
         // case '\t':
         //         tty.output += "\\t";
         //         return 2;
+        case '<':
+                tty.output += "&lt;";
+                return 4;
+        case '>':
+                tty.output += "&gt;";
+                return 4;
 	case '"':
                 tty.output += "\"";
                 return 2;

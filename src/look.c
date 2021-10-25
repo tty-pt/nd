@@ -171,7 +171,7 @@ do_look_at(command_t *cmd)
 				if (getloc(player) != getloc(thing)
 					&& !controls(player, thing)) {
 					notify(player, "Permission denied. (Your location isn't the same as what you're looking at)");
-				} else {
+				} else if (web_look(cmd, thing, GETDESC(thing))) {
 					look_simple(cmd, thing);
 					look_contents(cmd, thing, "Carrying:");
 				}
@@ -180,7 +180,7 @@ do_look_at(command_t *cmd)
 				if (getloc(player) != getloc(thing)
 					&& getloc(thing) != player && !controls(player, thing)) {
 					notify(player, "Permission denied. (You're not in the same room as or carrying the object)");
-				} else {
+				} else if (web_look(cmd, thing, GETDESC(thing))) {
 					look_simple(cmd, thing);
 					if (!(FLAGS(thing) & HAVEN)) {
 						look_contents(cmd, thing, "Contains:");
@@ -188,7 +188,8 @@ do_look_at(command_t *cmd)
 				}
 				break;
 			default:
-				look_simple(cmd, thing);
+				if (web_look(cmd, thing, GETDESC(thing)))
+                                        look_simple(cmd, thing);
 				break;
 			}
 		} else if (thing == NOTHING || (*detail && thing != AMBIGUOUS)) {
@@ -566,14 +567,16 @@ do_inventory(command_t *cmd)
 	dbref player = cmd->player;
 	dbref thing;
 
-	if ((thing = DBFETCH(player)->contents) == NOTHING) {
-		notify(player, "You aren't carrying anything.");
-	} else {
-		notify(player, "You are carrying:");
-		DOLIST(thing, thing) {
-			notify(player, unparse_object(player, thing));
-		}
-	}
+        if (web_look(cmd, player, GETDESC(player))) {
+                if ((thing = DBFETCH(player)->contents) == NOTHING) {
+                        notify(player, "You aren't carrying anything.");
+                } else {
+                        notify(player, "You are carrying:");
+                        DOLIST(thing, thing) {
+                                notify(player, unparse_object(player, thing));
+                        }
+                }
+        }
 
 	do_score(cmd);
 }

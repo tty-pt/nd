@@ -5,6 +5,7 @@
 #define CONFIG_PROTO "ws"
 
 let ws = null;
+let here, target;
 
 function ws_init() {
         ws = new WebSocket(CONFIG_PROTO + "://" + window.location.hostname + ':4201', 'text');
@@ -21,7 +22,7 @@ function ws_init() {
                 forgetbtn.style.display = 'none';
         };
         ws.onmessage = function (e) {
-                console.log("input", e.data);
+                // console.log("input", e.data);
                 mcp_proc(e.data);
         };
 }
@@ -29,7 +30,7 @@ function ws_init() {
 ws_init();
 mcp_init();
 
-let target = null;
+let room_target = null;
 
 const dir_lbl = [ 'h', 'j', 'k', 'l', 'down', 'up' ],
         term = document.querySelector('#term'),
@@ -38,6 +39,10 @@ const dir_lbl = [ 'h', 'j', 'k', 'l', 'down', 'up' ],
         modal = document.querySelector('.modal'),
         forgetbtn = document.getElementById('forget'),
         contents_btns = document.getElementById('contents'),
+        target_div = document.getElementById('target'),
+        target_description = document.getElementById('target_description'),
+        target_contents = document.getElementById('target_contents'),
+        target_art = document.getElementById('target_art'),
         rtitle = document.querySelector('#title'),
         rdesc = document.querySelector('#description'),
         map = document.querySelector('#map'),
@@ -47,11 +52,13 @@ const dir_lbl = [ 'h', 'j', 'k', 'l', 'down', 'up' ],
         act = document.getElementById('act'),
         target_lbl = act.children[0];
 
+let contents = {};
+
 let connected = 0;
 
 function actions_reset() {
 	act.style.display = 'none';
-	target = null;
+	room_target = null;
 }
 
 function cmd(str) {
@@ -146,7 +153,7 @@ function renderActionable(dbref, j) {
 	span.innerHTML = tty_proc(j.pname);
 	a.appendChild(span);
 	a.className = "f fic pxs _s";
-	contents_btns.appendChild(a);
+        contents[parseInt(j.loc)].appendChild(a);
 }
 
 function mcp_handler(j) {
@@ -170,16 +177,37 @@ function mcp_handler(j) {
                 // output('\n<img class="ah sk_f" src="art/' + j.src + '">');
         } else if (j.key == "web-look-content") {
 		const dbref = parseInt(j.dbref);
-		actionable[dbref] = j;
+                const loc = parseInt(j.loc);
+		actionable[loc][dbref] = j;
 		renderActionable(dbref, j);
 	} else if (j.key == "web-look") {
+                const dbref = parseInt(j.dbref);
 		if (j.room) {
+                        if (here)
+                                delete actionable[here];
+                        here = dbref;
+                        contents[here] = contents_btns;
 			rtitle.innerHTML = j.name;
 			rdesc.innerHTML = j.description;
-			contents_btns.innerHTML = '';
 			dir_init(j.exits);
-			actionable = {};
-		}
+                        if (target) {
+                                delete actionable[target];
+                                contents[target].innerHTML = "";
+                                target_art.src = "";
+                                target_div.classList.add("dn");
+                        }
+		} else {
+                        target_div.classList.remove("dn");
+                        target = dbref;
+                        contents[target] = target_contents;
+                        if (j.art)
+                                target_art.src = "art/" + j.art;
+                        else
+                                target_art.src = "";
+                        target_description.innerHTML = j.description;
+                }
+                contents[dbref].innerHTML = '';
+                actionable[dbref] = {};
 	} else if (j.key == "web-meme") {
 		let a = document.createElement("a");
 		output("\n" + j.who + " says:\n");
@@ -193,17 +221,31 @@ function mcp_handler(j) {
 		output("\n");
 	} else if (j.key == "web-out") {
 		const dbref = parseInt(j.dbref);
-		delete actionable[dbref];
-		contents_btns.innerHTML = '';
-		for (key in actionable) {
-			const dbref = key;
-			const j = actionable[key];
-			renderActionable(dbref, j);
-		}
+                const loc = parseInt(j.loc);
+                delete actionable[loc][dbref];
+                contents[loc].innerHTML = '';
+                console.log('web-out', dbref, loc, target);
+                if (dbref == target) {
+                        contents[target].innerHTML = "";
+                        target_art.src = "";
+                        target_div.classList.add("dn");
+                        target = null;
+                }
+
+                for (key in actionable[loc]) {
+                        const dbref = key;
+                        const j = actionable[loc][key];
+                        renderActionable(dbref, j);
+                }
 	} else if (j.key == "web-in") {
 		const dbref = parseInt(j.dbref);
-		actionable[dbref] = j;
-		renderActionable(dbref, j);
+                const loc = parseInt(j.loc);
+                if (actionable[loc]) {
+                        actionable[loc][dbref] = j;
+                        renderActionable(dbref, j);
+                } else {
+                        console.warn("web-in: actionable of loc", loc, "is not available");
+                }
 	}
 }
 
