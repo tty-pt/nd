@@ -16,4 +16,5 @@ void do_meme(command_t *cmd);
 void web_content_out(dbref thing);
 void web_content_in(dbref thing);
 int web_auth_fail(int descr, int reason);
+int web_auth_success(int descr, dbref player);
 #endif

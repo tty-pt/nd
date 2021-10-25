@@ -31,6 +31,7 @@ ws_init();
 mcp_init();
 
 let room_target = null;
+let target_target = null;
 
 const dir_lbl = [ 'h', 'j', 'k', 'l', 'down', 'up' ],
         term = document.querySelector('#term'),
@@ -126,7 +127,8 @@ function output(stuff) {
 if (!username)
 	promptUsername();
 
-let actionable = {};
+let actionable = {},
+    properties = {};
 
 function dir_init(mask) {
 	for (let i = 0; i < dir_lbl.length; i++)
@@ -135,15 +137,21 @@ function dir_init(mask) {
 }
 
 function renderActionable(dbref, j) {
-	let str = tty_proc(j.icon);
 	let a = document.createElement("a");
-	a.onclick = actions_init.bind(null, dbref);
+        const loc = parseInt(j.loc);
+        if (loc == here)
+                a.onclick = actions_init.bind(null, dbref);
+        else if (loc == me)
+                a.onclick = actions_me_init.bind(null, dbref);
+        else
+                a.onclick = actions_other_init.bind(null, dbref);
 	let icon = null;
 	if (j.avatar) {
 		icon = document.createElement("img");
 		icon.src = "art/" + j.avatar;
                 icon.classList.add("s_xl", "svxl");
 	} else {
+                let str = j.icon ? tty_proc(j.icon) : "?";
 		icon = document.createElement("span");
 		icon.innerHTML = str;
 		icon.className = "sxl txl tcv";
@@ -153,7 +161,7 @@ function renderActionable(dbref, j) {
 	span.innerHTML = tty_proc(j.pname);
 	a.appendChild(span);
 	a.className = "f fic pxs _s";
-        contents[parseInt(j.loc)].appendChild(a);
+        contents[loc].appendChild(a);
 }
 
 function mcp_handler(j) {
@@ -161,8 +169,10 @@ function mcp_handler(j) {
 	if (j.key == 'inband') {
 		if (j.data != "\n\r")
 			output(tty_proc(j.data));
-	} if (j.key == "web-auth-fail")
+	} else if (j.key == "web-auth-fail")
 		forget();
+        else if (j.key == "web-auth-success")
+		me = parseInt(j.player);
 	else if (j.key == "web-view") {
 		map.innerHTML = tty_proc(j.data);
 	} else if (j.key == "web-art") {
@@ -208,6 +218,7 @@ function mcp_handler(j) {
                 }
                 contents[dbref].innerHTML = '';
                 actionable[dbref] = {};
+                properties[dbref] = j;
 	} else if (j.key == "web-meme") {
 		let a = document.createElement("a");
 		output("\n" + j.who + " says:\n");
@@ -222,6 +233,8 @@ function mcp_handler(j) {
 	} else if (j.key == "web-out") {
 		const dbref = parseInt(j.dbref);
                 const loc = parseInt(j.loc);
+                if (!actionable[loc])
+                        return;
                 delete actionable[loc][dbref];
                 contents[loc].innerHTML = '';
                 console.log('web-out', dbref, loc, target);

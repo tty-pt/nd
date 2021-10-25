@@ -71,7 +71,7 @@ cannot_equip(dbref who, dbref eq)
 {
 	unsigned eql = GETEQL(eq);
 
-	if (GETEQ(who, eql)
+	if (!eql || GETEQ(who, eql)
 	    || equip_calc(who, eq))
 		return 1;
 

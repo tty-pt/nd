@@ -78,7 +78,8 @@ web_look(command_t *cmd, dbref loc, char const *description)
 
         }
         mcp_mesg_arg_append(&msg, "art", GETMESG(loc, MESGPROP_ART));
-        mcp_mesg_arg_append(&msg, "name", unparse_object(player, loc));
+        mcp_mesg_arg_append(&msg, "name", NAME(loc));
+        mcp_mesg_arg_append(&msg, "pname", unparse_object(player, loc));
         mcp_mesg_arg_append(&msg, "description", description);
         mcp_frame_output_mesg(mfr, &msg);
         mcp_mesg_clear(&msg);
@@ -194,6 +195,22 @@ web_auth_fail(int descr, int reason) {
         mcp_mesg_init(&msg, MCP_WEB_PKG, "auth-fail");
 	snprintf(buf, sizeof(buf), "%d", reason);
         mcp_mesg_arg_append(&msg, "reason", buf);
+        mcp_frame_output_mesg(mfr, &msg);
+        mcp_mesg_clear(&msg);
+        return 0;
+}
+
+int
+web_auth_success(int descr, dbref player) {
+	McpMesg msg;
+	McpFrame *mfr = web_frame(descr);
+	char buf[BUFSIZ];
+	if (!mfr)
+                return 1;
+
+        mcp_mesg_init(&msg, MCP_WEB_PKG, "auth-success");
+	snprintf(buf, sizeof(buf), "%d", player);
+        mcp_mesg_arg_append(&msg, "player", buf);
         mcp_frame_output_mesg(mfr, &msg);
         mcp_mesg_clear(&msg);
         return 0;

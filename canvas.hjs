@@ -1,59 +1,109 @@
-var canvas = document.querySelector("canvas");
-var ctx = canvas.getContext('2d');
-var tilemap = document.createElement("img");
+let canvas = document.querySelector("canvas");
+let ctx = canvas.getContext('2d');
+let tilemap = document.createElement("img");
 tilemap.src = "./art/tilemap.png";
 tilemap.classList.add("dn");
 
-var actions_lbl = [
+const ACT_LOOK = 0;
+const ACT_KILL = 1;
+const ACT_SHOP = 2;
+const ACT_DRINK = 3;
+const ACT_OPEN = 4;
+const ACT_CHOP = 5;
+const ACT_FILL = 6;
+const ACT_GET = 7;
+const ACT_DIE = 8;
+const ACT_PUT = 9;
+const ACT_EQUIP = 10;
+const ACT_DROP = 11;
+const ACT_EAT = 12;
+const ACT_13 = 13;
+const ACT_INVENTORY = 14;
+
+let actions_lbl = [
 	"look", "kill", "shop",
 	"drink", "open", "chop",
 	"fill", "get", "die",
+        "put", "equip", "drop",
+        "eat", "reserved", "inventory",
 ];
 
-function tilemap_icon_cache(p, data) {
-	var a = document.createElement("a");
-	var img = document.createElement("img");
-	var id = actions_lbl[p];
-	// a.style.backgroundImage = "url(" + data + ")";
-	a.classList.add("ps", "round", "c0");
-	a.style.display = 'none';
-        img.src = data;
+let actions_init = null;
+let actions_me_init = null;
+let actions_other_init = null;
+
+let actions_tiles = [];
+
+function action_add(p, onclick) {
+        let a = document.createElement("a");
+        let img = document.createElement("img");
+        a.classList.add("ps", "round", "c0");
+        img.src = actions_tiles[p];
         a.appendChild(img);
-	a.onclick = function () {
-		cmd(id + " " + room_target.name);
-	};
-	act.appendChild(a);
-	return a;
+        a.onclick = onclick;
+        act.appendChild(a);
 }
 
-var action_btns = [];
-var actions_init = null;
-
 function tilemap_cache() {
-	var p = 0;
-	for (var i = 0; i < 3; i++) {
-		for (var j = 0; j < 3; j++, p++) {
+	let p = 0;
+	for (let i = 0; i < 5; i++) {
+		for (let j = 0; j < 3; j++, p++) {
 			ctx.clearRect(0, 0, 16, 16);
 			ctx.drawImage(tilemap, 16 * j, 16 * i,
 				16, 16, 0, 0, 16, 16);
 
-			action_btns.push(tilemap_icon_cache(
-				p, canvas.toDataURL()
-			));
+                        actions_tiles.push(canvas.toDataURL());
 		}
 	}
-
-	// forgetbtn.style.backgroundImage
-	// 	= action_btns[p].style.backgroundImage;
 
 	actions_init =  function (dbref) {
 		act.style.display = 'block';
 		room_target = actionable[here][dbref];
 		// target_lbl.innerHTML = room_target.pname;
-		for (var i = 0; i < action_btns.length; i++)
-			action_btns[i].style.display
-				= (room_target.actions & (1 << i)) ? '' : 'none';
+                act.innerHTML = "";
+
+		for (let p = 0; p < 9; p++) {
+                        if (!(parseInt(room_target.actions) & (1 << p)))
+                                continue;
+
+                        let id = actions_lbl[p];
+                        action_add(p, function () {
+                                cmd(id + " " + room_target.name);
+                        });
+                }
 	};
+
+        actions_me_init = function (dbref) {
+                act.style.display = 'block';
+                target_target = actionable[target][dbref];
+                act.innerHTML = "";
+
+                action_add(ACT_PUT, function () {
+                        output("\nPUT is not implemented yet!");
+                });
+
+                action_add(ACT_EQUIP, function () {
+                        cmd("equip " + target_target.name);
+                });
+
+                action_add(ACT_DROP, function () {
+                        cmd("drop " + target_target.name);
+                });
+
+                action_add(ACT_EAT, function () {
+                        cmd("eat " + target_target.name);
+                });
+        };
+
+        actions_other_init = function (dbref) {
+                act.style.display = 'block';
+                target_target = actionable[target][dbref];
+                act.innerHTML = "";
+
+                action_add(ACT_GET, function () {
+                        cmd("get " + properties[target].name + "=" + target_target.name);
+                });
+        };
 }
 
 tilemap.onload = function () {
