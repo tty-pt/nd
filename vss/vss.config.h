@@ -15,6 +15,8 @@ CALL(ROUND_T, TS)
 CALL(ROUND_EDGE, SS)
 ROUND_PADDING( xs, )
 ROUND_PADDING( s, m)
+ROUND_PADDING( s, l)
+ROUND_PADDING( s, xl)
 
 #define C #3c403c
 #define CF #c1c3da

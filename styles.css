@@ -8,7 +8,7 @@ canvas { vertical-align: inherit; }
 
 #main {
 	overflow: hidden;
-	max-height: calc(100% - 24px);
+	/* max-height: calc(100% - 24px); */
 }
 
 #term {
@@ -66,12 +66,16 @@ pre { margin-top: -1em; }
 	font-size: 20px;
         margin-bottom: -1em;
         margin-left: -1em;
+        margin-top: 0;
+        margin-right: 0;
 }
 
 #dir {
 	position: absolute;
-	right: 8px;
-	top: 32px;
+	/* right: 8px; */
+	right: 0px;
+	/* top: 32px; */
+	right: 0px;
 }
 
 .sr1 {
@@ -109,7 +113,4 @@ pre { margin-top: -1em; }
 	#map { font-size: 8px; }
 }
 
-#contents img {
-        image-rendering: crisp-edges;
-        width: 64px;
-}
+#contents img, #act img { image-rendering: crisp-edges; }

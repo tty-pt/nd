@@ -39,6 +39,7 @@ function action_add(p, onclick) {
         let img = document.createElement("img");
         a.classList.add("ps", "round", "c0");
         img.src = actions_tiles[p];
+        img.classList.add("svl", "s_l");
         a.appendChild(img);
         a.onclick = onclick;
         act.appendChild(a);
@@ -104,6 +105,12 @@ function tilemap_cache() {
                         cmd("get " + properties[target].name + "=" + target_target.name);
                 });
         };
+
+        inventory_btn.innerHTML = '';
+        let img = document.createElement("img");
+        img.src = actions_tiles[ACT_OPEN];
+        img.classList.add("svl", "s_l");
+        inventory_btn.appendChild(img);
 }
 
 tilemap.onload = function () {
