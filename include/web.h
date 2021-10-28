@@ -13,8 +13,8 @@ int web_look(command_t *cmd, dbref loc, char const *description);
 void web_room_mcp(dbref room, void *msg);
 void * web_frame(int descr);
 void do_meme(command_t *cmd);
-void web_content_out(dbref thing);
-void web_content_in(dbref thing);
+void web_content_out(dbref loc, dbref thing);
+void web_content_in(dbref loc, dbref thing);
 int web_auth_fail(int descr, int reason);
 int web_auth_success(int descr, dbref player);
 #endif

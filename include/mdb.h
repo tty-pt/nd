@@ -345,6 +345,7 @@ struct player_specific {
 	dbref home;
 	const char *password;
 	int fd;
+	dbref last_observed;
 };
 
 #define THING_SP(x)		(DBFETCH(x)->sp.player.sp)
@@ -384,9 +385,14 @@ union specific {				/* I've been railroaded! */
 
 /* timestamps record */
 
+struct observer_node {
+        dbref who;
+        struct observer_node *next;
+};
 
 struct object {
 
+        struct observer_node *first_observer;
 	const char *name;
 	dbref location;				/* pointer to container */
 	dbref owner;
@@ -396,9 +402,6 @@ struct object {
 	struct plist *properties;
 
 	object_flag_type flags;
-
-	/* unsigned int mpi_prof_use; */
-	/* struct timeval mpi_proftime; */
 
 	union specific sp;
 };
@@ -439,6 +442,8 @@ extern int db_write_object(FILE *, dbref);	/* write one object to file */
 extern dbref db_write(FILE * f);	/* write db to file, return # of objects */
 
 extern dbref db_read(FILE * f);	/* read db from file, return # of objects */
+extern void db_obs_add(dbref observable, dbref observer);
+extern int db_obs_remove(dbref observable, dbref observer);
 
  /* Warning: destroys existing db contents! */
 

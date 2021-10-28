@@ -143,7 +143,7 @@ obj_add(struct obj o, dbref where)
 	THING_SET_HOME(nu, where);
 	PUSH(nu, DBFETCH(where)->contents);
 	DBDIRTY(where);
-        web_content_in(nu);
+        web_content_in(where, nu);
 	return nu;
 }
 

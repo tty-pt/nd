@@ -960,6 +960,10 @@ descr_close(descr_t *d)
 	if (d->flags & DF_CONNECTED) {
 		warn("%s(%d) disconnects on fd %d\n",
 		     NAME(d->player), d->player, d->fd);
+		dbref last_observed = PLAYER_SP(d->player)->last_observed;
+		if (last_observed != NOTHING)
+			db_obs_remove(last_observed, d->player);
+
 		PLAYER_SP(d->player)->fd = -1;
 		DBDIRTY(d->player);
 		d->flags = 0;

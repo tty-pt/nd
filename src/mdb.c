@@ -135,6 +135,7 @@ db_clear_object(dbref i)
 	o->exits = NOTHING;
 	o->next = NOTHING;
 	o->properties = 0;
+	o->first_observer = NULL;
 
 	/* DBDIRTY(i); */
 	/* flags you must initialize yourself */
@@ -460,17 +461,55 @@ db_free_object(dbref i)
 
 	if (Typeof(i) == TYPE_EXIT && o->sp.exit.dest) {
 		free((void *) o->sp.exit.dest);
-    } else if (Typeof(i) == TYPE_PLAYER) {
-        if (PLAYER_PASSWORD(i)) {
+	} else if (Typeof(i) == TYPE_PLAYER) {
+		if (PLAYER_PASSWORD(i)) {
 			free((void*)PLAYER_PASSWORD(i));
-        }
-    }
+		}
+	}
 	if (Typeof(i) == TYPE_THING) {
 		FREE_THING_SP(i);
 	}
 	if (Typeof(i) == TYPE_PLAYER) {
 		FREE_PLAYER_SP(i);
 	}
+	if (Typeof(i) != TYPE_ROOM) {
+		struct observer_node *obs, *aux;
+		for (obs = o->first_observer; obs; obs = aux) {
+			aux = obs->next;
+			free(obs);
+		}
+	}
+}
+
+void
+db_obs_add(dbref observable, dbref observer) {
+	struct object *o;
+	struct observer_node *node = (struct observer_node *)
+		malloc(sizeof(struct observer_node));
+	o = DBFETCH(observable);
+	node->next = o->first_observer;
+	node->who = observer;
+	o->first_observer = node;
+}
+
+int
+db_obs_remove(dbref observable, dbref observer) {
+	struct object *o = DBFETCH(observable);
+	struct observer_node *cur, *prev = NULL;
+
+	for (cur = o->first_observer; cur; ) {
+		if (cur->who == observer) {
+			if (prev) {
+				prev->next = cur->next;
+				free(cur);
+				return 0;
+			}
+		}
+		prev = cur;
+		cur = cur->next;
+	}
+
+	return 1;
 }
 
 void
@@ -617,6 +656,7 @@ db_read_object_foxen(FILE * f, struct object *o, dbref objno)
 		password = getstring(f);
 		set_password_raw(objno, password);
 		PLAYER_SP(objno)->fd = -1;
+		PLAYER_SP(objno)->last_observed = NOTHING;
 		break;
 	case TYPE_GARBAGE:
 		break;

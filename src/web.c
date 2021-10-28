@@ -71,12 +71,19 @@ web_look(command_t *cmd, dbref loc, char const *description)
         snprintf(buf2, sizeof(buf2), "%d", loc);
         mcp_mesg_arg_append(&msg, "dbref", buf2);
 
+	dbref last_observed = PLAYER_SP(player)->last_observed;
+	if (last_observed != NOTHING)
+		db_obs_remove(last_observed, player);
+
         if (Typeof(loc) == TYPE_ROOM) {
                 mcp_mesg_arg_append(&msg, "room", "1");
                 snprintf(buf, sizeof(buf), "%d", gexits(cmd, loc));
                 mcp_mesg_arg_append(&msg, "exits", buf);
+        } else {
+		PLAYER_SP(player)->last_observed = loc;
+		db_obs_add(loc, player);
+	}
 
-        }
         mcp_mesg_arg_append(&msg, "art", GETMESG(loc, MESGPROP_ART));
         mcp_mesg_arg_append(&msg, "name", NAME(loc));
         mcp_mesg_arg_append(&msg, "pname", unparse_object(player, loc));
@@ -133,6 +140,26 @@ void web_room_mcp(dbref room, void *msg) {
 	}
 }
 
+void web_obs_mcp(dbref thing, void *msg) {
+	struct object *o = DBFETCH(thing);
+	struct observer_node *node = o->first_observer;
+
+	for (node = o->first_observer; node; node = node->next)
+	{
+		dbref tmp = node->who;
+
+		if (Typeof(tmp) != TYPE_PLAYER)
+			continue;
+
+		McpFrame *mfr = web_frame(PLAYER_FD(OWNER(tmp)));
+
+		if (!mfr)
+			continue;
+
+		mcp_frame_output_mesg(mfr, msg);
+	}
+}
+
 void do_meme(command_t *cmd) {
         dbref player = cmd->player;
         const char *url = cmd->argv[1];
@@ -146,8 +173,7 @@ void do_meme(command_t *cmd) {
 }
 
 void
-web_content_out(dbref thing) {
-	dbref loc = DBFETCH(thing)->location;
+web_content_out(dbref loc, dbref thing) {
 	char buf[BUFSIZ];
 	McpMesg msg;
 
@@ -157,13 +183,18 @@ web_content_out(dbref thing) {
 	snprintf(buf, BUFSIZ, "%d", thing);
         mcp_mesg_arg_append(&msg, "dbref", buf);
         /* mcp_mesg_arg_append(&msg, "name", unparse_object(player, thing)); */
-        web_room_mcp(loc, &msg);
+
+	if (Typeof(loc) == TYPE_ROOM)
+		web_room_mcp(loc, &msg);
+	else
+		web_obs_mcp(loc, &msg);
+
         mcp_mesg_clear(&msg);
 }
 
 void
-web_content_in(dbref thing) {
-	dbref loc = DBFETCH(thing)->location;
+web_content_in(dbref loc, dbref thing) {
+	/* dbref loc = DBFETCH(thing)->location; */
 	struct icon ico = icon(thing);
 	char buf[BUFSIZ];
 	McpMesg msg;
@@ -180,7 +211,11 @@ web_content_in(dbref thing) {
         mcp_mesg_arg_append(&msg, "avatar", GETAVATAR(thing));
 	mcp_mesg_arg_append(&msg, "actions", buf);
 
-        web_room_mcp(loc, &msg);
+	if (Typeof(loc) == TYPE_ROOM)
+		web_room_mcp(loc, &msg);
+	else
+		web_obs_mcp(loc, &msg);
+
         mcp_mesg_clear(&msg);
 }
 

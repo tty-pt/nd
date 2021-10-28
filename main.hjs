@@ -210,6 +210,8 @@ function mcp_handler(j) {
                         if (target)
                                 target_null();
 		} else {
+                        if (target)
+                                delete actionable[target];
                         target_div.classList.remove("dn");
                         target = dbref;
                         contents[target] = target_contents;
@@ -241,7 +243,7 @@ function mcp_handler(j) {
                         return;
                 delete actionable[loc][dbref];
                 contents[loc].innerHTML = '';
-                console.log('web-out', dbref, loc, target);
+                console.log('web-out', dbref, loc, target, contents[loc]);
                 if (dbref == target) {
                         contents[target].innerHTML = "";
                         target_art.src = "";
