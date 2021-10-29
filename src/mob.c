@@ -67,11 +67,9 @@ enum bodypart ch_bodypart_map[] = {
 	['g'] = BP_LEGS,
 };
 
-mobi_t mobi_map[MOBI_SIZE];
-
 #include "drop.c"
 
-mob_t mob_map[] = {
+struct mob_skeleton mob_skeleton_map[] = {
 	[MOB_HUMAN] = {
 		.o = {
 			.name = "human",
@@ -224,7 +222,7 @@ mob_t mob_map[] = {
 };
 
 static inline void
-mob_add_stats(mob_t *mob, dbref nu)
+mob_add_stats(struct mob_skeleton *mob, dbref nu)
 {
 	unsigned char stat = mob->stat;
 	int lvl = mob->lvl, spend, i, sp, v = mob->lvl_v ? mob->lvl_v : 0xf;
@@ -261,143 +259,102 @@ rarity_get() {
 }
 
 static inline dbref
-inventory_add(mobi_t *liv, struct item i)
+inventory_add(struct mob *mob, struct item i)
 {
 	dbref nu;
 
-	nu = obj_add(i.o, liv->who);
+	nu = obj_add(i.o, mob->who);
 	SETEQW(nu, i.eqw);
 	SETMSV(nu, i.msv);
 	SETRARE(nu, rarity_get());
 
-	if (!cannot_equip(liv->who, nu))
-		SETEQ(liv->who, i.eqw, nu);
+	if (!cannot_equip(mob->who, nu))
+		SETEQ(mob->who, i.eqw, nu);
 
 	return nu;
 }
 
 static inline void
-mob_inventory(mobi_t *liv, drop_t **drop)
+mob_inventory(struct mob *mob, drop_t **drop)
 {
 	for (; *drop; drop++)
 		if (random() < (RAND_MAX >> (*drop)->y))
-			inventory_add(liv, (*drop)->i);
+			inventory_add(mob, (*drop)->i);
 }
 
 static inline int
-bird_is(mob_t *mob)
+bird_is(struct mob_skeleton *mob)
 {
 	return mob->wt == PECK;
 }
 
-void
-mob_save()
+struct mob *
+mob_put(dbref who)
 {
-	static const unsigned m = MOBI_SIZE;
-	register mobi_t *n = MOBI(0);
-	char buf[BUFFER_LEN], *b = buf;
-	size_t len = 0;
-	unsigned i;
-	PData mydat;
+	register struct mob *mob;
+        struct object *o;
 
-	// TODO? use mask?
-	for (i = 0; i < m; i++, n++) {
-		if (n->who > 0 && n->who < db_top && (Typeof(n->who) == TYPE_PLAYER
-				   || Typeof(n->who) == TYPE_THING)
-                    && GETLID(n->who) >= 0)
-		{
-			register size_t d;
-			d = snprintf(b, sizeof(buf) - len, "#%d ", n->who);
-			len += d;
-                        CBUG(len > sizeof(buf));
-			b += d;
-		}
-        }
+        /* CBUG(GETLID(who) >= 0); */
 
-	mydat.flags = PROP_STRTYP;
-	mydat.data.str = buf;
-	set_property((dbref) 0, "_/living", &mydat);
-}
+        mob = (struct mob *) malloc(sizeof(struct mob));
 
-static void
-mobi_init(mobi_t *liv, dbref who)
-{
+        CBUG(!mob);
+
+	o = DBFETCH(who);
+        o->mob = mob;
+
+	memset(mob, 0, sizeof(struct mob));
+	mob->who = who;
+	mob->mob_skeleton = MOB_SKELETON(MOB_HUMAN);
+	mob->wts = phys_wts[mob->mob_skeleton ? mob->mob_skeleton->wt : GETWTS(who)];
+	mob->hunger = mob->thirst = 0;
+	mob->flags = 0;
+	mob->combo = GETCOMBO(who);
+	mob->hp = HP_MAX(who);
+	mob->mp = MP_MAX(who);
+
+	MOB_EV(mob, DMG) = DMG_BASE(who);
+	MOB_EV(mob, DODGE) = DODGE_BASE(who);
+
+	spells_init(mob->spells, who);
+
+	SETLID(who, 1);
+
 	int i;
-	memset(liv, 0, sizeof(mobi_t));
-	liv->who = who;
-	liv->mob = MOB(MOB_HUMAN);
-	liv->wts = phys_wts[liv->mob ? liv->mob->wt : GETWTS(who)];
-	liv->hunger = liv->thirst = 0;
-	liv->flags = 0;
-	liv->combo = GETCOMBO(who);
-	liv->hp = HP_MAX(who);
-	liv->mp = MP_MAX(who);
-
-	MOBI_EV(liv, DMG) = DMG_BASE(who);
-	MOBI_EV(liv, DODGE) = DODGE_BASE(who);
-
-	spells_init(liv->spells, who);
-
-	SETLID(who, liv - mobi_map);
 
 	for (i = 0; i < EQ_MAX; i++) {
 		register dbref eq = GETEQ(who, i);
 		if (eq > 0)
-			equip_calc(liv->who, eq);
+			equip_calc(who, eq);
 	}
 
-	/* debug("mobi_init %d %d\n", who, liv->who); */
-}
-
-mobi_t *
-mob_put(dbref who)
-{
-	register const unsigned m = MOBI_SIZE;
-	register mobi_t *liv;
-	register unsigned i;
-
-	/* debug("mob_put %d\n", who); */
-
-	CBUG(who < 0 || Typeof(who) == TYPE_GARBAGE);
-
-	for (liv = &mobi_map[0], i = 0;
-	     i < m;
-	     i++, liv++)
-	{
-		if (liv->who <= 0) {
-			/* debug("will mobi_init %d %d\n", who, i); */
-			mobi_init(liv, who);
-			return liv;
-		}
-	}
-
-	return NULL;
+        return mob;
 }
 
 static inline dbref
-mob_add(enum mob mid, dbref where, enum biome biome, long long pdn) {
-	mob_t *mob = MOB(mid);
-	mobi_t *liv;
+mob_add(enum mob_type mid, dbref where, enum biome biome, long long pdn) {
+	struct mob_skeleton *skel = MOB_SKELETON(mid);
+	struct mob *mob;
 	dbref nu;
 
-	if ((bird_is(mob) && !pdn)
-	    || (!NIGHT_IS && (mob->type == ELM_DARK || mob->type == ELM_VAMP))
-	    || random() >= (RAND_MAX >> mob->y))
+	if ((bird_is(skel) && !pdn)
+	    || (!NIGHT_IS && (skel->type == ELM_DARK || skel->type == ELM_VAMP))
+	    || random() >= (RAND_MAX >> skel->y))
 		return NOTHING;
 
-	if (!((1 << biome) & mob->biomes))
+	if (!((1 << biome) & skel->biomes))
 		return NOTHING;
 
-	nu = obj_add(mob->o, where);
+	nu = obj_add(skel->o, where);
 
 	SETMID(nu, mid);
-	SETAGGRO(nu, mob->flags & MF_AGGRO);
-	mob_add_stats(mob, nu);
-	liv = mob_put(nu);
+	SETAGGRO(nu, skel->flags & MF_AGGRO);
+	mob_add_stats(skel, nu);
+	mob = mob_put(nu);
 
 	/* debug("%d %s loc %d %s MID %d", nu, NAME(nu), where, NAME(where), mid); */
 
-	mob_inventory(liv, (drop_t **) mob->drop);
+	mob_inventory(mob, (drop_t **) skel->drop);
 
 	return nu;
 }
@@ -421,27 +378,27 @@ mob_obj_random()
 	int idx = random() % MOFS_END;
 	if (idx == 0 || idx == 5 || idx == 8 || idx == 9)
 		return NULL;
-	return &MOB(idx)->o;
+	return &MOB_SKELETON(idx)->o;
 }
 
 void
 mobs_aggro(command_t *cmd)
 {
 	dbref player = cmd->player;
-        mobi_t *me;
+        struct mob *me;
 	dbref tmp;
 	int klock = 0;
 
         CBUG(GETLID(player) < 0);
-        me = MOBI(player);
+        me = MOB(player);
         if (me->who != player)
                 me = mob_put(player);
 
 	DOLIST(tmp, DBFETCH(getloc(player))->contents) {
 		int lid = GETLID(tmp);
 		if (lid >= 0 && GETAGGRO(tmp)) {
-			mobi_t *liv = MOBI(tmp);
-			liv->target = me;
+			struct mob *mob = MOB(tmp);
+			mob->target = me;
 			klock++;
 		}
 	}
@@ -454,7 +411,7 @@ do_eat(command_t *cmd)
 {
 	dbref player = cmd->player;
 	const char *what = cmd->argv[1];
-	mobi_t *p = MOBI(player);
+	struct mob *p = MOB(player);
 	dbref item = contents_find(cmd, player, what);
 	int food;
 	unsigned stack;
@@ -479,18 +436,6 @@ do_eat(command_t *cmd)
 	SETSTACK(item, stack - 1);
 }
 
-void
-mob_init() {
-	register PropPtr p = get_property((dbref) 0, "_/living");
-        memset(mobi_map, 0, sizeof(mobi_map));
-
-	if (p) {
-		const char *liv_s = PropDataStr(p), *l;
-		for (l = liv_s; l; l = strchr(l, '#'))
-			mob_put((dbref) atoi(++l));
-	}
-}
-
 static void
 respawn(dbref who)
 {
@@ -498,7 +443,7 @@ respawn(dbref who)
 		return;
 	dbref where = THING_HOME(who);
 	moveto(who, where);
-        mobi_t *mob = MOBI(who);
+        struct mob *mob = MOB(who);
         mob->hp = HP_MAX(who);
         mob->mp = MP_MAX(who);
 	notify_except_fmt(DBFETCH(where)->contents, who,
@@ -530,8 +475,8 @@ huth_notify(dbref who, unsigned v, unsigned char y, char const *m[4])
 	}
 }
 
-static inline void
-mobi_update(mobi_t *n, long long unsigned tick)
+void
+mob_update(struct mob *n, long long unsigned tick)
 {
 	static char const *thirst_msg[] = {
 		"You are thirsty.",
@@ -575,18 +520,4 @@ mobi_update(mobi_t *n, long long unsigned tick)
 
 	debufs_process(n->who);
 	kill_update(n);
-}
-
-void
-mob_update(long long unsigned tick)
-{
-	register mobi_t *n, *e;
-
-	for (n = MOBI(0), e = n + MOBI_SIZE;
-	     n < e;
-	     n++) {
-
-		if (n->who > 0)
-			mobi_update(n, tick);
-	}
 }

@@ -3,12 +3,9 @@
 
 #include <limits.h>
 #include <stdint.h>
-#ifndef CLIENT
 #include <stddef.h>
 #include <string.h>
-#include "mdb.h"
 #include "command.h"
-#endif
 
 /* it is possible to add other coord_t (like char) but a corresponding
  * hash function must be used */
@@ -99,102 +96,36 @@ struct obj {
 extern enum exit e_map[];
 extern exit_t exit_map[];
 
-static inline void
-pos_move(pos_t d, pos_t o, enum exit e) {
-	exit_t *ex = &exit_map[e];
-	POOP4D d[I] = o[I];
-	d[ex->dim] += ex->dis;
-}
-
-static inline enum exit
-dir_e(const char dir) {
-	return e_map[(int) dir];
-}
-
-static inline const char
-e_dir(enum exit e) {
-	return exit_map[e].name[0];
-}
-
-static inline enum exit
-e_simm(enum exit e) {
-	return exit_map[e].simm;
-}
-
-static inline const char *
-e_name(enum exit e) {
-	return exit_map[e].name;
-}
-
-static inline const char *
-e_fname(enum exit e) {
-	return exit_map[e].fname;
-}
-
-static inline const char *
-e_other(enum exit e) {
-	return exit_map[e].other;
-}
-
-#ifndef CLIENT
-
 morton_t pos_morton(pos_t);
 void morton_pos(pos_t p, morton_t code);
 
-static inline morton_t
-point_rel_idx(point_t p, point_t s, smorton_t w)
-{
-	smorton_t s0 = s[Y_COORD],
-		s1 = s[X_COORD];
-	if (s0 > p[Y_COORD])
-		s0 -= UCOORD_MAX;
-	if (s1 > p[X_COORD])
-		s1 -= UCOORD_MAX;
-	return (p[Y_COORD] - s0) * w + (p[X_COORD] - s1);
-}
-
-static inline enum exit
-exit_e(ref_t exit) {
-	const char dir = NAME(exit)[0];
-	return dir_e(dir);
-}
-
-static inline int
-e_exit_is(ref_t exit)
-{ 
-	char const *fname = e_fname(exit_e(exit));
-	return *fname && !strncmp(NAME(exit), fname, 4);
-}
-
-static inline ref_t
-e_exit_dest(dbref exit)
-{
-	if (!DBFETCH(exit)->sp.exit.ndest)
-		return NOTHING;
-
-	else
-		return DBFETCH(exit)->sp.exit.dest[0];
-}
-
-ref_t e_exit_where(command_t *cmd, ref_t loc, enum exit e);
-int e_exit_can(ref_t player, ref_t exit);
-int e_ground(ref_t room, enum exit e);
+dbref e_exit_where(command_t *cmd, dbref loc, enum exit e);
+int e_exit_can(dbref player, dbref exit);
+int e_ground(dbref room, enum exit e);
 void e_exit_dest_set(dbref exit, dbref dest);
 
-static inline ref_t
-e_exit_here(command_t *cmd, enum exit e)
-{
-	return e_exit_where(cmd, getloc(cmd->player), e);
-}
+dbref
+obj_add(struct obj o, dbref where);
 
-ref_t
-obj_add(struct obj o, ref_t where);
-
-ref_t
-obj_stack_add(struct obj o, ref_t where,
+dbref
+obj_stack_add(struct obj o, dbref where,
 		unsigned char n);
-ref_t
-contents_find(command_t *cmd, ref_t where,
+dbref
+contents_find(command_t *cmd, dbref where,
 		const char *name);
-#endif
+
+dbref e_exit_here(command_t *cmd, enum exit e);
+void pos_move(pos_t d, pos_t o, enum exit e);
+enum exit dir_e(const char dir);
+const char e_dir(enum exit e);
+enum exit e_simm(enum exit e);
+const char * e_name(enum exit e);
+const char * e_fname(enum exit e);
+const char * e_other(enum exit e);
+morton_t point_rel_idx(point_t p, point_t s, smorton_t w);
+enum exit exit_e(dbref exit);
+int e_exit_is(dbref exit);
+dbref e_exit_dest(dbref exit);
+
+
 #endif

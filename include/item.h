@@ -21,8 +21,8 @@ struct wts {
 extern struct wts phys_wts[];
 
 /* dbref contents_find(int descr, dbref player, dbref what, const char *name); */
-int equip_calc(ref_t who, ref_t eq);
-ref_t unequip(ref_t player, unsigned eql);
-int cannot_equip(ref_t player, ref_t eq);
+int equip_calc(dbref who, dbref eq);
+dbref unequip(dbref player, unsigned eql);
+int cannot_equip(dbref player, dbref eq);
 
 #endif

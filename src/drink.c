@@ -22,28 +22,26 @@ drink(dbref who, dbref source)
 {
 	static const size_t affects_ofs[] = {
 		0,
-		offsetof(mobi_t, hp),
-		offsetof(mobi_t, mp),
+		offsetof(struct mob, hp),
+		offsetof(struct mob, mp),
 	};
 
-	mobi_t *liv = MOBI(who);
+	struct mob *mob = MOB(who);
 	drink_t *drink = DRINK_SOURCE(source);
 	unsigned n = GETCONSUN(source);
 	unsigned const value = 2;
 	int aux;
-
-	assert(liv);
 
 	if (!n) {
 		notifyf(who, "%s is empty.", NAME(source));
 		return 1;
 	}
 
-	* (unsigned *) (((char *) liv) + affects_ofs[drink->da]) += 1 << value;
-	aux = liv->thirst - (1 << (16 - value));
+	* (unsigned *) (((char *) mob) + affects_ofs[drink->da]) += 1 << value;
+	aux = mob->thirst - (1 << (16 - value));
 	if (aux < 0)
 		aux = 0;
-	liv->thirst = aux;
+	mob->thirst = aux;
 
 	SETCONSUN(source, n - 1);
 	notify_wts(who, "drink", "drinks", " %s", drink->name);

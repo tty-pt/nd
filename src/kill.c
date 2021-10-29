@@ -68,11 +68,11 @@ kill_dmg(enum element dmg_type, short dmg,
 
 // returns 1 if target dodges
 static inline int
-dodge_get(mobi_t *att)
+dodge_get(struct mob *att)
 {
 	int d = RAND_MAX / 4;
-	short ad = MOBI_EV(att, DODGE),
-	      dd = MOBI_EV(att->target, DODGE);
+	short ad = MOB_EV(att, DODGE),
+	      dd = MOB_EV(att->target, DODGE);
 
 	if (ad > dd)
 		d += 3 * d / (ad - dd);
@@ -92,10 +92,10 @@ xp_get(unsigned x, unsigned y)
 }
 
 int
-kill_dodge(mobi_t *att, struct wts wts)
+kill_dodge(struct mob *att, struct wts wts)
 {
-	mobi_t *tar = att->target;
-	if (!MOBI_EV(tar, MOV) && dodge_get(att)) {
+	struct mob *tar = att->target;
+	if (!MOB_EV(tar, MOV) && dodge_get(att)) {
 		notify_wts_to(tar->who, att->who, "dodge", "dodges", "'s %s", wts.a);
 		return 1;
 	} else
@@ -126,13 +126,13 @@ notify_attack(dbref att, dbref tar, struct wts wts, short val, char const *color
 }
 
 static inline void
-living_dead(mobi_t *liv)
+living_dead(struct mob *mob)
 {
-	liv->target = NULL;
-	liv->hp = HP_MAX(liv->who);
-	liv->mp = MP_MAX(liv->who);
-	liv->thirst = liv->hunger = 0;
-	debufs_end(liv->who);
+	mob->target = NULL;
+	mob->hp = HP_MAX(mob->who);
+	mob->mp = MP_MAX(mob->who);
+	mob->thirst = mob->hunger = 0;
+	debufs_end(mob->who);
 }
 
 static inline dbref
@@ -191,8 +191,8 @@ xp_award(dbref attacker, dbref target)
 void
 kill_target(dbref attacker, dbref target)
 {
-	mobi_t *att = attacker > 0 ? MOBI(attacker) : NULL;
-	mobi_t *tar = MOBI(target);
+	struct mob *att = attacker > 0 ? MOB(attacker) : NULL;
+	struct mob *tar = MOB(target);
 
 	notify_wts(target, "die", "dies", "");
 
@@ -237,9 +237,9 @@ kill_target(dbref attacker, dbref target)
 }
 
 static inline void
-attack(mobi_t *p, int player_attack)
+attack(struct mob *p, int player_attack)
 {
-	mobi_t *att, *tar;
+	struct mob *att, *tar;
 	dbref attacker;
 	register unsigned char mask;
 
@@ -253,7 +253,7 @@ attack(mobi_t *p, int player_attack)
 
 	attacker = att->who;
 
-	mask = MOBI_EM(att, MOV);
+	mask = MOB_EM(att, MOV);
 
 	if (mask) {
 		register unsigned i = __builtin_ffs(mask) - 1;
@@ -262,8 +262,8 @@ attack(mobi_t *p, int player_attack)
 		enum element at = ELEMENT_NEXT(att->who, MDMG);
 		enum element dt = ELEMENT_NEXT(tar->who, MDEF);
 		dbref target = tar->who;
-		short aval = -kill_dmg(ELM_PHYSICAL, MOBI_EV(att, DMG), MOBI_EV(tar, DEF) + MOBI_EV(tar, MDEF), dt);
-		short bval = -kill_dmg(at, MOBI_EV(att, MDMG), MOBI_EV(tar, MDEF), dt);
+		short aval = -kill_dmg(ELM_PHYSICAL, MOB_EV(att, DMG), MOB_EV(tar, DEF) + MOB_EV(tar, MDEF), dt);
+		short bval = -kill_dmg(at, MOB_EV(att, MDMG), MOB_EV(tar, MDEF), dt);
 		char const *color = ELEMENT(at)->color;
 		notify_attack(attacker, target, att->wts, aval, color, bval);
 		cspell_heal(attacker, target, aval + bval);
@@ -271,14 +271,14 @@ attack(mobi_t *p, int player_attack)
 }
 
 static inline void
-target_try(mobi_t *me, dbref target)
+target_try(struct mob *me, dbref target)
 {
-	mobi_t *tar;
+	struct mob *tar;
 
 	if (me->target)
 		return;
 
-	tar = MOBI(target);
+	tar = MOB(target);
 
 	if (tar == me->target)
 		return;
@@ -296,14 +296,14 @@ do_kill(command_t *cmd)
 	dbref target = strcmp(what, "me")
 		? contents_find(cmd, here, what)
 		: player;
-	mobi_t *att, *tar;
+	struct mob *att, *tar;
 
-        att = GETLID(player) ? MOBI(player) : mob_put(player);
+        att = GETLID(player) ? MOB(player) : mob_put(player);
 
 	if (FLAGS(here) & HAVEN
 	    || target == NOTHING
 	    || player == target
-	    || !(tar = MOBI(target)))
+	    || !(tar = MOB(target)))
 	{
 		notify(player, "You can't target that.");
 		return;
@@ -320,39 +320,39 @@ do_kill(command_t *cmd)
 }
 
 void
-kill_update(mobi_t *liv)
+kill_update(struct mob *mob)
 {
-	mobi_t *livt = liv->target;
+	struct mob *target = mob->target;
 
-	if (!livt
-            || livt == liv
-            || livt->who < 0
-            || Typeof(livt->who) == TYPE_GARBAGE
-	    || getloc(livt->who) != getloc(liv->who)) {
-		liv->target = NULL;
+	if (!target
+            || target == mob
+            || target->who < 0
+            || Typeof(target->who) == TYPE_GARBAGE
+	    || getloc(target->who) != getloc(mob->who)) {
+		mob->target = NULL;
 		return;
 	}
 
-	target_try(liv->target, liv->who);
-	attack(liv, 1);
+	target_try(mob->target, mob->who);
+	attack(mob, 1);
 }
 
 void
 do_status(command_t *cmd)
 {
 	dbref player = cmd->player;
-	// TODO optimize MOBI_EV / MOBI_EM
-	mobi_t *liv = MOBI(player);
+	// TODO optimize MOB_EV / MOB_EM
+	struct mob *mob = MOB(player);
 	notifyf(player, "hp %u/%u\tmp %u/%u\tstuck 0x%x\n"
 		"dodge %d\tcombo 0x%x \tdebuf_mask 0x%x\n"
 		"damage %d\tmdamage %d\tmdmg_mask 0x%x\n"
 		"defense %d\tmdefense %d\tmdef_mask 0x%x\n"
 		"klock   %u\thunger %u\tthirst %u",
-		liv->hp, HP_MAX(player), liv->mp, MP_MAX(player), MOBI_EM(liv, MOV),
-		MOBI_EV(liv, DODGE), liv->combo, liv->debuf_mask,
-		MOBI_EV(liv, DMG), MOBI_EV(liv, MDMG), MOBI_EM(liv, MDMG),
-		MOBI_EV(liv, DEF), MOBI_EV(liv, MDEF), MOBI_EM(liv, MDEF),
-		liv->klock, liv->hunger, liv->thirst);
+		mob->hp, HP_MAX(player), mob->mp, MP_MAX(player), MOB_EM(mob, MOV),
+		MOB_EV(mob, DODGE), mob->combo, mob->debuf_mask,
+		MOB_EV(mob, DMG), MOB_EV(mob, MDMG), MOB_EM(mob, MDMG),
+		MOB_EV(mob, DEF), MOB_EV(mob, MDEF), MOB_EM(mob, MDEF),
+		mob->klock, mob->hunger, mob->thirst);
 }
 
 void
@@ -362,7 +362,7 @@ do_heal(command_t *cmd)
 	const char *name = cmd->argv[1];
 	dbref here = getloc(player);
 	dbref target;
-	mobi_t *tar;
+	struct mob *tar;
 
 	if (strcmp(name, "me")) {
 		target = contents_find(cmd, here, name);
@@ -377,7 +377,7 @@ do_heal(command_t *cmd)
                 return;
         }
 
-        tar = MOBI(target);
+        tar = MOB(target);
 	tar->hp = HP_MAX(target);
 	tar->mp = MP_MAX(target);
 	tar->hunger = tar->thirst = 0;
@@ -423,7 +423,7 @@ do_train(command_t *cmd) {
 	dbref player = cmd->player;
 	const char *attrib = cmd->argv[1];
 	const char *amount_s = cmd->argv[2];
-	mobi_t *liv = MOBI(player);
+	struct mob *mob = MOB(player);
 	int attr;
 
 	switch (attrib[0]) {
@@ -450,10 +450,10 @@ do_train(command_t *cmd) {
 
 	switch (attr) {
 	case STR:
-		MOBI_EV(liv, DMG) += DMG_G(c + amount) - DMG_G(c);
+		MOB_EV(mob, DMG) += DMG_G(c + amount) - DMG_G(c);
 		break;
 	case DEX:
-		MOBI_EV(liv, DODGE) += DODGE_G(c + amount) - DODGE_G(c);
+		MOB_EV(mob, DODGE) += DODGE_G(c + amount) - DODGE_G(c);
 		break;
 	}
 
@@ -469,11 +469,11 @@ kill_v(command_t *cmd, char const *opcs)
 	if (isdigit(*opcs)) {
 		unsigned combo = strtol(opcs, &end, 0);
 		SETCOMBO(player, combo);
-		MOBI(player)->combo = combo;
+		MOB(player)->combo = combo;
 		notifyf(player, "Set combo to 0x%x.", combo);
 		return end - opcs;
 	} else if (*opcs == 'c' && isdigit(opcs[1])) {
-		mobi_t *p = MOBI(player);
+		struct mob *p = MOB(player);
 		unsigned slot = strtol(opcs + 1, &end, 0);
 
 		if (!p->target)
@@ -516,7 +516,7 @@ do_sit(command_t *cmd)
 
 	SETSEATN(seat, cur + 1);
 	SETSAT(player, seat);
-	MOBI(player)->flags |= MF_SITTING;
+	MOB(player)->flags |= MF_SITTING;
 
 	notify_wts(player, "sit", "sits", " on %s", NAME(seat));
 }
@@ -533,7 +533,7 @@ do_stand_silent(dbref player)
 		SETSEATN(chair, GETSEATN(chair) - 1);
 
 	USETSAT(player);
-	MOBI(player)->flags ^= MF_SITTING;
+	MOB(player)->flags ^= MF_SITTING;
 	notify_wts(player, "stand", "stands", " up");
 	return 0;
 }

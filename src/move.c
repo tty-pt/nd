@@ -634,8 +634,8 @@ recycle(command_t *cmd, dbref thing)
 		break;
 	case TYPE_THING:
 		if (GETLID(thing) >= 0) {
-			mobi_t *liv = MOBI(thing);
-			liv->who = -1;
+			struct mob *mob = MOB(thing);
+			mob->who = -1;
 		}
 		if (!Wizard(OWNER(thing)))
 			SETVALUE(OWNER(thing), GETVALUE(OWNER(thing)) + GETVALUE(thing));

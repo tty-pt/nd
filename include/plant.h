@@ -40,7 +40,7 @@ plants_shuffle(struct plant_data *,
 		morton_t v);
 
 void
-plants_add(command_t *cmd, ref_t where,
+plants_add(command_t *cmd, dbref where,
 		struct plant_data *pd,
 		morton_t ty, coord_t tmp,
 		ucoord_t rn);

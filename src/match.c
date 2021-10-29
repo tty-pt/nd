@@ -183,9 +183,9 @@ static void
 match_list(dbref first, struct match_data *md)
 {
 	dbref absolute;
-	mobi_t *liv = MOBI(md->match_who);
-	unsigned nth = liv->select;
-	liv->select = 0;
+	struct mob *mob = MOB(md->match_who);
+	unsigned nth = mob->select;
+	mob->select = 0;
 
 	absolute = absolute_name(md);
 	if (!controls(OWNER(md->match_from), absolute))

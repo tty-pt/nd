@@ -11,12 +11,12 @@
 #include <math.h>
 #include <time.h>
 
+#include "mob.h"
+
 #define BUFFER_LEN 8192
 
 extern char match_args[BUFFER_LEN];
 extern char match_cmdname[BUFFER_LEN];
-
-typedef int dbref;				/* offset into db */
 
 #define DBFETCH(x)  (db + (x))
 #define DBDIRTY(x)  {db[x].flags |= OBJECT_CHANGED;}
@@ -400,6 +400,7 @@ struct object {
 	dbref exits;
 	dbref next;					/* pointer to next in contents/exits chain */
 	struct plist *properties;
+	struct mob *mob;
 
 	object_flag_type flags;
 
@@ -450,6 +451,8 @@ extern int db_obs_remove(dbref observable, dbref observer);
 extern void db_free(void);
 
 extern dbref parse_dbref(const char *);	/* parse a dbref */
+
+void objects_update(long long unsigned tick);
 
 #define DOLIST(var, first) \
   for((var) = (first); (var) != NOTHING; (var) = DBFETCH(var)->next)

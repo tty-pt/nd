@@ -1,6 +1,7 @@
 #ifndef _PROPS_H
 #define _PROPS_H
 
+#include <stdio.h>
 #include "command.h"
 
 union pdata_u {

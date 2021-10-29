@@ -440,7 +440,7 @@ command_t command_null(command_t *cmd) {
 	return ret;
 }
 
-command_t command_new_null(int descr, ref_t player) {
+command_t command_new_null(int descr, dbref player) {
 	command_t ret;
 	command_null(&ret);
 	ret.player = player;
@@ -587,7 +587,6 @@ main(int argc, char **argv)
 		return 1;
 
 	map_close();
-	mob_save();
 
 	close_sockets("\r\nServer shutting down.\r\n");
 
@@ -826,8 +825,8 @@ command_process(command_t *cmd)
 
 	// set current descriptor (needed for death)
 	CBUG(GETLID(player) < 0);
-	mobi_t *liv = MOBI(player);
-	liv->descr = descr;
+	struct mob *mob = MOB(player);
+	mob->descr = descr;
 
 	pos_t pos;
 	map_where(pos, getloc(player));
@@ -1040,8 +1039,6 @@ shovechars()
 
 	avail_descriptors = sysconf(_SC_OPEN_MAX) - 5;
 
-	mob_init();
-
 	/* Daemonize */
 	if ((optflags & OPT_DETACH) && daemon(1, 1) != 0)
 		_exit(0);
@@ -1050,7 +1047,7 @@ shovechars()
 
 	while (shutdown_flag == 0) {
 		/* process_commands(); */
-		mob_update(tick);
+		objects_update(tick);
 		geo_update();
                 tick ++;
 

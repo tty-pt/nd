@@ -1,10 +1,10 @@
 #ifndef COMMAND_H
 #define COMMAND_H
 
-typedef int ref_t;
+typedef int dbref;
 
 typedef struct {
-	ref_t player;
+	dbref player;
 	int fd, argc;
 	char *argv[8];
 } command_t; /* FIXME commandi_t */
@@ -26,7 +26,7 @@ typedef struct {
 extern core_command_t cmds[];
 
 command_t command_null(command_t *cmd);
-command_t command_new_null(int descr, ref_t player);
+command_t command_new_null(int descr, dbref player);
 void command_debug(command_t *cmd, char *label);
 core_command_t * command_match(command_t *cmd);
 

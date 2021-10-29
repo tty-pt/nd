@@ -1,11 +1,9 @@
 #include "geometry.h"
-#ifndef CLIENT
 #include "mdb.h"
 #include "props.h"
 #include "externs.h"
 #include "search.h"
 #include "web.h"
-#endif
 
 enum exit e_map[] = {
 	[0 ... 254] = E_NULL,
@@ -126,7 +124,6 @@ morton_pos(pos_t p, morton_t code)
 	/* debug("decoded point x%llx -> %d %d %d %d", code, p[0], p[1], p[2], p[3]); */
 }
 
-#ifndef CLIENT
 dbref
 obj_add(struct obj o, dbref where)
 {
@@ -184,7 +181,7 @@ e_exit_can(dbref player, dbref exit) {
 }
 
 int
-e_ground(ref_t room, enum exit e)
+e_ground(dbref room, enum exit e)
 {
 	pos_t pos;
 
@@ -210,4 +207,80 @@ e_exit_dest_set(dbref exit, dbref dest)
 	sp->exit.dest[0] = dest;
 }
 
-#endif
+dbref
+e_exit_here(command_t *cmd, enum exit e)
+{
+	return e_exit_where(cmd, getloc(cmd->player), e);
+}
+
+void
+pos_move(pos_t d, pos_t o, enum exit e) {
+	exit_t *ex = &exit_map[e];
+	POOP4D d[I] = o[I];
+	d[ex->dim] += ex->dis;
+}
+
+enum exit
+dir_e(const char dir) {
+	return e_map[(int) dir];
+}
+
+const char
+e_dir(enum exit e) {
+	return exit_map[e].name[0];
+}
+
+enum exit
+e_simm(enum exit e) {
+	return exit_map[e].simm;
+}
+
+const char *
+e_name(enum exit e) {
+	return exit_map[e].name;
+}
+
+const char *
+e_fname(enum exit e) {
+	return exit_map[e].fname;
+}
+
+const char *
+e_other(enum exit e) {
+	return exit_map[e].other;
+}
+
+morton_t
+point_rel_idx(point_t p, point_t s, smorton_t w)
+{
+	smorton_t s0 = s[Y_COORD],
+		s1 = s[X_COORD];
+	if (s0 > p[Y_COORD])
+		s0 -= UCOORD_MAX;
+	if (s1 > p[X_COORD])
+		s1 -= UCOORD_MAX;
+	return (p[Y_COORD] - s0) * w + (p[X_COORD] - s1);
+}
+
+enum exit
+exit_e(dbref exit) {
+	const char dir = NAME(exit)[0];
+	return dir_e(dir);
+}
+
+int
+e_exit_is(dbref exit)
+{ 
+	char const *fname = e_fname(exit_e(exit));
+	return *fname && !strncmp(NAME(exit), fname, 4);
+}
+
+dbref
+e_exit_dest(dbref exit)
+{
+	if (!DBFETCH(exit)->sp.exit.ndest)
+		return NOTHING;
+
+	else
+		return DBFETCH(exit)->sp.exit.dest[0];
+}

@@ -23,7 +23,7 @@ typedef struct {
 typedef struct view_tile {
 	/* ref_t players[ROOM_MAX]; /1* dbref actually *1/ */
 	enum biome bio_idx;
-	ref_t room;
+	dbref room;
 	ucoord_t flags, exits, doors;
 	struct plant_data pd;
 } view_tile_t;

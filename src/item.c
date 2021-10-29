@@ -20,7 +20,7 @@
 int
 equip_calc(dbref who, dbref eq)
 {
-	mobi_t *p = MOBI(who);
+	struct mob *p = MOB(who);
 	register int msv = GETMSV(eq),
 		 eqw = GETEQW(eq),
 		 eql = EQL(eqw),
@@ -31,7 +31,7 @@ equip_calc(dbref who, dbref eq)
 	case RHAND:
 		if (GETSTAT(p->who, STR) < msv)
 			return 1;
-		MOBI_EV(p, DMG) += DMG_WEAPON(eq);
+		MOB_EV(p, DMG) += DMG_WEAPON(eq);
 		p->wts = WTS_WEAPON(eq);
 		break;
 
@@ -58,9 +58,9 @@ equip_calc(dbref who, dbref eq)
 				return 1;
 		}
 		aux = DEF_ARMOR(eq, aux);
-		MOBI_EV(p, DEF) += aux;
-		int pd = MOBI_EV(p, DODGE) - DODGE_ARMOR(aux);
-		MOBI_EV(p, DODGE) = pd > 0 ? pd : 0;
+		MOB_EV(p, DEF) += aux;
+		int pd = MOB_EV(p, DODGE) - DODGE_ARMOR(aux);
+		MOB_EV(p, DODGE) = pd > 0 ? pd : 0;
 	}
 
 	return 0;
@@ -89,8 +89,8 @@ do_select(command_t *cmd)
 	dbref player = cmd->player;
 	const char *n_s = cmd->argv[1];
 	unsigned n = strtoul(n_s, NULL, 0);
-	mobi_t *liv = MOBI(player);
-	liv->select = n;
+	struct mob *mob = MOB(player);
+	mob->select = n;
 	notifyf(player, "You select %u.", n);
 }
 
@@ -115,7 +115,7 @@ do_equip(command_t *cmd)
 dbref
 unequip(dbref who, unsigned eql)
 {
-	mobi_t *liv = MOBI(who);
+	struct mob *mob = MOB(who);
 	dbref eq = GETEQ(who, eql);
 	unsigned eqt, aux;
 
@@ -124,12 +124,12 @@ unequip(dbref who, unsigned eql)
 
 	eqt = EQT(GETEQW(eq));
 	aux = 0;
-	assert(liv);
+	assert(mob);
 
 	switch (eql) {
 	case RHAND:
-		MOBI_EV(liv, DMG) -= DMG_WEAPON(eq);
-		liv->wts = phys_wts[liv->mob ? liv->mob->wt : GETWTS(who)];
+		MOB_EV(mob, DMG) -= DMG_WEAPON(eq);
+		mob->wts = phys_wts[mob->mob_skeleton ? mob->mob_skeleton->wt : GETWTS(who)];
 		break;
 	case PANTS:
 	case HEAD:
@@ -140,8 +140,8 @@ unequip(dbref who, unsigned eql)
 		case ARMOR_MEDIUM: aux += 1; break;
 		}
 		aux = DEF_ARMOR(eq, aux);
-		MOBI_EV(liv, DEF) -= aux;
-		MOBI_EV(liv, DODGE) += DODGE_ARMOR(aux);
+		MOB_EV(mob, DEF) -= aux;
+		MOB_EV(mob, DODGE) += DODGE_ARMOR(aux);
 	}
 
 	SETEQ(who, eql, 0);

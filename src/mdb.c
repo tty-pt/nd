@@ -136,6 +136,7 @@ db_clear_object(dbref i)
 	o->next = NOTHING;
 	o->properties = 0;
 	o->first_observer = NULL;
+	o->mob = NULL;
 
 	/* DBDIRTY(i); */
 	/* flags you must initialize yourself */
@@ -479,6 +480,8 @@ db_free_object(dbref i)
 			free(obs);
 		}
 	}
+	if (o->mob)
+		free(o->mob);
 }
 
 void
@@ -639,7 +642,7 @@ db_read_object_foxen(FILE * f, struct object *o, dbref objno)
 		o->sp.room.dropto = prop_flag ? getref(f) : j;
 		o->exits = getref(f);
 		OWNER(objno) = getref(f);
-		break;
+		return;
 	case TYPE_EXIT:
 		o->sp.exit.ndest = prop_flag ? getref(f) : j;
 		if (o->sp.exit.ndest > 0)	/* only allocate space for linked exits */
@@ -648,7 +651,7 @@ db_read_object_foxen(FILE * f, struct object *o, dbref objno)
 			(o->sp.exit.dest)[j] = getref(f);
 		}
 		OWNER(objno) = getref(f);
-		break;
+		return;
 	case TYPE_PLAYER:
 		ALLOC_PLAYER_SP(objno);
 		PLAYER_SET_HOME(objno, (prop_flag ? getref(f) : j));
@@ -659,8 +662,11 @@ db_read_object_foxen(FILE * f, struct object *o, dbref objno)
 		PLAYER_SP(objno)->last_observed = NOTHING;
 		break;
 	case TYPE_GARBAGE:
-		break;
+		return;
 	}
+
+	if (GETLID(objno) >= 0)
+		mob_put(objno);
 }
 
 dbref
@@ -741,6 +747,22 @@ copyobj(dbref player, dbref old, dbref nu)
 	moveto(nu, player);
 
 	DBDIRTY(nu);
+}
+
+static void
+object_update(dbref what, long long unsigned tick) {
+	struct object *o = DBFETCH(what);
+	if (o->mob)
+		mob_update(o->mob, tick);
+}
+
+void
+objects_update(long long unsigned tick)
+{
+	
+	dbref i;
+	for (i = db_top; i-- > 0;)
+		object_update(i, tick);
 }
 
 static const char *db_c_version = "$RCSfile$ $Revision: 1.39 $";

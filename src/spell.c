@@ -149,9 +149,9 @@ struct wts buf_wts[] = {
 };
 
 enum element
-element_next(ref_t ref, register unsigned char a)
+element_next(dbref ref, register unsigned char a)
 {
-	return a ? MOBI(ref)->debufs[__builtin_ffs(a) - 1]._sp->element
+	return a ? MOB(ref)->debufs[__builtin_ffs(a) - 1]._sp->element
 		: ELM_PHYSICAL;
 }
 
@@ -195,12 +195,12 @@ spells_init(spelli_t sps[8], dbref player)
 void
 debuf_end(dbref who, unsigned i)
 {
-	mobi_t *liv = MOBI(who);
-	struct debuf *d = &liv->debufs[i];
+	struct mob *mob = MOB(who);
+	struct debuf *d = &mob->debufs[i];
 	effect_t *e = EFFECT(who, DEBUF_TYPE(d->_sp));
 	i = 1 << i;
 
-	liv->debuf_mask ^= i;
+	mob->debuf_mask ^= i;
 	e->mask ^= i;
 	e->value -= d->val;
 }
@@ -240,27 +240,27 @@ debuf_notify(dbref who, struct debuf *d, short val)
 }
 
 void
-debufs_process(ref_t who)
+debufs_process(dbref who)
 {
-	mobi_t *liv = MOBI(who);
+	struct mob *mob = MOB(who);
 	register unsigned mask, i, aux;
 	short hpi = 0, dmg;
 	struct debuf *d, *hd;
 
-	for (mask = liv->debuf_mask, i = 0;
+	for (mask = mob->debuf_mask, i = 0;
 	     (aux = __builtin_ffs(mask));
 	     i++, mask >>= aux)
 	{
 		i += aux - 1;
-		d = &liv->debufs[i];
+		d = &mob->debufs[i];
 		d->duration--;
 		if (d->duration == 0)
-			debuf_end(liv->who, i);
+			debuf_end(mob->who, i);
 		// wtf is this special code?
 		else if (DEBUF_TYPE(d->_sp) == AF_HP) {
 			dmg = kill_dmg(d->_sp->element, d->val,
-				      MOBI_EV(liv, MDEF),
-				      ELEMENT_NEXT(liv->who, MDEF));
+				      MOB_EV(mob, MDEF),
+				      ELEMENT_NEXT(mob->who, MDEF));
 			hd = d;
 
 			hpi += dmg;
@@ -268,18 +268,18 @@ debufs_process(ref_t who)
 	}
 
 	if (hpi) {
-		debuf_notify(liv->who, hd, hpi);
-		cspell_heal(NOTHING, liv->who, hpi);
+		debuf_notify(mob->who, hd, hpi);
+		cspell_heal(NOTHING, mob->who, hpi);
 	}
 }
 
 void
 debufs_end(dbref who)
 {
-	mobi_t *liv = MOBI(who);
+	struct mob *mob = MOB(who);
 	register unsigned mask, i, aux;
 
-	for (mask = liv->debuf_mask, i = 0;
+	for (mask = mob->debuf_mask, i = 0;
 	     (aux = __builtin_ffs(mask));
 	     i++, mask >>= aux)
 
@@ -290,26 +290,26 @@ static inline int
 debuf_start(dbref who, spelli_t *sp, short val)
 {
 	spell_t *_sp = sp->_sp;
-	mobi_t *liv;
+	struct mob *mob;
 	struct debuf *d;
 	int i;
 
-	liv = MOBI(who);
-	if (liv->debuf_mask) {
-		i = __builtin_ffs(~liv->debuf_mask);
+	mob = MOB(who);
+	if (mob->debuf_mask) {
+		i = __builtin_ffs(~mob->debuf_mask);
 		if (!i)
 			return -1;
 		i--;
 	} else
 		i = 0;
 
-	d = &liv->debufs[i];
+	d = &mob->debufs[i];
 	d->_sp = _sp;
 	d->duration = DEBUF_DURATION(_sp->ra);
 	d->val = DEBUF_DMG(val, d->duration);
 
 	i = 1 << i;
-	liv->debuf_mask |= i;
+	mob->debuf_mask |= i;
 
 	effect_t *e = EFFECT(who, DEBUF_TYPE(_sp));
 	e->mask |= i;
@@ -321,10 +321,10 @@ debuf_start(dbref who, spelli_t *sp, short val)
 }
 
 int
-spell_cast(ref_t attacker, ref_t target, unsigned slot)
+spell_cast(dbref attacker, dbref target, unsigned slot)
 {
-	mobi_t *att = MOBI(attacker);
-	mobi_t *tar = att->target;
+	struct mob *att = MOB(attacker);
+	struct mob *tar = att->target;
 	spelli_t sp = att->spells[slot];
 	spell_t *_sp = sp._sp;
 
@@ -346,7 +346,7 @@ spell_cast(ref_t attacker, ref_t target, unsigned slot)
 	att->mp = mana > 0 ? mana : 0;
 
 	short val = kill_dmg(_sp->element, sp.val,
-			MOBI_EV(tar, MDEF),
+			MOB_EV(tar, MDEF),
 			ELEMENT_NEXT(tar->who, MDEF));
 
 	if (_sp->flags & AF_NEG) {
@@ -371,7 +371,7 @@ spell_cast(ref_t attacker, ref_t target, unsigned slot)
 int
 spells_cast(dbref attacker, dbref target)
 {
-	mobi_t *att = MOBI(attacker);
+	struct mob *att = MOB(attacker);
 	register unsigned i, d, combo = att->combo;
 	unsigned enough_mp = 1;
 
@@ -392,7 +392,7 @@ spells_cast(dbref attacker, dbref target)
 int
 cspell_heal(dbref attacker, dbref target, short amt)
 {
-	mobi_t *tar = MOBI(target);
+	struct mob *tar = MOB(target);
 	short hp = tar->hp;
 	int ret = 0;
 	hp += amt;

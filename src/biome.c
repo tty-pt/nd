@@ -1,9 +1,7 @@
 #include "biome.h"
 #include "params.h"
-#ifndef CLIENT
 #include "externs.h"
 #include "mdb.h"
-#endif
 
 biome_t biomes[] = {
 	[BIOME_WATER] = {

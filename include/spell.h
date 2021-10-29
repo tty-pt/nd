@@ -3,11 +3,12 @@
 
 #include "geometry.h"
 #include "stat.h"
+#include "command.h"
 
 #define ELEMENT(idx) (&element_map[idx])
 
 #define ELEMENT_NEXT(ref, type) \
-	element_next(ref, MOBI_EM(MOBI(ref), type))
+	element_next(ref, MOB_EM(MOB(ref), type))
 
 enum element {
 	ELM_PHYSICAL,
@@ -27,7 +28,7 @@ typedef struct {
 
 extern element_t element_map[];
 
-enum element element_next(ref_t ref, register unsigned char a);
+enum element element_next(dbref ref, register unsigned char a);
 
 #define DEBUF_DURATION(ra) 20 * (RARE_MAX - ra) / RARE_MAX
 #define DEBUF_DMG(sp_dmg, duration) ((long) 2 * sp_dmg) / duration
@@ -39,7 +40,7 @@ enum element element_next(ref_t ref, register unsigned char a);
 #define SPELL_DMG(p, sp) SPELL_G(GETSTAT(p, INT)) + HS(sp)
 #define SPELL_COST(dmg, y, no_bdmg) (no_bdmg ? 0 : dmg) + dmg / (1 << y)
 
-#define EFFECT(ref, idx) (&MOBI(ref)->e[idx])
+#define EFFECT(ref, idx) (&MOB(ref)->e[idx])
 
 enum spell_affects {
 	// these are changed by bufs
@@ -95,13 +96,13 @@ typedef struct {
 	unsigned char mask;
 } effect_t;
 
-void spells_init(spelli_t sps[8], ref_t player);
-void debuf_end(ref_t who, unsigned i);
-void debufs_end(ref_t who);
-void debufs_process(ref_t who);
+void spells_init(spelli_t sps[8], dbref player);
+void debuf_end(dbref who, unsigned i);
+void debufs_end(dbref who);
+void debufs_process(dbref who);
 void debuf_notify(dbref who, struct debuf *d, short val);
-int spell_cast(ref_t attacker, ref_t target, unsigned slot);
-int spells_cast(ref_t caster, ref_t target);
-int cspell_heal(ref_t attacker, ref_t target, short amt);
+int spell_cast(dbref attacker, dbref target, unsigned slot);
+int spells_cast(dbref caster, dbref target);
+int cspell_heal(dbref attacker, dbref target, short amt);
 
 #endif

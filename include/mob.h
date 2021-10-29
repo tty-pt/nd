@@ -12,13 +12,12 @@
 
 
 /* FIXME use ref as index */
-#define MOBI(who) (&mobi_map[GETLID(who)])
-#define MOBI_SIZE 64
+#define MOB(who) (DBFETCH(who)->mob)
 
-#define MOB(mob_id) (&mob_map[mob_id])
+#define MOB_SKELETON(mob_id) (&mob_skeleton_map[mob_id])
 
-#define MOBI_EV(mobi, w) mobi->e[AF_ ## w].value
-#define MOBI_EM(mobi, w) mobi->e[AF_ ## w].mask
+#define MOB_EV(mob, w) mob->e[AF_ ## w].value
+#define MOB_EM(mob, w) mob->e[AF_ ## w].mask
 
 #define BODYPART_ID(_c) ch_bodypart_map[(int) _c]
 /* #define BODYPART(_c) bodypart_map[BODYPART_ID(_c)] */
@@ -60,7 +59,7 @@ enum mob_ofs {
 };
 
 /* const unsigned ofs_water = 1; */
-enum mob {
+enum mob_type {
 	MOB_HUMAN = 0,
 	MOB_GOLDFISH,
 	MOB_SALMON,
@@ -93,38 +92,34 @@ enum mob_flags {
 	MF_SITTING,
 };
 
-typedef struct {
+struct mob_skeleton {
 	struct obj o;
 	drop_t *drop[32];
 	// y max 63 (6 bit) 
 	unsigned char y, stat, lvl, lvl_v, wt, flags;
 	enum element type;
 	unsigned biomes;
-} mob_t;
+};
 
 /* instance of mob */
-typedef struct mobi {
+struct mob {
 	struct debuf debufs[8];
 	spelli_t spells[8];
 	effect_t e[7];
-	mob_t *mob;
-	struct mobi *target;
+	struct mob_skeleton *mob_skeleton;
+	struct mob *target;
 	struct wts wts;
-	ref_t who;
+	dbref who;
 	int descr;
 	unsigned respawn_in, flags; // TODO merge these two
 	unsigned short hp, mp, hunger, thirst;
 	unsigned char debuf_mask, combo, select, klock;
-} mobi_t;
+};
 
-void mob_save(void);
-void mob_init();
-void mobs_add(ref_t where, enum biome, long long);
-mobi_t *mob_put(ref_t where);
+void mobs_add(dbref where, enum biome, long long);
+struct mob *mob_put(dbref where);
 void mobs_aggro(command_t *cmd);
 struct obj const *mob_obj_random();
-void mob_update(long long unsigned tick);
-
-extern mobi_t mobi_map[];
+void mob_update(struct mob *n, long long unsigned tick);
 
 #endif

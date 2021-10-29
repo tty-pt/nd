@@ -5,13 +5,11 @@
 #include "geography.h"
 #include "item.h"
 
-#ifndef CLIENT
 #include "mdb.h"
 #include "externs.h"
 #include "props.h"
 #include "params.h"
 #include "web.h"
-#endif
 
 #define BIOME_BG(i) (NIGHT_IS \
 		? ANSI_RESET : biomes[i].bg)
