@@ -125,7 +125,7 @@ morton_pos(pos_t p, morton_t code)
 }
 
 dbref
-obj_add(struct obj o, dbref where)
+obj_add(struct object_skeleton o, dbref where)
 {
 	CBUG(where < 0);
 	dbref nu = new_object();
@@ -145,7 +145,7 @@ obj_add(struct obj o, dbref where)
 }
 
 dbref
-obj_stack_add(struct obj o, dbref where, unsigned char n)
+obj_stack_add(struct object_skeleton o, dbref where, unsigned char n)
 {
 	CBUG(n <= 0);
 	dbref nu = obj_add(o, where);

@@ -6,7 +6,7 @@
 #include "externs.h"
 
 /* TODO calculate water needs */
-plant_t plant_map[] = {{
+struct plant_skeleton plant_skeleton_map[] = {{
 	// taiga
 	{
                 .name = "pinus sylvestris",
@@ -74,7 +74,7 @@ plant_t plant_map[] = {{
 static inline int
 plant_noise(unsigned char *plid, coord_t tmp, ucoord_t rn, morton_t v, unsigned char n)
 {
-	plant_t *pl = PLANT(n);
+	struct plant_skeleton *pl = PLANT_SKELETON(n);
 
 	CBUG(n >= PLANT_MAX);
 
@@ -147,7 +147,7 @@ plants_shuffle(struct plant_data *pd, morton_t v)
 }
 
 static inline unsigned
-plant_yield(plant_t *pl, coord_t tmp,
+plant_yield(struct plant_skeleton *pl, coord_t tmp,
 		unsigned char n)
 {
 	register unsigned ptmin = pl->tmp_min;
@@ -159,7 +159,7 @@ plant_add(command_t *cmd, dbref where, unsigned char plid, unsigned char n, coor
 {
 	if (n == 0)
 		return;
-	plant_t *pl = PLANT(plid);
+	struct plant_skeleton *pl = PLANT_SKELETON(plid);
 	dbref plant = obj_stack_add(pl->o, where, n);
 	dbref fruit = obj_add(pl->fruit, plant);
 	struct boolexp *key = parse_boolexp(cmd, NAME(cmd->player), 0);

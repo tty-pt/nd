@@ -682,7 +682,7 @@ wall(const char *msg)
 void
 mob_welcome(int fd)
 {
-	struct obj const *o = mob_obj_random();
+	struct object_skeleton const *o = mob_obj_random();
 	if (o) {
 		CBUG(*o->name == '\0');
 		descr_inband(fd, o->name);

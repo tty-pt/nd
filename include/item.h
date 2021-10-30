@@ -9,8 +9,8 @@
 #define ARMORSET_LIST(s) & s ## _helmet, \
 	& s ## _chest, & s ## _pants
 
-struct item {
-	struct obj o;
+struct equipment_skeleton {
+	struct object_skeleton o;
 	unsigned short eqw, msv;
 };
 

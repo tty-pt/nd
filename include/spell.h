@@ -35,7 +35,7 @@ enum element element_next(dbref ref, register unsigned char a);
 #define DEBUF_TYPE_MASK 0xf
 #define DEBUF_TYPE(sp) (sp->flags & DEBUF_TYPE_MASK)
 
-#define SPELL(idx) (&spell_map[idx])
+#define SPELL_SKELETON(idx) (&spell_skeleton_map[idx])
 #define SPELL_G(v) G(v)
 #define SPELL_DMG(p, sp) SPELL_G(GETSTAT(p, INT)) + HS(sp)
 #define SPELL_COST(dmg, y, no_bdmg) (no_bdmg ? 0 : dmg) + dmg / (1 << y)
@@ -59,7 +59,7 @@ enum spell_affects {
 	AF_BUF = 0x20,
 };
 
-enum spell {
+enum spell_type {
 	SPELL_HEAL,
 	SPELL_FOCUS,
 	SPELL_FIRE_FOCUS,
@@ -73,30 +73,30 @@ enum spell {
 	SPELL_STONE_SKIN,
 };
 
-typedef struct {
-	struct obj o;
+struct spell_skeleton {
+	struct object_skeleton o;
 	enum element element;
 	unsigned char ms, ra, y, flags;
-} spell_t;
+};
 
 struct debuf { // one for each type of spell
-	spell_t *_sp;
+	struct spell_skeleton *_sp;
 	unsigned duration;
 	short val;
 };
 
-typedef struct {
-	spell_t *_sp;
+struct spell {
+	struct spell_skeleton *_sp;
 	unsigned cost; 
 	unsigned short val;
-} spelli_t;
+};
 
 typedef struct {
 	short value;
 	unsigned char mask;
 } effect_t;
 
-void spells_init(spelli_t sps[8], dbref player);
+void spells_init(struct spell sps[8], dbref player);
 void debuf_end(dbref who, unsigned i);
 void debufs_end(dbref who);
 void debufs_process(dbref who);

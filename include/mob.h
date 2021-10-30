@@ -43,7 +43,7 @@ extern bodypart_t bodypart_map[];
 extern enum bodypart ch_bodypart_map[];
 
 typedef struct {
-	struct item i;
+	struct equipment_skeleton i;
 	unsigned y;
 } drop_t;
 
@@ -93,7 +93,7 @@ enum mob_flags {
 };
 
 struct mob_skeleton {
-	struct obj o;
+	struct object_skeleton o;
 	drop_t *drop[32];
 	// y max 63 (6 bit) 
 	unsigned char y, stat, lvl, lvl_v, wt, flags;
@@ -104,7 +104,7 @@ struct mob_skeleton {
 /* instance of mob */
 struct mob {
 	struct debuf debufs[8];
-	spelli_t spells[8];
+	struct spell spells[8];
 	effect_t e[7];
 	struct mob_skeleton *mob_skeleton;
 	struct mob *target;
@@ -119,7 +119,7 @@ struct mob {
 void mobs_add(dbref where, enum biome, long long);
 struct mob *mob_put(dbref where);
 void mobs_aggro(command_t *cmd);
-struct obj const *mob_obj_random();
+struct object_skeleton const *mob_obj_random();
 void mob_update(struct mob *n, long long unsigned tick);
 
 #endif

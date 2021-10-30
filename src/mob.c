@@ -259,7 +259,7 @@ rarity_get() {
 }
 
 static inline dbref
-inventory_add(struct mob *mob, struct item i)
+inventory_add(struct mob *mob, struct equipment_skeleton i)
 {
 	dbref nu;
 
@@ -372,7 +372,7 @@ mobs_add(dbref w, enum biome biome, long long pdn) {
 	}
 }
 
-struct obj const *
+struct object_skeleton const *
 mob_obj_random()
 {
 	int idx = random() % MOFS_END;

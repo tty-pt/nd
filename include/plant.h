@@ -8,26 +8,26 @@
 #define PLANT_MASK 0x3
 #define PLANT_HALF (PLANT_MASK >> 1)
 #define PLANT_N(pln, i) ((pln >> (i * 2)) & 3)
-#define PLANT_MAX (sizeof(plant_map) / sizeof(plant_t))
+#define PLANT_MAX (sizeof(plant_skeleton_map) / sizeof(struct plant_skeleton))
 
-#define PLANT(plid) &plant_map[plid]
+#define PLANT_SKELETON(plid) &plant_skeleton_map[plid]
 
-typedef struct {
-	struct obj o;
+struct plant_skeleton {
+	struct object_skeleton o;
 	char const *pre, small, big, *post;
 	coord_t tmp_min, tmp_max;
 	ucoord_t rn_min, rn_max;
 	unsigned char yield;
-	struct obj fruit;
+	struct object_skeleton fruit;
 	unsigned y;
-} plant_t;
+};
 
 struct plant_data {
 	unsigned char id[3];
 	unsigned char n, max;
 };
 
-extern plant_t plant_map[];
+extern struct plant_skeleton plant_skeleton_map[];
 
 void
 plants_noise(struct plant_data *,

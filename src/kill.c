@@ -139,7 +139,7 @@ static inline dbref
 body(command_t *cmd, dbref mob)
 {
 	char buf[32];
-	struct obj o = { "", "", "" };
+	struct object_skeleton o = { "", "", "" };
 	snprintf(buf, sizeof(buf), "%s's body.", NAME(mob));
 	o.name = buf;
 	dbref dead_mob = obj_add(o, getloc(mob));

@@ -86,7 +86,7 @@ typedef struct {
 	coord_t dim, dis;
 } exit_t;
 
-struct obj {
+struct object_skeleton {
 	char const *name;
 	char const *art;
 	char const *description;
@@ -105,10 +105,10 @@ int e_ground(dbref room, enum exit e);
 void e_exit_dest_set(dbref exit, dbref dest);
 
 dbref
-obj_add(struct obj o, dbref where);
+obj_add(struct object_skeleton o, dbref where);
 
 dbref
-obj_stack_add(struct obj o, dbref where,
+obj_stack_add(struct object_skeleton o, dbref where,
 		unsigned char n);
 dbref
 contents_find(command_t *cmd, dbref where,

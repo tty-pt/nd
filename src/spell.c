@@ -43,7 +43,7 @@ element_t element_map[] = {
 	},
 };
 
-spell_t spell_map[] = {
+struct spell_skeleton spell_skeleton_map[] = {
 	[SPELL_HEAL] = {
 		{"Heal", "", "" },
 		ELM_PHYSICAL, 3, 1, 2, AF_HP,
@@ -157,23 +157,23 @@ element_next(dbref ref, register unsigned char a)
 
 static inline void
 spell_init(
-		spelli_t *sp, dbref player,
+		struct spell *sp, dbref player,
 		unsigned intelligence,
 		unsigned idx)
 {
-	spell_t *_sp = SPELL(idx);
+	struct spell_skeleton *_sp = SPELL_SKELETON(idx);
 	sp->_sp = _sp;
 	sp->val = SPELL_DMG(player, _sp);
 	sp->cost = SPELL_COST(sp->val, _sp->y, _sp->flags & AF_BUF);
 }
 
 void
-spells_init(spelli_t sps[8], dbref player)
+spells_init(struct spell sps[8], dbref player)
 {
 	char const *str = GETCURSPELLS(player);
 	unsigned i = 0;
 	unsigned intelligence = GETSTAT(player, INT);
-	memset(sps, 0, sizeof(spelli_t) * 8);
+	memset(sps, 0, sizeof(struct spell) * 8);
 
 	if (str && *str != '\0')
 		for (; i < 8; i ++) {
@@ -206,7 +206,7 @@ debuf_end(dbref who, unsigned i)
 }
 
 static inline char const *
-sp_color(spell_t *_sp)
+sp_color(struct spell_skeleton *_sp)
 {
 	return DEBUF_TYPE(_sp) == AF_HP
 		&& !(_sp->flags & AF_NEG)
@@ -215,7 +215,7 @@ sp_color(spell_t *_sp)
 }
 
 static inline struct wts *
-debuf_wts(spell_t *_sp)
+debuf_wts(struct spell_skeleton *_sp)
 {
 	register unsigned char mask = _sp->flags;
 	register unsigned idx = (DEBUF_TYPE(_sp) << 1) + ((mask >> 4) & 1);
@@ -227,7 +227,7 @@ void
 debuf_notify(dbref who, struct debuf *d, short val)
 {
 	char buf[BUFSIZ];
-	register spell_t *_sp = d->_sp;
+	register struct spell_skeleton *_sp = d->_sp;
 	char const *color = sp_color(_sp);
 	struct wts *wts = debuf_wts(_sp);
 
@@ -287,9 +287,9 @@ debufs_end(dbref who)
 }
 
 static inline int
-debuf_start(dbref who, spelli_t *sp, short val)
+debuf_start(dbref who, struct spell *sp, short val)
 {
-	spell_t *_sp = sp->_sp;
+	struct spell_skeleton *_sp = sp->_sp;
 	struct mob *mob;
 	struct debuf *d;
 	int i;
@@ -325,8 +325,8 @@ spell_cast(dbref attacker, dbref target, unsigned slot)
 {
 	struct mob *att = MOB(attacker);
 	struct mob *tar = att->target;
-	spelli_t sp = att->spells[slot];
-	spell_t *_sp = sp._sp;
+	struct spell sp = att->spells[slot];
+	struct spell_skeleton *_sp = sp._sp;
 
 	unsigned mana = att->mp;
 	char a[BUFSIZ]; // FIXME way too big?

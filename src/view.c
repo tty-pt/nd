@@ -42,7 +42,7 @@ vtf_t vtf_map[] = {
 static inline char *
 dr_tree(struct plant_data pd, int n, char *b) {
 	if (PLANT_N(pd.n, n)) {
-		plant_t *pl = PLANT(pd.id[n]);
+		struct plant_skeleton *pl = PLANT_SKELETON(pd.id[n]);
 		b = stpcpy(b, pl->pre);
 		*b++ = PLANT_N(pd.n, n) > PLANT_HALF
 			? pl->big : pl->small;

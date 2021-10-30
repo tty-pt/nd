@@ -107,7 +107,7 @@ icon(dbref what)
                         ret.icon = ANSI_BOLD ANSI_FG_BLUE "~";
                         break;
                 } else if ((aux = GETPLID(what)) >= 0) {
-                        plant_t *pl = PLANT(aux);
+                        struct plant_skeleton *pl = PLANT_SKELETON(aux);
 
                         ret.actions |= ACT_CHOP | ACT_OPEN;
                         snprintf(buf, sizeof(buf), "%s%c%s", pl->pre,

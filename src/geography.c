@@ -273,7 +273,7 @@ others_add(command_t *cmd, dbref where, enum biome b, pos_t p)
 {
 	noise_t v = uhash((const char *) p, sizeof(pos_t), 0);
 	unsigned char n = v & 0x7;
-	static struct obj stone = {
+	static struct object_skeleton stone = {
                 .name = "stone",
                 .art = "stones.jpg",
                 .description = "Solid stone(s)",
