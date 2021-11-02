@@ -132,7 +132,7 @@ ws_handshake(int cfd, char *buf) {
 }
 
 int
-ws_write(int cfd, void *data, size_t n)
+ws_write(int cfd, const void *data, size_t n)
 {
 	unsigned char head[2] = { 0x81, 0x00 };
 

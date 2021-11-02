@@ -8,12 +8,8 @@ void *
 web_frame(int descr)
 {
 	McpFrame *mfr = descr_mcpframe(descr);
-	McpVer supp;
 
-	if (!mfr)
-                return NULL;
-
-        if (!mfr->enabled)
+	if (!mfr || !mfr->enabled)
                 return NULL;
 
         return mfr;
