@@ -86,11 +86,64 @@ typedef struct {
 	coord_t dim, dis;
 } exit_t;
 
+enum object_skeleton_type {
+        S_TYPE_OTHER,
+        S_TYPE_FOOD,
+        S_TYPE_DRINK,
+        S_TYPE_EQUIPMENT,
+        S_TYPE_MOB,
+	S_TYPE_PLANT,
+};
+
+enum element {
+	ELM_PHYSICAL,
+	ELM_FIRE,
+	ELM_ICE,
+	ELM_AIR,
+	ELM_EARTH,
+	ELM_SPIRIT,
+	ELM_VAMP,
+	ELM_DARK,
+};
+
+struct drop {
+	struct object_skeleton *i;
+	unsigned y;
+};
+
+struct mob_skeleton {
+	struct drop *drop[32];
+	unsigned char y, stat, lvl, lvl_v, wt, flags;
+	enum element type;
+	unsigned biomes;
+};
+
+struct plant_skeleton {
+	char const *pre, small, big, *post;
+	coord_t tmp_min, tmp_max;
+	ucoord_t rn_min, rn_max;
+	unsigned char yield;
+	struct drop *drop[32];
+	unsigned y;
+};
+
 struct object_skeleton {
 	char const *name;
 	char const *art;
 	char const *description;
         char const *avatar;
+
+        enum object_skeleton_type type;
+
+        union {
+                unsigned short food;
+                unsigned short drink;
+                struct {
+                        unsigned short eqw, msv;
+                } equipment;
+                struct mob_skeleton mob;
+		struct plant_skeleton plant;
+        } sp;
 };
 
 extern enum exit e_map[];
@@ -110,6 +163,10 @@ obj_add(struct object_skeleton o, dbref where);
 dbref
 obj_stack_add(struct object_skeleton o, dbref where,
 		unsigned char n);
+
+void
+object_drop(dbref where, struct drop **drop);
+
 dbref
 contents_find(command_t *cmd, dbref where,
 		const char *name);

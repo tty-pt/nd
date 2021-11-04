@@ -129,7 +129,7 @@ unequip(dbref who, unsigned eql)
 	switch (eql) {
 	case RHAND:
 		MOB_EV(mob, DMG) -= DMG_WEAPON(eq);
-		mob->wts = phys_wts[mob->mob_skeleton ? mob->mob_skeleton->wt : GETWTS(who)];
+		mob->wts = phys_wts[GETWTS(who)];
 		break;
 	case PANTS:
 	case HEAD:

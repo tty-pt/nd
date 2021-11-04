@@ -124,6 +124,22 @@ morton_pos(pos_t p, morton_t code)
 	/* debug("decoded point x%llx -> %d %d %d %d", code, p[0], p[1], p[2], p[3]); */
 }
 
+static inline int
+rarity_get() {
+	register int r = random();
+	if (r > RAND_MAX >> 1)
+		return 0; // POOR
+	if (r > RAND_MAX >> 2)
+		return 1; // COMMON
+	if (r > RAND_MAX >> 6)
+		return 2; // UNCOMMON
+	if (r > RAND_MAX >> 10)
+		return 3; // RARE
+	if (r > RAND_MAX >> 14)
+		return 4; // EPIC
+	return 5; // MYTHICAL
+}
+
 dbref
 obj_add(struct object_skeleton o, dbref where)
 {
@@ -140,6 +156,40 @@ obj_add(struct object_skeleton o, dbref where)
 	THING_SET_HOME(nu, where);
 	PUSH(nu, DBFETCH(where)->contents);
 	DBDIRTY(where);
+
+	switch (o.type) {
+	case S_TYPE_EQUIPMENT:
+		SETEQW(nu, o.sp.equipment.eqw);
+		SETMSV(nu, o.sp.equipment.msv);
+		SETRARE(nu, rarity_get());
+
+		struct mob *mob = MOB(where);
+
+		if (mob && !cannot_equip(where, nu))
+			SETEQ(where, o.sp.equipment.eqw, nu);
+
+		break;
+	case S_TYPE_FOOD:
+		SETFOOD(nu, o.sp.food);
+		break;
+	case S_TYPE_DRINK:
+		SETDRINK(nu, o.sp.drink);
+		break;
+	case S_TYPE_MOB:
+		/* SETMID(nu, mid); */
+		SETAGGRO(nu, o.sp.mob.flags & MF_AGGRO);
+		SETWTS(nu, o.sp.mob.wt);
+		mob_add_stats(&o, nu);
+		mob = mob_put(nu);
+		object_drop(nu, o.sp.mob.drop);
+		break;
+	case S_TYPE_PLANT:
+		object_drop(nu, o.sp.plant.drop);
+		break;
+	case S_TYPE_OTHER:
+		break;
+	}
+
         web_content_in(where, nu);
 	return nu;
 }
@@ -152,6 +202,14 @@ obj_stack_add(struct object_skeleton o, dbref where, unsigned char n)
 	if (n > 1)
 		SETSTACK(nu, n);
 	return nu;
+}
+
+void
+object_drop(dbref where, struct drop **drop)
+{
+	for (; *drop; drop++)
+		if (random() < (RAND_MAX >> (*drop)->y))
+			obj_add(*(*drop)->i, where);
 }
 
 dbref

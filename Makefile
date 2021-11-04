@@ -5,7 +5,7 @@ subdirs := src/ vss/ game/data/
 
 include scripts/Makefile.common
 
-GCC_JS := gcc -E -P -nostdinc -undef -x c
+GCC_JS := ${CC} -E -P -nostdinc -undef -x c
 .SUFFIXES: .js .hjs
 
 .hjs.js:

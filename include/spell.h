@@ -10,17 +10,6 @@
 #define ELEMENT_NEXT(ref, type) \
 	element_next(ref, MOB_EM(MOB(ref), type))
 
-enum element {
-	ELM_PHYSICAL,
-	ELM_FIRE,
-	ELM_ICE,
-	ELM_AIR,
-	ELM_EARTH,
-	ELM_SPIRIT,
-	ELM_VAMP,
-	ELM_DARK,
-};
-
 typedef struct {
 	char *color;
 	enum element weakness;

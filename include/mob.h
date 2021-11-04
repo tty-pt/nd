@@ -42,11 +42,6 @@ enum bodypart {
 extern bodypart_t bodypart_map[];
 extern enum bodypart ch_bodypart_map[];
 
-typedef struct {
-	struct equipment_skeleton i;
-	unsigned y;
-} drop_t;
-
 enum mob_ofs {
 	MOFS_WATER = 1,
 	MOFS_ICE = 9,
@@ -73,15 +68,15 @@ enum mob_type {
 	MOB_PARROT = MOFS_JUNGLE,
 	MOB_BANDIT = MOFS_TEMPERATE,
 	MOB_SWALLOW,
-	MOB_SKELETON,
+	/* MOB_SKELETON_, */
 	MOB_VAMPIRE_SPAWN,
 	MOB_WOODPECKER,
 	MOB_SPARROW,
-	MOB_OWL,
-	MOB_EAGLE,
-	MOB_STARLING = MOFS_TEMPERATE_DESERT,
-	MOB_VULTURE = MOFS_DESERT,
-	MOB_FIREBIRD = MOFS_FIRE,
+	/* MOB_OWL, */
+	/* MOB_EAGLE, */
+	/* MOB_STARLING = MOFS_TEMPERATE_DESERT, */
+	/* MOB_VULTURE = MOFS_DESERT, */
+	/* MOB_FIREBIRD = MOFS_FIRE, */
 	MOB_MAX,
 };
 
@@ -92,21 +87,11 @@ enum mob_flags {
 	MF_SITTING,
 };
 
-struct mob_skeleton {
-	struct object_skeleton o;
-	drop_t *drop[32];
-	// y max 63 (6 bit) 
-	unsigned char y, stat, lvl, lvl_v, wt, flags;
-	enum element type;
-	unsigned biomes;
-};
-
 /* instance of mob */
 struct mob {
 	struct debuf debufs[8];
 	struct spell spells[8];
 	effect_t e[7];
-	struct mob_skeleton *mob_skeleton;
 	struct mob *target;
 	struct wts wts;
 	dbref who;
@@ -116,10 +101,11 @@ struct mob {
 	unsigned char debuf_mask, combo, select, klock;
 };
 
-void mobs_add(dbref where, enum biome, long long);
+void mobs_add(dbref where, enum biome, long long pdn);
 struct mob *mob_put(dbref where);
 void mobs_aggro(command_t *cmd);
 struct object_skeleton const *mob_obj_random();
 void mob_update(struct mob *n, long long unsigned tick);
+void mob_add_stats(struct object_skeleton *mob, dbref nu);
 
 #endif

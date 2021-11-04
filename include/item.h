@@ -6,13 +6,8 @@
 #include "geometry.h"
 /* #include "mdb.h" */
 
-#define ARMORSET_LIST(s) & s ## _helmet, \
-	& s ## _chest, & s ## _pants
-
-struct equipment_skeleton {
-	struct object_skeleton o;
-	unsigned short eqw, msv;
-};
+#define ARMORSET_LIST(s) & s ## _helmet_drop, \
+	& s ## _chest_drop, & s ## _pants_drop
 
 struct wts {
 	const char *a, *b;

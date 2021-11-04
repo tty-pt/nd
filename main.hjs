@@ -332,7 +332,7 @@ let cmd_history = [];
 let history_position = -1;
 
 window.onkeydown = function(e) {
-	console.log('onkeydown', e.keyCode, e);
+	// console.log('onkeydown', e.keyCode, e);
 	help_hide();
 
 	if (document.activeElement == input) {

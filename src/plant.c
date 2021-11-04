@@ -6,75 +6,123 @@
 #include "externs.h"
 
 /* TODO calculate water needs */
-struct plant_skeleton plant_skeleton_map[] = {{
+struct object_skeleton plant_skeleton_map[] = {{
 	// taiga
-	{
-                .name = "pinus sylvestris",
-                .art = "pinus_sylvestris.png",
-                .description = "",
-                .avatar = "pinus_sylvestris_avatar.png"
-        }, ANSI_BOLD ANSI_FG_GREEN, 'x', 'X', ANSI_RESET_BOLD,
-	30, 70, 50, 1024, 1,
-	{ "fruit", "", "" }, 1,
+	.name = "pinus sylvestris",
+	.art = "pinus_sylvestris.png",
+	.description = "",
+	.avatar = "pinus_sylvestris_avatar.png",
+	.type = S_TYPE_PLANT,
+	.sp = { .plant = {
+		.pre = ANSI_BOLD ANSI_FG_GREEN,
+		.small = 'x',
+		.big = 'X',
+		.post = ANSI_RESET_BOLD,
+		.tmp_min = 30,
+		.tmp_max = 70,
+		.rn_min = 50,
+		.rn_max = 1024,
+		.yield = 1,
+		.drop = { NULL },
+		.y = 1,
+	} },
 }, {	// temperate rainforest
-	{
-                .name = "pseudotsuga menziesii",
-                .art = "pseudotsuga_menziesii.jpg",
-                .description = "",
-                .avatar = "pseudotsuga_menziesii_avatar.jpg"
-        }, ANSI_BOLD ANSI_FG_GREEN, 't', 'T', ANSI_RESET_BOLD,
-	32, 100, 180, 350, 1,
-	{ "fruit", "", "" }, 1,
+	.name = "pseudotsuga menziesii",
+	.art = "pseudotsuga_menziesii.jpg",
+	.description = "",
+	.avatar = "pseudotsuga_menziesii_avatar.jpg",
+	.type = S_TYPE_PLANT,
+	.sp = { .plant = {
+		ANSI_BOLD ANSI_FG_GREEN, 't', 'T', ANSI_RESET_BOLD,
+		32, 100, 180, 350, 1,
+		{ NULL }, 1
+	} },
 }, {	// woodland / grassland / shrubland
-	{
-                .name = "betula pendula",
-                .art = "betula_pendula.jpg",
-                .description = "",
-                .avatar = "betula_pendula_avatar.jpg"
-        }, ANSI_FG_YELLOW, 'x', 'X', "",
-	30, 86, 0, 341, 1,
-	{ "fruit", "", "" }, 1,
+	.name = "betula pendula",
+	.art = "betula_pendula.jpg",
+	.description = "",
+	.avatar = "betula_pendula_avatar.jpg",
+	.type = S_TYPE_PLANT,
+	.sp = { .plant = {
+		ANSI_FG_YELLOW, 'x', 'X', "",
+		30, 86, 0, 341, 1,
+		{ NULL }, 1,
+	} },
 }, {	// woodland / grassland?
-	{ "betula pubescens", "", "" }, ANSI_FG_WHITE, 'x', 'X', "",
-	50, 146, 500, 900, 1,
-	{ "fruit", "", "" }, 1,
+	.name = "betula pubescens",
+	.description = "", 
+	.art = "",
+	.avatar = "",
+	.type = S_TYPE_PLANT,
+	.sp = { .plant = {
+		ANSI_FG_WHITE, 'x', 'X', "",
+		50, 146, 500, 900, 1,
+		{ NULL }, 1
+	} },
 }, {	// temperate forest
-        {
-                .name = "abies alba",
-                .art = "abies_alba.jpg",
-                .description = "",
-                .avatar = "abies_alba_avatar.jpg"
-        },
-	ANSI_BOLD ANSI_FG_GREEN, 'a', 'A', ANSI_RESET_BOLD,
-	-40, 86, 100, 200, 1,
-	{ "fruit", "", "" }, 1,
+	.name = "abies alba",
+	.art = "abies_alba.jpg",
+	.description = "",
+	.avatar = "abies_alba_avatar.jpg",
+	.type = S_TYPE_PLANT,
+	.sp = { .plant = {
+		ANSI_BOLD ANSI_FG_GREEN, 'a', 'A', ANSI_RESET_BOLD,
+		-40, 86, 100, 200, 1,
+		{ NULL }, 1,
+	} },
 }, {	// desert
-	{ "arthrocereus rondonianus", "", "" }, ANSI_BOLD ANSI_FG_GREEN, 'i', 'I', "",
-	110, 190, 10, 180, 1,
-	{ "fruit", "", "" }, 1,
+	.name = "arthrocereus rondonianus",
+	.description = "",
+	.art = "",
+	.avatar = "",
+	.type = S_TYPE_PLANT,
+	.sp = { .plant = {
+		ANSI_BOLD ANSI_FG_GREEN, 'i', 'I', "",
+		110, 190, 10, 180, 1,
+		{ NULL }, 1,
+	} },
 }, {	// savannah
-	{
-                .name = "acacia senegal",
-                .art = "acacia_senegal.jpg",
-                .description = "",
-                .avatar = "acacia_senegal_avatar.jpg"
-        }, ANSI_BOLD ANSI_FG_GREEN, 't', 'T', "",
-	40, 150, 20, 345, 1,
-	{ "fruit", "", "" }, 1,
+	.name = "acacia senegal",
+	.art = "acacia_senegal.jpg",
+	.description = "",
+	.avatar = "acacia_senegal_avatar.jpg",
+	.type = S_TYPE_PLANT,
+	.sp = { .plant = {
+		ANSI_BOLD ANSI_FG_GREEN, 't', 'T', "",
+		40, 150, 20, 345, 1,
+		{ NULL }, 1,
+	} },
 }, {
-	{ "daucus carota", "", "" }, ANSI_FG_WHITE, 'x', 'X', "",
-	38, 96, 100, 200, 1,
-	{ "carrot", "", "" }, 1,
+	.name = "daucus carota",
+	.art = "",
+	.description = "",
+	.avatar = "",
+	.type = S_TYPE_PLANT,
+	.sp = { .plant = {
+		ANSI_FG_WHITE, 'x', 'X', "",
+		38, 96, 100, 200, 1,
+		/* { "carrot", "", "" }, 1, */
+		{ NULL }, 1
+	} },
 }, {
-	{ "solanum lycopersicum", "", "" }, ANSI_FG_RED, 'x', 'X', "", 
-	50, 98, 100, 200, 5,
-	{ "tomato", "", "" }, 1,
+	.name = "solanum lycopersicum",
+	.art = "",
+	.description = "",
+	.avatar = "",
+	.type = S_TYPE_PLANT,
+	.sp = { .plant = {
+		ANSI_FG_RED, 'x', 'X', "", 
+		50, 98, 100, 200, 5,
+		/* { "tomato", "", "" }, 1, */
+		{ NULL }, 1
+	} },
 }};
 
 static inline int
 plant_noise(unsigned char *plid, coord_t tmp, ucoord_t rn, morton_t v, unsigned char n)
 {
-	struct plant_skeleton *pl = PLANT_SKELETON(n);
+	struct object_skeleton *obj_skel = PLANT_SKELETON(n);
+	struct plant_skeleton *pl = &obj_skel->sp.plant;
 
 	CBUG(n >= PLANT_MAX);
 
@@ -146,29 +194,16 @@ plants_shuffle(struct plant_data *pd, morton_t v)
 		| (apln[2] << 4);
 }
 
-static inline unsigned
-plant_yield(struct plant_skeleton *pl, coord_t tmp,
-		unsigned char n)
-{
-	register unsigned ptmin = pl->tmp_min;
-	return random() % (1 + n * (tmp - ptmin) * pl->yield / (pl->tmp_max - ptmin));
-}
-
 static inline void
 plant_add(command_t *cmd, dbref where, unsigned char plid, unsigned char n, coord_t tmp)
 {
 	if (n == 0)
 		return;
-	struct plant_skeleton *pl = PLANT_SKELETON(plid);
-	dbref plant = obj_stack_add(pl->o, where, n);
-	dbref fruit = obj_add(pl->fruit, plant);
+	struct object_skeleton *obj_skel = PLANT_SKELETON(plid);
+	dbref plant = obj_stack_add(*obj_skel, where, n);
 	struct boolexp *key = parse_boolexp(cmd, NAME(cmd->player), 0);
-	unsigned yield = plant_yield(pl, tmp, n);
 	SETCONLOCK(plant, key);
         SETPLID(plant, plid);
-	SETFOOD(fruit, 3); // TODO
-	if (yield > 1)
-		SETSTACK(fruit, yield);
 }
 
 static inline void
@@ -195,15 +230,15 @@ plants_add(command_t *cmd, dbref where,
 		morton_t ty, coord_t tmp,
 		ucoord_t rn)
 {
-	struct plant_data epd;
+	/* struct plant_data epd; */
 
         if (pd->n)
                 _plants_add(cmd, where,
 				pd, tmp);
 
-	plants_noise(&epd, ty, tmp, rn, PLANT_EXTRA);
+	/* plants_noise(&epd, ty, tmp, rn, PLANT_EXTRA); */
 
-        if (epd.n)
-                _plants_add(cmd, where,
-				&epd, tmp);
+        /* if (epd.n) */
+                /* _plants_add(cmd, where, */
+	/* 			&epd, tmp); */
 }

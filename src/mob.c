@@ -69,163 +69,320 @@ enum bodypart ch_bodypart_map[] = {
 
 #include "drop.c"
 
-struct mob_skeleton mob_skeleton_map[] = {
+struct object_skeleton mob_skeleton_map[] = {
 	[MOB_HUMAN] = {
-		.o = {
-			.name = "human",
-		},
+		.name = "human",
 	},
 	[MOB_GOLDFISH] = {
-		FISH(goldfish, ""), .y = 4,
+		.name = "goldfish",
+		.description = "",
+		.art = "",
+		.avatar = "",
+		.type = S_TYPE_MOB,
+		.sp = {
+			.mob = {
+				.wt = BITE,
+				.type = ELM_ICE,
+				.biomes = (1<<BIOME_WATER),
+				.y = 4,
+			}
+		},
 	},
 	[MOB_SALMON] = {
-		FISH(salmon, ""), .y = 4,
+		.name = "salmon",
+		.description = "",
+		.art = "",
+		.avatar = "",
+		.type = S_TYPE_MOB,
+		.sp = {
+			.mob = {
+				.wt = BITE,
+				.type = ELM_ICE,
+				.biomes = (1<<BIOME_WATER),
+				.y = 4,
+			}
+		},
 	},
 	[MOB_TUNA] = {
-		FISH(tuna, ""), .y = 6,
+		.name = "tuna",
+		.description = "",
+		.art = "",
+		.avatar = "",
+		.type = S_TYPE_MOB,
+		.sp = {
+			.mob = {
+				.wt = BITE,
+				.type = ELM_ICE,
+				.biomes = (1<<BIOME_WATER),
+				.y = 6,
+			}
+		},
 	},
 	[MOB_KOIFISH] = {
-		FISH(koifish, ""), .y = 10,
+		.name = "koifish",
+		.description = "",
+		.art = "",
+		.avatar = "",
+		.type = S_TYPE_MOB,
+		.sp = {
+			.mob = {
+				.wt = BITE,
+				.type = ELM_ICE,
+				.biomes = (1<<BIOME_WATER),
+				.y = 10,
+			}
+		},
 	},
 	[MOB_DOLPHIN] = {
-		FISH(dolphin, ""), .y = 13,
+		.name = "dolphin",
+		.description = "",
+		.art = "",
+		.avatar = "",
+		.type = S_TYPE_MOB,
+		.sp = {
+			.mob = {
+				.wt = BITE,
+				.type = ELM_ICE,
+				.biomes = (1<<BIOME_WATER),
+				.y = 13,
+			}
+		},
 	},
 	[MOB_SHARK] = {
-		FISH(shark, ""), .y = 13, .lvl = 40,
-		.lvl_v = 0x1f, .flags = MF_AGGRO,
+		.name = "shark",
+		.description = "",
+		.art = "",
+		.avatar = "",
+		.type = S_TYPE_MOB,
+		.sp = {
+			.mob = {
+				.wt = BITE,
+				.type = ELM_ICE,
+				.biomes = (1<<BIOME_WATER),
+				.y = 13,
+				.lvl = 40,
+				.lvl_v = 0x1f,
+				.flags = MF_AGGRO,
+			}
+		},
 	},
 	[MOB_MOONFISH] = {
-		FISH(moonfish, ""), .y = 14, .flags = MF_AGGRO,
+		.name = "moonfish",
+		.description = "",
+		.art = "",
+		.avatar = "",
+		.type = S_TYPE_MOB,
+		.sp = {
+			.mob = {
+				.wt = BITE,
+				.type = ELM_ICE,
+				.biomes = (1<<BIOME_WATER),
+				.y = 14,
+				.flags = MF_AGGRO,
+			}
+		},
 	},
 	[MOB_RAINBOWFISH] = {
-		FISH(rainbowfish, ""), .y = 14, .flags = MF_AGGRO
+		.name = "rainbowfish",
+		.description = "",
+		.art = "",
+		.avatar = "",
+		.type = S_TYPE_MOB,
+		.sp = {
+			.mob = {
+				.wt = BITE,
+				.type = ELM_ICE,
+				.biomes = (1<<BIOME_WATER),
+				.y = 14,
+				.flags = MF_AGGRO,
+			}
+		},
 	},
 	[MOB_ICEBIRD] = {
-		BIRD(icebird, ""), .y = 14, .type = ELM_ICE, .flags = MF_AGGRO,
-		.biomes = (1 << BIOME_PERMANENT_ICE)
-			| (1 << BIOME_TUNDRA)
-			| (1 << BIOME_TUNDRA2)
-			| (1 << BIOME_TUNDRA3)
-			| (1 << BIOME_TUNDRA4)
-			| (1 << BIOME_COLD_DESERT)
+		.name = "icebird",
+		.description = "",
+		.art = "",
+		.avatar = "",
+		.type = S_TYPE_MOB,
+		.sp = {
+			.mob = {
+				.wt = PECK,
+				.type = ELM_AIR,
+				.biomes = (1 << BIOME_PERMANENT_ICE)
+					| (1 << BIOME_TUNDRA)
+					| (1 << BIOME_TUNDRA2)
+					| (1 << BIOME_TUNDRA3)
+					| (1 << BIOME_TUNDRA4)
+					| (1 << BIOME_COLD_DESERT),
+				.y = 14,
+				.flags = MF_AGGRO,
+			}
+		},
 
 	},
 	[MOB_PARROT] = {
-		.y = 4, BIRD(parrot, ""),
-		.biomes = (1 << BIOME_TEMPERATE_RAINFOREST)
+		.name = "parrot",
+		.description = "",
+		.art = "",
+		.avatar = "",
+		.type = S_TYPE_MOB,
+		.sp = {
+			.mob = {
+				.wt = PECK,
+				.type = ELM_AIR,
+				.biomes = (1 << BIOME_TEMPERATE_RAINFOREST),
+				.y = 4,
+				.flags = MF_AGGRO,
+			}
+		},
 	},
 	[MOB_BANDIT] = {
-		{
-			.name = "bandit",
-			.art = "bandit.jpg",
-			.description = "A shady person under some robes",
-			.avatar = "bandit_avatar.jpg"
+		.name = "bandit",
+		.art = "bandit.jpg",
+		.description = "A shady person under some robes",
+		.avatar = "bandit_avatar.jpg",
+		.type = S_TYPE_MOB,
+		.sp = {
+			.mob = {
+				.drop = {
+					&dagger_drop,
+					ARMORSET_LIST(padded),
+					ARMORSET_LIST(hide),
+					ARMORSET_LIST(chainmail),
+					NULL
+				},
+				.y = 4,
+				.stat = FIGHTER,
+				.lvl = 5,
+				.lvl_v = 0x7,
+				.flags = MF_AGGRO,
+				.biomes = (1 << BIOME_SHRUBLAND)
+					| (1 << BIOME_CONIFEROUS_FOREST)
+					| (1 << BIOME_BOREAL_FOREST)
+					| (1 << BIOME_TEMPERATE_GRASSLAND)
+					| (1 << BIOME_WOODLAND)
+					| (1 << BIOME_TEMPERATE_SEASONAL_FOREST)
+					| (1 << BIOME_TEMPERATE_RAINFOREST),
+			}
 		},
-		{ &dagger_drop, ARMORSET_LIST(padded),
-			ARMORSET_LIST(hide),
-			ARMORSET_LIST(chainmail), NULL },
-		4, FIGHTER, 5, 0x7, .flags = MF_AGGRO,
-		.biomes = (1 << BIOME_SHRUBLAND)
-			| (1 << BIOME_CONIFEROUS_FOREST)
-			| (1 << BIOME_BOREAL_FOREST)
-			| (1 << BIOME_TEMPERATE_GRASSLAND)
-			| (1 << BIOME_WOODLAND)
-			| (1 << BIOME_TEMPERATE_SEASONAL_FOREST)
-			| (1 << BIOME_TEMPERATE_RAINFOREST)
 	},
 	[MOB_SWALLOW] = {
-		{
-			.name = "swallow",
-			.art = "swallow.png",
-			.description = "",
-			.avatar = "swallow_avatar.png"
-		},
-		.wt = PECK,
-		.type = ELM_AIR,
-		.y = 4,
-		.biomes = (1 << BIOME_SHRUBLAND)
-			| (1 << BIOME_CONIFEROUS_FOREST)
-			| (1 << BIOME_BOREAL_FOREST)
-			| (1 << BIOME_TEMPERATE_GRASSLAND)
-			| (1 << BIOME_WOODLAND)
-			| (1 << BIOME_TEMPERATE_SEASONAL_FOREST)
-			| (1 << BIOME_TEMPERATE_RAINFOREST)
+		.name = "swallow",
+		.art = "swallow.png",
+		.description = "",
+		.avatar = "swallow_avatar.png",
+		.type = S_TYPE_MOB,
+		.sp = { .mob = {
+			.wt = PECK,
+			.type = ELM_AIR,
+			.y = 4,
+			.biomes = (1 << BIOME_SHRUBLAND)
+				| (1 << BIOME_CONIFEROUS_FOREST)
+				| (1 << BIOME_BOREAL_FOREST)
+				| (1 << BIOME_TEMPERATE_GRASSLAND)
+				| (1 << BIOME_WOODLAND)
+				| (1 << BIOME_TEMPERATE_SEASONAL_FOREST)
+				| (1 << BIOME_TEMPERATE_RAINFOREST)
+		} },
 	},
-	[MOB_SKELETON] = {
-		MOB_DEFINE(skeleton, "Bones that almost shine with a white polish that never seems to dull."),
-		{ NULL }, 2, FIGHTER, 40, 0xf, .flags = MF_AGGRO, .type = ELM_DARK,
-	},
+	/* [MOB_SKELETON] = { */
+	/* 	.name = "skeleton", */
+	/* 	.description = "Bones that almost shine with a white polish that never seems to dull.", */
+	/* 	.type = S_TYPE_MOB, */
+	/* 	.sp = { .mob = { */
+	/* 		.drop = { NULL }, */
+	/* 		.y = 2, */
+	/* 		.stat = FIGHTER, */
+	/* 		.lvl = 40, */
+	/* 		.lvl_v = 0xf, */
+	/* 		.flags = MF_AGGRO, */
+	/* 		.type = ELM_DARK, */
+	/* 	} }, */
+	/* }, */
 	[MOB_VAMPIRE_SPAWN] = {
-		MOB_DEFINE(vampire_spawn, "Undead that came into Being when a Vampire Slew a Mortal."),
-		{ NULL }, 6, FIGHTER, 80, 0x1f,
-		.type = ELM_VAMP, .flags = MF_AGGRO,
-		.o.name = "vampire spawn",
+		.name = "vampire spawn",
+		.description = "Undead that came into Being when a Vampire Slew a Mortal.",
+		.art = "",
+		.avatar = "",
+		.type = S_TYPE_MOB,
+		.sp = { .mob = {
+			.drop = { NULL },
+			.y = 6,
+			.stat = FIGHTER,
+			.lvl = 80,
+			.lvl_v = 0x1f,
+			.type = ELM_VAMP,
+			.flags = MF_AGGRO,
+		} },
 	},
 	[MOB_WOODPECKER] = {
-		{
-			.name = "woodpecker",
-			.art = "woodpecker.jpg",
-			.description = "",
-			.avatar = "woodpecker_avatar.jpg"
-		},
-		.wt = PECK,
-		.type = ELM_AIR,
-		.y = 2,
-		.biomes = (1 << BIOME_SHRUBLAND)
-			| (1 << BIOME_CONIFEROUS_FOREST)
-			| (1 << BIOME_BOREAL_FOREST)
-			| (1 << BIOME_TEMPERATE_GRASSLAND)
-			| (1 << BIOME_WOODLAND)
-			| (1 << BIOME_TEMPERATE_SEASONAL_FOREST)
-			| (1 << BIOME_TEMPERATE_RAINFOREST)
+		.name = "woodpecker",
+		.art = "woodpecker.jpg",
+		.description = "",
+		.avatar = "woodpecker_avatar.jpg",
+		.type = S_TYPE_MOB,
+		.sp = { .mob = {
+			.wt = PECK,
+			.type = ELM_AIR,
+			.y = 2,
+			.biomes = (1 << BIOME_SHRUBLAND)
+				| (1 << BIOME_CONIFEROUS_FOREST)
+				| (1 << BIOME_BOREAL_FOREST)
+				| (1 << BIOME_TEMPERATE_GRASSLAND)
+				| (1 << BIOME_WOODLAND)
+				| (1 << BIOME_TEMPERATE_SEASONAL_FOREST)
+				| (1 << BIOME_TEMPERATE_RAINFOREST),
+		} },
 	},
 	[MOB_SPARROW] = {
-		{
-			.name = "sparrow",
-			.art = "sparrow.jpg",
-			.description = "",
-			.avatar = "sparrow_avatar.jpg"
-		},
-		.wt = PECK, .type = ELM_AIR,
-		.y = 3,
-		.biomes = (1 << BIOME_SHRUBLAND)
-			| (1 << BIOME_CONIFEROUS_FOREST)
-			| (1 << BIOME_BOREAL_FOREST)
-			| (1 << BIOME_TEMPERATE_GRASSLAND)
-			| (1 << BIOME_WOODLAND)
-			| (1 << BIOME_TEMPERATE_SEASONAL_FOREST)
-			| (1 << BIOME_TEMPERATE_RAINFOREST)
+		.name = "sparrow",
+		.art = "sparrow.jpg",
+		.description = "",
+		.avatar = "sparrow_avatar.jpg",
+		.type = S_TYPE_MOB,
+		.sp = { .mob = {
+			.wt = PECK, .type = ELM_AIR,
+			.y = 3,
+			.biomes = (1 << BIOME_SHRUBLAND)
+				| (1 << BIOME_CONIFEROUS_FOREST)
+				| (1 << BIOME_BOREAL_FOREST)
+				| (1 << BIOME_TEMPERATE_GRASSLAND)
+				| (1 << BIOME_WOODLAND)
+				| (1 << BIOME_TEMPERATE_SEASONAL_FOREST)
+				| (1 << BIOME_TEMPERATE_RAINFOREST)
+		} },
 	},
-	[MOB_OWL] = {
-		BIRD(owl, ""), .y = 7, .type = ELM_DARK,
-		.biomes = (1 << BIOME_SHRUBLAND)
-			| (1 << BIOME_CONIFEROUS_FOREST)
-			| (1 << BIOME_BOREAL_FOREST)
-			| (1 << BIOME_TEMPERATE_GRASSLAND)
-			| (1 << BIOME_WOODLAND)
-			| (1 << BIOME_TEMPERATE_SEASONAL_FOREST)
-			| (1 << BIOME_TEMPERATE_RAINFOREST)
-	},
-	[MOB_EAGLE] = {
-		BIRD(eagle, ""), .y = 7,
-	},
-	[MOB_STARLING] = {
-		BIRD(starling, ""), .y = 8,
-	},
-	[MOB_VULTURE] = {
-		BIRD(vulture, ""), .y = 7,
-	},
-	[MOB_FIREBIRD] = {
-		BIRD(firebird, ""), .y = 14,
-		.type = ELM_FIRE, .flags = MF_AGGRO,
-	}
+	/* [MOB_OWL] = { */
+	/* 	BIRD(owl, ""), .y = 7, .type = ELM_DARK, */
+	/* 	.biomes = (1 << BIOME_SHRUBLAND) */
+	/* 		| (1 << BIOME_CONIFEROUS_FOREST) */
+	/* 		| (1 << BIOME_BOREAL_FOREST) */
+	/* 		| (1 << BIOME_TEMPERATE_GRASSLAND) */
+	/* 		| (1 << BIOME_WOODLAND) */
+	/* 		| (1 << BIOME_TEMPERATE_SEASONAL_FOREST) */
+	/* 		| (1 << BIOME_TEMPERATE_RAINFOREST) */
+	/* }, */
+	/* [MOB_EAGLE] = { */
+	/* 	BIRD(eagle, ""), .y = 7, */
+	/* }, */
+	/* [MOB_STARLING] = { */
+	/* 	BIRD(starling, ""), .y = 8, */
+	/* }, */
+	/* [MOB_VULTURE] = { */
+	/* 	BIRD(vulture, ""), .y = 7, */
+	/* }, */
+	/* [MOB_FIREBIRD] = { */
+	/* 	BIRD(firebird, ""), .y = 14, */
+	/* 	.type = ELM_FIRE, .flags = MF_AGGRO, */
+	/* } */
 };
 
-static inline void
-mob_add_stats(struct mob_skeleton *mob, dbref nu)
+void
+mob_add_stats(struct object_skeleton *mob, dbref nu)
 {
-	unsigned char stat = mob->stat;
-	int lvl = mob->lvl, spend, i, sp, v = mob->lvl_v ? mob->lvl_v : 0xf;
+	unsigned char stat = mob->sp.mob.stat;
+	int lvl = mob->sp.mob.lvl, spend, i, sp,
+	    v = mob->sp.mob.lvl_v ? mob->sp.mob.lvl_v : 0xf;
 
 	lvl += random() & v;
 
@@ -240,46 +397,6 @@ mob_add_stats(struct mob_skeleton *mob, dbref nu)
 		}
 
 	SETLVL(nu, lvl);
-}
-
-static inline int
-rarity_get() {
-	register int r = random();
-	if (r > RAND_MAX >> 1)
-		return 0; // POOR
-	if (r > RAND_MAX >> 2)
-		return 1; // COMMON
-	if (r > RAND_MAX >> 6)
-		return 2; // UNCOMMON
-	if (r > RAND_MAX >> 10)
-		return 3; // RARE
-	if (r > RAND_MAX >> 14)
-		return 4; // EPIC
-	return 5; // MYTHICAL
-}
-
-static inline dbref
-inventory_add(struct mob *mob, struct equipment_skeleton i)
-{
-	dbref nu;
-
-	nu = obj_add(i.o, mob->who);
-	SETEQW(nu, i.eqw);
-	SETMSV(nu, i.msv);
-	SETRARE(nu, rarity_get());
-
-	if (!cannot_equip(mob->who, nu))
-		SETEQ(mob->who, i.eqw, nu);
-
-	return nu;
-}
-
-static inline void
-mob_inventory(struct mob *mob, drop_t **drop)
-{
-	for (; *drop; drop++)
-		if (random() < (RAND_MAX >> (*drop)->y))
-			inventory_add(mob, (*drop)->i);
 }
 
 static inline int
@@ -305,8 +422,7 @@ mob_put(dbref who)
 
 	memset(mob, 0, sizeof(struct mob));
 	mob->who = who;
-	mob->mob_skeleton = MOB_SKELETON(MOB_HUMAN);
-	mob->wts = phys_wts[mob->mob_skeleton ? mob->mob_skeleton->wt : GETWTS(who)];
+	mob->wts = phys_wts[GETWTS(who)];
 	mob->hunger = mob->thirst = 0;
 	mob->flags = 0;
 	mob->combo = GETCOMBO(who);
@@ -333,29 +449,20 @@ mob_put(dbref who)
 
 static inline dbref
 mob_add(enum mob_type mid, dbref where, enum biome biome, long long pdn) {
-	struct mob_skeleton *skel = MOB_SKELETON(mid);
-	struct mob *mob;
+	struct object_skeleton *obj_skel = MOB_SKELETON(mid);
+	CBUG(obj_skel->type != S_TYPE_MOB);
+	struct mob_skeleton *mob_skel = &obj_skel->sp.mob;
 	dbref nu;
 
-	if ((bird_is(skel) && !pdn)
-	    || (!NIGHT_IS && (skel->type == ELM_DARK || skel->type == ELM_VAMP))
-	    || random() >= (RAND_MAX >> skel->y))
+	if ((bird_is(mob_skel) && !pdn)
+	    || (!NIGHT_IS && (mob_skel->type == ELM_DARK || mob_skel->type == ELM_VAMP))
+	    || random() >= (RAND_MAX >> mob_skel->y))
 		return NOTHING;
 
-	if (!((1 << biome) & skel->biomes))
+	if (!((1 << biome) & mob_skel->biomes))
 		return NOTHING;
 
-	nu = obj_add(skel->o, where);
-
-	SETMID(nu, mid);
-	SETAGGRO(nu, skel->flags & MF_AGGRO);
-	mob_add_stats(skel, nu);
-	mob = mob_put(nu);
-
-	/* debug("%d %s loc %d %s MID %d", nu, NAME(nu), where, NAME(where), mid); */
-
-	mob_inventory(mob, (drop_t **) skel->drop);
-
+	nu = obj_add(*obj_skel, where);
 	return nu;
 }
 
@@ -364,7 +471,7 @@ mobs_add(dbref w, enum biome biome, long long pdn) {
 	/* int o = MOFS_ICE; */
 	int o = 1;
 	unsigned mid,
-		 n = MOB_MAX - o;
+		 n = (sizeof(mob_skeleton_map) / sizeof(struct object_skeleton)) - 1;
 	CBUG(w <= 0);
 
 	for (mid = o; mid < o + n; mid++) {
@@ -378,7 +485,7 @@ mob_obj_random()
 	int idx = random() % MOFS_END;
 	if (idx == 0 || idx == 5 || idx == 8 || idx == 9)
 		return NULL;
-	return &MOB_SKELETON(idx)->o;
+	return MOB_SKELETON(idx);
 }
 
 void

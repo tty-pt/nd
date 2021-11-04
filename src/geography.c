@@ -281,7 +281,7 @@ others_add(command_t *cmd, dbref where, enum biome b, pos_t p)
         };
 	if (b == BIOME_WATER)
 		return;
-	if (n && (v & 0x18))
+	if (n && (v & 0x18) && (v & 0x01))
 		obj_stack_add(stone, where, n);
 }
 
