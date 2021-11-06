@@ -37,11 +37,10 @@ const dir_lbl = [ 'h', 'j', 'k', 'l', 'down', 'up' ],
         modal = document.querySelector('.modal'),
         forgetbtn = document.getElementById('forget_btn'),
         contents_btns = document.getElementById('contents'),
-        target_div = document.getElementById('target'),
         target_title = document.getElementById('target_title'),
         target_description = document.getElementById('target_description'),
-        target_contents = document.getElementById('target_contents'),
         target_art = document.getElementById('target_art'),
+        room_art = document.getElementById('room_art'),
         rtitle = document.querySelector('#title'),
         rdesc = document.querySelector('#description'),
         map = document.querySelector('#map'),
@@ -50,6 +49,7 @@ const dir_lbl = [ 'h', 'j', 'k', 'l', 'down', 'up' ],
 	}),
         act = document.getElementById('act'),
         inventory_btn = document.getElementById('inventory_btn'),
+        look_btn = document.getElementById('look_btn'),
         target_lbl = act.children[0];
 
 let contents = {};
@@ -167,7 +167,6 @@ function target_null() {
         delete actionable[target];
         contents[target].innerHTML = "";
         target_art.src = "";
-        target_div.classList.add("dn");
         target = null;
 }
 
@@ -199,29 +198,36 @@ function mcp_handler(j) {
 		renderActionable(dbref, j);
 	} else if (j.key == "web-look") {
                 const dbref = parseInt(j.dbref);
+                contents[dbref] = contents_btns;
 		if (j.room) {
+                        map.classList.remove("dn");
+                        target_art.classList.add("dn");
                         if (here)
                                 delete actionable[here];
                         here = dbref;
-                        contents[here] = contents_btns;
+                        if (j.art) {
+                                room_art.src = "art/" + j.art;
+                                console.log("setting room art to", j.art, room_art.src);
+                        } else
+                                room_art.src = "";
 			rtitle.innerHTML = j.name;
-			rdesc.innerHTML = j.description;
 			dir_init(j.exits);
                         if (target)
                                 target_null();
 		} else {
+                        map.classList.add("dn");
                         if (target)
                                 delete actionable[target];
-                        target_div.classList.remove("dn");
                         target = dbref;
-                        contents[target] = target_contents;
+                        target_art.classList.remove("dn");
                         if (j.art)
                                 target_art.src = "art/" + j.art;
                         else
                                 target_art.src = "";
                         target_title.innerHTML = j.pname;
-                        target_description.innerHTML = j.description;
                 }
+                rdesc.innerHTML = j.description;
+                console.log(actionable, contents);
                 contents[dbref].innerHTML = '';
                 actionable[dbref] = {};
                 properties[dbref] = j;
@@ -247,7 +253,6 @@ function mcp_handler(j) {
                 if (dbref == target) {
                         contents[target].innerHTML = "";
                         target_art.src = "";
-                        target_div.classList.add("dn");
                         target = null;
                 }
 
@@ -412,6 +417,10 @@ function inventory() {
                 target_null();
         else
                 cmd("inventory");
+}
+
+function look() {
+        cmd("look");
 }
 
 ws_init();

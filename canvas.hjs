@@ -111,6 +111,11 @@ function tilemap_cache() {
         img.src = actions_tiles[ACT_OPEN];
         img.classList.add("svl", "s_l");
         inventory_btn.appendChild(img);
+
+        img = document.createElement("img");
+        img.src = actions_tiles[ACT_LOOK];
+        img.classList.add("svl", "s_l");
+        look_btn.appendChild(img);
 }
 
 tilemap.onload = function () {

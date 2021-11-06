@@ -19,21 +19,26 @@
 				<a id="forget_btn" class="round txl ps c0" onclick="disconnect()">X</a>
 				<a id="help" class="round txl ps c0" onclick="help_show()">?</a>
 				<a id="inventory_btn" class="round ps c0" onclick="inventory()"></a>
+				<a id="look_btn" class="round ps c0" onclick="look()"></a>
 			</span>
 			<form id="left" class="vn f fg">
+                                <div class="_n f">
+                                        <div class="fg">
+                                                stats / equipment
+                                        </div>
+                                        <div class="vn">
+                                                <div id="title" class="tm pxs tac"></div>
+                                                <img id="room_art" class="sr2" />
+                                        </div>
+                                </div>
 				<pre id="term" class="fg"></pre>
 				<input name="cmd" class="cf" autocomplete="please-dont" autocapitalize="off">
 			</form>
-			<div id="target" class="vn f dn">
-				<div id="target_title"></div>
-				<img id="target_art" class="sr1" />
-				<div id="target_description"></div>
-				<div id="target_contents" class="vn fg oa"></div>
-			</div>
 			<div id="right" class="vn f">
-				<div id="title"></div>
+				<div id="target_title" class="tm pxs tac"></div>
 
 				<div class="faj"><pre id="map"></pre></div>
+				<img id="target_art" class="sr1 dn" />
 
 				<div id="dir" class="vn tar tnow">
 					<div class="_n">
