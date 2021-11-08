@@ -38,11 +38,9 @@ const dir_lbl = [ 'h', 'j', 'k', 'l', 'down', 'up' ],
         forgetbtn = document.getElementById('forget_btn'),
         contents_btns = document.getElementById('contents'),
         target_title = document.getElementById('target_title'),
-        target_description = document.getElementById('target_description'),
         target_art = document.getElementById('target_art'),
         room_art = document.getElementById('room_art'),
-        rtitle = document.querySelector('#title'),
-        rdesc = document.querySelector('#description'),
+        room_title = document.querySelector('#title'),
         map = document.querySelector('#map'),
         dir_btns = dir_lbl.map(function(id) {
 		return document.querySelector('#dir #' + id);
@@ -199,35 +197,37 @@ function mcp_handler(j) {
 	} else if (j.key == "web-look") {
                 const dbref = parseInt(j.dbref);
                 contents[dbref] = contents_btns;
+
+                if (here)
+                        delete actionable[here];
+                if (target)
+                        delete actionable[target];
+
 		if (j.room) {
                         map.classList.remove("dn");
                         target_art.classList.add("dn");
-                        if (here)
-                                delete actionable[here];
+                        target_title.innerHTML = "";
                         here = dbref;
-                        if (j.art) {
+                        if (j.art)
                                 room_art.src = "art/" + j.art;
-                                console.log("setting room art to", j.art, room_art.src);
-                        } else
-                                room_art.src = "";
-			rtitle.innerHTML = j.name;
+                        else
+                                room_art.src = "art/unknown.jpg";
+			room_title.innerHTML = j.name;
 			dir_init(j.exits);
                         if (target)
                                 target_null();
 		} else {
                         map.classList.add("dn");
-                        if (target)
-                                delete actionable[target];
                         target = dbref;
                         target_art.classList.remove("dn");
                         if (j.art)
                                 target_art.src = "art/" + j.art;
                         else
-                                target_art.src = "";
+                                target_art.src = "art/unknown_small.jpg";
                         target_title.innerHTML = j.pname;
                 }
-                rdesc.innerHTML = j.description;
-                console.log(actionable, contents);
+                if (j.description)
+                        output("\n" + j.description);
                 contents[dbref].innerHTML = '';
                 actionable[dbref] = {};
                 properties[dbref] = j;
@@ -413,10 +413,7 @@ window.onkeydown = function(e) {
 window.onorientationchange = scroll_reset;
 
 function inventory() {
-        if (target == me)
-                target_null();
-        else
-                cmd("inventory");
+        cmd("inventory");
 }
 
 function look() {

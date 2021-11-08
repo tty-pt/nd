@@ -150,14 +150,20 @@ do_look_at(command_t *cmd)
 		match_neighbor(&md);
 		match_possession(&md);
 		/* match_registered(&md); */
+                match_absolute(&md);
 		if (Wizard(OWNER(player))) {
-			match_absolute(&md);
 			match_player(&md);
 		}
 		match_here(&md);
 		match_me(&md);
 
 		thing = match_result(&md);
+
+                if (Typeof(thing) != TYPE_ROOM && getloc(thing) != getloc(player)) {
+                        notify(player, "That is too far away to see.");
+                        return;
+                }
+
 		if (thing != NOTHING && thing != AMBIGUOUS && !*detail) {
 			switch (Typeof(thing)) {
 			case TYPE_ROOM:

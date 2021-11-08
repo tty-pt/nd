@@ -218,6 +218,9 @@ contents_find(command_t *cmd, dbref where, const char *name)
 	struct match_data md;
 	init_match_remote(cmd, where, name, TYPE_THING, &md);
 	match_possession(&md);
+        match_absolute(&md);
+        if (getloc(md.exact_match) != where)
+                return NOTHING;
 	return md.exact_match;
 }
 

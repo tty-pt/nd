@@ -18,6 +18,8 @@ canvas { vertical-align: inherit; }
 	margin-bottom: 0;
 }
 
+#right { width: 33%; }
+
 body {
         font-family: 'Lucida Console', Monaco, monospace;
 	margin: 0;
@@ -83,10 +85,14 @@ pre { margin-top: -1em; }
         height: 256px;
 }
 
+.mw33vw {
+        max-width: 33vw;
+}
+
 .sr2 {
         width: 512px;
         height: 256px;
-        max-width: 33vw;
+        max-width: 100%;
         object-fit: cover;
 }
 
@@ -99,6 +105,10 @@ pre { margin-top: -1em; }
         .sr1 {
                 width: 128px;
                 height: 128px;
+        }
+        .sr2 {
+                width: 80vh;
+                height: 40vh;
         }
 
 }
@@ -113,16 +123,12 @@ pre { margin-top: -1em; }
 }
 
 @media only screen and (max-height: 400px) {
-	#map { font-size: 8px; }
-        .sr2 {
-                width: 100vh;
-                height: 50vh;
-        }
+	#map { font-size: 9px; }
 
 }
 
 @media only screen and (max-width: 500px) {
-	#map { font-size: 8px; }
+	#map { font-size: 9px; }
 }
 
 #contents img, #act img { image-rendering: crisp-edges; }

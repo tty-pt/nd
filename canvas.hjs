@@ -69,7 +69,7 @@ function tilemap_cache() {
 
                         let id = actions_lbl[p];
                         action_add(p, function () {
-                                cmd(id + " " + room_target.name);
+                                cmd(id + " #" + room_target.dbref);
                         });
                 }
 	};
@@ -84,15 +84,15 @@ function tilemap_cache() {
                 });
 
                 action_add(ACT_EQUIP, function () {
-                        cmd("equip " + target_target.name);
+                        cmd("equip #" + dbref);
                 });
 
                 action_add(ACT_DROP, function () {
-                        cmd("drop " + target_target.name);
+                        cmd("drop #" + dbref);
                 });
 
                 action_add(ACT_EAT, function () {
-                        cmd("eat " + target_target.name);
+                        cmd("eat #" + dbref);
                 });
         };
 
@@ -102,7 +102,7 @@ function tilemap_cache() {
                 act.innerHTML = "";
 
                 action_add(ACT_GET, function () {
-                        cmd("get " + properties[target].name + "=" + target_target.name);
+                        cmd("get #" + target + "=#" + dbref);
                 });
         };
 

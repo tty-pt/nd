@@ -359,16 +359,20 @@ do_get(command_t *cmd)
 	init_match_check_keys(cmd, what, TYPE_THING, &md);
 	match_neighbor(&md);
 	match_possession(&md);
-	if (Wizard(OWNER(player)))
-		match_absolute(&md);	/* the wizard has long fingers */
+        match_absolute(&md);
 
 	if ((thing = noisy_match_result(&md)) != NOTHING) {
 		cont = thing;
+
+                if (getloc(thing) != getloc(player) && !Wizard(OWNER(player))) {
+                        notify(player, "That is too far away from you.");
+                        return;
+                }
+
 		if (obj && *obj) {
 			init_match_check_keys(cmd, obj, TYPE_THING, &md);
 			match_rmatch(cont, &md);
-			if (Wizard(OWNER(player)))
-				match_absolute(&md);	/* the wizard has long fingers */
+                        match_absolute(&md);
 			if ((thing = noisy_match_result(&md)) == NOTHING) {
 				return;
 			}
@@ -437,23 +441,29 @@ do_drop(command_t *cmd)
 
 	init_match(cmd, name, NOTYPE, &md);
 	match_possession(&md);
+        match_absolute(&md);
 	if ((thing = noisy_match_result(&md)) == NOTHING || thing == AMBIGUOUS)
 		return;
+
+        if (getloc(thing) != player) {
+                notify(player, "You can't drop something you don't have.");
+                return;
+        }
 
 	cont = loc;
 	if (obj && *obj) {
 		init_match(cmd, obj, NOTYPE, &md);
 		match_possession(&md);
 		match_neighbor(&md);
-		if (Wizard(OWNER(player)))
+		/* if (Wizard(OWNER(player))) */
 			match_absolute(&md);	/* the wizard has long fingers */
 		if ((cont = noisy_match_result(&md)) == NOTHING || thing == AMBIGUOUS) {
 			return;
 		}
 	}
+        
 	switch (Typeof(thing)) {
 	case TYPE_THING:
-		CBUG(DBFETCH(thing)->location != player);
 
 		if (Typeof(cont) != TYPE_ROOM && Typeof(cont) != TYPE_PLAYER &&
 			Typeof(cont) != TYPE_THING) {
