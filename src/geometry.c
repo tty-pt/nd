@@ -186,6 +186,11 @@ obj_add(struct object_skeleton o, dbref where)
 	case S_TYPE_PLANT:
 		object_drop(nu, o.sp.plant.drop);
 		break;
+        case S_TYPE_BIOME:
+                FLAGS(nu) = TYPE_ROOM;
+                DBFETCH(nu)->exits = NOTHING;
+                DBFETCH(nu)->sp.room.dropto = NOTHING;
+                SETTMP(nu, 1);
 	case S_TYPE_OTHER:
 		break;
 	}

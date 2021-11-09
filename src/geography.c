@@ -290,22 +290,17 @@ geo_room_at(command_t *cmd, pos_t pos)
 {
 	struct bio *bio;
 	static const dbref loc = 0;
-	dbref there = new_object();
-	CBUG(there <= 0);
+	dbref there;
+	bio = noise_point(pos);
+        there = obj_add(biomes[bio->bio_idx], 0);
 	map_put(pos, there, DB_NOOVERWRITE);
-	NAME(there) = alloc_string("No name");
-	DBFETCH(there)->location = loc;
-	OWNER(there) = 1;
 	DBFETCH(there)->exits = NOTHING;
 	DBFETCH(there)->sp.room.dropto = NOTHING;
-	FLAGS(there) = TYPE_ROOM | (FLAGS(cmd->player) & JUMP_OK);
-	PUSH(there, DBFETCH(loc)->contents);
-	DBDIRTY(there);
-	DBDIRTY(loc);
-	bio = noise_point(pos);
+	/* FLAGS(there) = TYPE_ROOM | (FLAGS(cmd->player) & JUMP_OK); */
+	/* DBDIRTY(there); */
+	/* DBDIRTY(loc); */
 	CBUG(there <= 0);
 	exits_infer(cmd, there);
-	SETTMP(there, 1);
 
 	if (pos[2] != 0)
 		return there;

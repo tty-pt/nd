@@ -31,11 +31,6 @@ enum biome {
 	BIOME_VOLCANIC,
 };
 
-typedef struct {
-	const char *name;
-	const char *bg;
-} biome_t;
-
-extern biome_t biomes[];
+extern struct object_skeleton biomes[];
 
 #endif

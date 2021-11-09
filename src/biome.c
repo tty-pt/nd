@@ -3,87 +3,201 @@
 #include "externs.h"
 #include "mdb.h"
 
-biome_t biomes[] = {
+struct object_skeleton biomes[] = {
 	[BIOME_WATER] = {
-		.bg = ANSI_BG_BLUE,
-		.name = "water",
+                .name = "water",
+                .description = "",
+                .art = "water.jpg",
+                .avatar = "",
+                .type = S_TYPE_BIOME,
+                .sp = { .biome = {
+                        .bg = ANSI_BG_BLUE,
+                } },
 	},
 
 	[BIOME_PERMANENT_ICE] = {
-		.bg = ANSI_BG_WHITE,
 		.name = "permanent ice",
+                .description = "",
+                .art = "",
+                .avatar = "",
+                .type = S_TYPE_BIOME,
+                .sp = { .biome = {
+                        .bg = ANSI_BG_WHITE,
+                } },
 	},
 
 	[BIOME_TUNDRA] = {
-		.bg = ANSI_BG_CYAN,
 		.name = "tundra",
+                .description = "",
+                .art = "",
+                .avatar = "",
+                .type = S_TYPE_BIOME,
+                .sp = { .biome = {
+                        .bg = ANSI_BG_CYAN,
+                } },
 	},
 	[BIOME_TUNDRA2] = {
-		.bg = ANSI_BG_CYAN,
 		.name = "tundra2",
+                .description = "",
+                .art = "",
+                .avatar = "",
+                .type = S_TYPE_BIOME,
+                .sp = { .biome = {
+                        .bg = ANSI_BG_CYAN,
+                } },
 	},
 	[BIOME_TUNDRA3] = {
-		.bg = ANSI_BG_CYAN,
 		.name = "tundra3",
+                .description = "",
+                .art = "",
+                .avatar = "",
+                .type = S_TYPE_BIOME,
+                .sp = { .biome = {
+                        .bg = ANSI_BG_CYAN,
+                } },
 	},
 	[BIOME_TUNDRA4] = {
-		.bg = ANSI_BG_CYAN,
 		.name = "tundra4",
+                .description = "",
+                .art = "",
+                .avatar = "",
+                .type = S_TYPE_BIOME,
+                .sp = { .biome = {
+                        .bg = ANSI_BG_CYAN,
+                } },
 	},
 
 	[BIOME_COLD_DESERT] = {
-		.bg = ANSI_BG_CYAN,
 		.name = "cold desert",
+                .description = "",
+                .art = "",
+                .avatar = "",
+                .type = S_TYPE_BIOME,
+                .sp = { .biome = {
+                        .bg = ANSI_BG_CYAN,
+                } },
 	},
 	[BIOME_SHRUBLAND] = {
-		.bg = ANSI_BG_GREEN,
 		.name = "shrubland",
+                .description = "",
+                .art = "shrubland.jpg",
+                .avatar = "",
+                .type = S_TYPE_BIOME,
+                .sp = { .biome = {
+                        .bg = ANSI_BG_GREEN,
+                } },
 	},
 	[BIOME_CONIFEROUS_FOREST] = {
-		.bg = ANSI_BG_GREEN,
 		.name = "coniferous forest",
+                .description = "",
+                .art = "coniferous_forest.jpg",
+                .avatar = "",
+                .type = S_TYPE_BIOME,
+                .sp = { .biome = {
+                        .bg = ANSI_BG_GREEN,
+                } },
 	},
 	[BIOME_BOREAL_FOREST] = {
-		.bg = ANSI_BG_GREEN,
 		.name = "boreal forest",
+                .description = "",
+                .art = "",
+                .avatar = "",
+                .type = S_TYPE_BIOME,
+                .sp = { .biome = {
+                        .bg = ANSI_BG_GREEN,
+                } },
 	},
 
 	[BIOME_TEMPERATE_GRASSLAND] = {
-		.bg = ANSI_BG_GREEN,
 		.name = "temperate grassland",
+                .description = "",
+                .art = "",
+                .avatar = "",
+                .type = S_TYPE_BIOME,
+                .sp = { .biome = {
+                        .bg = ANSI_BG_GREEN,
+                } },
 	},
 	[BIOME_WOODLAND] = {
-		.bg = ANSI_BG_GREEN,
 		.name = "woodland",
+                .description = "",
+                .art = "",
+                .avatar = "",
+                .type = S_TYPE_BIOME,
+                .sp = { .biome = {
+                        .bg = ANSI_BG_GREEN,
+                } },
 	},
 	[BIOME_TEMPERATE_SEASONAL_FOREST] = {
-		.bg = ANSI_BG_GREEN,
 		.name = "temperate seasonal forest",
+                .description = "",
+                .art = "",
+                .avatar = "",
+                .type = S_TYPE_BIOME,
+                .sp = { .biome = {
+                        .bg = ANSI_BG_GREEN,
+                } },
 	},
 	[BIOME_TEMPERATE_RAINFOREST] = {
-		.bg = ANSI_BG_GREEN,
 		.name = "temperate rainforest",
+                .description = "",
+                .art = "",
+                .avatar = "",
+                .type = S_TYPE_BIOME,
+                .sp = { .biome = {
+                        .bg = ANSI_BG_GREEN,
+                } },
 	},
 
 	[BIOME_DESERT] = {
-		.bg = ANSI_BG_YELLOW,
 		.name = "desert",
+                .description = "",
+                .art = "",
+                .avatar = "",
+                .type = S_TYPE_BIOME,
+                .sp = { .biome = {
+                        .bg = ANSI_BG_YELLOW,
+                } },
 	},
 	[BIOME_SAVANNAH] = {
-		.bg = ANSI_BG_YELLOW,
 		.name = "savannah",
+                .description = "",
+                .art = "",
+                .avatar = "",
+                .type = S_TYPE_BIOME,
+                .sp = { .biome = {
+                        .bg = ANSI_BG_YELLOW,
+                } },
 	},
 	[BIOME_TROPICAL_SEASONAL_FOREST] = {
-		.bg = ANSI_BG_GREEN,
 		.name = "tropical seasonal forest",
+                .description = "",
+                .art = "",
+                .avatar = "",
+                .type = S_TYPE_BIOME,
+                .sp = { .biome = {
+                        .bg = ANSI_BG_GREEN,
+                } },
 	},
 	[BIOME_TROPICAL_RAINFOREST] = {
-		.bg = ANSI_BG_BLACK,
 		.name = "tropical rainforest",
+                .description = "",
+                .art = "",
+                .avatar = "",
+                .type = S_TYPE_BIOME,
+                .sp = { .biome = {
+                        .bg = ANSI_BG_BLACK,
+                } },
 	},
 
 	[BIOME_VOLCANIC] = {
-		.bg = ANSI_BG_BLACK,
 		.name = "volcanic",
+                .description = "",
+                .art = "",
+                .avatar = "",
+                .type = S_TYPE_BIOME,
+                .sp = { .biome = {
+                        .bg = ANSI_BG_BLACK,
+                } },
 	},
 };

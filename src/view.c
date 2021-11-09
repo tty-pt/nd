@@ -12,7 +12,7 @@
 #include "web.h"
 
 #define BIOME_BG(i) (NIGHT_IS \
-		? ANSI_RESET : biomes[i].bg)
+		? ANSI_RESET : biomes[i].sp.biome.bg)
 
 // global buffer for map? // FIXME d bio_limit
 static const char * v = "|";

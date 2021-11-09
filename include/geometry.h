@@ -93,6 +93,7 @@ enum object_skeleton_type {
         S_TYPE_EQUIPMENT,
         S_TYPE_MOB,
 	S_TYPE_PLANT,
+	S_TYPE_BIOME,
 };
 
 enum element {
@@ -143,6 +144,9 @@ struct object_skeleton {
                 } equipment;
                 struct mob_skeleton mob;
 		struct plant_skeleton plant;
+                struct {
+                        const char *bg;
+                } biome;
         } sp;
 };
 
