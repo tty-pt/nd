@@ -467,6 +467,11 @@ uncarve(command_t *cmd, enum exit e)
 		if (here == there)
 			return;
 	} else {
+                if (exit < 0) {
+                        notifyf(player, "No exit there");
+                        return;
+                }
+
 		there = e_exit_dest(exit);
 		if (there < 0) {
 			notify(player, "No room there");

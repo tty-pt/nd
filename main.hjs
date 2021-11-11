@@ -4,102 +4,9 @@
 
 #define CONFIG_PROTO "ws"
 
-let ws = null;
-let here, target;
-
-function ws_init() {
-        ws = new WebSocket(CONFIG_PROTO + "://" + window.location.hostname + ':4201', 'text');
-        ws.binaryType = 'arraybuffer';
-        ws.onopen = function () {
-                if (username && password) {
-                        login();
-                        help_hide();
-                }
-        };
-        ws.onclose = function () {
-                output("\nSocket connection closed");
-                // input.disabled = true;
-                forgetbtn.style.display = 'none';
-        };
-        ws.onmessage = function (e) {
-                // console.log("input", e.data);
-                mcp_proc(e.data);
-        };
-}
-
-let room_target = null;
-let target_target = null;
-
-const dir_lbl = [ 'h', 'j', 'k', 'l', 'down', 'up' ],
-        term = document.querySelector('#term'),
-        form = document.querySelector('form'),
-        input = document.querySelector('input'),
-        modal = document.querySelector('.modal'),
-        forgetbtn = document.getElementById('forget_btn'),
-        contents_btns = document.getElementById('contents'),
-        target_title = document.getElementById('target_title'),
-        target_art = document.getElementById('target_art'),
-        room_art = document.getElementById('room_art'),
-        room_title = document.querySelector('#title'),
-        map = document.querySelector('#map'),
-        dir_btns = dir_lbl.map(function(id) {
-		return document.querySelector('#dir #' + id);
-	}),
-        act = document.getElementById('act'),
-        inventory_btn = document.getElementById('inventory_btn'),
-        look_btn = document.getElementById('look_btn'),
-        target_lbl = act.children[0];
-
-let contents = {};
+const modal = document.querySelector('.modal');
 
 let connected = 0;
-
-function actions_reset() {
-	act.style.display = 'none';
-	room_target = null;
-}
-
-function cmd(str) {
-	console.log("CMD", str);
-	ws.send(str + "\n");
-	actions_reset();
-}
-
-let nop_opacity = 0.2;
-let op_opacity = 0.7;
-
-dir_btns.forEach(function(el) {
-        el.onclick = cmd.bind(null, el.id);
-        el.style.opacity = nop_opacity;
-});
-
-let username = localStorage.getItem('username');
-let password = localStorage.getItem('password');
-
-function login() {
-	localStorage.setItem('username', username);
-	localStorage.setItem('password', password);
-	ws.send('auth ' + username + '=' + password + "\n");
-	forgetbtn.style.display = 'inline-block';
-        connected = 1;
-}
-
-function forget() {
-	localStorage.removeItem('username');
-	localStorage.removeItem('password');
-        promptUsername();
-}
-
-function disconnect() {
-        forget();
-	location.reload();
-        ws.close();
-        ws_init();
-};
-
-function scroll_reset() {
-	term.scrollTop = term.scrollHeight;
-}
 
 function help_show() {
 	modal.classList.add("f");
@@ -115,311 +22,542 @@ modal.addEventListener("click", function (evt) {
         help_hide();
 });
 
-function output(stuff) {
-	// term.append(stuff);
-	term.innerHTML += stuff;
-	scroll_reset();
-}
-
-if (!username)
-	promptUsername();
-
-let actionable = {},
-    properties = {};
-
-function dir_init(mask) {
-	for (let i = 0; i < dir_lbl.length; i++)
-		dir_btns[i].style.opacity
-			= (mask & 1 << i) ? op_opacity : nop_opacity;
-}
-
-function renderActionable(dbref, j) {
-	let a = document.createElement("a");
-        const loc = parseInt(j.loc);
-        if (loc == here)
-                a.onclick = actions_init.bind(null, dbref);
-        else if (loc == me)
-                a.onclick = actions_me_init.bind(null, dbref);
-        else
-                a.onclick = actions_other_init.bind(null, dbref);
-	let icon = null;
-	if (j.avatar) {
-		icon = document.createElement("img");
-		icon.src = "art/" + j.avatar;
-                icon.classList.add("s_xl", "svxl");
-	} else {
-                let str = j.icon ? tty_proc(j.icon) : "?";
-		icon = document.createElement("span");
-		icon.innerHTML = str;
-		icon.className = "sxl txl tcv";
-	}
-	a.appendChild(icon);
-	let span = document.createElement("span");
-	span.innerHTML = tty_proc(j.pname);
-	a.appendChild(span);
-	a.className = "f fic pxs _s";
-        contents[loc].appendChild(a);
-}
-
-function target_null() {
-        delete actionable[target];
-        contents[target].innerHTML = "";
-        target_art.src = "";
-        target = null;
-}
-
-function mcp_handler(j) {
-	console.log('mcp_handler', j, actionable);
-	if (j.key == 'inband') {
-		if (j.data != "\n\r")
-			output(tty_proc(j.data));
-	} else if (j.key == "web-auth-fail")
-		forget();
-        else if (j.key == "web-auth-success")
-		me = parseInt(j.player);
-	else if (j.key == "web-view") {
-		map.innerHTML = tty_proc(j.data);
-	} else if (j.key == "web-art") {
-                let img = document.createElement("img");
-                img.className = "ah sk_f";
-                img.src = "art/" + j.src;
-                img.addEventListener("load", function () {
-                        scroll_reset();
-                });
-                output('\n');
-                term.appendChild(img);
-                // output('\n<img class="ah sk_f" src="art/' + j.src + '">');
-        } else if (j.key == "web-look-content") {
-		const dbref = parseInt(j.dbref);
-                const loc = parseInt(j.loc);
-		actionable[loc][dbref] = j;
-		renderActionable(dbref, j);
-	} else if (j.key == "web-look") {
-                const dbref = parseInt(j.dbref);
-                contents[dbref] = contents_btns;
-
-                if (here)
-                        delete actionable[here];
-                if (target)
-                        delete actionable[target];
-
-		if (j.room) {
-                        map.classList.remove("dn");
-                        target_art.classList.add("dn");
-                        target_title.innerHTML = "";
-                        here = dbref;
-                        if (j.art)
-                                room_art.src = "art/" + j.art;
-                        else
-                                room_art.src = "art/unknown.jpg";
-			room_title.innerHTML = j.name;
-			dir_init(j.exits);
-                        if (target)
-                                target_null();
-		} else {
-                        map.classList.add("dn");
-                        target = dbref;
-                        target_art.classList.remove("dn");
-                        if (j.art)
-                                target_art.src = "art/" + j.art;
-                        else
-                                target_art.src = "art/unknown_small.jpg";
-                        target_title.innerHTML = j.pname;
-                }
-                if (j.description)
-                        output("\n" + j.description);
-                contents[dbref].innerHTML = '';
-                actionable[dbref] = {};
-                properties[dbref] = j;
-	} else if (j.key == "web-meme") {
-		let a = document.createElement("a");
-		output("\n" + j.who + " says:\n");
-		a.href = j.url;
-		let img = document.createElement("img");
-		img.src = j.url;
-		img.alt = j.url;
-		img.onload = scroll_reset;
-		a.appendChild(img);
-		term.appendChild(a);
-		output("\n");
-	} else if (j.key == "web-out") {
-		const dbref = parseInt(j.dbref);
-                const loc = parseInt(j.loc);
-                if (!actionable[loc])
-                        return;
-                delete actionable[loc][dbref];
-                contents[loc].innerHTML = '';
-                console.log('web-out', dbref, loc, target, contents[loc]);
-                if (dbref == target) {
-                        contents[target].innerHTML = "";
-                        target_art.src = "";
-                        target = null;
-                }
-
-                for (key in actionable[loc]) {
-                        const dbref = key;
-                        const j = actionable[loc][key];
-                        renderActionable(dbref, j);
-                }
-	} else if (j.key == "web-in") {
-		const dbref = parseInt(j.dbref);
-                const loc = parseInt(j.loc);
-                if (actionable[loc]) {
-                        actionable[loc][dbref] = j;
-                        renderActionable(dbref, j);
-                } else {
-                        console.warn("web-in: actionable of loc", loc, "is not available");
-                }
-	}
-}
 
 let BUFSIZE = 156000;
 
-let cmd_str = "";
+// window.onorientationchange = scroll_reset;
 
-input.onchange = function (e) {
-	cmd_str = e.target.value;
-};
-
-function input_send(e) {
-	if (input.value.match("http")) {
-		let url = cmd_str.substr(cmd_str.indexOf("h"));
-		cmd_str = "meme " + url; 
-	}
-	cmd(cmd_str);
-	input.blur();
-	input.value = "";
-	return false;
-};
-
-function gotPassword() {
-	password = input.value;
-	input.type = 'text';
-	input.placeholder = input.value = "";
-
-	login();
-	form.onsubmit = input_send;
-	input.blur();
-	return false;
-}
-
-function gotUsername() {
-	username = input.value;
-	input.value = "";
-	input.placeholder = input.type = 'password';
-	form.onsubmit = gotPassword;
-	output("\nThanks. What would your password be?");
-	return false;
-}
-
-function focus() {
-	input.focus();
-	scroll_reset();
-}
-
-function promptUsername() {
-	input.placeholder = "username";
-	focus();
-	form.onsubmit = gotUsername;
-	output("\nPlease insert username to login/register");
-	return false;
-}
-
-if (username) {
-	forgetbtn.style.display = 'inline-block';
-	form.onsubmit = input_send;
-} else {
-	forgetbtn.style.display = 'none';
-	form.onsubmit = gotUsername;
-}
-
-let cmd_history = [];
-let history_position = -1;
-
-window.onkeydown = function(e) {
-	// console.log('onkeydown', e.keyCode, e);
-	help_hide();
-
-	if (document.activeElement == input) {
-		switch (e.keyCode) {
-			case 27:
-				input.blur();
-                                break;
-                        case 85: // u
-                                if (e.ctrlKey)
-                                        input.value = "";
-                                break;
-                        case 38: // "ArrowUp":
-                                input.value = cmd_history[history_position];
-                                e.preventDefault();
-                                history_position --;
-                                if (history_position < 0)
-                                        history_position = cmd_history.length - 1;
-                                return false;
-                        case 40: // "ArrowDown":
-                                history_position ++;
-                                if (history_position >= cmd_history.length)
-                                        history_position = 0;
-                                input.value = cmd_history[history_position];
-                                e.preventDefault();
-                                return false;
-                        case 13: // Enter
-                                cmd_history.push(input.value);
-                                history_position = cmd_history.length - 1;
-                                break;
-		}
-		return;
-	}
-
-	switch (e.keyCode) {
-		case 83:
-			input.value = "say ";
-			focus();
-			e.preventDefault();
-			break;
-		case 65: // "a":
-			focus();
-			e.preventDefault();
-			break;
-		case 75:
-		case 38: // "ArrowUp":
-			if (e.shiftKey)
-				cmd("K");
-			else
-				cmd("k");
-			break;
-		case 74:
-		// case 49: // "ArrowDown":
-		case 40: // "ArrowDown":
-			if (e.shiftKey)
-				cmd("J");
-			else
-				cmd("j");
-			break;
-		case 72:
-		case 37: // "ArrowLeft":
-			cmd("h");
-			break;
-		case 76:
-		case 39: // "ArrowRight":
-			cmd("l");
-			break;
-                case 73: // i
-                        inventory();
-                        break;
-	}
-};
-
-window.onorientationchange = scroll_reset;
-
-function inventory() {
-        cmd("inventory");
-}
-
-function look() {
-        cmd("look");
-}
-
-ws_init();
 mcp_init();
 
+const atiles = [
+        "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAQklEQVQ4jWNgGL7g4OFb/9ExWZpwYZyaiXEBhiH4NBNSA+fg8wpWW5H1ETIAl98xvEHIEJyacfmdEB8vICsdjFAAAGW58imbroFwAAAAAElFTkSuQmCC",
+        "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAWElEQVQ4jWNgoAY4ePjW/4OHb/0nWw+MQ6whWNUTawhedYQMIcoSXIpI8ia6YlLDCMMQcmKJdGdTxQW4/IyNT7KziXYJMemAoBewOROfHG5BAi4lRT1OAAA/Xu7MVtQQRgAAAABJRU5ErkJggg==",
+        "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAOUlEQVQ4jWNgGJTg4OFb/3FhkjXjEiNaMzFyWBXB+Li8RHsDKPYCIZfQxwCSvYBLIcWJiSTNQw8AAO8uLsItXTaGAAAAAElFTkSuQmCC",
+        "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAR0lEQVQ4jWNgIBIcPHzrPzImWREyn2wDyHIBuhhJBhDUgM8QdDZJmim2nWwDcBlCkmZ0Q8iynSRN2AwYGP9T3QAYnyQDyAEAd7gQfVonw9EAAAAASUVORK5CYII=",
+        "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAVElEQVQ4jaXRywkAMAgDUPffStzCZey1FE3UCt7Cw48IKTUPNQ+Wo8AauYEV8gIQycJVQ6ALwwlWq7DAGEBIegO07+iV3wBDWgBC2kCFjIAMGQOoDj9EP5M9YZdfAAAAAElFTkSuQmCC",
+        "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAANElEQVQ4jWNgGLTg4OFb/5ExyRoGjwHIcmQZgi5HsiHY5EgyBJccQUOIsWBwGEKRAcMEAABAgauIKxMDjQAAAABJRU5ErkJggg==",
+        "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAUElEQVQ4jWNgwAEOHr71H5cc0QBmCEWGUcUlZNuMjskyBJmmnwHYnEySNw4evvX/////TLhcRFAzJfLUMYAQxmsAIUMIaqaKAdgMIkkjKQAABfenzXQV7xsAAAAASUVORK5CYII=",
+        "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAQUlEQVQ4jWNggIKDh2/9P3j41n8GcgBMM9mGoBswuAwh2UBChhBlENUMwGcwWQYQkiPJFQQNgClGp8lOraMANwAA27bDE5yTd30AAAAASUVORK5CYII=",
+        "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAR0lEQVQ4jWNgoCU4ePjWfximSDNZhlDFAGw02a4gWTNJtuOzBZ84hhwxziXKS9gUURyVJGlEt5EkQwgFKE6DSLGForRBdQAAjPakzh7dkTsAAAAASUVORK5CYII=",
+        "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAWElEQVQ4jc3QwQ0AMAQFUPtvJbawjF4qaUVQcair/18EwB4kFiQW6IyW24gF/kKewQwpQWNABJcBWxq7IgU03C5HUH2ZZJBYwrPOx1no6mWI3bv5yiVebgFV9xc3cxaEggAAAABJRU5ErkJggg==",
+        "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAALElEQVQ4jWNgGF7g4OFb/5ExsXI4FeHDRLuCJM3EGEJWWIxEA3AZQrTmEQYAvLnktS1HPJUAAAAASUVORK5CYII=",
+        "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAATElEQVQ4jWNggIKDh2/9P3j41n8GcgBMM9mGoBswuAwh2UBChhBlENUMwGcw0Qaga6KaKwgaAFNMtmZ8BtHPAOSAI9sgipI2ukuwAQABHugSAyRIzQAAAABJRU5ErkJggg==",
+        "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAQUlEQVQ4jWNgoDY4ePjWf7LkYRLoNLoasg2AaR6iBiBrpq0BuBQOEQPQFeIzHKcBMMWEXEeyAfhcR7Iisg3AJQcA7LE1fLFqxRoAAAAASUVORK5CYII=",
+        "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAEklEQVQ4jWNgGAWjYBSMAggAAAQQAAF/TXiOAAAAAElFTkSuQmCC",
+        "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAANElEQVQ4jWNgGFTg4OFb/4nBBA0hRw7FBWTJE+U8fOqI0YxX7agBVDKAomhElqQoKdMdAADVVJq360zbaQAAAABJRU5ErkJggg=="
+];
+
+const GameContext = React.createContext({});
+
+function MiniMap(props) {
+        const { view, target } = React.useContext(GameContext);
+
+        if (target)
+                return null;
+
+        return <div className="fac"><pre id="map" dangerouslySetInnerHTML={{ __html: view }}></pre></div>;
+}
+
+function useSession(onOpen, onMessage) {
+        const [ session, setSession ] = React.useState(null);
+
+        const connect = React.useCallback(() => {
+                const ws = new WebSocket(CONFIG_PROTO + "://" + window.location.hostname + ':4201', 'text');
+                ws.binaryType = 'arraybuffer';
+                setSession(ws);
+        }, []);
+
+        const updateOpenHandler = () => {
+                if (!session) return;
+                session.addEventListener('open', onOpen);
+                session.addEventListener('open', function () {
+                        let username = "one";
+                        let password = "qovmjbl";
+                        session.send('auth ' + username + '=' + password + "\n");
+                });
+                return () => {
+                        session.removeEventListener('open', onOpen);
+                };
+        };
+
+        const updateMessageHandler = () => {
+                if (!session) return;
+                session.addEventListener('message', onMessage);
+                return () => {
+                        session.removeEventListener('message', onMessage);
+                };
+        };
+
+        React.useEffect(connect, []);
+        React.useEffect(updateOpenHandler, [session, onOpen]);
+        React.useEffect(updateMessageHandler, [session, onMessage]);
+
+        function sendMessage(text) {
+                // console.log("sendMessage", text);
+                session.send(text + "\n");
+        }
+
+        return [connect, sendMessage, session];
+}
+
+function webLookReducer(state, action) {
+        const dbref = parseInt(action.dbref);
+        const { room } = action;
+
+        const ret = {
+                ...state,
+                ...(room ? {
+                        here: dbref,
+                        target: null,
+                } : {
+                        target: dbref,
+                }),
+                objects: {
+                        ...state.objects,
+                        [dbref]: {
+                                ...action,
+                                contents: {},
+                        },
+                }
+        };
+
+        // console.log("WEB-LOOK", state, action, ret);
+
+        return ret;
+}
+
+function webLookContentReducer(state, action) {
+        const dbref = parseInt(action.dbref);
+        const loc = parseInt(action.loc);
+        return {
+                ...state,
+                objects: {
+                        ...state.objects,
+                        [loc]: {
+                                ...state.objects[loc],
+                                contents: {
+                                        ...state.objects[loc].contents,
+                                        [dbref]: {
+                                                ...action,
+                                                icon: tty_proc(action.icon),
+                                                pname: tty_proc(action.pname),
+                                        },
+                                },
+                        },
+                }
+        };
+}
+
+function webInReducer(state, action) {
+        const dbref = parseInt(action.dbref);
+        const loc = parseInt(action.loc);
+
+        if (!state.objects[loc]) {
+                console.warn("web-in: actionable of loc", loc, "is not available");
+                return state;
+        }
+
+        return {
+                ...state,
+                objects: {
+                        ...state.objects,
+                        [loc]: {
+                                ...state.objects[loc],
+                                contents: {
+                                        ...state.objects[loc].contents,
+                                        [dbref]: {
+                                                ...action,
+                                                icon: tty_proc(action.icon),
+                                        },
+                                }
+                        }
+                }
+        };
+}
+
+function gameReducer(state, action) {
+        switch (action.key) {
+                case 'inband':
+                        if (action.data != "\n\r")
+                                return {
+                                        ...state,
+                                        terminal: state.terminal + tty_proc(action.data),
+                                }
+                        break;
+
+                case 'web-view':
+                        return {
+                                ...state,
+                                view: tty_proc(action.data),
+                        }
+
+                case 'web-look':
+                        return webLookReducer(state, action);
+
+                case 'web-look-content':
+                        return webLookContentReducer(state, action);
+
+                case 'web-in':
+                        return webInReducer(state, action);
+
+                case 'web-out':
+                        const dbref = parseInt(action.dbref);
+                        const loc = parseInt(action.loc);
+
+                        if (!state.objects[loc])
+                                return state;
+
+                        let newContents = { ...state.objects[loc].contents };
+                        delete newContents[dbref];
+
+                        return {
+                                ...state,
+                                objects: {
+                                        ...state.objects,
+                                        [loc]: {
+                                                ...state.objects[loc],
+                                                contents: newContents
+                                        }
+                                }
+                        };
+
+                case 'web-auth-success':
+                        return {
+                                ...state,
+                                me: parseInt(action.player),
+                        };
+        }
+
+        return state;
+}
+
+function GameContextProvider(props) {
+        const { children } = props;
+
+        const [state, dispatch] = React.useReducer(
+                gameReducer,
+                {
+                        terminal: '',
+                        objects: {},
+                        target: null,
+                        here: null,
+                }
+        );
+
+        function onMessage(ev) {
+                const mcp_arr = mcp_proc(ev.data);
+                for (let i = 0; i < mcp_arr.length; i++) {
+                        // console.log(mcp_arr[i]);
+                        dispatch(mcp_arr[i]);
+                }
+        }
+
+        function onOpen() {
+                console.log("socket connection open");
+        }
+
+        const [ connect, sendMessage, session ] = useSession(onOpen, onMessage);
+
+        return <GameContext.Provider
+                value={{
+                        ...state, 
+                        session,
+                        sendMessage,
+                }}
+        >
+                { children }
+        </GameContext.Provider>
+        
+}
+
+function Terminal() {
+        const { terminal } = React.useContext(GameContext);
+        const ref = React.useRef(null);
+
+        React.useEffect(() => {
+                ref.current.scrollTop = ref.current.scrollHeight;
+        }, [terminal]);
+
+        // console.log(context);
+        return (<pre id="term" ref={ref} className="fg"
+                dangerouslySetInnerHTML={{ __html: terminal }}>
+        </pre>)
+}
+
+function RoomArt() {
+        const { here, objects } = React.useContext(GameContext);
+        const obj = objects[here];
+
+        if (!obj)
+                return null;
+
+        const src = "art/" + (obj.art || "unknown.jpg");
+
+        return (
+                <img id="room_art" className="sr2" src={src} />
+        );
+}
+
+function Left() {
+        const { sendMessage, session } = React.useContext(GameContext);
+        const input = React.useRef(null);
+
+        function keyDownHandler(e) {
+                if (document.activeElement == input.current) {
+                        switch (e.keyCode) {
+                                case 27:
+                                        input.current.blur();
+                                        break;
+                                case 85: // u
+                                        if (e.ctrlKey)
+                                                input.current.value = "";
+                                        break;
+                        }
+                        return;
+                }
+
+                switch (e.keyCode) {
+                        case 83:
+                                input.current.value = "say ";
+                                input.current.focus();
+                                e.preventDefault();
+                                break;
+                        case 65: // "a":
+                                input.current.focus();
+                                e.preventDefault();
+                                break;
+                        case 75:
+                        case 38: // "ArrowUp":
+                                if (e.shiftKey)
+                                        sendMessage("K");
+                                else
+                                        sendMessage("k");
+                                break;
+                        case 74:
+                                // case 49: // "ArrowDown":
+                        case 40: // "ArrowDown":
+                                if (e.shiftKey)
+                                        sendMessage("J");
+                                else
+                                        sendMessage("j");
+                                break;
+                        case 72:
+                        case 37: // "ArrowLeft":
+                                sendMessage("h");
+                                break;
+                        case 76:
+                        case 39: // "ArrowRight":
+                                sendMessage("l");
+                                break;
+                        case 73: // i
+                                sendMessage("inventory");
+                                break;
+                }
+        }
+
+        React.useEffect(() => {
+                window.addEventListener('keydown', keyDownHandler);
+                return () => window.removeEventListener('keydown', keyDownHandler);
+        }, [session]);
+
+        function onSubmit(e) {
+                e.preventDefault();
+                const fd = new FormData(e.target);
+                sendMessage(fd.get("cmd"));
+                input.current.value = "";
+                input.current.blur();
+        }
+
+        return (<form id="left" className="vn f fg" onSubmit={onSubmit}>
+                <div className="_n f">
+                        <div className="fg vn">
+                                <div className="_">
+                                        <a>stats</a>
+                                        <a>equipment</a>
+                                </div>
+                                <div className="p vs">
+                                        <div className="_s">
+                                                <div className="tb">str</div><div>10</div>
+                                        </div>
+                                        <div className="_s">
+                                                <div className="tb">con</div><div>10</div>
+                                        </div>
+                                        <div className="_s">
+                                                <div className="tb">dex</div><div>10</div>
+                                        </div>
+                                        <div className="_s">
+                                                <div className="tb">int</div><div>10</div>
+                                        </div>
+                                        <div className="_s">
+                                                <div className="tb">wiz</div><div>10</div>
+                                        </div>
+                                </div>
+                        </div>
+                        <div className="vn fg f fic">
+                                <div id="title" className="tm pxs tac"></div>
+                                <RoomArt />
+                        </div>
+                </div>
+
+                <Terminal />
+                <input ref={input} name="cmd" className="cf"
+                        autoComplete="please-dont" autoCapitalize="off" />
+        </form>);
+};
+
+function TargetArt() {
+        const { target, objects } = React.useContext(GameContext);
+
+        if (!target)
+                return null;
+
+        const obj = objects[target];
+
+        const src = "art/" + (obj.art || "unknown_small.jpg");
+
+        return <img id="target_art" className="sr1 fac" src={src} />;
+}
+
+function ContentsItem(props) {
+        const { item, onClick } = props;
+
+        let iconEl = null;
+        if (item.avatar)
+                iconEl = <img className="s_xl svxl" src={"art/" + item.avatar} />;
+        else
+                iconEl = <span className="sxl txl tcv"
+                        dangerouslySetInnerHTML={{ __html: item.icon }} />;
+
+        return (<a className="f fic pxs _s" onClick={onClick}>
+                { iconEl }
+                <span dangerouslySetInnerHTML={{ __html: item.pname }}></span>
+        </a>);
+}
+
+function Contents(props) {
+        const { onItemClick } = props;
+        const { target, here, objects } = React.useContext(GameContext);
+
+        const obj = target ? objects[target] : objects[here];
+
+        if (!here)
+                return null;
+
+        const contentsEl = Object.keys(obj.contents).map(k => {
+                const item = obj.contents[k];
+
+                return <ContentsItem key={item.dbref} item={item}
+                        onClick={e => onItemClick(e, item)} />;
+        });
+
+        return (<div id="contents" className="vn fg oa">
+                { contentsEl }
+        </div>);
+}
+
+function Right() {
+        const { sendMessage, here, me, target } = React.useContext(GameContext);
+        const [ actions, setActions ] = React.useState([]);
+
+        function onItemClick(ev, item) {
+                let newActions = [];
+
+                if (item.loc == here) {
+                        for (let p = 0; p < 9; p++) {
+                                if (!(parseInt(item.actions) & (1 << p)))
+                                        continue;
+
+                                let id = actions_lbl[p];
+                                newActions.push([p, function () {
+                                        sendMessage(id + " #" + item.dbref);
+                                }]);
+                        }
+                } else if (item.loc == me) {
+                        // action_add(ACT_PUT, function () {
+                        //         output("\nPUT is not implemented yet!");
+                        // });
+
+                        newActions.push([ACT_EQUIP, function () {
+                                sendMessage("equip #" + item.dbref);
+                        }]);
+
+                        newActions.push([ACT_DROP, function () {
+                                sendMessage("drop #" + item.dbref);
+                        }]);
+
+                        newActions.push([ACT_EAT, function () {
+                                sendMessage("eat #" + item.dbref);
+                        }]);
+
+                } else {
+                        newActions.push([ACT_GET, function () {
+                                sendMessage("get #" + target + "=#" + item.dbref);
+                        }]);
+                }
+
+                setActions(newActions);
+        }
+
+        const actionsEl = actions.map(([p, cb]) => (
+                <a key={p} className="ps round c0" onClick={cb}>
+                        <img className="svl s_l" src={atiles[p]} />
+                </a>
+        ));
+
+        return (<div id="right" className="vn f fg">
+                <div id="target_title" className="tm pxs tac"></div>
+
+                <MiniMap />
+
+                <TargetArt />
+
+                <div id="dir" className="vn tar tnow">
+                        <div className="_n">
+                                <a className="round txl ps"></a>
+                                <a id="k" className="round txl ps c0" onClick={() => sendMessage('k')}>k</a>
+                                <a id="up" className="round txl ps c0" onClick={() => sendMessage('K')}>K</a>
+                        </div>
+                        <div className="_n">
+                                <a id="h" className="round txl ps c0" onClick={() => sendMessage('h')}>h</a>
+                                <a className="round txl ps"></a>
+                                <a id="l" className="round txl ps c0" onClick={() => sendMessage('l')}>l</a>
+                        </div>
+                        <div className="_n">
+                                <a className="round txl ps"></a>
+                                <a id="j" className="round txl ps c0" onClick={() => sendMessage('j')}>j</a>
+                                <a id="down" className="round txl ps c0" onClick={() => sendMessage('J')}>J</a>
+                        </div>
+                </div>
+
+                <Contents onItemClick={onItemClick}/>
+
+                <div id="act" className="_n">
+                        { actionsEl }
+                </div>
+        </div>);
+}
+
+function NoTargetActions() {
+        const { sendMessage } = React.useContext(GameContext);
+
+        return (<span className="vn f">
+                {/* <a className="round txl ps c0" onClick={disconnect}>X</a> */}
+                <a className="round txl ps c0" onClick={help_show}>?</a>
+                <a className="round ps c0" onClick={() => sendMessage('inventory')}>
+                        <img className="svl s_l" src={atiles[ACT_OPEN]} />
+                </a>
+                <a className="round ps c0" onClick={() => sendMessage('look')}>
+                        <img className="svl s_l" src={atiles[ACT_LOOK]} />
+                </a>
+        </span>);
+}
+
+function App() {
+        return (<GameContextProvider>
+                <NoTargetActions />
+                <Left />
+                <Right />
+        </GameContextProvider>);
+}
+
+ReactDOM.render(<App />, document.getElementById('main'));

@@ -30,7 +30,7 @@ let mcp = {
         cache_i: 0,
         flags: 0,
 
-};
+}, mcp_arr;
 
 function mcp_clear() {
         mcp.args = [];
@@ -42,14 +42,14 @@ function mcp_clear() {
 }
 
 function mcp_emit() {
-        mcp_handler(mcp.args.reduce((a, i) => Object.assign(a, {
+        mcp_arr.push(mcp.args.reduce((a, i) => Object.assign(a, {
                 [i.key]: i.value
         }), { key: mcp.name }));
         mcp_clear();
 }
 
 function inband_emit() {
-        mcp_handler({
+        mcp_arr.push({
                 key: "inband",
                 data: mcp.cache,
         });
@@ -210,6 +210,7 @@ function mcp_proc_ch(p) {
 
 function mcp_proc(data) {
         let in_i;
+        mcp_arr = [];
 
         for (in_i = 0; in_i < data.length; in_i++) {
                 mcp_proc_ch(data.charAt(in_i));
@@ -222,7 +223,7 @@ function mcp_proc(data) {
 	else if (GET_FLAG(MCP_INBAND))
 		inband_emit();
 
-	return null;
+	return mcp_arr;
 }
 
 function mcp_reset() {

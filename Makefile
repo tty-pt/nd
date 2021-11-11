@@ -6,14 +6,14 @@ subdirs := src/ vss/ game/data/
 include scripts/Makefile.common
 
 GCC_JS := ${CC} -E -P -nostdinc -undef -x c
-.SUFFIXES: .js .hjs
-
-.hjs.js:
-	${GCC_JS} -o $@ $<
 
 all: index.html main.js vim.css
 
-main.js: main.hjs canvas.hjs
+pre.js: main.hjs canvas.hjs
+	${GCC_JS} -o $@ main.hjs
+
+main.js: pre.js
+	babel pre.js > $@
 
 inline-js := main.js
 index.html: pre-index.html ${inline-js}

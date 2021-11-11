@@ -1,0 +1,27 @@
+{
+  "name": "neverdark",
+  "version": "1.0.0",
+  "description": "This is TinyMUCK 2.2fb6.00 (FuzzBall 6.00), a programmable, player expandable, multi-user adventure game.  Please see the CHANGES file for a list of changes from the previous version.",
+  "main": "main.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tty-pt/neverdark.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/tty-pt/neverdark/issues"
+  },
+  "homepage": "https://github.com/tty-pt/neverdark#readme",
+  "devDependencies": {
+    "@babel/cli": "^7.16.0",
+    "@babel/core": "^7.16.0",
+    "@babel/preset-react": "^7.16.0"
+  }
+}

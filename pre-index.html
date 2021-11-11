@@ -11,52 +11,12 @@
 		<link rel="preload" href="./art/tilemap.png" as="image" />
 		<!-- <script src="./lib/text.min.js"></script> -->
 		<link rel="shortcut icon" type="image/png" href="./nd256.png"/>
+                <script crossorigin src="https://unpkg.com/react@17/umd/react.development.js"></script>
+                <script crossorigin src="https://unpkg.com/react-dom@17/umd/react-dom.development.js"></script>
 	</head>
 	<body class="cf cb sfv vn f">
 		<div id="main" class="_n f fg">
-			<span class="vn f">
-				<canvas height=16 width=16></canvas>
-				<a id="forget_btn" class="round txl ps c0" onclick="disconnect()">X</a>
-				<a id="help" class="round txl ps c0" onclick="help_show()">?</a>
-				<a id="inventory_btn" class="round ps c0" onclick="inventory()"></a>
-				<a id="look_btn" class="round ps c0" onclick="look()"></a>
-			</span>
-			<form id="left" class="vn f fg">
-                                <div class="_n f">
-                                        <div class="fg">
-                                                stats / equipment
-                                        </div>
-                                        <div class="vn fg f fic">
-                                                <div id="title" class="tm pxs tac"></div>
-                                                <img id="room_art" class="sr2" />
-                                        </div>
-                                </div>
-				<pre id="term" class="fg"></pre>
-				<input name="cmd" class="cf" autocomplete="please-dont" autocapitalize="off">
-			</form>
-			<div id="right" class="vn f fg">
-				<div id="target_title" class="tm pxs tac"></div>
-
-				<div class="fac"><pre id="map"></pre></div>
-				<img id="target_art" class="sr1 dn fac" />
-
-				<div id="dir" class="vn tar tnow">
-					<div class="_n">
-						<a class="round txl ps"></a><a id="k" class="round txl ps c0">k</a><a id="up" class="round txl ps c0">K</a>
-					</div>
-					<div class="_n">
-						<a id="h" class="round txl ps c0">h</a><a class="round txl ps"></a><a id="l" class="round txl ps c0">l</a>
-					</div>
-					<div class="_n">
-						<a class="round txl ps"></a><a id="j" class="round txl ps c0">j</a><a id="down" class="round txl ps c0">J</a>
-					</div>
-				</div>
-
-				<div id="contents" class="vn fg oa"></div>
-
-				<div id="act" class="_n">
-				</div>
-			</div>
+                        <canvas height=16 width=16></canvas>
 		</div>
 		<div class="modal abs sfv vn c fcc oh f">
 			<span class="r c0 p oa">

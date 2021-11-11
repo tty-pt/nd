@@ -31,3 +31,6 @@
 /vss/*.h
 /game/data/mpihelp.txt
 .*.sw?
+/package-lock.json
+/pre.js
+/node_modules
