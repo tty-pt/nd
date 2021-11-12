@@ -1,29 +1,67 @@
-#include "mcp.hjs"
-#include "canvas.hjs"
-#include "tty.hjs"
+#include "mcp.js"
+#include "tty.js"
+#include "canvas.js"
+#include "vendor.js"
 
 #define CONFIG_PROTO "ws"
 
+class Modal extends React.Component {
+	constructor(props) {
+		super(props);
+		// this.ref = React.createRef();
+		this.el = props.el;
+	}
+
+	componentDidMount() {
+		this.el.onclick = e => {
+			if (e.target == this.el)
+				this.props.setOpen(false);
+		};
+		this.el.className = 'modal abs sfv vn c fcc oh f';
+		// this.el.classList.remove('dn');
+	}
+
+	componentWillUnmount() {
+		this.el.classList.add('dn');
+	}
+
+	onKeyDown(e) {
+		if (e.keyCode == 27) // escape
+			this.props.setOpen(false);
+	}
+
+	render() {
+		return ReactDOM.createPortal(
+			(<span
+				onKeyDown={e => this.onKeyDown(e)}
+				onClick={e => e.stopPropagation()}
+                                className="r c0 p oa"
+			>
+				{ this.props.children }
+                        </span>),
+			this.el,
+		);
+	}
+}
+
 const modal = document.querySelector('.modal');
 
-let connected = 0;
+function _useModal(el, Component, props = {}) {
+	const [ isOpen, setOpen ] = useState(false);
 
-function help_show() {
-	modal.classList.add("f");
-	modal.classList.remove("dn");
+	const modal = isOpen ? (
+		<Modal setOpen={setOpen} el={el}>
+			<Component
+				{ ...props }
+				close={() => setOpen(false)}
+			/>
+		</Modal>
+	) : null;
+
+	return [ modal, isOpen, setOpen ];
 }
 
-function help_hide() {
-	modal.classList.add("dn");
-	modal.classList.remove("f");
-}
-
-modal.addEventListener("click", function (evt) {
-        help_hide();
-});
-
-
-let BUFSIZE = 156000;
+const useModal = _useModal.bind(null, modal);
 
 // window.onorientationchange = scroll_reset;
 
@@ -49,19 +87,10 @@ const atiles = [
 
 const GameContext = React.createContext({});
 
-function MiniMap(props) {
-        const { view, target } = React.useContext(GameContext);
-
-        if (target)
-                return null;
-
-        return <div className="fac"><pre id="map" dangerouslySetInnerHTML={{ __html: view }}></pre></div>;
-}
-
 function useSession(onOpen, onMessage) {
-        const [ session, setSession ] = React.useState(null);
+        const [ session, setSession ] = useState(null);
 
-        const connect = React.useCallback(() => {
+        const connect = useCallback(() => {
                 const ws = new WebSocket(CONFIG_PROTO + "://" + window.location.hostname + ':4201', 'text');
                 ws.binaryType = 'arraybuffer';
                 setSession(ws);
@@ -70,11 +99,6 @@ function useSession(onOpen, onMessage) {
         const updateOpenHandler = () => {
                 if (!session) return;
                 session.addEventListener('open', onOpen);
-                session.addEventListener('open', function () {
-                        let username = "one";
-                        let password = "qovmjbl";
-                        session.send('auth ' + username + '=' + password + "\n");
-                });
                 return () => {
                         session.removeEventListener('open', onOpen);
                 };
@@ -88,9 +112,9 @@ function useSession(onOpen, onMessage) {
                 };
         };
 
-        React.useEffect(connect, []);
-        React.useEffect(updateOpenHandler, [session, onOpen]);
-        React.useEffect(updateMessageHandler, [session, onMessage]);
+        useEffect(connect, []);
+        useEffect(updateOpenHandler, [session, onOpen]);
+        useEffect(updateMessageHandler, [session, onMessage]);
 
         function sendMessage(text) {
                 // console.log("sendMessage", text);
@@ -234,10 +258,10 @@ function gameReducer(state, action) {
 function GameContextProvider(props) {
         const { children } = props;
 
-        const [state, dispatch] = React.useReducer(
+        const [state, dispatch] = useReducer(
                 gameReducer,
                 {
-                        terminal: '',
+                        terminal: "",
                         objects: {},
                         target: null,
                         here: null,
@@ -271,21 +295,21 @@ function GameContextProvider(props) {
 }
 
 function Terminal() {
-        const { terminal } = React.useContext(GameContext);
-        const ref = React.useRef(null);
+        const { terminal } = useContext(GameContext);
+        const ref = useRef(null);
 
-        React.useEffect(() => {
+        useEffect(() => {
                 ref.current.scrollTop = ref.current.scrollHeight;
         }, [terminal]);
 
         // console.log(context);
-        return (<pre id="term" ref={ref} className="fg"
+        return (<pre id="term" ref={ref} className="fg oa"
                 dangerouslySetInnerHTML={{ __html: terminal }}>
         </pre>)
 }
 
-function RoomArt() {
-        const { here, objects } = React.useContext(GameContext);
+function RoomTitleAndArt() {
+        const { here, objects } = useContext(GameContext);
         const obj = objects[here];
 
         if (!obj)
@@ -293,14 +317,15 @@ function RoomArt() {
 
         const src = "art/" + (obj.art || "unknown.jpg");
 
-        return (
-                <img id="room_art" className="sr2" src={src} />
-        );
+        return (<div className="vn fg f fic">
+                <div className="tm pxs tac">{ obj.name }</div>
+                <img className="sr2" src={src} />
+        </div>);
 }
 
 function Left() {
-        const { sendMessage, session } = React.useContext(GameContext);
-        const input = React.useRef(null);
+        const { sendMessage, session } = useContext(GameContext);
+        const input = useRef(null);
 
         function keyDownHandler(e) {
                 if (document.activeElement == input.current) {
@@ -355,7 +380,7 @@ function Left() {
                 }
         }
 
-        React.useEffect(() => {
+        useEffect(() => {
                 window.addEventListener('keydown', keyDownHandler);
                 return () => window.removeEventListener('keydown', keyDownHandler);
         }, [session]);
@@ -368,7 +393,7 @@ function Left() {
                 input.current.blur();
         }
 
-        return (<form id="left" className="vn f fg" onSubmit={onSubmit}>
+        return (<form className="vn f fg s_f" onSubmit={onSubmit}>
                 <div className="_n f">
                         <div className="fg vn">
                                 <div className="_">
@@ -393,20 +418,28 @@ function Left() {
                                         </div>
                                 </div>
                         </div>
-                        <div className="vn fg f fic">
-                                <div id="title" className="tm pxs tac"></div>
-                                <RoomArt />
-                        </div>
+
+                        <RoomTitleAndArt />
                 </div>
 
                 <Terminal />
+
                 <input ref={input} name="cmd" className="cf"
                         autoComplete="please-dont" autoCapitalize="off" />
         </form>);
 };
 
-function TargetArt() {
-        const { target, objects } = React.useContext(GameContext);
+function MiniMap(props) {
+        const { view, target } = useContext(GameContext);
+
+        if (target)
+                return null;
+
+        return <div className="fac"><pre id="map" dangerouslySetInnerHTML={{ __html: view }}></pre></div>;
+}
+
+function TargetTitleAndArt() {
+        const { target, objects } = useContext(GameContext);
 
         if (!target)
                 return null;
@@ -415,7 +448,10 @@ function TargetArt() {
 
         const src = "art/" + (obj.art || "unknown_small.jpg");
 
-        return <img id="target_art" className="sr1 fac" src={src} />;
+        return (<>
+                <div className="tm pxs tac">{obj.name}</div>
+                <img className="sr1 fac" src={src} />
+        </>);
 }
 
 function ContentsItem(props) {
@@ -436,7 +472,7 @@ function ContentsItem(props) {
 
 function Contents(props) {
         const { onItemClick } = props;
-        const { target, here, objects } = React.useContext(GameContext);
+        const { target, here, objects } = useContext(GameContext);
 
         const obj = target ? objects[target] : objects[here];
 
@@ -450,14 +486,52 @@ function Contents(props) {
                         onClick={e => onItemClick(e, item)} />;
         });
 
-        return (<div id="contents" className="vn fg oa">
+        return (<div className="vn fg oa icec">
                 { contentsEl }
         </div>);
 }
 
-function Right() {
-        const { sendMessage, here, me, target } = React.useContext(GameContext);
-        const [ actions, setActions ] = React.useState([]);
+function RB(props) {
+        const { children, onClick } = props;
+        return <a className="round txl ps c0" onClick={onClick}>{ children }</a>;
+}
+
+function RBT(props) {
+        return <a className="round txl ps"></a>;
+}
+
+function RBI(props) {
+        const { onClick, src } = props;
+        return (<a className="round ps c0" onClick={onClick}>
+                <img className="svl s_l" src={atiles[src]} />
+        </a>);
+}
+
+function Directions() {
+        const { sendMessage } = useContext(GameContext);
+
+        return (<div className="vn tar tnow abs al">
+                <div className="_n">
+                        <RBT />
+                        <RB onClick={() => sendMessage("k")}>k</RB>
+                        <RB onClick={() => sendMessage("K")}>K</RB>
+                </div>
+                <div className="_n">
+                        <RB onClick={() => sendMessage("h")}>h</RB>
+                        <RBT />
+                        <RB onClick={() => sendMessage("l")}>l</RB>
+                </div>
+                <div className="_n">
+                        <RBT />
+                        <RB onClick={() => sendMessage("j")}>j</RB>
+                        <RB onClick={() => sendMessage("J")}>J</RB>
+                </div>
+        </div>);
+}
+
+function ContentsAndActions(props) {
+        const { sendMessage, here, me, target } = useContext(GameContext);
+        const [ actions, setActions ] = useState([]);
 
         function onItemClick(ev, item) {
                 let newActions = [];
@@ -499,65 +573,96 @@ function Right() {
         }
 
         const actionsEl = actions.map(([p, cb]) => (
-                <a key={p} className="ps round c0" onClick={cb}>
-                        <img className="svl s_l" src={atiles[p]} />
-                </a>
+                <RBI key={p} onClick={cb} src={p} />
         ));
 
-        return (<div id="right" className="vn f fg">
-                <div id="target_title" className="tm pxs tac"></div>
+        return (<>
+                <Contents onItemClick={onItemClick} />
 
-                <MiniMap />
-
-                <TargetArt />
-
-                <div id="dir" className="vn tar tnow">
-                        <div className="_n">
-                                <a className="round txl ps"></a>
-                                <a id="k" className="round txl ps c0" onClick={() => sendMessage('k')}>k</a>
-                                <a id="up" className="round txl ps c0" onClick={() => sendMessage('K')}>K</a>
-                        </div>
-                        <div className="_n">
-                                <a id="h" className="round txl ps c0" onClick={() => sendMessage('h')}>h</a>
-                                <a className="round txl ps"></a>
-                                <a id="l" className="round txl ps c0" onClick={() => sendMessage('l')}>l</a>
-                        </div>
-                        <div className="_n">
-                                <a className="round txl ps"></a>
-                                <a id="j" className="round txl ps c0" onClick={() => sendMessage('j')}>j</a>
-                                <a id="down" className="round txl ps c0" onClick={() => sendMessage('J')}>J</a>
-                        </div>
-                </div>
-
-                <Contents onItemClick={onItemClick}/>
-
-                <div id="act" className="_n">
+                <div className="_n icec">
                         { actionsEl }
                 </div>
-        </div>);
+        </>);
 }
 
-function NoTargetActions() {
-        const { sendMessage } = React.useContext(GameContext);
+function Help() {
+        return (<>
+                <b>Help</b><br />
+                <br />
+                Hopefully on a mobile phone you will be able to use<br />
+                the interface to interact with the game. But here are<br />
+                the keyboard commands for the game:<br />
+                <br />
+                <b>Normal mode:</b><br />
+                <p>
+                        <b>s</b> To chat.<br />
+                        <b>a</b> to send commands.<br />
+                        <b>i</b> to access your inventory.<br />
+                        <b>Left</b> or <b>h</b> to move west.<br />
+                        <b>Right</b> or <b>l</b> to move east.<br />
+                        <b>Up</b> or <b>k</b> to move north.<br />
+                        <b>Down</b> or <b>j</b> to move south.<br />
+                        <b>Shift+Up</b> or <b>K</b> to move up.<br />
+                        <b>Shift+Down</b> or <b>J</b> to move down.<br />
+                </p>
+                <b>Input mode:</b><br />
+                <p>
+                        <b>Esc</b> to go back to normal mode.<br />
+                        <b>Up</b> to travel up in history.<br />
+                        <b>Down</b> to travel down in history.<br />
+                        <b>Ctrl+u</b> to delete input text.<br />
+                </p>
+                this game is very early stage, and it still requires a<br />
+                                lot of work. but i might not be able to provide it full-time.<br />
+                <br />
+                You can use it freely to chat with your friends.<br />
+                Meme at will.<br />
+                <br />
+                You can check out the code <a href="https://github.com/tty-pt/neverdark">here</a>.<br />
+                <br />
+                Hopefully the users will be able to create game content in the future.<br />
+                Meanwhile i will be working at the engine for that to be possible.<br />
+                <br />
+                The help command is very useful. Try issuing "help help".<br />
 
-        return (<span className="vn f">
-                {/* <a className="round txl ps c0" onClick={disconnect}>X</a> */}
-                <a className="round txl ps c0" onClick={help_show}>?</a>
-                <a className="round ps c0" onClick={() => sendMessage('inventory')}>
-                        <img className="svl s_l" src={atiles[ACT_OPEN]} />
-                </a>
-                <a className="round ps c0" onClick={() => sendMessage('look')}>
-                        <img className="svl s_l" src={atiles[ACT_LOOK]} />
-                </a>
-        </span>);
+                                <p><b>help startingout</b> will get you further.</p>
+        </>);
+}
+
+function Game() {
+        const { sendMessage } = useContext(GameContext);
+	const [ modal, isOpen, setOpen ] = useModal(Help, {});
+
+        function toggle_help() {
+                setOpen(!isOpen);
+        }
+
+        return (<>
+                <span className="vn f">
+                        {/* <RB onClick={disconnect}>X</RB> */}
+                        <RB onClick={toggle_help}>?</RB>
+                        <RBI onClick={() => sendMessage('inventory')} src={ACT_OPEN} />
+                        <RBI onClick={() => sendMessage('look')} src={ACT_LOOK} />
+                </span>
+
+                <Left />
+
+                <div className="vn f fg s_33">
+                        <MiniMap />
+                        <TargetTitleAndArt />
+                        <Directions />
+                        <ContentsAndActions />
+                </div>
+
+                { modal }
+        </>);
 }
 
 function App() {
         return (<GameContextProvider>
-                <NoTargetActions />
-                <Left />
-                <Right />
+                <Game />
         </GameContextProvider>);
 }
 
 ReactDOM.render(<App />, document.getElementById('main'));
+	/* max-height: calc(100% - 60px); */

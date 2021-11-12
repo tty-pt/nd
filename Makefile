@@ -9,8 +9,10 @@ GCC_JS := ${CC} -E -P -nostdinc -undef -x c
 
 all: index.html main.js vim.css
 
-pre.js: main.hjs canvas.hjs
-	${GCC_JS} -o $@ main.hjs
+js-src != find js -type f
+
+pre.js: ${js-src}
+	${GCC_JS} -o $@ ./js/main.js
 
 main.js: pre.js
 	babel pre.js > $@
