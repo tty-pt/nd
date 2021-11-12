@@ -323,8 +323,263 @@ function RoomTitleAndArt() {
         </div>);
 }
 
-function Left() {
+function Tabs(props) {
+        const { children } = props;
+        const [ activeTab, setActiveTab ] = useState(0);
+
+        return (<div className="fg vn">
+                <div className="_n">
+                        { children.map((child, idx) => {
+                                const { label } = child.props;
+                                return (<a key={idx}
+                                        onClick={() => setActiveTab(idx)}
+                                        className={activeTab == idx ? 'ps c0' : 'ps'}
+                                >
+                                        {label}
+                                </a>);
+                        }) }
+                </div>
+                { children.map((child, idx) => {
+                        // const { label } = child.props;
+                        if (idx != activeTab)
+                                return null;
+
+                        return child;
+                }) }
+        </div>);
+}
+
+function Stat(props) {
+        const { label, value } = props;
+
+        return (<div className="_s">
+                <div className="tb">{label}</div><div>{value}</div>
+        </div>);
+}
+
+function PlayerTabs() {
+        return (<Tabs>
+                <div label="stats" className="ps vs">
+                        <Stat label="str" value={10} />
+                        <Stat label="con" value={10} />
+                        <Stat label="dex" value={10} />
+                        <Stat label="int" value={10} />
+                        <Stat label="wiz" value={10} />
+                </div>
+                <div label="equipment" className="ps vs">
+                        Hello world
+                </div>
+        </Tabs>);
+}
+
+function MiniMap(props) {
+        const { view, target } = useContext(GameContext);
+
+        if (target)
+                return null;
+
+        return <div className="fac"><pre id="map" dangerouslySetInnerHTML={{ __html: view }}></pre></div>;
+}
+
+function TargetTitleAndArt() {
+        const { target, objects } = useContext(GameContext);
+
+        if (!target)
+                return null;
+
+        const obj = objects[target];
+
+        const src = "art/" + (obj.art || "unknown_small.jpg");
+
+        return (<>
+                <div className="tm pxs tac">{obj.name}</div>
+                <img className="sr1 fac" src={src} />
+        </>);
+}
+
+function ContentsItem(props) {
+        const { item, onClick, activeItem } = props;
+
+        let iconEl = null;
+        if (item.avatar)
+                iconEl = <img className="s_xl svxl" src={"art/" + item.avatar} />;
+        else
+                iconEl = <span className="sxl txl tcv"
+                        dangerouslySetInnerHTML={{ __html: item.icon }} />;
+
+        const className = "f fic pxs _s " + (activeItem == item.dbref ? 'c0' : "");
+
+        return (<a className={className} onClick={onClick}>
+                { iconEl }
+                <span dangerouslySetInnerHTML={{ __html: item.pname }}></span>
+        </a>);
+}
+
+function Contents(props) {
+        const { onItemClick, activeItem } = props;
+        const { target, here, objects } = useContext(GameContext);
+
+        const obj = target ? objects[target] : objects[here];
+
+        if (!here)
+                return null;
+
+        const contentsEl = Object.keys(obj.contents).map(k => {
+                const item = obj.contents[k];
+
+                return <ContentsItem key={item.dbref} item={item}
+                        activeItem={activeItem}
+                        onClick={e => onItemClick(e, item)} />;
+        });
+
+        return (<div className="vn fg oa icec">
+                { contentsEl }
+        </div>);
+}
+
+function RB(props) {
+        const { children, onClick } = props;
+        return <a className="round txl ps c0" onClick={onClick}>{ children }</a>;
+}
+
+function RBT(props) {
+        return <a className="round txl ps"></a>;
+}
+
+function RBI(props) {
+        const { onClick, src } = props;
+        return (<a className="round ps c0" onClick={onClick}>
+                <img className="svl s_l" src={atiles[src]} />
+        </a>);
+}
+
+function Directions() {
+        const { sendMessage } = useContext(GameContext);
+
+        return (<div className="vn tar tnow abs al">
+                <div className="_n">
+                        <RBT />
+                        <RB onClick={() => sendMessage("k")}>k</RB>
+                        <RB onClick={() => sendMessage("K")}>K</RB>
+                </div>
+                <div className="_n">
+                        <RB onClick={() => sendMessage("h")}>h</RB>
+                        <RBT />
+                        <RB onClick={() => sendMessage("l")}>l</RB>
+                </div>
+                <div className="_n">
+                        <RBT />
+                        <RB onClick={() => sendMessage("j")}>j</RB>
+                        <RB onClick={() => sendMessage("J")}>J</RB>
+                </div>
+        </div>);
+}
+
+function ContentsAndActions(props) {
+        const { sendMessage, here, me, target } = useContext(GameContext);
+        const [ actions, setActions ] = useState([]);
+        const [ activeItem, setActiveItem ] = useState(null);
+
+        function onItemClick(ev, item) {
+                let newActions = [];
+
+                if (item.loc == here) {
+                        for (let p = 0; p < 9; p++) {
+                                if (!(parseInt(item.actions) & (1 << p)))
+                                        continue;
+
+                                let id = actions_lbl[p];
+                                newActions.push([p, function () {
+                                        sendMessage(id + " #" + item.dbref);
+                                }]);
+                        }
+                } else if (item.loc == me) {
+                        // action_add(ACT_PUT, function () {
+                        //         output("\nPUT is not implemented yet!");
+                        // });
+
+                        newActions.push([ACT_EQUIP, function () {
+                                sendMessage("equip #" + item.dbref);
+                        }]);
+
+                        newActions.push([ACT_DROP, function () {
+                                sendMessage("drop #" + item.dbref);
+                        }]);
+
+                        newActions.push([ACT_EAT, function () {
+                                sendMessage("eat #" + item.dbref);
+                        }]);
+
+                } else {
+                        newActions.push([ACT_GET, function () {
+                                sendMessage("get #" + target + "=#" + item.dbref);
+                        }]);
+                }
+
+                setActions(newActions);
+                setActiveItem(item.dbref);
+        }
+
+        const actionsEl = actions.map(([p, cb]) => (
+                <RBI key={p} onClick={cb} src={p} />
+        ));
+
+        return (<>
+                <Contents onItemClick={onItemClick} activeItem={activeItem} />
+
+                <div className="_n icec">
+                        { actionsEl }
+                </div>
+        </>);
+}
+
+function Help() {
+        return (<>
+                <b>Help</b><br />
+                <br />
+                Hopefully on a mobile phone you will be able to use<br />
+                the interface to interact with the game. But here are<br />
+                the keyboard commands for the game:<br />
+                <br />
+                <b>Normal mode:</b><br />
+                <p>
+                        <b>s</b> To chat.<br />
+                        <b>a</b> to send commands.<br />
+                        <b>i</b> to access your inventory.<br />
+                        <b>Left</b> or <b>h</b> to move west.<br />
+                        <b>Right</b> or <b>l</b> to move east.<br />
+                        <b>Up</b> or <b>k</b> to move north.<br />
+                        <b>Down</b> or <b>j</b> to move south.<br />
+                        <b>Shift+Up</b> or <b>K</b> to move up.<br />
+                        <b>Shift+Down</b> or <b>J</b> to move down.<br />
+                </p>
+                <b>Input mode:</b><br />
+                <p>
+                        <b>Esc</b> to go back to normal mode.<br />
+                        <b>Up</b> to travel up in history.<br />
+                        <b>Down</b> to travel down in history.<br />
+                        <b>Ctrl+u</b> to delete input text.<br />
+                </p>
+                this game is very early stage, and it still requires a<br />
+                                lot of work. but i might not be able to provide it full-time.<br />
+                <br />
+                You can use it freely to chat with your friends.<br />
+                Meme at will.<br />
+                <br />
+                You can check out the code <a href="https://github.com/tty-pt/neverdark">here</a>.<br />
+                <br />
+                Hopefully the users will be able to create game content in the future.<br />
+                Meanwhile i will be working at the engine for that to be possible.<br />
+                <br />
+                The help command is very useful. Try issuing "help help".<br />
+
+                                <p><b>help startingout</b> will get you further.</p>
+        </>);
+}
+
+function Game() {
         const { sendMessage, session } = useContext(GameContext);
+	const [ modal, isOpen, setOpen ] = useModal(Help, {});
         const input = useRef(null);
 
         function keyDownHandler(e) {
@@ -379,11 +634,14 @@ function Left() {
                                 break;
                 }
         }
-
         useEffect(() => {
                 window.addEventListener('keydown', keyDownHandler);
                 return () => window.removeEventListener('keydown', keyDownHandler);
         }, [session]);
+
+        function toggle_help() {
+                setOpen(!isOpen);
+        }
 
         function onSubmit(e) {
                 e.preventDefault();
@@ -391,250 +649,6 @@ function Left() {
                 sendMessage(fd.get("cmd"));
                 input.current.value = "";
                 input.current.blur();
-        }
-
-        return (<form className="vn f fg s_f" onSubmit={onSubmit}>
-                <div className="_n f">
-                        <div className="fg vn">
-                                <div className="_">
-                                        <a>stats</a>
-                                        <a>equipment</a>
-                                </div>
-                                <div className="p vs">
-                                        <div className="_s">
-                                                <div className="tb">str</div><div>10</div>
-                                        </div>
-                                        <div className="_s">
-                                                <div className="tb">con</div><div>10</div>
-                                        </div>
-                                        <div className="_s">
-                                                <div className="tb">dex</div><div>10</div>
-                                        </div>
-                                        <div className="_s">
-                                                <div className="tb">int</div><div>10</div>
-                                        </div>
-                                        <div className="_s">
-                                                <div className="tb">wiz</div><div>10</div>
-                                        </div>
-                                </div>
-                        </div>
-
-                        <RoomTitleAndArt />
-                </div>
-
-                <Terminal />
-
-                <input ref={input} name="cmd" className="cf"
-                        autoComplete="please-dont" autoCapitalize="off" />
-        </form>);
-};
-
-function MiniMap(props) {
-        const { view, target } = useContext(GameContext);
-
-        if (target)
-                return null;
-
-        return <div className="fac"><pre id="map" dangerouslySetInnerHTML={{ __html: view }}></pre></div>;
-}
-
-function TargetTitleAndArt() {
-        const { target, objects } = useContext(GameContext);
-
-        if (!target)
-                return null;
-
-        const obj = objects[target];
-
-        const src = "art/" + (obj.art || "unknown_small.jpg");
-
-        return (<>
-                <div className="tm pxs tac">{obj.name}</div>
-                <img className="sr1 fac" src={src} />
-        </>);
-}
-
-function ContentsItem(props) {
-        const { item, onClick } = props;
-
-        let iconEl = null;
-        if (item.avatar)
-                iconEl = <img className="s_xl svxl" src={"art/" + item.avatar} />;
-        else
-                iconEl = <span className="sxl txl tcv"
-                        dangerouslySetInnerHTML={{ __html: item.icon }} />;
-
-        return (<a className="f fic pxs _s" onClick={onClick}>
-                { iconEl }
-                <span dangerouslySetInnerHTML={{ __html: item.pname }}></span>
-        </a>);
-}
-
-function Contents(props) {
-        const { onItemClick } = props;
-        const { target, here, objects } = useContext(GameContext);
-
-        const obj = target ? objects[target] : objects[here];
-
-        if (!here)
-                return null;
-
-        const contentsEl = Object.keys(obj.contents).map(k => {
-                const item = obj.contents[k];
-
-                return <ContentsItem key={item.dbref} item={item}
-                        onClick={e => onItemClick(e, item)} />;
-        });
-
-        return (<div className="vn fg oa icec">
-                { contentsEl }
-        </div>);
-}
-
-function RB(props) {
-        const { children, onClick } = props;
-        return <a className="round txl ps c0" onClick={onClick}>{ children }</a>;
-}
-
-function RBT(props) {
-        return <a className="round txl ps"></a>;
-}
-
-function RBI(props) {
-        const { onClick, src } = props;
-        return (<a className="round ps c0" onClick={onClick}>
-                <img className="svl s_l" src={atiles[src]} />
-        </a>);
-}
-
-function Directions() {
-        const { sendMessage } = useContext(GameContext);
-
-        return (<div className="vn tar tnow abs al">
-                <div className="_n">
-                        <RBT />
-                        <RB onClick={() => sendMessage("k")}>k</RB>
-                        <RB onClick={() => sendMessage("K")}>K</RB>
-                </div>
-                <div className="_n">
-                        <RB onClick={() => sendMessage("h")}>h</RB>
-                        <RBT />
-                        <RB onClick={() => sendMessage("l")}>l</RB>
-                </div>
-                <div className="_n">
-                        <RBT />
-                        <RB onClick={() => sendMessage("j")}>j</RB>
-                        <RB onClick={() => sendMessage("J")}>J</RB>
-                </div>
-        </div>);
-}
-
-function ContentsAndActions(props) {
-        const { sendMessage, here, me, target } = useContext(GameContext);
-        const [ actions, setActions ] = useState([]);
-
-        function onItemClick(ev, item) {
-                let newActions = [];
-
-                if (item.loc == here) {
-                        for (let p = 0; p < 9; p++) {
-                                if (!(parseInt(item.actions) & (1 << p)))
-                                        continue;
-
-                                let id = actions_lbl[p];
-                                newActions.push([p, function () {
-                                        sendMessage(id + " #" + item.dbref);
-                                }]);
-                        }
-                } else if (item.loc == me) {
-                        // action_add(ACT_PUT, function () {
-                        //         output("\nPUT is not implemented yet!");
-                        // });
-
-                        newActions.push([ACT_EQUIP, function () {
-                                sendMessage("equip #" + item.dbref);
-                        }]);
-
-                        newActions.push([ACT_DROP, function () {
-                                sendMessage("drop #" + item.dbref);
-                        }]);
-
-                        newActions.push([ACT_EAT, function () {
-                                sendMessage("eat #" + item.dbref);
-                        }]);
-
-                } else {
-                        newActions.push([ACT_GET, function () {
-                                sendMessage("get #" + target + "=#" + item.dbref);
-                        }]);
-                }
-
-                setActions(newActions);
-        }
-
-        const actionsEl = actions.map(([p, cb]) => (
-                <RBI key={p} onClick={cb} src={p} />
-        ));
-
-        return (<>
-                <Contents onItemClick={onItemClick} />
-
-                <div className="_n icec">
-                        { actionsEl }
-                </div>
-        </>);
-}
-
-function Help() {
-        return (<>
-                <b>Help</b><br />
-                <br />
-                Hopefully on a mobile phone you will be able to use<br />
-                the interface to interact with the game. But here are<br />
-                the keyboard commands for the game:<br />
-                <br />
-                <b>Normal mode:</b><br />
-                <p>
-                        <b>s</b> To chat.<br />
-                        <b>a</b> to send commands.<br />
-                        <b>i</b> to access your inventory.<br />
-                        <b>Left</b> or <b>h</b> to move west.<br />
-                        <b>Right</b> or <b>l</b> to move east.<br />
-                        <b>Up</b> or <b>k</b> to move north.<br />
-                        <b>Down</b> or <b>j</b> to move south.<br />
-                        <b>Shift+Up</b> or <b>K</b> to move up.<br />
-                        <b>Shift+Down</b> or <b>J</b> to move down.<br />
-                </p>
-                <b>Input mode:</b><br />
-                <p>
-                        <b>Esc</b> to go back to normal mode.<br />
-                        <b>Up</b> to travel up in history.<br />
-                        <b>Down</b> to travel down in history.<br />
-                        <b>Ctrl+u</b> to delete input text.<br />
-                </p>
-                this game is very early stage, and it still requires a<br />
-                                lot of work. but i might not be able to provide it full-time.<br />
-                <br />
-                You can use it freely to chat with your friends.<br />
-                Meme at will.<br />
-                <br />
-                You can check out the code <a href="https://github.com/tty-pt/neverdark">here</a>.<br />
-                <br />
-                Hopefully the users will be able to create game content in the future.<br />
-                Meanwhile i will be working at the engine for that to be possible.<br />
-                <br />
-                The help command is very useful. Try issuing "help help".<br />
-
-                                <p><b>help startingout</b> will get you further.</p>
-        </>);
-}
-
-function Game() {
-        const { sendMessage } = useContext(GameContext);
-	const [ modal, isOpen, setOpen ] = useModal(Help, {});
-
-        function toggle_help() {
-                setOpen(!isOpen);
         }
 
         return (<>
@@ -645,7 +659,17 @@ function Game() {
                         <RBI onClick={() => sendMessage('look')} src={ACT_LOOK} />
                 </span>
 
-                <Left />
+                <form className="vn f fg s_f" onSubmit={onSubmit}>
+                        <div className="_n f">
+                                <PlayerTabs />
+                                <RoomTitleAndArt />
+                        </div>
+
+                        <Terminal />
+
+                        <input ref={input} name="cmd" className="cf"
+                                autoComplete="off" autoCapitalize="off" />
+                </form>
 
                 <div className="vn f fg s_33">
                         <MiniMap />
