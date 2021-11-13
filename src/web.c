@@ -246,3 +246,27 @@ web_auth_success(int descr, dbref player) {
         mcp_mesg_clear(&msg);
         return 0;
 }
+
+int
+web_stats(dbref player) {
+	McpMesg msg;
+	McpFrame *mfr = web_frame(PLAYER_FD(player));
+	char buf[BUFSIZ];
+	if (!mfr)
+                return 1;
+
+        mcp_mesg_init(&msg, MCP_WEB_PKG, "stats");
+	snprintf(buf, sizeof(buf), "%d", GETSTAT(player, STR));
+        mcp_mesg_arg_append(&msg, "str", buf);
+	snprintf(buf, sizeof(buf), "%d", GETSTAT(player, CON));
+        mcp_mesg_arg_append(&msg, "con", buf);
+	snprintf(buf, sizeof(buf), "%d", GETSTAT(player, DEX));
+        mcp_mesg_arg_append(&msg, "dex", buf);
+	snprintf(buf, sizeof(buf), "%d", GETSTAT(player, INT));
+        mcp_mesg_arg_append(&msg, "int", buf);
+	snprintf(buf, sizeof(buf), "%d", GETSTAT(player, WIZ));
+        mcp_mesg_arg_append(&msg, "wiz", buf);
+        mcp_frame_output_mesg(mfr, &msg);
+        mcp_mesg_clear(&msg);
+        return 0;
+}

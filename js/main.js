@@ -200,6 +200,8 @@ function webInReducer(state, action) {
 }
 
 function gameReducer(state, action) {
+        console.log(action);
+
         switch (action.key) {
                 case 'inband':
                         if (action.data != "\n\r")
@@ -249,6 +251,12 @@ function gameReducer(state, action) {
                         return {
                                 ...state,
                                 me: parseInt(action.player),
+                        };
+
+                case 'web-stats':
+                        return {
+                                ...state,
+                                stats: action,
                         };
         }
 
@@ -358,13 +366,18 @@ function Stat(props) {
 }
 
 function PlayerTabs() {
+        const { me, stats } = useContext(GameContext);
+
+        if (!me)
+                return null;
+
         return (<Tabs>
                 <div label="stats" className="ps vs">
-                        <Stat label="str" value={10} />
-                        <Stat label="con" value={10} />
-                        <Stat label="dex" value={10} />
-                        <Stat label="int" value={10} />
-                        <Stat label="wiz" value={10} />
+                        <Stat label="str" value={stats.str} />
+                        <Stat label="con" value={stats.con} />
+                        <Stat label="dex" value={stats.dex} />
+                        <Stat label="int" value={stats.int} />
+                        <Stat label="wiz" value={stats.wiz} />
                 </div>
                 <div label="equipment" className="ps vs">
                         Hello world
@@ -597,36 +610,35 @@ function Game() {
                 }
 
                 switch (e.keyCode) {
-                        case 83:
+                        case 83: // "s"
                                 input.current.value = "say ";
                                 input.current.focus();
                                 e.preventDefault();
                                 break;
-                        case 65: // "a":
+                        case 65: // "a"
                                 input.current.focus();
                                 e.preventDefault();
                                 break;
                         case 75:
-                        case 38: // "ArrowUp":
+                        case 38: // "ArrowUp"
                                 if (e.shiftKey)
                                         sendMessage("K");
                                 else
                                         sendMessage("k");
                                 break;
                         case 74:
-                                // case 49: // "ArrowDown":
-                        case 40: // "ArrowDown":
+                        case 40: // "ArrowDown"
                                 if (e.shiftKey)
                                         sendMessage("J");
                                 else
                                         sendMessage("j");
                                 break;
                         case 72:
-                        case 37: // "ArrowLeft":
+                        case 37: // "ArrowLeft"
                                 sendMessage("h");
                                 break;
                         case 76:
-                        case 39: // "ArrowRight":
+                        case 39: // "ArrowRight"
                                 sendMessage("l");
                                 break;
                         case 73: // i

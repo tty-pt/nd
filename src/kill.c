@@ -10,6 +10,7 @@
 #include "search.h"
 #include "spell.h"
 #include "mob.h"
+#include "web.h"
 
 #define MESGPROP_CXP	"_/cxp"
 #define GETCXP(x)	get_property_value(x, MESGPROP_CXP)
@@ -459,6 +460,7 @@ do_train(command_t *cmd) {
 
 	SETSPEND(player, avail - amount);
 	notifyf(player, "Your %s increases %d time(s).", attrib, amount);
+        web_stats(player);
 }
 
 int

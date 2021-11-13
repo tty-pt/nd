@@ -172,7 +172,7 @@ enum st { NOSTAT, STR, CON, DEX, INT, WIZ };
 
 #define MESGPROP_STAT	"_/st"
 #define GETSTAT(x, y)	(1 + GETHASH(x, MESGPROP_STAT, y))
-#define SETSTAT(x, y, z) SETHASH(x, MESGPROP_STAT, y, z)
+#define SETSTAT(x, y, z) SETHASH(x, MESGPROP_STAT, y, z - 1)
 
 /* }}} */
 

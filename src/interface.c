@@ -782,6 +782,7 @@ do_auth(command_t *cmd)
 	CBUG(d->fd != fd);
 	PLAYER_FD(player) = fd;
 	spit_file(player, MOTD_FILE);
+        web_stats(player);
         web_auth_success(fd, player);
 	do_look_around(cmd);
 	do_view(cmd);
