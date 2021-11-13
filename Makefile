@@ -10,12 +10,16 @@ GCC_JS := ${CC} -E -P -nostdinc -undef -x c
 all: index.html main.js vim.css
 
 js-src != find js -type f
+art-y != find art -type f
 
 pre.js: ${js-src}
 	${GCC_JS} -o $@ ./js/main.js
 
-main.js: pre.js
-	babel pre.js > $@
+./node_modules/:
+	npm install
+
+main.js: ./node_modules/ pre.js
+	./node_modules/.bin/babel pre.js > $@
 
 inline-js := main.js
 index.html: pre-index.html ${inline-js}
@@ -45,8 +49,6 @@ PREFIX ?= ${DESTDIR}usr/local
 INSTALL_SCRIPT ?= install
 INSTALL_DATA ?= install -m 644
 
-art-y := tilemap.png
-art-y := ${art-y:%=art/%}
 datadir := ${PREFIX}/share/neverdark
 artdir := ${datadir}/art
 
