@@ -258,6 +258,12 @@ function gameReducer(state, action) {
                                 ...state,
                                 stats: action,
                         };
+
+                case 'web-bars':
+                        return {
+                                ...state,
+                                bars: action,
+                        };
         }
 
         return state;
@@ -599,6 +605,31 @@ function Help() {
         </>);
 }
 
+function Bar(props) {
+        const { max, value, color } = props;
+        const style = {
+                width: (100 * value / max) + "%",
+        };
+
+        return (<div className="fg svs b0">
+                <div className={"svf c" + color} style={style}></div>
+        </div>);
+}
+
+function PlayerBars() {
+        const { bars } = useContext(GameContext);
+
+        if (!bars)
+                return null;
+
+        const { hp, hpMax, mp, mpMax } = bars;
+
+        return (<div className="_s f ps">
+                <Bar value={hp} max={hpMax} color="1" />
+                <Bar value={mp} max={mpMax} color="12" />
+        </div>);
+}
+
 function Game() {
         const { sendMessage, session } = useContext(GameContext);
 	const [ modal, isOpen, setOpen ] = useModal(Help, {});
@@ -685,6 +716,8 @@ function Game() {
                                 <PlayerTabs />
                                 <RoomTitleAndArt />
                         </div>
+
+                        <PlayerBars />
 
                         <Terminal />
 

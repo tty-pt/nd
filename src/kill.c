@@ -384,6 +384,7 @@ do_heal(command_t *cmd)
 	tar->hunger = tar->thirst = 0;
 	debufs_end(target);
 	notify_wts_to(player, target, "heal", "heals", "");
+	web_bars(target);
 }
 
 void

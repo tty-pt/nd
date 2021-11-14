@@ -281,3 +281,26 @@ web_stats(dbref player) {
         mcp_mesg_clear(&msg);
         return 0;
 }
+
+int
+web_bars(dbref player) {
+	McpMesg msg;
+	McpFrame *mfr = web_frame(PLAYER_FD(player));
+	struct mob *mob = MOB(player);
+	char buf[BUFSIZ];
+	if (!mfr)
+                return 1;
+
+        mcp_mesg_init(&msg, MCP_WEB_PKG, "bars");
+	snprintf(buf, sizeof(buf), "%d", mob->hp);
+        mcp_mesg_arg_append(&msg, "hp", buf);
+	snprintf(buf, sizeof(buf), "%d", HP_MAX(player));
+        mcp_mesg_arg_append(&msg, "hpMax", buf);
+	snprintf(buf, sizeof(buf), "%d", mob->mp);
+        mcp_mesg_arg_append(&msg, "mp", buf);
+	snprintf(buf, sizeof(buf), "%d", MP_MAX(player));
+        mcp_mesg_arg_append(&msg, "mpMax", buf);
+        mcp_frame_output_mesg(mfr, &msg);
+        mcp_mesg_clear(&msg);
+        return 0;
+}

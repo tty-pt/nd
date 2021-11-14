@@ -18,5 +18,6 @@ void web_content_in(dbref loc, dbref thing);
 int web_auth_fail(int descr, int reason);
 int web_auth_success(int descr, dbref player);
 int web_stats(dbref player);
+int web_bars(dbref player);
 
 #endif

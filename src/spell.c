@@ -7,6 +7,7 @@
 #include "props.h"
 /* #include "speech.h" */
 #include "externs.h"
+#include "web.h"
 
 element_t element_map[] = {
 	[ELM_PHYSICAL] = {
@@ -406,6 +407,9 @@ cspell_heal(dbref attacker, dbref target, short amt)
 			hp = max;
 	}
 	tar->hp = hp;
+	web_bars(target);
+	if (attacker > 0)
+		web_bars(attacker);
 	return ret;
 }
 

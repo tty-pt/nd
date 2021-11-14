@@ -467,9 +467,10 @@ short optflags = 0;
 void
 show_program_usage(char *prog)
 {
-	fprintf(stderr, "Usage: %s [-sSyWv?] [-C [path]]", prog);
+	fprintf(stderr, "Usage: %s [-dsSyWv?] [-C [path]]", prog);
 	fprintf(stderr, "    Options:\n");
 	fprintf(stderr, "        -C PATH   changes directory to PATH before starting up.\n");
+	fprintf(stderr, "        -d        daemon mode\n");
 	fprintf(stderr, "        -S        don't do db sanity checks at startup time.\n");
 	fprintf(stderr, "        -s        load db, then enter the interactive sanity editor.\n");
 	fprintf(stderr, "        -y        attempt to auto-fix a corrupt db after loading.\n");
@@ -783,6 +784,7 @@ do_auth(command_t *cmd)
 	PLAYER_FD(player) = fd;
 	spit_file(player, MOTD_FILE);
         web_stats(player);
+        web_bars(player);
         web_auth_success(fd, player);
 	do_look_around(cmd);
 	do_view(cmd);
