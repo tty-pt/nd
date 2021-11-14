@@ -505,14 +505,18 @@ init_game()
 {
 	FILE *f = fopen(STD_DB, "rb");
 
-	if (f == NULL)
-		return -1;
+	if (f == NULL) {
+                warn("No such file");
+                return -1;
+        }
 
 	db_free();
 	srand(getpid());			/* init random number generator */
 
-	if (db_read(f) < 0)
+	if (db_read(f) < 0) {
+                warn("Error in db_read");
 		return -1;
+        }
 
 	return 0;
 }
