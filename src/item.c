@@ -81,7 +81,8 @@ cannot_equip(dbref who, dbref eq)
 	DBDIRTY(eq);
 
 	notifyf(who, "You equip %s.", NAME(eq));
-        web_stats(who);
+        if (Typeof(who) == TYPE_PLAYER)
+                web_stats(who);
 	return 0;
 }
 
@@ -149,7 +150,8 @@ unequip(dbref who, unsigned eql)
 	SETEQ(who, eql, 0);
 	DBFETCH(eq)->flags &= ~DARK;
 	DBDIRTY(eq);
-        web_stats(who);
+        if (Typeof(who) == TYPE_PLAYER)
+                web_stats(who);
 	return eq;
 }
 

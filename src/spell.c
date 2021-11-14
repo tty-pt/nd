@@ -407,8 +407,10 @@ cspell_heal(dbref attacker, dbref target, short amt)
 			hp = max;
 	}
 	tar->hp = hp;
-	web_bars(target);
-	if (attacker > 0)
+	
+	if (Typeof(target) == TYPE_PLAYER)
+		web_bars(target);
+	if (attacker > 0 && Typeof(attacker) == TYPE_PLAYER)
 		web_bars(attacker);
 	return ret;
 }
