@@ -372,12 +372,21 @@ function PlayerTabs() {
                 return null;
 
         return (<Tabs>
-                <div label="stats" className="ps vs">
-                        <Stat label="str" value={stats.str} />
-                        <Stat label="con" value={stats.con} />
-                        <Stat label="dex" value={stats.dex} />
-                        <Stat label="int" value={stats.int} />
-                        <Stat label="wiz" value={stats.wiz} />
+                <div label="stats" className="ps _s f">
+                        <div className="vs fg">
+                                <Stat label="str" value={stats.str} />
+                                <Stat label="con" value={stats.con} />
+                                <Stat label="dex" value={stats.dex} />
+                                <Stat label="int" value={stats.int} />
+                                <Stat label="wiz" value={stats.wiz} />
+                        </div>
+                        <div className="vs fg">
+                                <Stat label="dodge" value={stats.dodge} />
+                                <Stat label="dmg" value={stats.dmg} />
+                                <Stat label="mdmg" value={stats.mdmg} />
+                                <Stat label="def" value={stats.def} />
+                                <Stat label="mdef" value={stats.mdef} />
+                        </div>
                 </div>
                 <div label="equipment" className="ps vs">
                         Hello world

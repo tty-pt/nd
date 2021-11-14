@@ -251,6 +251,7 @@ int
 web_stats(dbref player) {
 	McpMesg msg;
 	McpFrame *mfr = web_frame(PLAYER_FD(player));
+	struct mob *mob = MOB(player);
 	char buf[BUFSIZ];
 	if (!mfr)
                 return 1;
@@ -266,6 +267,16 @@ web_stats(dbref player) {
         mcp_mesg_arg_append(&msg, "int", buf);
 	snprintf(buf, sizeof(buf), "%d", GETSTAT(player, WIZ));
         mcp_mesg_arg_append(&msg, "wiz", buf);
+	snprintf(buf, sizeof(buf), "%d", MOB_EV(mob, DODGE));
+        mcp_mesg_arg_append(&msg, "dodge", buf);
+	snprintf(buf, sizeof(buf), "%d", MOB_EV(mob, DMG));
+        mcp_mesg_arg_append(&msg, "dmg", buf);
+	snprintf(buf, sizeof(buf), "%d", MOB_EV(mob, MDMG));
+        mcp_mesg_arg_append(&msg, "mdmg", buf);
+	snprintf(buf, sizeof(buf), "%d", MOB_EV(mob, DEF));
+        mcp_mesg_arg_append(&msg, "def", buf);
+	snprintf(buf, sizeof(buf), "%d", MOB_EV(mob, MDEF));
+        mcp_mesg_arg_append(&msg, "mdef", buf);
         mcp_frame_output_mesg(mfr, &msg);
         mcp_mesg_clear(&msg);
         return 0;
