@@ -11,7 +11,6 @@ all: index.html main.js vim.css
 
 js-src != find js -type f
 art-y != find art -type f
-lib-y != find lib -type f
 
 pre.js: ${js-src}
 	${GCC_JS} -o $@ ./js/main.js
@@ -52,7 +51,6 @@ INSTALL_DATA ?= install -m 644
 
 datadir := ${PREFIX}/share/neverdark
 artdir := ${datadir}/art
-libdir := ${datadir}/lib
 
 $(artdir):
 	mkdir -p $@
@@ -60,13 +58,7 @@ art-install := ${art-y:%=${datadir}/%}
 $(art-install):
 	install -m 644 ${@:${datadir}/%=%} $@
 
-$(libdir):
-	mkdir -p $@
-lib-install := ${lib-y:%=${datadir}/%}
-$(lib-install):
-	install -m 644 ${@:${datadir}/%=%} $@
-
-install: ${artdir} ${art-install} ${libdir} ${lib-install}
+install: ${artdir} ${art-install}
 	${INSTALL_SCRIPT} ${srcdir}/src/fbmuck ${PREFIX}/bin/neverdark
 	${INSTALL_DATA} index.html ${datadir}/
 	${INSTALL_DATA} vim.css ${datadir}/
