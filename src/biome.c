@@ -70,7 +70,7 @@ struct object_skeleton biomes[] = {
 	[BIOME_COLD_DESERT] = {
 		.name = "cold desert",
                 .description = "",
-                .art = "",
+                .art = "cold_desert.jpg",
                 .avatar = "",
                 .type = S_TYPE_BIOME,
                 .sp = { .biome = {
@@ -100,7 +100,7 @@ struct object_skeleton biomes[] = {
 	[BIOME_BOREAL_FOREST] = {
 		.name = "boreal forest",
                 .description = "",
-                .art = "",
+                .art = "boreal_forest.jpg",
                 .avatar = "",
                 .type = S_TYPE_BIOME,
                 .sp = { .biome = {

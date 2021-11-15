@@ -87,7 +87,7 @@ const atiles = [
 
 const GameContext = React.createContext({});
 
-function useSession(onOpen, onMessage) {
+function useSession(onOpen, onMessage, onClose) {
         const [ session, setSession ] = useState(null);
 
         const connect = useCallback(() => {
@@ -112,9 +112,18 @@ function useSession(onOpen, onMessage) {
                 };
         };
 
+        const updateCloseHandler = () => {
+                if (!session) return;
+                session.addEventListener('close', onClose);
+                return () => {
+                        session.removeEventListener('close', onClose);
+                };
+        };
+
         useEffect(connect, []);
         useEffect(updateOpenHandler, [session, onOpen]);
         useEffect(updateMessageHandler, [session, onMessage]);
+        useEffect(updateCloseHandler, [session, onClose]);
 
         function sendMessage(text) {
                 // console.log("sendMessage", text);
@@ -142,7 +151,8 @@ function webLookReducer(state, action) {
                                 ...action,
                                 contents: {},
                         },
-                }
+                },
+                terminal: state.terminal + (action.description ? "\nYou see: " + action.description : ""),
         };
 
         // console.log("WEB-LOOK", state, action, ret);
@@ -290,11 +300,22 @@ function GameContextProvider(props) {
                 }
         }
 
-        function onOpen() {
-                console.log("socket connection open");
+        function output(text) {
+                dispatch({
+                        key: "inband", 
+                        data: "\n" + text,
+                });
         }
 
-        const [ connect, sendMessage, session ] = useSession(onOpen, onMessage);
+        function onOpen() {
+                output("use \"auth <user>=<password>\" to login.");
+        }
+
+        function onClose() {
+                output("socket connection closed");
+        }
+
+        const [ connect, sendMessage, session ] = useSession(onOpen, onMessage, onClose);
 
         return <GameContext.Provider
                 value={{

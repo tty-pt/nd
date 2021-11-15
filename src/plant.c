@@ -94,9 +94,9 @@ struct object_skeleton plant_skeleton_map[] = {{
 	} },
 }, {
 	.name = "daucus carota",
-	.art = "",
+	.art = "daucus_carota.png",
 	.description = "",
-	.avatar = "",
+	.avatar = "daucus_carota_avatar.png",
 	.type = S_TYPE_PLANT,
 	.sp = { .plant = {
 		ANSI_FG_WHITE, 'x', 'X', "",
