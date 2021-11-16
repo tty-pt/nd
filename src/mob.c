@@ -421,7 +421,6 @@ mob_put(dbref who)
         o->mob = mob;
 
 	memset(mob, 0, sizeof(struct mob));
-	mob->who = who;
 	mob->wts = phys_wts[GETWTS(who)];
 	mob->hunger = mob->thirst = 0;
 	mob->flags = 0;
@@ -492,20 +491,17 @@ void
 mobs_aggro(command_t *cmd)
 {
 	dbref player = cmd->player;
-        struct mob *me;
+        struct mob *me = MOB(player);
 	dbref tmp;
 	int klock = 0;
 
         CBUG(GETLID(player) < 0);
-        me = MOB(player);
-        if (me->who != player)
-                me = mob_put(player);
 
 	DOLIST(tmp, DBFETCH(getloc(player))->contents) {
 		int lid = GETLID(tmp);
 		if (lid >= 0 && GETAGGRO(tmp)) {
 			struct mob *mob = MOB(tmp);
-			mob->target = me;
+			mob->target = player;
 			klock++;
 		}
 	}
@@ -557,7 +553,7 @@ respawn(dbref who)
 			  "%s appears.", NAME(who));
 }
 
-static inline void
+static inline int
 huth_notify(dbref who, unsigned v, unsigned char y, char const *m[4])
 {
 	static unsigned const n[] = {
@@ -578,13 +574,16 @@ huth_notify(dbref who, unsigned v, unsigned char y, char const *m[4])
 		notify(who, m[3]);
 	else if (v > aux) {
 		short val = -(HP_MAX(who) >> 3);
-		cspell_heal(NOTHING, who, val);
+		return cspell_heal(NOTHING, who, val);
 	}
+
+        return 0;
 }
 
 void
-mob_update(struct mob *n, long long unsigned tick)
+mob_update(dbref who, long long unsigned tick)
 {
+        struct mob *n = MOB(who);
 	static char const *thirst_msg[] = {
 		"You are thirsty.",
 		"You are very thirsty.",
@@ -598,8 +597,6 @@ mob_update(struct mob *n, long long unsigned tick)
 		"You are starving.",
 		"You are starving to death."
 	};
-
-	dbref who = n->who;
 
 	if (n->respawn_in > 0) {
 		if (!--n->respawn_in)
@@ -619,12 +616,10 @@ mob_update(struct mob *n, long long unsigned tick)
 
 	}
 
-	huth_notify(n->who, n->thirst += THIRST_INC,
-		    THIRST_Y, thirst_msg);
+	if (huth_notify(who, n->thirst += THIRST_INC, THIRST_Y, thirst_msg)
+                || huth_notify(who, n->hunger += HUNGER_INC, HUNGER_Y, hunger_msg)
+                || debufs_process(who))
+                        return;
 
-	huth_notify(n->who, n->hunger += HUNGER_INC,
-		    HUNGER_Y, hunger_msg);
-
-	debufs_process(n->who);
-	kill_update(n);
+	kill_update(who);
 }

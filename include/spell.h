@@ -88,7 +88,7 @@ typedef struct {
 void spells_init(struct spell sps[8], dbref player);
 void debuf_end(dbref who, unsigned i);
 void debufs_end(dbref who);
-void debufs_process(dbref who);
+int debufs_process(dbref who);
 void debuf_notify(dbref who, struct debuf *d, short val);
 int spell_cast(dbref attacker, dbref target, unsigned slot);
 int spells_cast(dbref caster, dbref target);

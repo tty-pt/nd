@@ -92,9 +92,8 @@ struct mob {
 	struct debuf debufs[8];
 	struct spell spells[8];
 	effect_t e[7];
-	struct mob *target;
+	dbref target;
 	struct wts wts;
-	dbref who;
 	int descr;
 	unsigned respawn_in, flags; // TODO merge these two
 	unsigned short hp, mp, hunger, thirst;
@@ -105,7 +104,7 @@ void mobs_add(dbref where, enum biome, long long pdn);
 struct mob *mob_put(dbref where);
 void mobs_aggro(command_t *cmd);
 struct object_skeleton const *mob_obj_random();
-void mob_update(struct mob *n, long long unsigned tick);
+void mob_update(dbref who, long long unsigned tick);
 void mob_add_stats(struct object_skeleton *mob, dbref nu);
 
 #endif

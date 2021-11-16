@@ -240,13 +240,14 @@ debuf_notify(dbref who, struct debuf *d, short val)
 	notify_wts(who, wts->a, wts->b, "%s", buf);
 }
 
-void
+int
 debufs_process(dbref who)
 {
 	struct mob *mob = MOB(who);
 	register unsigned mask, i, aux;
 	short hpi = 0, dmg;
 	struct debuf *d, *hd;
+	CBUG(!mob);
 
 	for (mask = mob->debuf_mask, i = 0;
 	     (aux = __builtin_ffs(mask));
@@ -256,12 +257,12 @@ debufs_process(dbref who)
 		d = &mob->debufs[i];
 		d->duration--;
 		if (d->duration == 0)
-			debuf_end(mob->who, i);
+			debuf_end(who, i);
 		// wtf is this special code?
 		else if (DEBUF_TYPE(d->_sp) == AF_HP) {
 			dmg = kill_dmg(d->_sp->element, d->val,
 				      MOB_EV(mob, MDEF),
-				      ELEMENT_NEXT(mob->who, MDEF));
+				      ELEMENT_NEXT(who, MDEF));
 			hd = d;
 
 			hpi += dmg;
@@ -269,9 +270,11 @@ debufs_process(dbref who)
 	}
 
 	if (hpi) {
-		debuf_notify(mob->who, hd, hpi);
-		cspell_heal(NOTHING, mob->who, hpi);
+		debuf_notify(who, hd, hpi);
+		return cspell_heal(NOTHING, who, hpi);
 	}
+
+	return 0;
 }
 
 void
@@ -325,7 +328,7 @@ int
 spell_cast(dbref attacker, dbref target, unsigned slot)
 {
 	struct mob *att = MOB(attacker);
-	struct mob *tar = att->target;
+	struct mob *tar = MOB(target);
 	struct spell sp = att->spells[slot];
 	struct spell_skeleton *_sp = sp._sp;
 
@@ -348,11 +351,11 @@ spell_cast(dbref attacker, dbref target, unsigned slot)
 
 	short val = kill_dmg(_sp->element, sp.val,
 			MOB_EV(tar, MDEF),
-			ELEMENT_NEXT(tar->who, MDEF));
+			ELEMENT_NEXT(target, MDEF));
 
 	if (_sp->flags & AF_NEG) {
 		val = -val;
-		if (kill_dodge(att, wts))
+		if (kill_dodge(attacker, wts))
 			return 0;
 	} else
 		target = attacker;
@@ -385,7 +388,7 @@ spells_cast(dbref attacker, dbref target)
 	}
 
 	if (!enough_mp)
-		notify(att->who, "Not enough mana.");
+		notify(attacker, "Not enough mana.");
 
 	return 0;
 }
@@ -397,6 +400,12 @@ cspell_heal(dbref attacker, dbref target, short amt)
 	short hp = tar->hp;
 	int ret = 0;
 	hp += amt;
+
+	/* warn("cspell_heal %d %d %hd\n", attacker, target, amt); */
+
+	if (!amt)
+		return ret;
+
 	if (hp <= 0) {
 		hp = 1;
 		ret = 1;

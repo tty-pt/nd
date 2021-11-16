@@ -5,6 +5,20 @@
 #include "props.h"
 #include "externs.h"
 
+struct object_skeleton carrot = {
+        .name = "carrot",
+        .art = "carrot.png",
+        .description = "",
+	.avatar = "carrot_avatar.png",
+        .type = S_TYPE_FOOD,
+        .sp = { .food = 3 },
+};
+
+struct drop carrot_drop = {
+        .i = &carrot,
+        .y = 1,
+};
+
 /* TODO calculate water needs */
 struct object_skeleton plant_skeleton_map[] = {{
 	// taiga
@@ -102,7 +116,7 @@ struct object_skeleton plant_skeleton_map[] = {{
 		ANSI_FG_WHITE, 'x', 'X', "",
 		38, 96, 100, 200, 1,
 		/* { "carrot", "", "" }, 1, */
-		{ NULL }, 1
+		{ &carrot_drop, NULL }, 1
 	} },
 }, {
 	.name = "solanum lycopersicum",

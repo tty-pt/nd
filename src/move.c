@@ -643,10 +643,6 @@ recycle(command_t *cmd, dbref thing)
 		map_delete(thing);
 		break;
 	case TYPE_THING:
-		if (GETLID(thing) >= 0) {
-			struct mob *mob = MOB(thing);
-			mob->who = -1;
-		}
 		if (!Wizard(OWNER(thing)))
 			SETVALUE(OWNER(thing), GETVALUE(OWNER(thing)) + GETVALUE(thing));
 		DBDIRTY(OWNER(thing));

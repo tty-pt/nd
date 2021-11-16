@@ -213,8 +213,17 @@ void
 object_drop(dbref where, struct drop **drop)
 {
 	for (; *drop; drop++)
-		if (random() < (RAND_MAX >> (*drop)->y))
-			obj_add(*(*drop)->i, where);
+		if (random() < (RAND_MAX >> (*drop)->y)) {
+                        int yield = (*drop)->yield,
+                            yield_v = (*drop)->yield_v;
+			dbref nu = obj_add(*(*drop)->i, where);
+                        if (yield) {
+                                yield += random() & yield_v;
+                                if (yield > 1)
+                                        SETSTACK(nu, yield);
+                        }
+
+                }
 }
 
 dbref

@@ -109,7 +109,7 @@ enum element {
 
 struct drop {
 	struct object_skeleton *i;
-	unsigned y;
+	unsigned char y, yield, yield_v;
 };
 
 struct mob_skeleton {

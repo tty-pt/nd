@@ -30,7 +30,7 @@ equip_calc(dbref who, dbref eq)
 
 	switch (eql) {
 	case RHAND:
-		if (GETSTAT(p->who, STR) < msv)
+		if (GETSTAT(who, STR) < msv)
 			return 1;
 		MOB_EV(p, DMG) += DMG_WEAPON(eq);
 		p->wts = WTS_WEAPON(eq);
@@ -43,19 +43,19 @@ equip_calc(dbref who, dbref eq)
 
 		switch (eqt) {
 		case ARMOR_LIGHT:
-			if (GETSTAT(p->who, DEX) < msv)
+			if (GETSTAT(who, DEX) < msv)
 				return 1;
 			aux += 2;
 			break;
 		case ARMOR_MEDIUM:
 			msv /= 2;
-			if (GETSTAT(p->who, STR) < msv
-			    || GETSTAT(p->who, DEX) < msv)
+			if (GETSTAT(who, STR) < msv
+			    || GETSTAT(who, DEX) < msv)
 				return 1;
 			aux += 1;
 			break;
 		case ARMOR_HEAVY:
-			if (GETSTAT(p->who, STR) < msv)
+			if (GETSTAT(who, STR) < msv)
 				return 1;
 		}
 		aux = DEF_ARMOR(eq, aux);

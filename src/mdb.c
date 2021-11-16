@@ -751,9 +751,8 @@ copyobj(dbref player, dbref old, dbref nu)
 
 static void
 object_update(dbref what, long long unsigned tick) {
-	struct object *o = DBFETCH(what);
-	if (o->mob)
-		mob_update(o->mob, tick);
+	if (MOB(what))
+		mob_update(what, tick);
 }
 
 void

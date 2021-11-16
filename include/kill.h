@@ -6,9 +6,9 @@
 /* #include "item.h" */
 /* #include "params.h" */
 
-void kill_update(struct mob *);
+void kill_update(dbref who);
 void kill_target(dbref attacker, dbref target);
-int kill_dodge(struct mob *att, struct wts wts);
+int kill_dodge(dbref attacker, struct wts wts);
 short kill_dmg(enum element dmg_type,
 		short dmg, short def,
 		enum element def_type);

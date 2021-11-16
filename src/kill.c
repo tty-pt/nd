@@ -71,9 +71,11 @@ kill_dmg(enum element dmg_type, short dmg,
 static inline int
 dodge_get(struct mob *att)
 {
+	dbref target = att->target;
+	struct mob *tar = MOB(target);
 	int d = RAND_MAX / 4;
 	short ad = MOB_EV(att, DODGE),
-	      dd = MOB_EV(att->target, DODGE);
+	      dd = MOB_EV(tar, DODGE);
 
 	if (ad > dd)
 		d += 3 * d / (ad - dd);
@@ -93,11 +95,13 @@ xp_get(unsigned x, unsigned y)
 }
 
 int
-kill_dodge(struct mob *att, struct wts wts)
+kill_dodge(dbref attacker, struct wts wts)
 {
-	struct mob *tar = att->target;
+	struct mob *att = MOB(attacker);
+	dbref target = att->target;
+	struct mob *tar = MOB(target);
 	if (!MOB_EV(tar, MOV) && dodge_get(att)) {
-		notify_wts_to(tar->who, att->who, "dodge", "dodges", "'s %s", wts.a);
+		notify_wts_to(target, attacker, "dodge", "dodges", "'s %s", wts.a);
 		return 1;
 	} else
 		return 0;
@@ -127,13 +131,14 @@ notify_attack(dbref att, dbref tar, struct wts wts, short val, char const *color
 }
 
 static inline void
-living_dead(struct mob *mob)
+living_dead(dbref who)
 {
-	mob->target = NULL;
-	mob->hp = HP_MAX(mob->who);
-	mob->mp = MP_MAX(mob->who);
+	struct mob *mob = MOB(who);
+	mob->target = NOTHING;
+	mob->hp = HP_MAX(who);
+	mob->mp = MP_MAX(who);
 	mob->thirst = mob->hunger = 0;
-	debufs_end(mob->who);
+	debufs_end(who);
 }
 
 static inline dbref
@@ -209,19 +214,20 @@ kill_target(dbref attacker, dbref target)
                 do_look_around(&cmd_new);
                 do_view(&cmd_new);
 	} else {
-		if (tar->target && GETAGGRO(target))
-			tar->target->klock --;
+		if (tar->target && GETAGGRO(target)) {
+			dbref target_target = tar->target;
+			struct mob *tar_tar = MOB(target_target);
+			tar_tar->klock --;
+		}
 
 		if (GETTMP(getloc(target))) {
-			command_t cmd_att = command_new_null(att->descr, attacker);
-			int descr = 0;
+			command_t cmd_att = command_new_null(0, attacker);
 			if (att) {
-				descr = att->descr;
+				cmd_att.fd = att->descr;
 				body(&cmd_att, target);
-				att->target = NULL;
+				att->target = NOTHING;
 			}
 			recycle(&cmd_att, target);
-			tar->who = 0;
 			return;
 		}
 
@@ -231,60 +237,46 @@ kill_target(dbref attacker, dbref target)
 		tar->mp = MP_MAX(target);
 	}
 
-	living_dead(tar);
+	living_dead(target);
 
 	if (att)
-		att->target = NULL;
+		att->target = NOTHING;
 }
 
 static inline void
-attack(struct mob *p, int player_attack)
+attack(dbref attacker)
 {
-	struct mob *att, *tar;
-	dbref attacker;
+	struct mob *att = MOB(attacker),
+		   *tar;
+
 	register unsigned char mask;
 
-	if (player_attack) {
-		att = p;
-		tar = p->target;
-	} else {
-		att = p->target;
-		tar = p;
-	}
-
-	attacker = att->who;
+	warn("attack %d\n", attacker);
 
 	mask = MOB_EM(att, MOV);
 
 	if (mask) {
 		register unsigned i = __builtin_ffs(mask) - 1;
 		debuf_notify(attacker, &att->debufs[i], 0);
-	} else if (!spells_cast(attacker, tar->who) && !kill_dodge(att, att->wts)) {
-		enum element at = ELEMENT_NEXT(att->who, MDMG);
-		enum element dt = ELEMENT_NEXT(tar->who, MDEF);
-		dbref target = tar->who;
+		return;
+	}
+
+	dbref target = att->target;
+
+	if (target <= 0)
+		return;
+
+	tar = MOB(target);
+
+	if (!spells_cast(attacker, target) && !kill_dodge(attacker, att->wts)) {
+		enum element at = ELEMENT_NEXT(attacker, MDMG);
+		enum element dt = ELEMENT_NEXT(target, MDEF);
 		short aval = -kill_dmg(ELM_PHYSICAL, MOB_EV(att, DMG), MOB_EV(tar, DEF) + MOB_EV(tar, MDEF), dt);
 		short bval = -kill_dmg(at, MOB_EV(att, MDMG), MOB_EV(tar, MDEF), dt);
 		char const *color = ELEMENT(at)->color;
 		notify_attack(attacker, target, att->wts, aval, color, bval);
 		cspell_heal(attacker, target, aval + bval);
 	}
-}
-
-static inline void
-target_try(struct mob *me, dbref target)
-{
-	struct mob *tar;
-
-	if (me->target)
-		return;
-
-	tar = MOB(target);
-
-	if (tar == me->target)
-		return;
-
-	me->target = tar;
 }
 
 void
@@ -310,32 +302,31 @@ do_kill(command_t *cmd)
 		return;
 	}
 
-	// this happens when we clone living ones
-	if (tar->who != target)
-		tar = mob_put(target);
-
 	do_stand_silent(player);
-	att->target = tar;
+	att->target = target;
 	att->descr = descr;
 	notify(player, "You form a combat pose.");
 }
 
 void
-kill_update(struct mob *mob)
+kill_update(dbref attacker)
 {
-	struct mob *target = mob->target;
+	struct mob *att = MOB(attacker);
+	dbref target = att->target;
 
-	if (!target
-            || target == mob
-            || target->who < 0
-            || Typeof(target->who) == TYPE_GARBAGE
-	    || getloc(target->who) != getloc(mob->who)) {
-		mob->target = NULL;
+	if (target <= 0
+            || Typeof(target) == TYPE_GARBAGE
+	    || getloc(target) != getloc(attacker)) {
+		att->target = NOTHING;
 		return;
 	}
 
-	target_try(mob->target, mob->who);
-	attack(mob, 1);
+	struct mob *tar = MOB(target);
+
+	if (tar->target <= 0)
+		tar->target = attacker;
+
+	attack(attacker);
 }
 
 void
@@ -479,10 +470,10 @@ kill_v(command_t *cmd, char const *opcs)
 		struct mob *p = MOB(player);
 		unsigned slot = strtol(opcs + 1, &end, 0);
 
-		if (!p->target)
-			p->target = p;
+		if (p->target <= 0)
+			p->target = player;
 
-		spell_cast(p->who, p->target && p->target->who, slot);
+		spell_cast(player, p->target, slot);
 		return end - opcs;
 	} else
 		return 0;
