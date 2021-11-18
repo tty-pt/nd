@@ -69,10 +69,11 @@ enum actions {
         ACT_KILL = 2,
         ACT_SHOP = 4,
         ACT_DRINK = 8,
-        ACT_TALK = 16,
+        ACT_OPEN = 16,
         ACT_CHOP = 32,
         ACT_FILL = 64,
         ACT_GET = 128,
+        ACT_TALK = 256,
 };
 
 struct icon

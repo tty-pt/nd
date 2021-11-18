@@ -242,6 +242,19 @@ dialog_start(dbref player, dbref npc, const char *dialog) {
 }
 
 void
+dialog_stop(dbref player) {
+        const char *dialog = PLAYER_SP(player)->dialog;
+
+        if (dialog) {
+                free((void *) dialog);
+                PLAYER_SP(player)->dialog = NULL;
+        }
+
+        PLAYER_SP(player)->dialog_target = NOTHING;
+        web_dialog_stop(player);
+}
+
+void
 do_talk(command_t *cmd) {
         const char buf[BUFSIZ];
         dbref player = cmd->player;

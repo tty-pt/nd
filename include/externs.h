@@ -159,6 +159,7 @@ extern int check_password(dbref player, const char*password);
 extern void do_talk(command_t *);
 extern void do_answer(command_t *);
 extern int dialog_exists(dbref what);
+extern void dialog_stop(dbref player);
 
 /* From predicates.c */
 extern int OkObj(dbref obj);

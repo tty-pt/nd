@@ -12,7 +12,7 @@ const ACT_OPEN = 4;
 const ACT_CHOP = 5;
 const ACT_FILL = 6;
 const ACT_GET = 7;
-const ACT_DIE = 8;
+const ACT_TALK = 8;
 const ACT_PUT = 9;
 const ACT_EQUIP = 10;
 const ACT_DROP = 11;
@@ -22,8 +22,8 @@ const ACT_INVENTORY = 14;
 
 let actions_lbl = [
 	"look", "kill", "shop",
-	"drink", "talk", "chop",
-	"fill", "get", "die",
+	"drink", "open", "chop",
+	"fill", "get", "talk",
         "put", "equip", "drop",
         "eat", "reserved", "inventory",
 ];

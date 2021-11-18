@@ -63,6 +63,9 @@ moveto(dbref what, dbref where)
 		}
 	}
 
+        if (Typeof(what) == TYPE_PLAYER)
+                dialog_stop(what);
+
 	/* now put what in where */
 	PUSH(what, DBFETCH(where)->contents);
 	DBDIRTY(where);
