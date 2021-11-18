@@ -22,7 +22,7 @@ const ACT_INVENTORY = 14;
 
 let actions_lbl = [
 	"look", "kill", "shop",
-	"drink", "open", "chop",
+	"drink", "talk", "chop",
 	"fill", "get", "die",
         "put", "equip", "drop",
         "eat", "reserved", "inventory",

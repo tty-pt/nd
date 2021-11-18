@@ -339,13 +339,14 @@ struct boolexp {
 #define NOTHING ((dbref) -1)	/* null dbref */
 #define AMBIGUOUS ((dbref) -2)	/* multiple possibilities, for matchers */
 #define HOME ((dbref) -3)		/* virtual room, represents mover's home */
-#define WATER ((dbref) -4)	/* water tile */
 
 struct player_specific {
 	dbref home;
 	const char *password;
 	int fd;
 	dbref last_observed;
+        dbref dialog_target;
+        const char *dialog;
 };
 
 #define THING_SP(x)		(DBFETCH(x)->sp.player.sp)

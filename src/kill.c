@@ -251,8 +251,6 @@ attack(dbref attacker)
 
 	register unsigned char mask;
 
-	warn("attack %d\n", attacker);
-
 	mask = MOB_EM(att, MOV);
 
 	if (mask) {

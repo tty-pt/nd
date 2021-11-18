@@ -616,6 +616,9 @@ mob_update(dbref who, long long unsigned tick)
 
 	}
 
+        CBUG(Typeof(who) == TYPE_GARBAGE);
+
+        /* if mob dies, return */
 	if (huth_notify(who, n->thirst += THIRST_INC, THIRST_Y, thirst_msg)
                 || huth_notify(who, n->hunger += HUNGER_INC, HUNGER_Y, hunger_msg)
                 || debufs_process(who))

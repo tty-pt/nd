@@ -72,7 +72,7 @@ const atiles = [
         "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAWElEQVQ4jWNgoAY4ePjW/4OHb/0nWw+MQ6whWNUTawhedYQMIcoSXIpI8ia6YlLDCMMQcmKJdGdTxQW4/IyNT7KziXYJMemAoBewOROfHG5BAi4lRT1OAAA/Xu7MVtQQRgAAAABJRU5ErkJggg==",
         "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAOUlEQVQ4jWNgGJTg4OFb/3FhkjXjEiNaMzFyWBXB+Li8RHsDKPYCIZfQxwCSvYBLIcWJiSTNQw8AAO8uLsItXTaGAAAAAElFTkSuQmCC",
         "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAR0lEQVQ4jWNgIBIcPHzrPzImWREyn2wDyHIBuhhJBhDUgM8QdDZJmim2nWwDcBlCkmZ0Q8iynSRN2AwYGP9T3QAYnyQDyAEAd7gQfVonw9EAAAAASUVORK5CYII=",
-        "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAVElEQVQ4jaXRywkAMAgDUPffStzCZey1FE3UCt7Cw48IKTUPNQ+Wo8AauYEV8gIQycJVQ6ALwwlWq7DAGEBIegO07+iV3wBDWgBC2kCFjIAMGQOoDj9EP5M9YZdfAAAAAElFTkSuQmCC",
+        "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAM0lEQVQ4jWNgGFTg4OFb/4nFOA0g1iK8EoRsHhgXkGQAxS6gyACKo5FYV1DkBeprHtoAAOijqCv2+qTkAAAAAElFTkSuQmCC",
         "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAANElEQVQ4jWNgGLTg4OFb/5ExyRoGjwHIcmQZgi5HsiHY5EgyBJccQUOIsWBwGEKRAcMEAABAgauIKxMDjQAAAABJRU5ErkJggg==",
         "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAUElEQVQ4jWNgwAEOHr71H5cc0QBmCEWGUcUlZNuMjskyBJmmnwHYnEySNw4evvX/////TLhcRFAzJfLUMYAQxmsAIUMIaqaKAdgMIkkjKQAABfenzXQV7xsAAAAASUVORK5CYII=",
         "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAQUlEQVQ4jWNggIKDh2/9P3j41n8GcgBMM9mGoBswuAwh2UBChhBlENUMwGcwWQYQkiPJFQQNgClGp8lOraMANwAA27bDE5yTd30AAAAASUVORK5CYII=",
@@ -274,6 +274,30 @@ function gameReducer(state, action) {
                                 ...state,
                                 bars: action,
                         };
+
+                case 'web-dialog-start':
+                        return {
+                                ...state,
+                                dialog: {
+                                        ...action,
+                                        answers: [],
+                                },
+                        };
+
+                case 'web-dialog-answer':
+                        return {
+                                ...state,
+                                dialog: {
+                                        ...state.dialog,
+                                        answers: state.dialog.answers.concat([action]),
+                                },
+                        };
+
+                case 'web-dialog-stop':
+                        return {
+                                ...state,
+                                dialog: null,
+                        };
         }
 
         return state;
@@ -322,6 +346,7 @@ function GameContextProvider(props) {
                         ...state, 
                         session,
                         sendMessage,
+                        dispatch,
                 }}
         >
                 { children }
@@ -446,20 +471,22 @@ function TargetTitleAndArt() {
         </>);
 }
 
+function Avatar(props) {
+        const { item } = props;
+
+        if (item.avatar)
+                return <img className="s_xl svxl" src={"art/" + item.avatar} />;
+        else
+                return <span className="sxl txl tcv"
+                        dangerouslySetInnerHTML={{ __html: item.icon }} />;
+}
+
 function ContentsItem(props) {
         const { item, onClick, activeItem } = props;
-
-        let iconEl = null;
-        if (item.avatar)
-                iconEl = <img className="s_xl svxl" src={"art/" + item.avatar} />;
-        else
-                iconEl = <span className="sxl txl tcv"
-                        dangerouslySetInnerHTML={{ __html: item.icon }} />;
-
         const className = "f fic pxs _s " + (activeItem == item.dbref ? 'c0' : "");
 
         return (<a className={className} onClick={onClick}>
-                { iconEl }
+                <Avatar item={item} />
                 <span dangerouslySetInnerHTML={{ __html: item.pname }}></span>
         </a>);
 }
@@ -651,6 +678,50 @@ function PlayerBars() {
         </div>);
 }
 
+function Dialog() {
+        const { dialog, here, objects, sendMessage, dispatch } = useContext(GameContext);
+
+        if (!dialog)
+                return null;
+
+        const item = objects[here].contents[dialog.npc];
+
+        const { text } = dialog;
+
+        let answersEl = dialog.answers.map(answer => (
+                <a key={answer.id} className="ps c0 cf15" onClick={() => sendMessage("answer " + answer.id)}>
+                        { answer.text }
+                </a>
+
+        ));
+
+        if (!answersEl.length) {
+                function endDialog() {
+                        dispatch({
+                                key: "web-dialog-stop",
+                        });
+                }
+
+                answersEl = (<a key="endC"
+                        className="ps c0 cf15" onClick={endDialog}>
+                        End conversation
+                </a>);
+        }
+
+        return (<>
+                <div className="ps _s f c15 cf0">
+                        <Avatar item={item} />
+                        <div className="fg">
+                                { text }
+                        </div>
+                </div>
+                <div className="_ ps">
+                        { answersEl }
+                </div>
+        </>);
+
+}
+
 function Game() {
         const { sendMessage, session } = useContext(GameContext);
 	const [ modal, isOpen, setOpen ] = useModal(Help, {});
@@ -742,6 +813,8 @@ function Game() {
 
                         <Terminal />
 
+                        <Dialog />
+
                         <input ref={input} name="cmd" className="cf"
                                 autoComplete="off" autoCapitalize="off" />
                 </form>
@@ -764,4 +837,3 @@ function App() {
 }
 
 ReactDOM.render(<App />, document.getElementById('main'));
-	/* max-height: calc(100% - 60px); */

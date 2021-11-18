@@ -19,5 +19,7 @@ int web_auth_fail(int descr, int reason);
 int web_auth_success(int descr, dbref player);
 int web_stats(dbref player);
 int web_bars(dbref player);
+int web_dialog_start(dbref player, dbref npc, const char *dialog);
+int web_dialog_stop(dbref player);
 
 #endif

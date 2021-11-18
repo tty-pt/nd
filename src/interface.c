@@ -227,6 +227,12 @@ core_command_t cmds[] = {
 		.name = "sweep",
 		.cb = &do_sweep,
 	}, {
+		.name = "talk",
+		.cb = &do_talk,
+	}, {
+		.name = "answer",
+		.cb = &do_answer,
+	}, {
 		.name = "teleport",
 		.cb = &do_teleport,
 	}, {

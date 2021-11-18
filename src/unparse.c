@@ -69,7 +69,7 @@ enum actions {
         ACT_KILL = 2,
         ACT_SHOP = 4,
         ACT_DRINK = 8,
-        ACT_OPEN = 16,
+        ACT_TALK = 16,
         ACT_CHOP = 32,
         ACT_FILL = 64,
         ACT_GET = 128,
@@ -101,6 +101,9 @@ icon(dbref what)
                 } else if (GETLID(what) >= 0) {
                         ret.actions |= ACT_KILL;
                         ret.icon = ANSI_BOLD ANSI_FG_YELLOW "!";
+                        if (dialog_exists(what)) {
+                                ret.actions |= ACT_TALK;
+                        }
                         break;
                 } else if (GETDRINK(what) >= 0) {
                         ret.actions |= ACT_DRINK | ACT_FILL;
@@ -110,7 +113,7 @@ icon(dbref what)
 			struct object_skeleton *obj_skel = PLANT_SKELETON(aux);
                         struct plant_skeleton *pl = &obj_skel->sp.plant;
 
-                        ret.actions |= ACT_CHOP | ACT_OPEN;
+                        ret.actions |= ACT_CHOP;
                         snprintf(buf, sizeof(buf), "%s%c%s", pl->pre,
                                  GETSTACK(what) > PLANT_HALF ? pl->big : pl->small,
                                  pl->post); 

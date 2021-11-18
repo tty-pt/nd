@@ -156,6 +156,9 @@ extern void clear_players(void);
 extern void set_password_raw(dbref player, const char*password);
 extern void set_password(dbref player, const char*password);
 extern int check_password(dbref player, const char*password);
+extern void do_talk(command_t *);
+extern void do_answer(command_t *);
+extern int dialog_exists(dbref what);
 
 /* From predicates.c */
 extern int OkObj(dbref obj);
@@ -248,34 +251,12 @@ struct icon {
         char *icon;
 };
 
-extern struct icon icon(dbref);
+extern struct icon icon(dbref what);
 extern const char *unparse_object(dbref player, dbref object);
 extern const char *unparse_boolexp(dbref player, struct boolexp *b, int fullname);
 
-/* From edit.c */
-extern void interactive(int descr, dbref player, const char *command);
-
-/* From interp.c */
-extern struct frame *interp(int descr, dbref player, dbref location, dbref program,
-							dbref source, int nosleeping, int whichperms, int forced_pid);
-/* from signal.h */
-extern void set_dumper_signals(void);
-
 /* From smatch.c */
 extern int equalstr(char *s, char *t);
-
-extern int force_level;
-extern dbref force_prog;
-
-extern void do_credits(command_t *);
-extern void do_version(command_t *);
-
-/* from random.c */
-void delete_seed(void *buffer);
-unsigned long rnd(void *buffer);
-
-/* from diskprop.c */
-extern void dispose_all_oldprops(void);
 
 /* from interface.c */
 void do_flock(command_t *);
@@ -284,53 +265,6 @@ int mcpframe_to_descr(McpFrame * ptr);
 
 /* from tune.c */
 extern void tune_load_parmsfile(dbref player);
-
-/* version-getting functions */
-
-const char *get_announce_c_version(void);
-const char *get_array_c_version(void);
-const char *get_boolexp_c_version(void);
-const char *get_copyright_c_version(void);
-const char *get_create_c_version(void);
-const char *get_db_c_version(void);
-const char *get_game_c_version(void);
-const char *get_hashtab_c_version(void);
-const char *get_help_c_version(void);
-const char *get_inst_c_version(void);
-const char *get_interface_c_version(void);
-const char *get_interp_c_version(void);
-const char *get_log_c_version(void);
-const char *get_look_c_version(void);
-const char *get_match_c_version(void);
-const char *get_mcp_c_version(void);
-const char *get_move_c_version(void);
-const char *get_msgparse_c_version(void);
-const char *get_mufevent_c_version(void);
-const char *get_player_c_version(void);
-const char *get_predicates_c_version(void);
-const char *get_prochelp_c_version(void);
-const char *get_propdirs_c_version(void);
-const char *get_property_c_version(void);
-const char *get_props_c_version(void);
-const char *get_random_c_version(void);
-const char *get_reconst_c_version(void);
-const char *get_resolver_c_version(void);
-const char *get_rob_c_version(void);
-const char *get_sanity_c_version(void);
-const char *get_set_c_version(void);
-const char *get_signal_c_version(void);
-const char *get_smatch_c_version(void);
-const char *get_snprintf_c_version(void);
-const char *get_speech_c_version(void);
-const char *get_strftime_c_version(void);
-const char *get_stringutil_c_version(void);
-const char *get_timequeue_c_version(void);
-const char *get_timestamp_c_version(void);
-const char *get_topwords_c_version(void);
-const char *get_tune_c_version(void);
-const char *get_unparse_c_version(void);
-const char *get_utils_c_version(void);
-const char *get_wiz_c_version(void);
 
 #endif /* _EXTERNS_H */
 

@@ -168,7 +168,6 @@ extern int get_property_flags(dbref player, const char *type);
 extern void set_property_flags(dbref player, const char *type, int flags);
 extern void clear_property_flags(dbref player, const char *type, int flags);
 
-extern int genderof(int descr, dbref player);
 extern struct plist *copy_prop(dbref old);
 
 extern PropPtr first_prop(dbref player, const char *dir, PropPtr * list, char *name, int maxlen);

@@ -11,6 +11,7 @@
 #include "defaults.h"
 #include "interface.h"
 #include "externs.h"
+#include "web.h"
 
 static hash_tab player_list[PLAYER_HASH_SIZE];
 
@@ -215,5 +216,108 @@ delete_player(dbref who)
 
 	return;
 }
-static const char *player_c_version = "$RCSfile$ $Revision: 1.13 $";
-const char *get_player_c_version(void) { return player_c_version; }
+
+static inline void
+dialog_start(dbref player, dbref npc, const char *dialog) {
+        const char buf[BUFSIZ];
+        snprintf((char *) buf, sizeof(buf), "_/dialog/%s/text", dialog);
+        const char *text = GETMESG(npc, buf);
+
+        if (!text) {
+                /* notifyf(player, "%s stops talking .", NAME(npc)); */
+                web_dialog_stop(player);
+                return;
+        }
+
+        notify(player, text);
+
+        snprintf((char *) buf, sizeof(buf), "_/dialog/%s/n", dialog);
+        int i, n = get_property_value(npc, buf);
+
+        for (i = 0; i < n; i++) {
+                snprintf((char *) buf, sizeof(buf), "_/dialog/%s/%d/text", dialog, i);
+                const char *answer = GETMESG(npc, buf);
+                notifyf(player, "%d) %s", i, answer);
+        }
+}
+
+void
+do_talk(command_t *cmd) {
+        const char buf[BUFSIZ];
+        dbref player = cmd->player;
+        dbref loc = getloc(player);
+        const char *npcs = cmd->argv[1];
+        dbref npc = *npcs ? contents_find(cmd, loc, npcs) : NOTHING;
+
+        if (npc <= 0) {
+                notify(player, "Can't find that.");
+                return;
+        }
+
+        snprintf((char *) buf, sizeof(buf), "_/dialog/%d", npc);
+
+        const char *pdialog = GETMESG(player, buf);
+        const char *dialog;
+
+        if (!pdialog)
+                dialog = "main";
+        else
+                dialog = pdialog;
+
+        PLAYER_SP(player)->dialog_target = npc;
+        if (PLAYER_SP(player)->dialog)
+                free((void *) PLAYER_SP(player)->dialog);
+        PLAYER_SP(player)->dialog = alloc_string(dialog);
+
+        if (web_dialog_start(player, npc, dialog))
+                dialog_start(player, npc, dialog);
+}
+
+void
+do_answer(command_t *cmd) {
+        const char buf[BUFSIZ];
+        const char propname[BUFFER_LEN];
+        dbref player = cmd->player;
+        dbref npc = PLAYER_SP(player)->dialog_target;
+        const char *dialog = PLAYER_SP(player)->dialog;
+        PropPtr propadr, pptr;
+        if (npc <= 0 || !dialog) {
+                notify(player, "You are not in a conversation\n");
+                return;
+        }
+        const char *answers = cmd->argv[1];
+        int answer = *answers ? atoi(answers) : 0;
+
+        snprintf((char *) buf, sizeof(buf), "_/dialog/%s/%d/props", dialog, answer);
+
+        /* this is not what we want */
+        propadr = first_prop(npc, (char *) buf, &pptr, (char *) propname, sizeof(propname));
+        while (propadr) {
+                notifyf(player, "Would set player prop %s%c%s", buf, PROPDIR_DELIMITER, propname);
+		propadr = next_prop(pptr, propadr, (char *) propname, sizeof(propname));
+        }
+
+        snprintf((char *) buf, sizeof(buf), "_/dialog/%s/%d/next", dialog, answer);
+        dialog = GETMESG(npc, buf);
+        free((void *) PLAYER_SP(player)->dialog);
+        if (!dialog) {
+                PLAYER_SP(player)->dialog = NULL;
+                web_dialog_stop(player);
+                return;
+        }
+        PLAYER_SP(player)->dialog = alloc_string(dialog);
+
+        if (web_dialog_start(player, npc, dialog))
+                dialog_start(player, npc, dialog);
+}
+
+/* TODO make this depend on player aswell */
+int
+dialog_exists(dbref npc) {
+        const char buf[BUFSIZ];
+        const char *dialog = "main";
+        snprintf((char *) buf, sizeof(buf), "_/dialog/%s/text", dialog);
+        const char *text = GETMESG(npc, buf);
+        return !!text;
+}
+
