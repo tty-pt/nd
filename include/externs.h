@@ -76,6 +76,7 @@ extern int unset_source(dbref player, dbref loc, dbref action);
 extern int link_exit(command_t *cmd, dbref exit, char *dest_name, dbref * dest_list);
 extern int link_exit_dry(command_t *cmd, dbref exit, char *dest_name, dbref * dest_list);
 extern void do_action(command_t *cmd);
+extern void copy_one_prop(dbref player, dbref source, dbref destination, char *propname, int ignore);
 
 /* From hashtab.c */
 extern unsigned int hash(const char *s, unsigned int hash_size);

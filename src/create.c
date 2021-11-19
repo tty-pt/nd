@@ -227,7 +227,7 @@ link_exit_dry(command_t *cmd, dbref exit, char *dest_name, dbref * dest_list)
  * another. helper routine for copy_props (below).
  */
 void
-copy_one_prop(dbref player, dbref source, dbref destination, char *propname)
+copy_one_prop(dbref player, dbref source, dbref destination, char *propname, int ignore)
 {
 	PropPtr currprop;
 	PData newprop;
@@ -258,7 +258,7 @@ copy_one_prop(dbref player, dbref source, dbref destination, char *propname)
 		}
 
 		/* now hook the new property into the destination object. */
-		set_property(destination, propname, &newprop);
+		set_property(destination, propname + ignore, &newprop);
 	}
 	
 	return;
@@ -284,7 +284,7 @@ copy_props(dbref player, dbref source, dbref destination, const char *dir)
 		snprintf(buf, sizeof(buf), "%s%c%s", dir, PROPDIR_DELIMITER, propname);
 
 		/* copy this property */
-		copy_one_prop(player, source, destination, buf);
+		copy_one_prop(player, source, destination, buf, 0);
 		
 		/* recursively copy this property directory */
 		copy_props(player, source, destination, buf);

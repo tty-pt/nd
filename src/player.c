@@ -59,7 +59,7 @@ set_password(dbref player, const char* password)
 	set_password_raw(player, alloc_string(hash));
 #else
 	char *enc;
-	enc = crypt(password, "k?");
+	enc = crypt(password, "$5$iamsha-256encryptedwhatashame$");
 	CBUG(!enc);
 	set_password_raw(player, alloc_string(enc));
 #endif
@@ -286,14 +286,32 @@ do_talk(command_t *cmd) {
                 dialog_start(player, npc, dialog);
 }
 
+static void
+props_copy(dbref target, dbref what, const char *prefix, int ignore) {
+        const char buf[BUFSIZ];
+        const char propname[BUFFER_LEN];
+        PropPtr propadr, pptr;
+        snprintf((char *) buf, sizeof(buf), "%s", prefix);
+        propadr = first_prop(what, buf, &pptr, (char *) propname, sizeof(propname));
+
+        while (propadr) {
+                snprintf((char *) buf, sizeof(buf), "%s%c%s", prefix, PROPDIR_DELIMITER, propname);
+                if (PropDir(pptr))
+                        props_copy(target, what, buf, ignore);
+                else {
+                        copy_one_prop(target, what, target, (char *) buf, ignore);
+                }
+
+		propadr = next_prop(pptr, propadr, (char *) propname, sizeof(propname));
+        }
+}
+
 void
 do_answer(command_t *cmd) {
         const char buf[BUFSIZ];
-        const char propname[BUFFER_LEN];
         dbref player = cmd->player;
         dbref npc = PLAYER_SP(player)->dialog_target;
         const char *dialog = PLAYER_SP(player)->dialog;
-        PropPtr propadr, pptr;
         if (npc <= 0 || !dialog) {
                 notify(player, "You are not in a conversation\n");
                 return;
@@ -302,13 +320,7 @@ do_answer(command_t *cmd) {
         int answer = *answers ? atoi(answers) : 0;
 
         snprintf((char *) buf, sizeof(buf), "_/dialog/%s/%d/props", dialog, answer);
-
-        /* this is not what we want */
-        propadr = first_prop(npc, (char *) buf, &pptr, (char *) propname, sizeof(propname));
-        while (propadr) {
-                notifyf(player, "Would set player prop %s%c%s", buf, PROPDIR_DELIMITER, propname);
-		propadr = next_prop(pptr, propadr, (char *) propname, sizeof(propname));
-        }
+        props_copy(player, npc, buf, strlen(buf) + 1);
 
         snprintf((char *) buf, sizeof(buf), "_/dialog/%s/%d/next", dialog, answer);
         dialog = GETMESG(npc, buf);
