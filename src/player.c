@@ -298,9 +298,8 @@ props_copy(dbref target, dbref what, const char *prefix, int ignore) {
                 snprintf((char *) buf, sizeof(buf), "%s%c%s", prefix, PROPDIR_DELIMITER, propname);
                 if (PropDir(pptr))
                         props_copy(target, what, buf, ignore);
-                else {
+                else
                         copy_one_prop(target, what, target, (char *) buf, ignore);
-                }
 
 		propadr = next_prop(pptr, propadr, (char *) propname, sizeof(propname));
         }
