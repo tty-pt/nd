@@ -637,7 +637,9 @@ notify(dbref player, const char *msg)
 	char *ptr1;
 	const char *ptr2;
 
-	/* CBUG(Typeof(player) != TYPE_PLAYER); */
+        if (Typeof(player) != TYPE_PLAYER)
+                return 0;
+
 	fd = PLAYER_FD(player);
 	if (fd <= 0)
 		return 0;
@@ -954,11 +956,11 @@ FlushText(McpFrame * mfr)
 	/* } */
 }
 
-int
-mcpframe_to_descr(McpFrame * ptr)
-{
-	return ((descr_t *) ptr->descriptor)->fd;
-}
+/* int */
+/* mcpframe_to_descr(McpFrame * ptr) */
+/* { */
+/* 	return ((descr_t *) ptr->descriptor)->fd; */
+/* } */
 
 int
 mcpframe_to_user(McpFrame * ptr)

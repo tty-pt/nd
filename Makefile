@@ -11,6 +11,7 @@ all: index.html main.js vim.css
 
 js-src != find js -type f
 art-y != find art -type f
+art-y += nd256.png
 
 pre.js: ${js-src}
 	${GCC_JS} -o $@ ./js/main.js

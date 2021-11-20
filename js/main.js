@@ -487,12 +487,14 @@ function Avatar(props) {
 }
 
 function ContentsItem(props) {
-        const { item, onClick, activeItem } = props;
+        const { item, onClick, activeItem, isShop } = props;
         const className = "f fic pxs _s " + (activeItem == item.dbref ? 'c0' : "");
 
         return (<a className={className} onClick={onClick}>
                 <Avatar item={item} />
-                <span dangerouslySetInnerHTML={{ __html: item.pname }}></span>
+                <span dangerouslySetInnerHTML={{
+                        __html: item.pname + (isShop ? " " + item.price + "P" : ""),
+                }}></span>
         </a>);
 }
 
@@ -509,6 +511,7 @@ function Contents(props) {
                 const item = obj.contents[k];
 
                 return <ContentsItem key={item.dbref} item={item}
+                        isShop={obj.shop}
                         activeItem={activeItem}
                         onClick={e => onItemClick(e, item)} />;
         });
@@ -557,7 +560,7 @@ function Directions() {
 }
 
 function ContentsAndActions(props) {
-        const { sendMessage, here, me, target } = useContext(GameContext);
+        const { sendMessage, here, me, target, objects } = useContext(GameContext);
         const [ actions, setActions ] = useState([]);
         const [ activeItem, setActiveItem ] = useState(null);
 
@@ -591,6 +594,14 @@ function ContentsAndActions(props) {
                                 sendMessage("eat #" + item.dbref);
                         }]);
 
+                        newActions.push([ACT_SHOP, function () {
+                                sendMessage("sell #" + item.dbref);
+                        }]);
+
+                } else if (objects[item.loc].shop) {
+                        newActions.push([ACT_SHOP, function () {
+                                sendMessage("buy #" + item.dbref);
+                        }]);
                 } else {
                         newActions.push([ACT_GET, function () {
                                 sendMessage("get #" + target + "=#" + item.dbref);

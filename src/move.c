@@ -32,10 +32,10 @@ moveto(dbref what, dbref where)
 
 	/* remove what from old loc */
 	loc = DBFETCH(what)->location;
-	CBUG(loc == NOTHING);
-	web_content_out(loc, what);
-
-	DBSTORE(loc, contents, remove_first(DBFETCH(loc)->contents, what));
+        if (loc != NOTHING) {
+                web_content_out(loc, what);
+                DBSTORE(loc, contents, remove_first(DBFETCH(loc)->contents, what));
+        }
 
 	/* test for special cases */
 	switch (where) {
@@ -71,6 +71,7 @@ moveto(dbref what, dbref where)
 	DBDIRTY(where);
 	DBSTORE(what, location, where);
 	web_content_in(where, what);
+        CBUG(getloc(what) != where);
 }
 
 dbref reverse(dbref);

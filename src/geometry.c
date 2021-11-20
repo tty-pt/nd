@@ -144,7 +144,7 @@ dbref
 obj_add(struct object_skeleton o, dbref where)
 {
 	CBUG(where < 0);
-	dbref nu = new_object();
+	dbref nu = object_new();
 	NAME(nu) = alloc_string(o.name);
 	SETART(nu, alloc_string(o.art));
         SETAVATAR(nu, o.avatar);
@@ -233,6 +233,8 @@ contents_find(command_t *cmd, dbref where, const char *name)
 	init_match_remote(cmd, where, name, TYPE_THING, &md);
 	match_possession(&md);
         match_absolute(&md);
+        if (md.exact_match == NOTHING)
+                return NOTHING;
         if (getloc(md.exact_match) != where)
                 return NOTHING;
 	return md.exact_match;

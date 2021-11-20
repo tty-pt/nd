@@ -37,19 +37,10 @@ extern char match_args[];
 extern char match_cmdname[];
 
 /* from timequeue.c */
-extern void propqueue(command_t *cmd, dbref where, dbref trigger, dbref what,
-					  dbref xclude, const char *propname, const char *toparg,
-
-					  int mlev, int mt);
-extern void envpropqueue(command_t *cmd, dbref where, dbref trigger, dbref what,
-						 dbref xclude, const char *propname, const char *toparg,
-
-						 int mlev, int mt);
 void do_newpassword(command_t *);
 void do_oecho(command_t *);
 void do_propset(command_t *);
 void do_sweep(command_t *);
-void do_leave(command_t *);
 void do_whisper(command_t *);
 void do_pecho(command_t *);
 void do_pose(command_t *);
@@ -73,8 +64,6 @@ extern void do_create(command_t *);
 extern void do_clone(command_t *);
 extern void do_attach(command_t *cmd);
 extern int unset_source(dbref player, dbref loc, dbref action);
-extern int link_exit(command_t *cmd, dbref exit, char *dest_name, dbref * dest_list);
-extern int link_exit_dry(command_t *cmd, dbref exit, char *dest_name, dbref * dest_list);
 extern void do_action(command_t *cmd);
 extern void copy_one_prop(dbref player, dbref source, dbref destination, char *propname, int ignore);
 
@@ -263,10 +252,7 @@ extern int equalstr(char *s, char *t);
 /* from interface.c */
 void do_flock(command_t *);
 int mcpframe_to_user(McpFrame * ptr);
-int mcpframe_to_descr(McpFrame * ptr);
-
-/* from tune.c */
-extern void tune_load_parmsfile(dbref player);
+/* int mcpframe_to_descr(McpFrame * ptr); */
 
 #endif /* _EXTERNS_H */
 

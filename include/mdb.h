@@ -122,6 +122,11 @@ extern char match_cmdname[BUFFER_LEN];
 #define GETSTACK(x)	get_property_value(x, MESGPROP_STACK)
 #define USETSTACK(x)	remove_property(x, MESGPROP_STACK)
 
+#define MESGPROP_INF	"_/inf"
+#define SETINF(x,y)	set_property_value(x, MESGPROP_INF, y)
+#define GETINF(x)	get_property_value(x, MESGPROP_INF)
+#define USETINF(x)	remove_property(x, MESGPROP_INF)
+
 #define MESGPROP_FOOD	"_/food"
 #define GETFOOD(x)	(get_property_value(x, MESGPROP_FOOD) - 1)
 #define SETFOOD(x,y)	set_property_value(x, MESGPROP_FOOD, y + 1)
@@ -434,7 +439,7 @@ extern dbref db_top;
 
 extern char *alloc_string(const char *);
 extern struct shared_string *alloc_prog_string(const char *);
-extern dbref new_object(void);		/* return a new object */
+extern dbref object_new(void);		/* return a new object */
 
 extern struct boolexp *getboolexp(FILE *);	/* get a boolexp */
 extern void putboolexp(FILE *, struct boolexp *);	/* put a boolexp */
@@ -465,7 +470,7 @@ void objects_update(long long unsigned tick);
   Usage guidelines:
 
   To obtain an object pointer use DBFETCH(i).  Pointers returned by DBFETCH
-  may become invalid after a call to new_object().
+  may become invalid after a call to object_new().
 
   To update an object, use DBSTORE(i, f, v), where i is the object number,
   f is the field (after ->), and v is the new value.

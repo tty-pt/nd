@@ -144,7 +144,7 @@ db_clear_object(dbref i)
 }
 
 dbref
-new_object(void)
+object_new(void)
 {
 	dbref newobj;
 
@@ -728,11 +728,11 @@ db_read(FILE * f)
 	}							/* for */
 }								/* db_read */
 
-void
-copyobj(dbref player, dbref old, dbref nu)
+dbref
+object_copy(dbref player, dbref old)
 {
+        dbref nu = object_new();
 	struct object *newp = DBFETCH(nu);
-
 	NAME(nu) = alloc_string(NAME(old));
 	if (Typeof(old) == TYPE_THING) {
 		ALLOC_THING_SP(nu);
@@ -744,9 +744,10 @@ copyobj(dbref player, dbref old, dbref nu)
 	newp->contents = NOTHING;
 	newp->next = NOTHING;
 	newp->location = NOTHING;
-	moveto(nu, player);
-
+        newp->flags = DBFETCH(old)->flags;
+        OWNER(nu) = OWNER(old);
 	DBDIRTY(nu);
+        return nu;
 }
 
 static void
@@ -763,6 +764,3 @@ objects_update(long long unsigned tick)
 	for (i = db_top; i-- > 0;)
 		object_update(i, tick);
 }
-
-static const char *db_c_version = "$RCSfile$ $Revision: 1.39 $";
-const char *get_db_c_version(void) { return db_c_version; }

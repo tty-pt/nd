@@ -16,212 +16,6 @@
 #include "match.h"
 #include "fbstrings.h"
 
-/* parse_linkable_dest()
- *
- * A utility for open and link which checks whether a given destination
- * string is valid.  It returns a parsed dbref on success, and NOTHING
- * on failure.
- */
-
-static dbref
-parse_linkable_dest(command_t *cmd, dbref exit, const char *dest_name)
-{
-	dbref player = cmd->player;
-	dbref dobj;					/* destination room/player/thing/link */
-	static char buf[BUFFER_LEN];
-	struct match_data md;
-
-	init_match(cmd, dest_name, NOTYPE, &md);
-	match_absolute(&md);
-	match_everything(&md);
-	match_home(&md);
-
-	if ((dobj = match_result(&md)) == NOTHING || dobj == AMBIGUOUS) {
-		snprintf(buf, sizeof(buf), "I couldn't find '%s'.", dest_name);
-		notify(player, buf);
-		return NOTHING;
-
-	}
-
-#if !TELEPORT_TO_PLAYER
-	if (Typeof(dobj) == TYPE_PLAYER) {
-		snprintf(buf, sizeof(buf), "You can't link to players.  Destination %s ignored.",
-				unparse_object(player, dobj));
-		notify(player, buf);
-		return NOTHING;
-	}
-#endif
-
-	if (!can_link(player, exit)) {
-		notify(player, "You can't link that.");
-		return NOTHING;
-	}
-	if (!can_link_to(player, Typeof(exit), dobj)) {
-		snprintf(buf, sizeof(buf), "You can't link to %s.", unparse_object(player, dobj));
-		notify(player, buf);
-		return NOTHING;
-	} else {
-		return dobj;
-	}
-}
-
-/* exit_loop_check()
- *
- * Recursive check for loops in destinations of exits.  Checks to see
- * if any circular references are present in the destination chain.
- * Returns 1 if circular reference found, 0 if not.
- */
-int
-exit_loop_check(dbref source, dbref dest)
-{
-
-	int i;
-
-	if (source == dest)
-		return 1;				/* That's an easy one! */
-	if (Typeof(dest) != TYPE_EXIT)
-		return 0;
-	for (i = 0; i < DBFETCH(dest)->sp.exit.ndest; i++) {
-		if ((DBFETCH(dest)->sp.exit.dest)[i] == source) {
-			return 1;			/* Found a loop! */
-		}
-		if (Typeof((DBFETCH(dest)->sp.exit.dest)[i]) == TYPE_EXIT) {
-			if (exit_loop_check(source, (DBFETCH(dest)->sp.exit.dest)[i])) {
-				return 1;		/* Found one recursively */
-			}
-		}
-	}
-	return 0;					/* No loops found */
-}
-
-int
-_link_exit(command_t *cmd, dbref exit, char *dest_name, dbref * dest_list, int dryrun)
-{
-	dbref player = cmd->player;
-	char *p, *q;
-	int prdest;
-	dbref dest;
-	int ndest, error;
-	char buf[BUFFER_LEN], qbuf[BUFFER_LEN];
-
-	prdest = 0;
-	ndest = 0;
-	error = 0;
-
-	while (*dest_name) {
-		while (isspace(*dest_name))
-			dest_name++;		/* skip white space */
-		p = dest_name;
-		while (*dest_name && (*dest_name != EXIT_DELIMITER))
-			dest_name++;
-		q = (char *) strncpy(qbuf, p, BUFFER_LEN);	/* copy word */
-		q[(dest_name - p)] = '\0';	/* terminate it */
-		if (*dest_name)
-			for (dest_name++; *dest_name && isspace(*dest_name); dest_name++) ;
-
-		if ((dest = parse_linkable_dest(cmd, exit, q)) == NOTHING)
-			continue;
-
-		switch (Typeof(dest)) {
-		case TYPE_PLAYER:
-		case TYPE_ROOM:
-			if (prdest) {
-				snprintf(buf, sizeof(buf),
-						"Only one player or room destination allowed. Destination %s ignored.",
-						unparse_object(player, dest));
-				notify(player, buf);
-
-				if(dryrun)
-					error = 1;
-
-				continue;
-			}
-			dest_list[ndest++] = dest;
-			prdest = 1;
-			break;
-		case TYPE_THING:
-			dest_list[ndest++] = dest;
-			break;
-		case TYPE_EXIT:
-			if (exit_loop_check(exit, dest)) {
-				snprintf(buf, sizeof(buf),
-						"Destination %s would create a loop, ignored.",
-						unparse_object(player, dest));
-				notify(player, buf);
-				
-				if(dryrun)
-					error = 1;
-
-				continue;
-			}
-			dest_list[ndest++] = dest;
-			break;
-		default:
-			notify(player, "Internal error: weird object type.");
-			warn("PANIC: weird object: Typeof(%d) = %ld", dest, Typeof(dest));
-
-			if(dryrun)
-				error = 1;
-				
-			break;
-		}
-		if(!dryrun) {
-			if (dest == HOME) {
-				notify(player, "Linked to HOME.");
-			} else {
-				snprintf(buf, sizeof(buf), "Linked to %s.", unparse_object(player, dest));
-				notify(player, buf);
-			}
-		}
-		
-		if (ndest >= MAX_LINKS) {
-			notify(player, "Too many destinations, rest ignored.");
-
-			if(dryrun)
-				error = 1;
-
-			break;
-		}
-	}
-	
-	if(dryrun && error)
-		return 0;
-		
-	return ndest;
-}
-
-/*
- * link_exit()
- *
- * This routine connects an exit to a bunch of destinations.
- *
- * 'player' contains the player's name.
- * 'exit' is the the exit whose destinations are to be linked.
- * 'dest_name' is a character string containing the list of exits.
- *
- * 'dest_list' is an array of dbref's where the valid destinations are
- * stored.
- *
- */
-
-int
-link_exit(command_t *cmd, dbref exit, char *dest_name, dbref * dest_list)
-{
-	return _link_exit(cmd, exit, dest_name, dest_list, 0);
-}
-
-/*
- * link_exit_dry()
- *
- * like link_exit(), but only checks whether the link would be ok or not.
- * error messages are still output.
- */
-int
-link_exit_dry(command_t *cmd, dbref exit, char *dest_name, dbref * dest_list)
-{
-	return _link_exit(cmd, exit, dest_name, dest_list, 1);
-}
-
 /*
  * copy a single property, identified by its name, from one object to
  * another. helper routine for copy_props (below).
@@ -376,7 +170,7 @@ do_clone(command_t *cmd)
 		return;
 	} else {
 		/* create the object */
-		clonedthing = new_object();
+		clonedthing = object_new();
 
 		/* initialize everything */
 		NAME(clonedthing) = alloc_string(NAME(thing));
@@ -467,7 +261,7 @@ do_create(command_t *cmd)
 		return;
 	} else {
 		/* create the object */
-		thing = new_object();
+		thing = object_new();
 
 		/* initialize everything */
 		NAME(thing) = alloc_string(name);
@@ -663,7 +457,7 @@ do_action(command_t *cmd)
                 return;
         }
 
-	action = new_object();
+	action = object_new();
 
 	NAME(action) = alloc_string(action_name);
 	DBFETCH(action)->location = NOTHING;

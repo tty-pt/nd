@@ -104,7 +104,7 @@ gexit(command_t *cmd, dbref loc, dbref loc2, enum exit e)
 {
 	dbref ref;
 
-	ref = new_object();
+	ref = object_new();
 
 	/* Initialize everything */
 	NAME(ref) = alloc_string(e_fname(e));

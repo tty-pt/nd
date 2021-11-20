@@ -606,7 +606,7 @@ create_lostandfound(dbref * player, dbref * room)
 	char player_name[PLAYER_NAME_LIMIT + 2] = "lost+found";
 	int temp = 0;
 
-	*room = new_object();
+	*room = object_new();
 	NAME(*room) = alloc_string("lost+found");
 	LOCATION(*room) = GLOBAL_ENVIRONMENT;
 	DBFETCH(*room)->exits = NOTHING;
@@ -624,7 +624,7 @@ create_lostandfound(dbref * player, dbref * room)
 		*player = GOD;
 	} else {
 		const char *rpass;
-		*player = new_object();
+		*player = object_new();
 		NAME(*player) = alloc_string(player_name);
 		LOCATION(*player) = *room;
 		FLAGS(*player) = TYPE_PLAYER |  SANEBIT;
