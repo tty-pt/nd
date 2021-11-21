@@ -19,6 +19,8 @@ const ACT_DROP = 11;
 const ACT_EAT = 12;
 const ACT_13 = 13;
 const ACT_INVENTORY = 14;
+const ACT_K = 15;
+const ACT_J = 16;
 
 let actions_lbl = [
 	"look", "kill", "shop",
@@ -26,13 +28,14 @@ let actions_lbl = [
 	"fill", "get", "talk",
         "put", "equip", "drop",
         "eat", "reserved", "inventory",
+        "K", "J",
 ];
 
 let actions_tiles = [];
 
 function tilemap_cache() {
 	let p = 0;
-	for (let i = 0; i < 5; i++) {
+	for (let i = 0; i < 6; i++) {
 		for (let j = 0; j < 3; j++, p++) {
 			ctx.clearRect(0, 0, 16, 16);
 			ctx.drawImage(tilemap, 16 * j, 16 * i,
