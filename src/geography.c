@@ -269,10 +269,9 @@ exits_infer(command_t *cmd, dbref here)
 // TODO make more add functions similar and easy to insert here
 
 static inline void
-others_add(command_t *cmd, dbref where, enum biome b, pos_t p)
-{
+stones_add(dbref where, enum biome b, pos_t p) {
 	noise_t v = uhash((const char *) p, sizeof(pos_t), 0);
-	unsigned char n = v & 0x7;
+	unsigned char n = v & 0x3, i;
 	static struct object_skeleton stone = {
                 .name = "stone",
                 .art = "stones.jpg",
@@ -281,8 +280,18 @@ others_add(command_t *cmd, dbref where, enum biome b, pos_t p)
         };
 	if (b == BIOME_WATER)
 		return;
-	if (n && (v & 0x18) && (v & 0x01))
-		obj_stack_add(stone, where, n);
+
+        if (!(n && (v & 0x18) && (v & 0x20)))
+                return;
+
+        for (i = 0; i < n; i++)
+                object_add(stone, where);
+}
+
+static inline void
+others_add(command_t *cmd, dbref where, enum biome b, pos_t p)
+{
+        stones_add(where, b, p);
 }
 
 static dbref
@@ -292,7 +301,7 @@ geo_room_at(command_t *cmd, pos_t pos)
 	static const dbref loc = 0;
 	dbref there;
 	bio = noise_point(pos);
-        there = obj_add(biomes[bio->bio_idx], 0);
+        there = object_add(biomes[bio->bio_idx], 0);
 	map_put(pos, there, DB_NOOVERWRITE);
 	DBFETCH(there)->exits = NOTHING;
 	DBFETCH(there)->sp.room.dropto = NOTHING;

@@ -461,7 +461,7 @@ mob_add(enum mob_type mid, dbref where, enum biome biome, long long pdn) {
 	if (!((1 << biome) & mob_skel->biomes))
 		return NOTHING;
 
-	nu = obj_add(*obj_skel, where);
+	nu = object_add(*obj_skel, where);
 	return nu;
 }
 
@@ -517,7 +517,6 @@ do_eat(command_t *cmd)
 	struct mob *p = MOB(player);
 	dbref item = contents_find(cmd, player, what);
 	int food;
-	unsigned stack;
 
 	if (item < 0
 	    || (food = GETFOOD(item)) < 0) {
@@ -525,18 +524,13 @@ do_eat(command_t *cmd)
 		return;
 	}
 
-	stack = GETSTACK(item);
 	// TODO food should have some water content
 	food = p->hunger - (1 << (16 - food));
 	if (food < 0)
 		food = 0;
 	p->hunger = food;
 	notify_wts(player, "eat", "eats", " %s", NAME(item));
-	if (!stack) {
-		recycle(cmd, item);
-		return;
-	}
-	SETSTACK(item, stack - 1);
+        recycle(cmd, item);
 }
 
 static void

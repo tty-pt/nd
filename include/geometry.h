@@ -162,11 +162,7 @@ int e_ground(dbref room, enum exit e);
 void e_exit_dest_set(dbref exit, dbref dest);
 
 dbref
-obj_add(struct object_skeleton o, dbref where);
-
-dbref
-obj_stack_add(struct object_skeleton o, dbref where,
-		unsigned char n);
+object_add(struct object_skeleton o, dbref where);
 
 void
 object_drop(dbref where, struct drop **drop);

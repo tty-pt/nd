@@ -148,7 +148,7 @@ body(command_t *cmd, dbref mob)
 	struct object_skeleton o = { "", "", "" };
 	snprintf(buf, sizeof(buf), "%s's body.", NAME(mob));
 	o.name = buf;
-	dbref dead_mob = obj_add(o, getloc(mob));
+	dbref dead_mob = object_add(o, getloc(mob));
 	dbref tmp;
 	unsigned n = 0;
 

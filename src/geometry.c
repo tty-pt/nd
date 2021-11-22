@@ -141,7 +141,7 @@ rarity_get() {
 }
 
 dbref
-obj_add(struct object_skeleton o, dbref where)
+object_add(struct object_skeleton o, dbref where)
 {
 	CBUG(where < 0);
 	dbref nu = object_new();
@@ -199,30 +199,25 @@ obj_add(struct object_skeleton o, dbref where)
 	return nu;
 }
 
-dbref
-obj_stack_add(struct object_skeleton o, dbref where, unsigned char n)
-{
-	CBUG(n <= 0);
-	dbref nu = obj_add(o, where);
-	if (n > 1)
-		SETSTACK(nu, n);
-	return nu;
-}
-
 void
 object_drop(dbref where, struct drop **drop)
 {
+        register int i;
+
 	for (; *drop; drop++)
 		if (random() < (RAND_MAX >> (*drop)->y)) {
                         int yield = (*drop)->yield,
                             yield_v = (*drop)->yield_v;
-			dbref nu = obj_add(*(*drop)->i, where);
-                        if (yield) {
-                                yield += random() & yield_v;
-                                if (yield > 1)
-                                        SETSTACK(nu, yield);
+
+                        if (!yield) {
+                                object_add(*(*drop)->i, where);
+                                continue;
                         }
 
+                        yield += random() & yield_v;
+
+                        for (i = 0; i < yield; i++)
+                                object_add(*(*drop)->i, where);
                 }
 }
 

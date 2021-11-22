@@ -116,7 +116,7 @@ icon(dbref what)
 
                         ret.actions |= ACT_CHOP;
                         snprintf(buf, sizeof(buf), "%s%c%s", pl->pre,
-                                 GETSTACK(what) > PLANT_HALF ? pl->big : pl->small,
+                                 GETSIZE(what) > PLANT_HALF ? pl->big : pl->small,
                                  pl->post); 
 
                         // use the icon immediately
@@ -149,12 +149,8 @@ unparse_object(dbref player, dbref loc)
 		if (loc < 0 || loc >= db_top)
 			return "*INVALID*";
 
-		unsigned n = GETSTACK(loc);
-		if (n)
-			BUFF("(%ux) ", n);
-
 		if (GETEQW(loc)) {
-			n = GETRARE(loc);
+			unsigned n = GETRARE(loc);
 
 			if (n != 1)
                                 BUFF("(%s) ", rarity_str[n]);
