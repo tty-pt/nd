@@ -5,9 +5,7 @@ subdirs := src/ vss/ game/data/
 
 include scripts/Makefile.common
 
-basename != basename ${PWD}
-
-GCC_JS := ${CC} -E -P -nostdinc -undef -x c -DBASENAME="/${basename}"
+GCC_JS := ${CC} -E -P -nostdinc -undef -x c
 
 all: index.html main.js vim.css
 

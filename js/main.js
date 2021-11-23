@@ -892,7 +892,7 @@ function Login() {
 function AppRouter() {
         const { me } = useContext(GameContext);
 
-        return (<BrowserRouter basename="BASENAME">
+        return (<BrowserRouter basename="/neverdark">
                 <Switch>
                         <Route path="/login" component={Login} />
                         <Route path="/">
