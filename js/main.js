@@ -266,7 +266,16 @@ function gameReducer(state, action) {
                         return {
                                 ...state,
                                 me: parseInt(action.player),
+                                authFail: null,
                         };
+
+                case 'web-auth-fail':
+                        return {
+                                ...state,
+                                me: parseInt(action.player),
+                                authFail: true,
+                        };
+
 
                 case 'web-stats':
                         return {
@@ -337,7 +346,7 @@ function GameContextProvider(props) {
         }
 
         function onOpen() {
-                output("use \"auth <user>=<password>\" to login.");
+                output("socket connection open");
         }
 
         function onClose() {
@@ -849,9 +858,53 @@ function Game() {
         </>);
 }
 
+const { BrowserRouter, Switch, Route, Redirect, useHistory } = ReactRouterDOM;
+
+function Login() {
+        const { sendMessage, me, authFail } = useContext(GameContext);
+
+        function onSubmit(e) {
+                const fd = new FormData(e.target);
+                sendMessage("auth " + fd.get("user") + "=" + fd.get("pass"));
+                e.preventDefault();
+        }
+
+        if (me)
+                return <Redirect to="/" />;
+
+        return (<div className="vn f sf fic fcc">
+                <h1>Login</h1>
+                <form className="vs" onSubmit={onSubmit}>
+                        <label>
+                                Username
+                                <input name="user" />
+                        </label>
+                        <label>
+                                Password
+                                <input name="pass" type="password" />
+                        </label>
+                        <input type="submit" value="login" />
+                </form>
+                { authFail ? <div className="cf1">Invalid authentication</div> : null }
+        </div>);
+}
+
+function AppRouter() {
+        const { me } = useContext(GameContext);
+
+        return (<BrowserRouter basename="BASENAME">
+                <Switch>
+                        <Route path="/login" component={Login} />
+                        <Route path="/">
+                                { me ? <Game /> : <Redirect to="/login" /> }
+                        </Route>
+                </Switch>
+        </BrowserRouter>);
+}
+
 function App() {
         return (<GameContextProvider>
-                <Game />
+                <AppRouter />
         </GameContextProvider>);
 }
 
