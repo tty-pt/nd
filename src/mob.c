@@ -440,7 +440,7 @@ mob_put(dbref who)
 	for (i = 0; i < EQ_MAX; i++) {
 		register dbref eq = GETEQ(who, i);
 		if (eq > 0)
-			equip_calc(who, eq);
+			CBUG(equip_affect(who, eq));
 	}
 
         return mob;

@@ -459,6 +459,7 @@ extern void db_free(void);
 extern dbref parse_dbref(const char *);	/* parse a dbref */
 
 void objects_update(long long unsigned tick);
+void objects_init();
 
 #define DOLIST(var, first) \
   for((var) = (first); (var) != NOTHING; (var) = DBFETCH(var)->next)

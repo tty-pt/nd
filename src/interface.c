@@ -576,6 +576,7 @@ main(int argc, char **argv)
 		warn("Couldn't load " STD_DB "!\n");
 		return 2;
 	}
+        objects_init();
 
 	CBUG(map_init());
 	commands_init();

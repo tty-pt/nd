@@ -19,7 +19,7 @@
 #define DODGE_ARMOR(def) def / 4
 
 int
-equip_calc(dbref who, dbref eq)
+equip_affect(dbref who, dbref eq)
 {
 	struct mob *p = MOB(who);
 	register int msv = GETMSV(eq),
@@ -68,21 +68,24 @@ equip_calc(dbref who, dbref eq)
 }
 
 int
-cannot_equip(dbref who, dbref eq)
+equip(dbref who, dbref eq)
 {
 	unsigned eql = GETEQL(eq);
 
 	if (!eql || GETEQ(who, eql)
-	    || equip_calc(who, eq))
+	    || equip_affect(who, eq))
 		return 1;
 
 	SETEQ(who, eql, eq);
 	DBFETCH(eq)->flags |= DARK;
+
 	DBDIRTY(eq);
 
 	notifyf(who, "You equip %s.", NAME(eq));
-        if (Typeof(who) == TYPE_PLAYER)
+        if (Typeof(who) == TYPE_PLAYER) {
                 web_stats(who);
+                web_content_out(who, eq);
+        }
 	return 0;
 }
 
@@ -109,7 +112,7 @@ do_equip(command_t *cmd)
 		return;
 	}
 
-	if (cannot_equip(player, eq)) { 
+	if (equip(player, eq)) { 
 		notify(player, "You can't equip that.");
 		return;
 	}
@@ -150,8 +153,10 @@ unequip(dbref who, unsigned eql)
 	SETEQ(who, eql, 0);
 	DBFETCH(eq)->flags &= ~DARK;
 	DBDIRTY(eq);
-        if (Typeof(who) == TYPE_PLAYER)
+        if (Typeof(who) == TYPE_PLAYER) {
+                web_content_in(who, eq);
                 web_stats(who);
+        }
 	return eq;
 }
 

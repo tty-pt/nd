@@ -205,6 +205,7 @@ function webInReducer(state, action) {
                                         [dbref]: {
                                                 ...action,
                                                 icon: tty_proc(action.icon),
+                                                pname: tty_proc(action.pname),
                                         },
                                 }
                         }

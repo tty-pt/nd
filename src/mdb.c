@@ -664,9 +664,6 @@ db_read_object_foxen(FILE * f, struct object *o, dbref objno)
 	case TYPE_GARBAGE:
 		return;
 	}
-
-	if (GETLID(objno) >= 0)
-		mob_put(objno);
 }
 
 dbref
@@ -763,4 +760,19 @@ objects_update(long long unsigned tick)
 	dbref i;
 	for (i = db_top; i-- > 0;)
 		object_update(i, tick);
+}
+
+static inline void
+object_init(dbref what) {
+	if (GETLID(what) >= 0)
+		mob_put(what);
+}
+
+void
+objects_init()
+{
+	
+	dbref i;
+	for (i = db_top; i-- > 0;)
+		object_init(i);
 }

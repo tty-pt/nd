@@ -109,7 +109,7 @@ ws_handshake(int cfd, char *buf) {
 	/* char buf[BUFSIZ]; */
 	char *s;
 
-	warn("ws_handshake %s", buf);
+	/* warn("ws_handshake %s", buf); */
         for (s = buf; s && *s; s = strchr(s, '\n'))
                 if (!strncasecmp(++s, kkey, sizeof(kkey) - 1)) {
                         SHA_CTX c;
