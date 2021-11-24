@@ -799,6 +799,7 @@ do_auth(command_t *cmd)
         web_stats(player);
         web_bars(player);
         web_auth_success(fd, player);
+        web_equipment(player);
 	do_look_around(cmd);
 	do_view(cmd);
 }

@@ -214,7 +214,7 @@ function webInReducer(state, action) {
 }
 
 function gameReducer(state, action) {
-        console.log(action);
+        // console.log(action, state);
 
         switch (action.key) {
                 case 'inband':
@@ -312,6 +312,25 @@ function gameReducer(state, action) {
                         return {
                                 ...state,
                                 dialog: null,
+                        };
+
+                case 'web-equipment':
+                        return {
+                                ...state,
+                                equipment: {},
+                        };
+
+                case 'web-equipment-item':
+                        return {
+                                ...state,
+                                equipment: {
+                                        ...(state.equipment || {}),
+                                        [parseInt(action.eql)]: {
+                                                ...action,
+                                                pname: tty_proc(action.pname),
+                                                icon: tty_proc(action.icon),
+                                        },
+                                },
                         };
         }
 
@@ -432,6 +451,43 @@ function Stat(props) {
         </div>);
 }
 
+const EQL_HEAD = 1;
+const EQL_NECK = 2;
+const EQL_CHEST = 3;
+const EQL_BACK = 4;
+const EQL_RHAND = 5;
+const EQL_LFINGER = 6;
+const EQL_RFINGER = 7;
+const EQL_PANTS = 8;
+
+const eql_label = {
+        [EQL_HEAD]: "hand",
+        [EQL_NECK]: "neck",
+        [EQL_CHEST]: "chest",
+        [EQL_BACK]: "back",
+        [EQL_RHAND]: "weapon",
+        [EQL_LFINGER]: "lfinger",
+        [EQL_RFINGER]: "rfinger",
+        [EQL_PANTS]: "grieves",
+};
+
+function Equipment(props) {
+        const { eql } = props;
+        const { equipment, sendMessage } = useContext(GameContext);
+
+        if (!equipment)
+                return null;
+
+        if (!equipment[eql])
+                return <div className="sl c0"></div>;
+
+        return (<Avatar
+                item={equipment[eql]}
+                size="l"
+                onClick={() => sendMessage("unequip " + eql_label[eql])}
+        />);
+}
+
 function PlayerTabs() {
         const { me, stats } = useContext(GameContext);
 
@@ -456,7 +512,34 @@ function PlayerTabs() {
                         </div>
                 </div>
                 <div label="equipment" className="ps vs">
-                        Hello world
+                        <div className="_s f">
+                                <div className="sl"></div>
+                                <div className="sl"></div>
+                                <Equipment eql={EQL_HEAD} />
+                                <div className="sl"></div>
+                                <div className="sl"></div>
+                        </div>
+                        <div className="_s f">
+                                <Equipment eql={EQL_RHAND} />
+                                <div className="sl"></div>
+                                <Equipment eql={EQL_NECK} />
+                                <Equipment eql={EQL_BACK} />
+                                <div className="sl"></div>
+                        </div>
+                        <div className="_s f">
+                                <Equipment eql={EQL_RFINGER} />
+                                <div className="sl"></div>
+                                <Equipment eql={EQL_CHEST} />
+                                <div className="sl"></div>
+                                <Equipment eql={EQL_LFINGER} />
+                        </div>
+                        <div className="_s f">
+                                <div className="sl"></div>
+                                <div className="sl"></div>
+                                <Equipment eql={EQL_PANTS} />
+                                <div className="sl"></div>
+                                <div className="sl"></div>
+                        </div>
                 </div>
         </Tabs>);
 }
@@ -487,16 +570,23 @@ function TargetTitleAndArt() {
 }
 
 function Avatar(props) {
-        const { item } = props;
+        const { item, size = "xl", ...rest } = props;
 
         if (!item)
                 return null;
 
         if (item.avatar)
-                return <img className="s_xl svxl" src={"art/" + item.avatar} />;
+                return <img
+                        className={"s_" + size + " sv" + size}
+                        src={"art/" + item.avatar}
+                        { ...rest }
+                />;
         else
-                return <span className="sxl txl tcv"
-                        dangerouslySetInnerHTML={{ __html: item.icon }} />;
+                return <span
+                        className={"s" + size + " t" + size + " tcv"}
+                        dangerouslySetInnerHTML={{ __html: item.icon }}
+                        { ...rest }
+                />;
 }
 
 function ContentsItem(props) {

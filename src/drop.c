@@ -59,8 +59,8 @@ ARMORSET_HEAVY(chainmail, 15, 5)
 struct object_skeleton dagger = {
 	.name = "dagger",
 	.description = "",
-	.art = "",
-	.avatar = "",
+	.art = "dagger.png",
+	.avatar = "dagger_avatar.png",
 	.type = S_TYPE_EQUIPMENT,
 	.sp = { .equipment = {
 		.eqw = EQ(RHAND, SLASH),

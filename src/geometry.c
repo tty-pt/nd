@@ -165,8 +165,9 @@ object_add(struct object_skeleton o, dbref where)
 
 		struct mob *mob = MOB(where);
 
-		if (mob && !cannot_equip(where, nu))
-			SETEQ(where, o.sp.equipment.eqw, nu);
+		if (mob && !equip(where, nu))
+                        ;
+			/* SETEQ(where, o.sp.equipment.eqw, nu); */
 
 		break;
 	case S_TYPE_FOOD:

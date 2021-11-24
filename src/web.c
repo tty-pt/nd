@@ -367,3 +367,54 @@ web_dialog_stop(dbref player)
 	mcp_mesg_clear(&msg);
 	return 0;
 }
+
+static inline void
+web_equipment_item(dbref player, enum eq eql)
+{
+        char buf[BUFSIZ];
+	McpMesg msg;
+	McpFrame *mfr = web_frame(PLAYER_FD(player));
+        dbref eq = GETEQ(player, eql);
+        if (!eq)
+                return;
+        CBUG(!mfr);
+        mcp_mesg_init(&msg, MCP_WEB_PKG, "equipment-item");
+	snprintf(buf, sizeof(buf), "%d", eq);
+        mcp_mesg_arg_append(&msg, "dbref", buf);
+	snprintf(buf, sizeof(buf), "%d", eql);
+        mcp_mesg_arg_append(&msg, "eql", buf);
+        mcp_mesg_arg_append(&msg, "pname", unparse_object(player, eq));
+        mcp_mesg_arg_append(&msg, "avatar", GETAVATAR(eq));
+        struct icon ico = icon(eq);
+        mcp_mesg_arg_append(&msg, "icon", ico.icon);
+	mcp_frame_output_mesg(mfr, &msg);
+	mcp_mesg_clear(&msg);
+}
+
+int
+web_equipment(dbref player)
+{
+        char buf[BUFSIZ];
+	McpMesg msg;
+	McpFrame *mfr = web_frame(PLAYER_FD(player));
+
+	if (!mfr)
+                return 1;
+
+        mcp_mesg_init(&msg, MCP_WEB_PKG, "equipment");
+	snprintf(buf, sizeof(buf), "%d", 1);
+        mcp_mesg_arg_append(&msg, "ignore", buf);
+	mcp_frame_output_mesg(mfr, &msg);
+	mcp_mesg_clear(&msg);
+
+        web_equipment_item(player, HEAD);
+        web_equipment_item(player, NECK);
+        web_equipment_item(player, CHEST);
+        web_equipment_item(player, BACK);
+        web_equipment_item(player, RHAND);
+        web_equipment_item(player, LFINGER);
+        web_equipment_item(player, RFINGER);
+        web_equipment_item(player, PANTS);
+
+	return 0;
+}

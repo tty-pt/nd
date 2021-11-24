@@ -21,5 +21,6 @@ int web_stats(dbref player);
 int web_bars(dbref player);
 int web_dialog_start(dbref player, dbref npc, const char *dialog);
 int web_dialog_stop(dbref player);
+int web_equipment(dbref player);
 
 #endif

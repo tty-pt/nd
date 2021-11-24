@@ -85,6 +85,7 @@ equip(dbref who, dbref eq)
         if (Typeof(who) == TYPE_PLAYER) {
                 web_stats(who);
                 web_content_out(who, eq);
+                web_equipment(who);
         }
 	return 0;
 }
@@ -156,6 +157,7 @@ unequip(dbref who, unsigned eql)
         if (Typeof(who) == TYPE_PLAYER) {
                 web_content_in(who, eq);
                 web_stats(who);
+                web_equipment(who);
         }
 	return eq;
 }
