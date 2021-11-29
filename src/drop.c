@@ -2,8 +2,8 @@
 	struct object_skeleton s ## _helmet = { \
 		.name = #s " armor helmet", \
 		.description = "", \
-		.art = "", \
-		.avatar = "", \
+		.art = #s "_armor_helmet.png", \
+		.avatar = #s "_armor_helmet_avatar.png", \
 		.type = S_TYPE_EQUIPMENT, \
 		.sp = { .equipment = { \
 			.eqw = EQ(HEAD, _type), \
@@ -16,8 +16,8 @@
 	struct object_skeleton s ## _chest = { \
 		.name = #s " armor chest", \
 		.description = "", \
-		.art = "", \
-		.avatar = "", \
+		.art = #s "_armor_chest.png", \
+		.avatar = #s "_armor_chest_avatar.png", \
 		.type = S_TYPE_EQUIPMENT, \
 		.sp = { .equipment = { \
 			.eqw = EQ(CHEST, _type), \
@@ -30,8 +30,8 @@
 	struct object_skeleton  s ## _pants = { \
 		.name = #s " armor leggings", \
 		.description = "", \
-		.art = "", \
-		.avatar = "", \
+		.art = #s "_armor_greaves.png", \
+		.avatar = #s "_armor_greaves_avatar.png", \
 		.type = S_TYPE_EQUIPMENT, \
 		.sp = { .equipment = { \
 			.eqw = EQ(PANTS, _type), \

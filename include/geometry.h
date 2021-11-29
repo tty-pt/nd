@@ -123,7 +123,6 @@ struct plant_skeleton {
 	char const *pre, small, big, *post;
 	coord_t tmp_min, tmp_max;
 	ucoord_t rn_min, rn_max;
-	unsigned char yield;
 	struct drop *drop[32];
 	unsigned y;
 };

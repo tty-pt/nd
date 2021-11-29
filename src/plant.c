@@ -16,7 +16,22 @@ struct object_skeleton carrot = {
 
 struct drop carrot_drop = {
         .i = &carrot,
-        .y = 1,
+        .y = 0,
+};
+
+struct object_skeleton stick = {
+        .name = "stick",
+        .art = "stick.png",
+        .description = "",
+	.avatar = "stick_avatar.png",
+        .type = S_TYPE_OTHER,
+};
+
+struct drop stick_drop = {
+        .i = &stick,
+        .y = 0,
+        .yield = 1,
+        .yield_v = 0x3,
 };
 
 /* TODO calculate water needs */
@@ -36,9 +51,8 @@ struct object_skeleton plant_skeleton_map[] = {{
 		.tmp_max = 70,
 		.rn_min = 50,
 		.rn_max = 1024,
-		.yield = 1,
-		.drop = { NULL },
-		.y = 1,
+		.drop = { &stick_drop, NULL },
+		.y = 4,
 	} },
 }, {	// temperate rainforest
 	.name = "pseudotsuga menziesii",
@@ -48,8 +62,9 @@ struct object_skeleton plant_skeleton_map[] = {{
 	.type = S_TYPE_PLANT,
 	.sp = { .plant = {
 		ANSI_BOLD ANSI_FG_GREEN, 't', 'T', ANSI_RESET_BOLD,
-		32, 100, 180, 350, 1,
-		{ NULL }, 1
+		32, 100, 180, 350,
+		.drop = { &stick_drop, NULL },
+		1
 	} },
 }, {	// woodland / grassland / shrubland
 	.name = "betula pendula",
@@ -59,8 +74,21 @@ struct object_skeleton plant_skeleton_map[] = {{
 	.type = S_TYPE_PLANT,
 	.sp = { .plant = {
 		ANSI_FG_YELLOW, 'x', 'X', "",
-		30, 86, 0, 341, 1,
-		{ NULL }, 1,
+		30, 86, 0, 341,
+		.drop = { &stick_drop, NULL },
+		4,
+	} },
+}, {
+	.name = "linum usitatissimum",
+	.art = "flax.jpg",
+	.description = "",
+	.avatar = "flax_avatar.jpg",
+	.type = S_TYPE_PLANT,
+	.sp = { .plant = {
+		ANSI_FG_YELLOW, 'x', 'X', "",
+		30, 86, 20, 341,
+		.drop = { &stick_drop, NULL },
+		.y = 30,
 	} },
 }, {	// woodland / grassland?
 	.name = "betula pubescens",
@@ -70,8 +98,9 @@ struct object_skeleton plant_skeleton_map[] = {{
 	.type = S_TYPE_PLANT,
 	.sp = { .plant = {
 		ANSI_FG_WHITE, 'x', 'X', "",
-		50, 146, 500, 900, 1,
-		{ NULL }, 1
+		50, 146, 500, 900,
+		.drop = { &stick_drop, NULL },
+		4
 	} },
 }, {	// temperate forest
 	.name = "abies alba",
@@ -81,8 +110,9 @@ struct object_skeleton plant_skeleton_map[] = {{
 	.type = S_TYPE_PLANT,
 	.sp = { .plant = {
 		ANSI_BOLD ANSI_FG_GREEN, 'a', 'A', ANSI_RESET_BOLD,
-		-40, 86, 100, 200, 1,
-		{ NULL }, 1,
+		-40, 86, 100, 200,
+		.drop = { &stick_drop, NULL },
+		4,
 	} },
 }, {	// desert
 	.name = "arthrocereus rondonianus",
@@ -92,8 +122,8 @@ struct object_skeleton plant_skeleton_map[] = {{
 	.type = S_TYPE_PLANT,
 	.sp = { .plant = {
 		ANSI_BOLD ANSI_FG_GREEN, 'i', 'I', "",
-		110, 190, 10, 180, 1,
-		{ NULL }, 1,
+		110, 190, 10, 180,
+		{ NULL }, 4,
 	} },
 }, {	// savannah
 	.name = "acacia senegal",
@@ -103,8 +133,9 @@ struct object_skeleton plant_skeleton_map[] = {{
 	.type = S_TYPE_PLANT,
 	.sp = { .plant = {
 		ANSI_BOLD ANSI_FG_GREEN, 't', 'T', "",
-		40, 150, 20, 345, 1,
-		{ NULL }, 1,
+		40, 150, 20, 345,
+		.drop = { &stick_drop, NULL },
+		4,
 	} },
 }, {
 	.name = "daucus carota",
@@ -114,9 +145,8 @@ struct object_skeleton plant_skeleton_map[] = {{
 	.type = S_TYPE_PLANT,
 	.sp = { .plant = {
 		ANSI_FG_WHITE, 'x', 'X', "",
-		38, 96, 100, 200, 1,
-		/* { "carrot", "", "" }, 1, */
-		{ &carrot_drop, NULL }, 1
+		38, 96, 100, 200,
+		{ &carrot_drop, NULL }, 4
 	} },
 }, {
 	.name = "solanum lycopersicum",
@@ -126,20 +156,23 @@ struct object_skeleton plant_skeleton_map[] = {{
 	.type = S_TYPE_PLANT,
 	.sp = { .plant = {
 		ANSI_FG_RED, 'x', 'X', "", 
-		50, 98, 100, 200, 5,
+		50, 98, 100, 200,
 		/* { "tomato", "", "" }, 1, */
-		{ NULL }, 1
+		{ NULL }, 4
 	} },
 }};
 
 static inline int
-plant_noise(unsigned char *plid, coord_t tmp, ucoord_t rn, morton_t v, unsigned char n)
+plant_noise(unsigned char *plid, coord_t tmp, ucoord_t rn, noise_t v, unsigned char n)
 {
 	struct object_skeleton *obj_skel = PLANT_SKELETON(n);
 	struct plant_skeleton *pl = &obj_skel->sp.plant;
 
 	CBUG(n >= PLANT_MAX);
 
+        /* warn("plant_noise %s y: %u v: %u O: %u\n", obj_skel->name, pl->y, v, NOISE_MAX >> pl->y); */
+        if (v >= (NOISE_MAX >> pl->y))
+                return 0;
 	/* if (((v >> 6) ^ (v >> 3) ^ v) & 1) */
 	/* 	return 0; */
 

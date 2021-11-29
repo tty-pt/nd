@@ -5,6 +5,8 @@
 #include "plant.h"
 #include "hash.h"
 
+#define NOISE_MAX ((noise_t) -1)
+
 typedef uint32_t noise_t;
 typedef int32_t snoise_t;
 

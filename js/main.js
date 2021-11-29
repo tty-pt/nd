@@ -647,7 +647,7 @@ function Directions() {
                 <div className="_n">
                         <RBT />
                         <RB onClick={() => sendMessage("k")}>&uarr;</RB>
-                        <RBI src={ACT_K} />
+                        <RBI onClick={() => sendMessage("K")} src={ACT_K} />
                 </div>
                 <div className="_n">
                         <RB onClick={() => sendMessage("h")}>&larr;</RB>
@@ -657,7 +657,7 @@ function Directions() {
                 <div className="_n">
                         <RBT />
                         <RB onClick={() => sendMessage("j")}>&darr;</RB>
-                        <RBI src={ACT_J} />
+                        <RBI onClick={() => sendMessage("J")} src={ACT_J} />
                 </div>
         </div>);
 }

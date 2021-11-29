@@ -40,7 +40,6 @@
 
 /* gets a mask for use with get_s */
 #define COORDMASK_LSHIFT(x) (ucoord_t) ((((ucoord_t) -1) << x))
-#define NOISE_MAX ((noise_t) -1)
 
 #define PLANTS_SEED 5
 
