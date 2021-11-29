@@ -23,7 +23,7 @@ do_rob(command_t *cmd)
 	char buf[BUFFER_LEN];
 	struct match_data md;
 
-	init_match(cmd, what, TYPE_PLAYER, &md);
+	init_match(player, what, TYPE_PLAYER, &md);
 	match_neighbor(&md);
 	match_me(&md);
 	if (Wizard(OWNER(player))) {
@@ -49,7 +49,7 @@ do_rob(command_t *cmd)
 					"%s tried to rob you, but you have no %s to take.",
 					NAME(player), PENNIES);
 			notify(thing, buf);
-		} else if (can_doit(cmd, thing, "Your conscience tells you not to.")) {
+		} else if (can_doit(player, thing, "Your conscience tells you not to.")) {
 			/* steal a penny */
 			SETVALUE(OWNER(player), GETVALUE(OWNER(player)) + 1);
 			DBDIRTY(player);
@@ -82,7 +82,7 @@ do_give(command_t *cmd)
 		return;
 	}
 	/* check recipient */
-	init_match(cmd, recipient, TYPE_PLAYER, &md);
+	init_match(player, recipient, TYPE_PLAYER, &md);
 	match_neighbor(&md);
 	match_me(&md);
 	if (Wizard(OWNER(player))) {

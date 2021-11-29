@@ -167,6 +167,11 @@ extern char match_cmdname[BUFFER_LEN];
 #define GETLVL(x)	1 + get_property_value(x, MESGPROP_LVL)
 #define SETLVL(x, y)	set_property_value(x, MESGPROP_LVL, y - 1)
 
+#define MESGPROP_SAT	"_/sat"
+#define GETSAT(x)	get_property_dbref(x, MESGPROP_SAT)
+#define SETSAT(x,y)	set_property_dbref(x, MESGPROP_SAT, y)
+#define USETSAT(x)	remove_property(x, MESGPROP_SAT)
+
 #define SETHASH(w, x, y, z)	set_property_hash(w, x, y, z)
 #define GETHASH(w, x, y)	get_property_hash(w, x, y)
 

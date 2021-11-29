@@ -46,9 +46,8 @@ print_owner(dbref player, dbref thing)
 }
 
 static void
-look_contents(command_t *cmd, dbref loc, const char *contents_name)
+look_contents(dbref player, dbref loc, const char *contents_name)
 {
-	dbref player = cmd->player;
         char buf[BUFSIZ];
         size_t buf_l = 0;
 	dbref thing;
@@ -75,13 +74,12 @@ look_contents(command_t *cmd, dbref loc, const char *contents_name)
 extern void art(dbref descr, const char *arts);
 
 static void
-look_simple(command_t *cmd, dbref thing)
+look_simple(dbref player, dbref thing)
 {
-	dbref player = cmd->player;
 	char const *art_str = GETMESG(thing, MESGPROP_ART);
 
 	if (art_str)
-		art(cmd->fd, art_str);
+		art(PLAYER_FD(player), art_str);
 
 	if (GETDESC(thing)) {
 		notify(player, GETDESC(thing));
@@ -91,9 +89,8 @@ look_simple(command_t *cmd, dbref thing)
 }
 
 void
-look_room(command_t *cmd, dbref loc, int verbose)
+look_room(dbref player, dbref loc, int verbose)
 {
-	dbref player = cmd->player;
 	char const *description = "";
 	/* tell him the name, and the number if he can link to it */
 
@@ -103,29 +100,29 @@ look_room(command_t *cmd, dbref loc, int verbose)
 			description = GETDESC(loc);
 		}
 		/* tell him the appropriate messages if he has the key */
-		can_doit(cmd, loc, 0);
+		can_doit(player, loc, 0);
 	} else {
 		if (GETIDESC(loc)) {
 			description = GETIDESC(loc);
 		}
 	}
 
-	if (web_look(cmd, loc, description)) {
+	if (web_look(player, loc, description)) {
 		notify(player, unparse_object(player, loc));
 		notify(player, description);
 		/* tell him the contents */
-		look_contents(cmd, loc, "You see:");
+		look_contents(player, loc, "You see:");
 	}
 }
 
 void
-do_look_around(command_t *cmd)
+look_around(dbref player)
 {
 	dbref loc;
 
-	if ((loc = getloc(cmd->player)) == NOTHING)
+	if ((loc = getloc(player)) == NOTHING)
 		return;
-	look_room(cmd, loc, 1);
+	look_room(player, loc, 1);
 }
 
 void
@@ -141,11 +138,11 @@ do_look_at(command_t *cmd)
 
 	if (*name == '\0' || !strcmp(name, "here")) {
 		if ((thing = getloc(player)) != NOTHING) {
-			look_room(cmd, thing, 1);
+			look_room(player, thing, 1);
 		}
 	} else {
 		/* look at a thing here */
-		init_match(cmd, name, NOTYPE, &md);
+		init_match(player, name, NOTYPE, &md);
 		match_all_exits(&md);
 		match_neighbor(&md);
 		match_possession(&md);
@@ -170,32 +167,32 @@ do_look_at(command_t *cmd)
 				if (getloc(player) != thing && !can_link_to(player, TYPE_ROOM, thing)) {
 					notify(player, "Permission denied. (you're not where you want to look, and can't link to it)");
 				} else {
-					look_room(cmd, thing, 1);
+					look_room(player, thing, 1);
 				}
 				break;
 			case TYPE_PLAYER:
 				if (getloc(player) != getloc(thing)
 					&& !controls(player, thing)) {
 					notify(player, "Permission denied. (Your location isn't the same as what you're looking at)");
-				} else if (web_look(cmd, thing, GETDESC(thing))) {
-					look_simple(cmd, thing);
-					look_contents(cmd, thing, "Carrying:");
+				} else if (web_look(player, thing, GETDESC(thing))) {
+					look_simple(player, thing);
+					look_contents(player, thing, "Carrying:");
 				}
 				break;
 			case TYPE_THING:
 				if (getloc(player) != getloc(thing)
 					&& getloc(thing) != player && !controls(player, thing)) {
 					notify(player, "Permission denied. (You're not in the same room as or carrying the object)");
-				} else if (web_look(cmd, thing, GETDESC(thing))) {
-					look_simple(cmd, thing);
+				} else if (web_look(player, thing, GETDESC(thing))) {
+					look_simple(player, thing);
 					if (!(FLAGS(thing) & HAVEN)) {
-						look_contents(cmd, thing, "Contains:");
+						look_contents(player, thing, "Contains:");
 					}
 				}
 				break;
 			default:
-				if (web_look(cmd, thing, GETDESC(thing)))
-                                        look_simple(cmd, thing);
+				if (web_look(player, thing, GETDESC(thing)))
+                                        look_simple(player, thing);
 				break;
 			}
 		} else if (thing == NOTHING || (*detail && thing != AMBIGUOUS)) {
@@ -324,7 +321,7 @@ do_examine(command_t *cmd)
 			return;
 	} else {
 		/* look it up */
-		init_match(cmd, name, NOTYPE, &md);
+		init_match(player, name, NOTYPE, &md);
 
 		match_all_exits(&md);
 		match_neighbor(&md);
@@ -573,7 +570,7 @@ do_inventory(command_t *cmd)
 	dbref player = cmd->player;
 	dbref thing;
 
-        if (web_look(cmd, player, GETDESC(player))) {
+        if (web_look(player, player, GETDESC(player))) {
                 if ((thing = DBFETCH(player)->contents) == NOTHING) {
                         notify(player, "You aren't carrying anything.");
                 } else {
@@ -971,7 +968,7 @@ do_trace(command_t *cmd)
 	int i;
 	struct match_data md;
 
-	init_match(cmd, name, NOTYPE, &md);
+	init_match(player, name, NOTYPE, &md);
 	match_absolute(&md);
 	match_here(&md);
 	match_me(&md);
@@ -1007,7 +1004,7 @@ do_entrances(command_t *cmd)
 	if (*name == '\0') {
 		thing = getloc(player);
 	} else {
-		init_match(cmd, name, NOTYPE, &md);
+		init_match(player, name, NOTYPE, &md);
 		match_all_exits(&md);
 		match_neighbor(&md);
 		match_possession(&md);
@@ -1084,7 +1081,7 @@ do_contents(command_t *cmd)
 	if (*name == '\0') {
 		thing = getloc(player);
 	} else {
-		init_match(cmd, name, NOTYPE, &md);
+		init_match(player, name, NOTYPE, &md);
 		match_me(&md);
 		match_here(&md);
 		match_all_exits(&md);
@@ -1145,7 +1142,7 @@ do_sweep(command_t *cmd)
 	if (*name == '\0') {
 		thing = getloc(player);
 	} else {
-		init_match(cmd, name, NOTYPE, &md);
+		init_match(player, name, NOTYPE, &md);
 		match_me(&md);
 		match_here(&md);
 		match_all_exits(&md);

@@ -437,23 +437,6 @@ command_match(command_t *cmd) {
 	return (core_command_t *) hd->pval;
 }
 
-command_t command_null(command_t *cmd) {
-	command_t ret;
-	ret.player = cmd->player;
-	ret.fd = cmd->fd;
-	ret.argc = 0;
-	memset(ret.argv, '0', sizeof(ret.argv));
-	return ret;
-}
-
-command_t command_new_null(int descr, dbref player) {
-	command_t ret;
-	command_null(&ret);
-	ret.player = player;
-	ret.fd = descr;
-	return ret;
-}
-
 static void
 commands_init() {
 	int i;
@@ -800,22 +783,22 @@ do_auth(command_t *cmd)
         web_bars(player);
         web_auth_success(fd, player);
         web_equipment(player);
-	do_look_around(cmd);
+	look_around(player);
 	do_view(cmd);
 }
 
 static inline void
-do_v(command_t *cmd, char const *cmdstr)
+do_v(dbref player, char const *cmdstr)
 {
 	int ofs = 1;
 	char const *s = cmdstr;
 
 	for (; *s && ofs > 0; s += ofs) {
-		ofs = geo_v(cmd, s);
+		ofs = geo_v(player, s);
 		if (ofs < 0)
 			ofs = - ofs;
 		s += ofs;
-		ofs = kill_v(cmd, s);
+		ofs = kill_v(player, s);
 	}
 }
 
@@ -851,7 +834,7 @@ command_process(command_t *cmd)
 	if (cmd_i)
 		cmd_i->cb(cmd);
 	else
-		do_v(cmd, cmd->argv[0]);
+		do_v(cmd->player, cmd->argv[0]);
 
 	pos_t pos2;
 	map_where(pos2, getloc(player));

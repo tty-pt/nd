@@ -14,5 +14,7 @@ short kill_dmg(enum element dmg_type,
 		enum element def_type);
 void notify_attack(dbref att, dbref tar, struct wts wts,
 		short val, char const *color, short mval);
+void sit(dbref who, char const *what);
+void stand(dbref who);
 
 #endif

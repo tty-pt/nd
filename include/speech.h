@@ -5,12 +5,6 @@ void
 notify_except(dbref first, dbref exception, const char *msg, dbref who)
 ;
 
-void
-parse_omessage(command_t *cmd, dbref dest, dbref exit, const char *msg,
-			   const char *prefix, const char *whatcalled, int mpiflags)
-;
-
-
 int
 blank(const char *s)
 ;

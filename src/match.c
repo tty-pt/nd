@@ -23,13 +23,12 @@ char match_cmdname[BUFFER_LEN];	/* triggering command */
 char match_args[BUFFER_LEN];	/* remaining text */
 
 void
-init_match(command_t *cmd, const char *name, int type, struct match_data *md)
+init_match(dbref player, const char *name, int type, struct match_data *md)
 {
 	md->exact_match = md->last_match = NOTHING;
 	md->match_count = 0;
-	md->match_who = cmd->player;
-	md->match_from = cmd->player;
-	md->match_descr = cmd->fd;
+	md->match_who = player;
+	md->match_from = player;
 	md->match_name = name;
 	md->check_keys = 0;
 	md->preferred_type = type;
@@ -40,18 +39,18 @@ init_match(command_t *cmd, const char *name, int type, struct match_data *md)
 }
 
 void
-init_match_check_keys(command_t *cmd, const char *name, int type,
+init_match_check_keys(dbref player, const char *name, int type,
 		      struct match_data *md)
 {
-	init_match(cmd, name, type, md);
+	init_match(player, name, type, md);
 	md->check_keys = 1;
 }
 
 void
-init_match_remote(command_t *cmd, dbref what, const char *name, int type,
+init_match_remote(dbref player, dbref what, const char *name, int type,
 				  struct match_data *md)
 {
-	init_match(cmd, name, type, md);
+	init_match(player, name, type, md);
 	md->match_from = what;
 }
 
@@ -558,9 +557,9 @@ match_rmatch(dbref arg1, struct match_data *md)
 }
 
 dbref
-ematch_from(command_t *cmd, dbref where, const char *name) {
+ematch_from(dbref player, dbref where, const char *name) {
 	struct match_data md;
-	init_match(cmd, name, TYPE_THING, &md);
+	init_match(player, name, TYPE_THING, &md);
 	md.match_from = where;
 	match_list(DBFETCH(md.match_from)->contents, &md);
 	return md.exact_match;

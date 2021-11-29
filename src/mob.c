@@ -488,9 +488,8 @@ mob_obj_random()
 }
 
 void
-mobs_aggro(command_t *cmd)
+mobs_aggro(dbref player)
 {
-	dbref player = cmd->player;
         struct mob *me = MOB(player);
 	dbref tmp;
 	int klock = 0;
@@ -515,7 +514,7 @@ do_eat(command_t *cmd)
 	dbref player = cmd->player;
 	const char *what = cmd->argv[1];
 	struct mob *p = MOB(player);
-	dbref item = contents_find(cmd, player, what);
+	dbref item = contents_find(player, player, what);
 	int food;
 
 	if (item < 0
@@ -530,7 +529,7 @@ do_eat(command_t *cmd)
 		food = 0;
 	p->hunger = food;
 	notify_wts(player, "eat", "eats", " %s", NAME(item));
-        recycle(cmd, item);
+        recycle(player, item);
 }
 
 static void
@@ -599,8 +598,17 @@ mob_update(dbref who, long long unsigned tick)
 		return;
 	}
 
-	if (tick % 16 == 0) {
-		int div = 10 - 5 * (n->flags & MF_SITTING);
+        if (Typeof(who) != TYPE_PLAYER) {
+                if (GETSAT(who) == NOTHING) {
+                        if (n->hp != HP_MAX(who)
+                            && n->target == NOTHING)
+                                sit(who, "");
+                } else if (n->hp == HP_MAX(who))
+                        stand(who);
+        }
+
+	if (tick % 16 == 0 && GETSAT(who) != NOTHING) {
+		int div = 10;
 		int max, cur;
 		cspell_heal(NOTHING, who, HP_MAX(who) / div);
 
@@ -619,4 +627,5 @@ mob_update(dbref who, long long unsigned tick)
                         return;
 
 	kill_update(who);
+
 }

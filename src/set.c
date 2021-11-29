@@ -22,13 +22,12 @@
 
 
 static dbref
-match_controlled(command_t *cmd, const char *name)
+match_controlled(dbref player, const char *name)
 {
-	dbref player = cmd->player;
 	dbref match;
 	struct match_data md;
 
-	init_match(cmd, name, NOTYPE, &md);
+	init_match(player, name, NOTYPE, &md);
 	match_absolute(&md);
 	match_everything(&md);
 
@@ -52,7 +51,7 @@ do_name(command_t *cmd)
 
 	NOGUEST("@name",player);
 
-	if ((thing = match_controlled(cmd, name)) != NOTHING) {
+	if ((thing = match_controlled(player, name)) != NOTHING) {
 		/* check for bad name */
 		if (*newname == '\0') {
 			notify(player, "Give it what new name?");
@@ -123,7 +122,7 @@ do_describe(command_t *cmd)
 
 	NOGUEST("@describe",player);
 
-	if ((thing = match_controlled(cmd, name)) != NOTHING) {
+	if ((thing = match_controlled(player, name)) != NOTHING) {
 		SETDESC(thing, description);
 		if(description && *description) {
 			notify(player, "Description set.");
@@ -143,7 +142,7 @@ do_idescribe(command_t *cmd)
 
 	NOGUEST("@idescribe",player);
 
-	if ((thing = match_controlled(cmd, name)) != NOTHING) {
+	if ((thing = match_controlled(player, name)) != NOTHING) {
 		SETIDESC(thing, description);
 		if(description && *description) {
 			notify(player, "Description set.");
@@ -163,7 +162,7 @@ do_doing(command_t *cmd)
 
 	NOGUEST("@doing", player);
 
-	if ((thing = match_controlled(cmd, name)) != NOTHING) {
+	if ((thing = match_controlled(player, name)) != NOTHING) {
 		SETDOING(thing, mesg);
 		if(mesg && *mesg) {
 			notify(player, "Doing set.");
@@ -183,7 +182,7 @@ do_fail(command_t *cmd)
 
 	NOGUEST("@fail",player);
 
-	if ((thing = match_controlled(cmd, name)) != NOTHING) {
+	if ((thing = match_controlled(player, name)) != NOTHING) {
 		SETFAIL(thing, message);
 		if(message && *message) {
 			notify(player, "Message set.");
@@ -203,7 +202,7 @@ do_success(command_t *cmd)
 
 	NOGUEST("@success",player);
 
-	if ((thing = match_controlled(cmd, name)) != NOTHING) {
+	if ((thing = match_controlled(player, name)) != NOTHING) {
 		SETSUCC(thing, message);
 		if(message && *message) {
 			notify(player, "Message set.");
@@ -224,7 +223,7 @@ do_drop_message(command_t *cmd)
 
 	NOGUEST("@drop",player);
 
-	if ((thing = match_controlled(cmd, name)) != NOTHING) {
+	if ((thing = match_controlled(player, name)) != NOTHING) {
 		SETDROP(thing, message);
 		if(message && *message) {
 			notify(player, "Message set.");
@@ -244,7 +243,7 @@ do_osuccess(command_t *cmd)
 
 	NOGUEST("@osuccess",player);
 
-	if ((thing = match_controlled(cmd, name)) != NOTHING) {
+	if ((thing = match_controlled(player, name)) != NOTHING) {
 		SETOSUCC(thing, message);
 		if(message && *message) {
 			notify(player, "Message set.");
@@ -264,7 +263,7 @@ do_ofail(command_t *cmd)
 
 	NOGUEST("@ofail",player);
 
-	if ((thing = match_controlled(cmd, name)) != NOTHING) {
+	if ((thing = match_controlled(player, name)) != NOTHING) {
 		SETOFAIL(thing, message);
 		if(message && *message) {
 			notify(player, "Message set.");
@@ -284,7 +283,7 @@ do_odrop(command_t *cmd)
 
 	NOGUEST("@odrop",player);
 
-	if ((thing = match_controlled(cmd, name)) != NOTHING) {
+	if ((thing = match_controlled(player, name)) != NOTHING) {
 		SETODROP(thing, message);
 		if(message && *message) {
 			notify(player, "Message set.");
@@ -304,7 +303,7 @@ do_oecho(command_t *cmd)
 
 	NOGUEST("@oecho",player);
 
-	if ((thing = match_controlled(cmd, name)) != NOTHING) {
+	if ((thing = match_controlled(player, name)) != NOTHING) {
 		SETOECHO(thing, message);
 		if(message && *message) {
 			notify(player, "Message set.");
@@ -324,7 +323,7 @@ do_pecho(command_t *cmd)
 
 	NOGUEST("@pecho",player);
 
-	if ((thing = match_controlled(cmd, name)) != NOTHING) {
+	if ((thing = match_controlled(player, name)) != NOTHING) {
 		SETPECHO(thing, message);
 		if(message && *message) {
 			notify(player, "Message set.");
@@ -338,12 +337,12 @@ do_pecho(command_t *cmd)
    If the lockstring is null, then it unlocks the object.
    this returns a 1 or a 0 to represent success. */
 int
-setlockstr(command_t *cmd, dbref thing, const char *keyname)
+setlockstr(dbref player, dbref thing, const char *keyname)
 {
 	struct boolexp *key;
 
 	if (*keyname != '\0') {
-		key = parse_boolexp(cmd, keyname, 0);
+		key = parse_boolexp(player, keyname, 0);
 		if (key == TRUE_BOOLEXP) {
 			return 0;
 		} else {
@@ -370,7 +369,7 @@ do_conlock(command_t *cmd)
 
 	NOGUEST("@conlock",player);
 
-	init_match(cmd, name, NOTYPE, &md);
+	init_match(player, name, NOTYPE, &md);
 	match_absolute(&md);
 	match_everything(&md);
 
@@ -395,7 +394,7 @@ do_conlock(command_t *cmd)
 		set_property(thing, "_/clk", &mydat);
 		notify(player, "Container lock cleared.");
 	} else {
-		key = parse_boolexp(cmd, keyname, 0);
+		key = parse_boolexp(player, keyname, 0);
 		if (key == TRUE_BOOLEXP) {
 			notify(player, "I don't understand that key.");
 		} else {
@@ -421,7 +420,7 @@ do_flock(command_t *cmd)
 
 	NOGUEST("@force_lock",player);
 
-	init_match(cmd, name, NOTYPE, &md);
+	init_match(player, name, NOTYPE, &md);
 	match_absolute(&md);
 	match_everything(&md);
 
@@ -446,7 +445,7 @@ do_flock(command_t *cmd)
 		set_property(thing, "@/flk", &mydat);
 		notify(player, "Force lock cleared.");
 	} else {
-		key = parse_boolexp(cmd, keyname, 0);
+		key = parse_boolexp(player, keyname, 0);
 		if (key == TRUE_BOOLEXP) {
 			notify(player, "I don't understand that key.");
 		} else {
@@ -471,7 +470,7 @@ do_chlock(command_t *cmd) {
 
 	NOGUEST("@chown_lock",player);
 
-	init_match(cmd, name, NOTYPE, &md);
+	init_match(player, name, NOTYPE, &md);
 	match_absolute(&md);
 	match_everything(&md);
 
@@ -496,7 +495,7 @@ do_chlock(command_t *cmd) {
 		set_property(thing, "_/chlk", &mydat);
 		notify(player, "Chown lock cleared.");
 	} else {
-		key = parse_boolexp(cmd, keyname, 0);
+		key = parse_boolexp(player, keyname, 0);
 		if (key == TRUE_BOOLEXP) {
 			notify(player, "I don't understand that key.");
 		} else {
@@ -521,7 +520,7 @@ do_lock(command_t *cmd)
 
 	NOGUEST("@lock",player);
 
-	init_match(cmd, name, NOTYPE, &md);
+	init_match(player, name, NOTYPE, &md);
 	match_absolute(&md);
 	match_everything(&md);
 
@@ -535,7 +534,7 @@ do_lock(command_t *cmd)
 	default:
 		if (Typeof(thing) == TYPE_EXIT
 		    && e_exit_is(thing)
-		    && geo_claim(cmd, getloc(thing)))
+		    && geo_claim(player, getloc(thing)))
 			return;
 
 		if (!controls(player, thing)) {
@@ -546,14 +545,14 @@ do_lock(command_t *cmd)
 	}
 
 	if(keyname && *keyname) {
-		key = parse_boolexp(cmd, keyname, 0);
+		key = parse_boolexp(player, keyname, 0);
 		if (key == TRUE_BOOLEXP) {
 			notify(player, "I don't understand that key.");
 		} else {
 			/* everything ok, do it */
 			if (Typeof(thing) == TYPE_EXIT
 			    && e_exit_is(thing)
-			    && geo_claim(cmd, getloc(thing)))
+			    && geo_claim(player, getloc(thing)))
 				return;
 
 			SETLOCK(thing, key);
@@ -573,7 +572,7 @@ do_unlock(command_t *cmd)
 
 	NOGUEST("@unlock",player);
 
-	if ((thing = match_controlled(cmd, name)) != NOTHING) {
+	if ((thing = match_controlled(player, name)) != NOTHING) {
 		CLEARLOCK(thing);
 		notify(player, "Unlocked.");
 	}
@@ -636,7 +635,7 @@ do_chown(command_t *cmd)
 		notify(player, "You must specify what you want to take ownership of.");
 		return;
 	}
-	init_match(cmd, name, NOTYPE, &md);
+	init_match(player, name, NOTYPE, &md);
 	match_everything(&md);
 	match_absolute(&md);
 	if ((thing = noisy_match_result(&md)) == NOTHING)
@@ -664,7 +663,7 @@ do_chown(command_t *cmd)
 		if (Typeof(thing) != TYPE_EXIT ||
 			(DBFETCH(thing)->sp.exit.ndest && !controls_link(player, thing))) {
 			if (!(FLAGS(thing) & CHOWN_OK) ||
-				!test_lock(cmd, thing, "_/chlk")) {
+				!test_lock(player, thing, "_/chlk")) {
 				notify(player, "You can't take possession of that.");
 				return;
 			}
@@ -735,7 +734,7 @@ do_set(command_t *cmd)
 	NOGUEST("@set",player);
 
 	/* find thing */
-	if ((thing = match_controlled(cmd, name)) == NOTHING)
+	if ((thing = match_controlled(player, name)) == NOTHING)
 		return;
 #ifdef GOD_PRIV
 	/* Only God can set anything on any of his stuff */
@@ -880,7 +879,7 @@ do_propset(command_t *cmd)
 	NOGUEST("@propset",player);
 
 	/* find thing */
-	if ((thing = match_controlled(cmd, name)) == NOTHING)
+	if ((thing = match_controlled(player, name)) == NOTHING)
 		return;
 
 	while (isspace(*prop))
@@ -941,7 +940,7 @@ do_propset(command_t *cmd)
 		mydat.data.fval = strtod(value, NULL);
 		set_property(thing, pname, &mydat);
 	} else if (string_prefix("dbref", type)) {
-		init_match(cmd, value, NOTYPE, &md);
+		init_match(player, value, NOTYPE, &md);
 		match_absolute(&md);
 		match_everything(&md);
 		if ((ref = noisy_match_result(&md)) == NOTHING)
@@ -950,7 +949,7 @@ do_propset(command_t *cmd)
 		mydat.data.ref = ref;
 		set_property(thing, pname, &mydat);
 	} else if (string_prefix("lock", type)) {
-		lok = parse_boolexp(cmd, value, 0);
+		lok = parse_boolexp(player, value, 0);
 		if (lok == TRUE_BOOLEXP) {
 			notify(player, "I don't understand that lock.");
 			return;

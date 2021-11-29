@@ -37,7 +37,7 @@ do_shop(command_t *cmd)
 
 	notifyf(player, "%s shows you what's for sale.", NAME(npc));
 
-        if (!web_look(cmd, npc, GETDESC(npc)))
+        if (!web_look(player, npc, GETDESC(npc)))
             return;
 
 	dbref tmp = DBFETCH(npc)->contents;
@@ -66,7 +66,7 @@ do_buy(command_t *cmd)
 		return;
 	}
 
-	dbref item = contents_find(cmd, npc, name);
+	dbref item = contents_find(player, npc, name);
 
 	if (item == NOTHING) {
 		notifyf(player, "%s does not sell %s.", NAME(npc), name);
@@ -106,7 +106,7 @@ do_sell(command_t *cmd)
 		return;
 	}
 
-	dbref item = contents_find(cmd, player, name);
+	dbref item = contents_find(player, player, name);
 
         if (item == NOTHING) {
 		notify(player, "You don't have that item.");

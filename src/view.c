@@ -277,9 +277,9 @@ view_draw(view_t view) {
 }
 
 static inline void
-view_build_exit(command_t *cmd, view_tile_t *t, dbref loc, enum exit e) {
+view_build_exit(dbref player, view_tile_t *t, dbref loc, enum exit e) {
 	register dbref tmp
-		= e_exit_where(cmd, loc, e);
+		= e_exit_where(player, loc, e);
 
 	if (tmp > 0) {
 		t->exits |= e;
@@ -289,9 +289,9 @@ view_build_exit(command_t *cmd, view_tile_t *t, dbref loc, enum exit e) {
 }
 
 static inline void
-view_build_exit_z(command_t *cmd, view_tile_t *t, dbref loc, enum exit e) {
+view_build_exit_z(dbref player, view_tile_t *t, dbref loc, enum exit e) {
 	register dbref tmp
-		= e_exit_where(cmd, loc, e);
+		= e_exit_where(player, loc, e);
 
 	if (tmp > 0 && DBFETCH(tmp)->sp.exit.ndest
 			&& DBFETCH(tmp)->sp.exit.dest[0] >= 0)
@@ -300,7 +300,7 @@ view_build_exit_z(command_t *cmd, view_tile_t *t, dbref loc, enum exit e) {
 }
 
 static inline void
-view_build_exit_s(command_t *cmd, view_tile_t *t,
+view_build_exit_s(dbref player, view_tile_t *t,
 		  dbref loc, pos_t p, enum exit e) {
 	pos_t pa;
 	pos_move(pa, p, e);
@@ -315,7 +315,7 @@ view_build_exit_s(command_t *cmd, view_tile_t *t,
 	/* 		tmp); */
 
 	if (tmp > 0) {
-		tmp = e_exit_where(cmd, tmp, e_simm(e));
+		tmp = e_exit_where(player, tmp, e_simm(e));
 		if (tmp > 0) {
 			t->exits |= e;
 			if (GETDOOR(tmp))
@@ -352,27 +352,27 @@ view_build_flags(dbref loc) {
 }
 
 static void
-view_build_tile(command_t *cmd,
+view_build_tile(dbref player,
 		struct bio *n, dbref loc,
 		view_tile_t *t, pos_t p)
 {
 	t->room = loc;
 	if (loc > 0) {
-		view_build_exit(cmd, t, loc, E_EAST);
-		view_build_exit(cmd, t, loc, E_NORTH);
-		view_build_exit(cmd, t, loc, E_WEST);
-		view_build_exit(cmd, t, loc, E_SOUTH);
-		view_build_exit_z(cmd, t, loc, E_UP);
-		view_build_exit_z(cmd, t, loc, E_DOWN);
+		view_build_exit(player, t, loc, E_EAST);
+		view_build_exit(player, t, loc, E_NORTH);
+		view_build_exit(player, t, loc, E_WEST);
+		view_build_exit(player, t, loc, E_SOUTH);
+		view_build_exit_z(player, t, loc, E_UP);
+		view_build_exit_z(player, t, loc, E_DOWN);
 		t->flags = view_build_flags(loc);
 		t->bio_idx = floor_get(loc);
 		if (GETTMP(loc))
 			t->room = -1;
 	} else {
-		view_build_exit_s(cmd, t, loc, p, E_EAST);
-		view_build_exit_s(cmd, t, loc, p, E_NORTH);
-		view_build_exit_s(cmd, t, loc, p, E_WEST);
-		view_build_exit_s(cmd, t, loc, p, E_SOUTH);
+		view_build_exit_s(player, t, loc, p, E_EAST);
+		view_build_exit_s(player, t, loc, p, E_NORTH);
+		view_build_exit_s(player, t, loc, p, E_WEST);
+		view_build_exit_s(player, t, loc, p, E_SOUTH);
 		/* view_build_exit_sz(t, descr, player, loc, E_UP); */
 		/* view_build_exit_sz(t, descr, player, loc, E_DOWN); */
 		t->bio_idx = n->bio_idx;
@@ -382,7 +382,7 @@ view_build_tile(command_t *cmd,
 }
 
 static inline view_tile_t *
-_view_build(command_t *cmd,
+_view_build(dbref player,
 		struct bio *n, dbref *g,
 		view_tile_t *b, pos_t p)
 {
@@ -390,15 +390,14 @@ _view_build(command_t *cmd,
 
 	// TODO vary p vertically and horizontally
 	for (; g < g_max ; n++, g++, b++, p[1]++)
-		view_build_tile(cmd, n, *g, b, p);
+		view_build_tile(player, n, *g, b, p);
 
         return b;
 }
 
 void
-do_view(command_t *cmd)
+view(dbref player)
 {
-	dbref player = cmd->player;
 	struct bio bd[VIEW_M], *n_p = bd,
 		   *n_max = &bd[VIEW_BDI + 1];
 	pos_t pos, opos;
@@ -413,7 +412,7 @@ do_view(command_t *cmd)
 	memset(view, 0, sizeof(view));
 
 	for (; n_p < n_max;) {
-		_view_build(cmd, n_p, o_p, p, pos);
+		_view_build(player, n_p, o_p, p, pos);
 		p += VIEW_SIZE;
 		o_p += VIEW_SIZE;
 		n_p += VIEW_SIZE;
@@ -421,9 +420,13 @@ do_view(command_t *cmd)
 		pos[1] = opos[1];
 	}
 
-	/* binary_notify(player, BIN_VIEW, view, sizeof(view)); */
 	char *view_buf = view_draw(view);
-        if (web_geo_view(cmd->fd, view_buf))
+        if (web_geo_view(player, view_buf))
 		notify(player, view_buf);
-	/* notify(player, view_draw(view)); */
+}
+
+void
+do_view(command_t *cmd)
+{
+        view(cmd->player);
 }

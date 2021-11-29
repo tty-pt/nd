@@ -2,7 +2,6 @@
 #define _EXTERNS_AUTO_H
 
 void add_property(dbref player, const char *pname, const char *strval, int value);
-int can_move(command_t *cmd, const char *direction, int lev);
 void clear_propnode(PropPtr p);
 void copy_proplist(dbref obj, PropPtr * newer, PropPtr old);
 char * displayprop(dbref player, dbref obj, const char *name, char *buf, size_t bufsiz);
@@ -26,8 +25,8 @@ int string_compare(const char *s1, const char *s2);
 int string_prefix(const char *string, const char *prefix);
 char * strip_ansi(char *buf, const char *input);
 char * strip_bad_ansi(char *buf, const char *input);
-int test_lock(command_t *cmd, dbref thing, const char *lockprop);
-int test_lock_false_default(command_t *cmd, dbref thing, const char *lockprop);
+int test_lock(dbref player, dbref thing, const char *lockprop);
+int test_lock_false_default(dbref player, dbref thing, const char *lockprop);
 void tune_freeparms(void);
 const char * unparse_flags(dbref thing);
 void untouchprops_incremental(int limit);

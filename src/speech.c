@@ -47,7 +47,7 @@ do_whisper(command_t *cmd)
 	char buf[BUFFER_LEN];
 	struct match_data md;
 
-	init_match(cmd, arg1, TYPE_PLAYER, &md);
+	init_match(player, arg1, TYPE_PLAYER, &md);
 	match_neighbor(&md);
 	match_me(&md);
 	if (Wizard(player) && Typeof(player) == TYPE_PLAYER) {

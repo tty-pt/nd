@@ -102,7 +102,7 @@ struct mob {
 
 void mobs_add(dbref where, enum biome, long long pdn);
 struct mob *mob_put(dbref where);
-void mobs_aggro(command_t *cmd);
+void mobs_aggro(dbref player);
 struct object_skeleton const *mob_obj_random();
 void mob_update(dbref who, long long unsigned tick);
 void mob_add_stats(struct object_skeleton *mob, dbref nu);

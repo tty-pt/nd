@@ -65,6 +65,9 @@ moveto(dbref what, dbref where)
 
         if (Typeof(what) == TYPE_PLAYER)
                 dialog_stop(what);
+        if (GETLID(what) > 0 && GETSAT(what) != NOTHING) {
+                stand(what);
+        }
 
 	/* now put what in where */
 	PUSH(what, DBFETCH(where)->contents);
@@ -76,9 +79,8 @@ moveto(dbref what, dbref where)
 
 dbref reverse(dbref);
 void
-send_contents(command_t *cmd, dbref dest)
+send_contents(dbref loc, dbref dest)
 {
-	dbref loc = cmd->player;
 	dbref first;
 	dbref rest;
 	dbref where;
@@ -218,9 +220,8 @@ parent_loop_check(dbref source, dbref dest)
 }
 
 void
-enter_room(command_t *cmd, dbref loc, dbref exit)
+enter_room(dbref player, dbref loc, dbref exit)
 {
-	dbref player = cmd->player;
 	dbref old;
 	char buf[BUFFER_LEN];
 
@@ -237,31 +238,30 @@ enter_room(command_t *cmd, dbref loc, dbref exit)
 	snprintf(buf, sizeof(buf), "%s has left.", NAME(player));
 	notify_except(DBFETCH(old)->contents, player, buf, player);
 
-	geo_clean(cmd, old);
+	geo_clean(player, old);
 
 	snprintf(buf, sizeof(buf), "%s has arrived.", NAME(player));
 	notify_except(DBFETCH(loc)->contents, player, buf, player);
 
-	mobs_aggro(cmd);
+	mobs_aggro(player);
 	/* TODO geo_notify(descr, player); */
 
-	do_look_around(cmd);
+	look_around(player);
 }
 
 void
-send_home(command_t *cmd, int puppethome)
+send_home(dbref thing, int puppethome)
 {
-	dbref thing = cmd->player;
 	switch (Typeof(thing)) {
 	case TYPE_PLAYER:
 		/* send his possessions home first! */
 		/* that way he sees them when he arrives */
-		send_contents(cmd, HOME);
-		enter_room(cmd, PLAYER_HOME(thing), DBFETCH(thing)->location);
+		send_contents(thing, HOME);
+		enter_room(thing, PLAYER_HOME(thing), DBFETCH(thing)->location);
 		break;
 	case TYPE_THING:
 		if (puppethome)
-			send_contents(cmd, HOME);
+			send_contents(thing, HOME);
 		moveto(thing, HOME);	/* home */
 		break;
 	default:
@@ -272,7 +272,7 @@ send_home(command_t *cmd, int puppethome)
 }
 
 int
-can_move(command_t *cmd, const char *direction, int lev)
+can_move(dbref player, const char *direction, int lev)
 {
 	struct match_data md;
 
@@ -282,14 +282,14 @@ can_move(command_t *cmd, const char *direction, int lev)
 #endif
 
 	/* otherwise match on exits */
-	init_match(cmd, direction, TYPE_EXIT, &md);
+	init_match(player, direction, TYPE_EXIT, &md);
 	md.match_level = lev;
 	match_all_exits(&md);
 	return (last_match_result(&md) != NOTHING);
 }
 
 void
-trigger(command_t *cmd, dbref exit)
+trigger(dbref player, dbref exit)
 {
 	dbref dest;
 
@@ -304,24 +304,23 @@ trigger(command_t *cmd, dbref exit)
 		dest = geo_there(getloc(exit), exit_e(exit));
 
 	if (dest > 0) {
-		enter_room(cmd, dest, exit);
+		enter_room(player, dest, exit);
 	} else {
-		dest = geo_room(cmd, exit);
-		enter_room(cmd, dest, exit);
+		dest = geo_room(player, exit);
+		enter_room(player, dest, exit);
 	}
 }
 
 void
-go_move(command_t *cmd, const char *direction, int lev)
+go_move(dbref player, const char *direction, int lev)
 {
-	dbref player = cmd->player;
 	dbref loc;
 
 	struct match_data md;
 	dbref exit;
 
 	/* find the exit */
-	init_match_check_keys(cmd, direction, TYPE_EXIT, &md);
+	init_match_check_keys(player, direction, TYPE_EXIT, &md);
 	md.match_level = lev;
 	match_all_exits(&md);
 	switch (exit = match_result(&md)) {
@@ -336,10 +335,10 @@ go_move(command_t *cmd, const char *direction, int lev)
 		/* check to see if we got through */
 		loc = DBFETCH(player)->location;
 
-		if (!can_doit(cmd, exit, "You can't go that way."))
+		if (!can_doit(player, exit, "You can't go that way."))
 			break;
 
-		trigger(cmd, exit);
+		trigger(player, exit);
 		break;
 	}
 }
@@ -347,7 +346,7 @@ go_move(command_t *cmd, const char *direction, int lev)
 void
 do_move(command_t *cmd)
 {
-	go_move(cmd, cmd->argv[1], atoi(cmd->argv[2]));
+	go_move(cmd->player, cmd->argv[1], atoi(cmd->argv[2]));
 }
 
 void
@@ -360,7 +359,7 @@ do_get(command_t *cmd)
 	int cando;
 	struct match_data md;
 
-	init_match_check_keys(cmd, what, TYPE_THING, &md);
+	init_match_check_keys(player, what, TYPE_THING, &md);
 	match_neighbor(&md);
 	match_possession(&md);
         match_absolute(&md);
@@ -374,7 +373,7 @@ do_get(command_t *cmd)
                 }
 
 		if (obj && *obj) {
-			init_match_check_keys(cmd, obj, TYPE_THING, &md);
+			init_match_check_keys(player, obj, TYPE_THING, &md);
 			match_rmatch(cont, &md);
                         match_absolute(&md);
 			if ((thing = noisy_match_result(&md)) == NOTHING) {
@@ -384,7 +383,7 @@ do_get(command_t *cmd)
 				notify(player, "You can't steal things from players.");
 				return;
 			}
-			if (!test_lock_false_default(cmd, cont, "_/clk")) {
+			if (!test_lock_false_default(player, cont, "_/clk")) {
 				notify(player, "You can't open that container.");
 				return;
 			}
@@ -404,7 +403,7 @@ do_get(command_t *cmd)
 		switch (Typeof(thing)) {
 		case TYPE_THING:
 			if (obj && *obj) {
-				cando = could_doit(cmd, thing);
+				cando = could_doit(player, thing);
 				if (!cando)
 					notify(player, "You can't get that.");
 			} else {
@@ -415,7 +414,7 @@ do_get(command_t *cmd)
                                         break;
                                 }
 
-				cando = can_doit(cmd, thing, "You can't pick that up.");
+				cando = can_doit(player, thing, "You can't pick that up.");
 			}
 			if (cando) {
 				moveto(thing, player);
@@ -443,7 +442,7 @@ do_drop(command_t *cmd)
 	if ((loc = getloc(player)) == NOTHING)
 		return;
 
-	init_match(cmd, name, NOTYPE, &md);
+	init_match(player, name, NOTYPE, &md);
 	match_possession(&md);
         match_absolute(&md);
 	if ((thing = noisy_match_result(&md)) == NOTHING || thing == AMBIGUOUS)
@@ -456,7 +455,7 @@ do_drop(command_t *cmd)
 
 	cont = loc;
 	if (obj && *obj) {
-		init_match(cmd, obj, NOTYPE, &md);
+		init_match(player, obj, NOTYPE, &md);
 		match_possession(&md);
 		match_neighbor(&md);
 		/* if (Wizard(OWNER(player))) */
@@ -475,7 +474,7 @@ do_drop(command_t *cmd)
 			break;
 		}
 		if (Typeof(cont) != TYPE_ROOM &&
-			!test_lock_false_default(cmd, cont, "_/clk")) {
+			!test_lock_false_default(player, cont, "_/clk")) {
 			notify(player, "You don't have permission to put something in that.");
 			break;
 		}
@@ -485,8 +484,7 @@ do_drop(command_t *cmd)
 		}
 		if (Typeof(cont) == TYPE_ROOM && (FLAGS(thing) & STICKY) &&
 			Typeof(thing) == TYPE_THING) {
-			command_t cmd_sh = command_new_null(cmd->fd, thing);
-			send_home(&cmd_sh, 0);
+			send_home(thing, 0);
 		} else {
 			int immediate_dropto = (Typeof(cont) == TYPE_ROOM &&
 									DBFETCH(cont)->sp.room.dropto != NOTHING
@@ -533,7 +531,7 @@ do_recycle(command_t *cmd)
 
 	NOGUEST("@recycle",player);
 
-	init_match(cmd, name, TYPE_THING, &md);
+	init_match(player, name, TYPE_THING, &md);
 	match_all_exits(&md);
 	match_neighbor(&md);
 	match_possession(&md);
@@ -605,16 +603,15 @@ do_recycle(command_t *cmd)
 				break;
 			}
 			snprintf(buf, sizeof(buf), "Thank you for recycling %.512s (#%d).", NAME(thing), thing);
-			recycle(cmd, thing);
+			recycle(player, thing);
 			notify(player, buf);
 		}
 	}
 }
 
 void
-recycle(command_t *cmd, dbref thing)
+recycle(dbref player, dbref thing)
 {
-	dbref player = cmd->player;
 	extern dbref recyclable;
 	static int depth = 0;
 	dbref first;
@@ -632,15 +629,15 @@ recycle(command_t *cmd, dbref thing)
 			if (DBFETCH(first)->location == NOTHING
 			    || DBFETCH(first)->location == thing) {
 				if (e_exit_is(first))
-					gexit_snull(cmd, first);
-				recycle(cmd, first);
+					gexit_snull(player, first);
+				recycle(player, first);
 			}
 		}
 		if (GETTMP(thing))
 			for (first = DBFETCH(thing)->contents; first != NOTHING; first = rest) {
 				rest = DBFETCH(first)->next;
 				if (Typeof(first) != TYPE_PLAYER)
-					recycle(cmd, first);
+					recycle(player, first);
 			}
 		notify_except(DBFETCH(thing)->contents, NOTHING,
 					  "You feel a wrenching sensation...", player);
@@ -653,13 +650,13 @@ recycle(command_t *cmd, dbref thing)
 		for (first = DBFETCH(thing)->exits; first != NOTHING; first = rest) {
 			rest = DBFETCH(first)->next;
 			if (DBFETCH(first)->location == NOTHING || DBFETCH(first)->location == thing)
-				recycle(cmd, first);
+				recycle(player, first);
 		}
 		if (GETTMP(getloc(thing))) {
 			SETTMP(thing, 1);
 			for (first = DBFETCH(thing)->contents; first != NOTHING; first = rest) {
 				rest = DBFETCH(first)->next;
-				recycle(cmd, first);
+				recycle(player, first);
 			}
 		}
 		break;
@@ -758,8 +755,7 @@ recycle(command_t *cmd, dbref thing)
 	looplimit = db_top;
 	while ((looplimit-- > 0) && ((first = DBFETCH(thing)->contents) != NOTHING)) {
 		if (Typeof(first) == TYPE_PLAYER) {
-			command_t cmd_er = command_new_null(cmd->fd, first);
-			enter_room(&cmd_er, HOME, DBFETCH(thing)->location);
+			enter_room(first, HOME, DBFETCH(thing)->location);
 			/* If the room is set to drag players back, there'll be no
 			 * reasoning with it.  DRAG the player out.
 			 */

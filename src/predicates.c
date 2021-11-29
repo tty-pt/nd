@@ -261,9 +261,8 @@ can_link(dbref who, dbref what)
  * whether it's an exit or not.
  */
 int
-could_doit(command_t *cmd, dbref thing)
+could_doit(dbref player, dbref thing)
 {
-	dbref player = cmd->player;
 	dbref source, dest, owner;
 
 	if (Typeof(thing) == TYPE_EXIT) {
@@ -315,22 +314,22 @@ geo:
 		return 0;
 out:
 		/* Check the @lock on the thing, as a final test. */
-	return (eval_boolexp(cmd, GETLOCK(thing), thing));
+	return (eval_boolexp(player, GETLOCK(thing), thing));
 }
 
 
 int
-test_lock(command_t *cmd, dbref thing, const char *lockprop)
+test_lock(dbref player, dbref thing, const char *lockprop)
 {
 	struct boolexp *lokptr;
 
 	lokptr = get_property_lock(thing, lockprop);
-	return (eval_boolexp(cmd, lokptr, thing));
+	return (eval_boolexp(player, lokptr, thing));
 }
 
 
 int
-test_lock_false_default(command_t *cmd, dbref thing, const char *lockprop)
+test_lock_false_default(dbref player, dbref thing, const char *lockprop)
 {
 	struct boolexp *lok;
 
@@ -338,13 +337,12 @@ test_lock_false_default(command_t *cmd, dbref thing, const char *lockprop)
 
 	if (lok == TRUE_BOOLEXP)
 		return 0;
-	return (eval_boolexp(cmd, lok, thing));
+	return (eval_boolexp(player, lok, thing));
 }
 
 int
-can_doit(command_t *cmd, dbref thing, const char *default_fail_msg)
+can_doit(dbref player, dbref thing, const char *default_fail_msg)
 {
-	dbref player = cmd->player;
 	char const *dwts = "door";
 	char dir = '\0';
 	int door = 0;
@@ -372,7 +370,7 @@ can_doit(command_t *cmd, dbref thing, const char *default_fail_msg)
 
 	}
 
-	if (!could_doit(cmd, thing)) {
+	if (!could_doit(player, thing)) {
 		/* can't do it */
 		if (GETFAIL(thing)) {
 			notify(player, GETFAIL(thing));

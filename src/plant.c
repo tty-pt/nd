@@ -242,7 +242,7 @@ plants_shuffle(struct plant_data *pd, morton_t v)
 }
 
 static inline void
-_plants_add(command_t *cmd, dbref where,
+_plants_add(dbref player, dbref where,
 		struct plant_data *pd,
 		coord_t tmp)
 {
@@ -257,7 +257,7 @@ _plants_add(command_t *cmd, dbref where,
                 struct object_skeleton *obj_skel = PLANT_SKELETON(pd->id[i]);
 
                 dbref plant = object_add(*obj_skel, where);
-                struct boolexp *key = parse_boolexp(cmd, NAME(cmd->player), 0);
+                struct boolexp *key = parse_boolexp(player, NAME(player), 0);
                 SETCONLOCK(plant, key);
                 SETPLID(plant, pd->id[i]);
                 SETSIZE(plant, n);
@@ -265,7 +265,7 @@ _plants_add(command_t *cmd, dbref where,
 }
 
 void
-plants_add(command_t *cmd, dbref where,
+plants_add(dbref player, dbref where,
 		struct plant_data *pd,
 		morton_t ty, coord_t tmp,
 		ucoord_t rn)
@@ -273,7 +273,7 @@ plants_add(command_t *cmd, dbref where,
 	/* struct plant_data epd; */
 
         if (pd->n)
-                _plants_add(cmd, where,
+                _plants_add(player, where,
 				pd, tmp);
 
 	/* plants_noise(&epd, ty, tmp, rn, PLANT_EXTRA); */

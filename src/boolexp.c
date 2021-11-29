@@ -95,21 +95,20 @@ copy_bool(struct boolexp *old)
 }
 
 int
-eval_boolexp_rec(command_t *cmd, struct boolexp *b, dbref thing)
+eval_boolexp_rec(dbref player, struct boolexp *b, dbref thing)
 {
-	dbref player = cmd->player;
 	if (b == TRUE_BOOLEXP) {
 		return 1;
 	} else {
 		switch (b->type) {
 		case BOOLEXP_AND:
-			return (eval_boolexp_rec(cmd, b->sub1, thing)
-					&& eval_boolexp_rec(cmd, b->sub2, thing));
+			return (eval_boolexp_rec(player, b->sub1, thing)
+					&& eval_boolexp_rec(player, b->sub2, thing));
 		case BOOLEXP_OR:
-			return (eval_boolexp_rec(cmd, b->sub1, thing)
-					|| eval_boolexp_rec(cmd, b->sub2, thing));
+			return (eval_boolexp_rec(player, b->sub1, thing)
+					|| eval_boolexp_rec(player, b->sub2, thing));
 		case BOOLEXP_NOT:
-			return !eval_boolexp_rec(cmd, b->sub1, thing);
+			return !eval_boolexp_rec(player, b->sub1, thing);
 		case BOOLEXP_CONST:
 			if (b->thing == NOTHING)
 				return 0;
@@ -118,10 +117,9 @@ eval_boolexp_rec(command_t *cmd, struct boolexp *b, dbref thing)
 					|| b->thing == DBFETCH(player)->location);
 		case BOOLEXP_PROP:
 			if (PropType(b->prop_check) == PROP_STRTYP) {
-				if (has_property_strict(cmd, thing,
-										PropName(b->prop_check),
+				if (has_property_strict(thing, PropName(b->prop_check),
 										PropDataStr(b->prop_check), 0)) return 1;
-				if (has_property(cmd, player,
+				if (has_property(player,
 								 PropName(b->prop_check), PropDataStr(b->prop_check), 0))
 					return 1;
 			}
@@ -134,12 +132,12 @@ eval_boolexp_rec(command_t *cmd, struct boolexp *b, dbref thing)
 }
 
 int
-eval_boolexp(command_t *cmd, struct boolexp *b, dbref thing)
+eval_boolexp(dbref player, struct boolexp *b, dbref thing)
 {
 	int result;
 
 	b = copy_bool(b);
-	result = eval_boolexp_rec(cmd, b, thing);
+	result = eval_boolexp_rec(player, b, thing);
 	free_boolexp(b);
 	return (result);
 }
@@ -154,14 +152,13 @@ skip_whitespace(const char **parsebuf)
 		(*parsebuf)++;
 }
 
-static struct boolexp *parse_boolexp_E(command_t *cmd, const char **parsebuf, int dbloadp);	/* defined below */
+static struct boolexp *parse_boolexp_E(dbref player, const char **parsebuf, int dbloadp);	/* defined below */
 static struct boolexp *parse_boolprop(char *buf);	/* defined below */
 
 /* F -> (E); F -> !F; F -> object identifier */
 static struct boolexp *
-parse_boolexp_F(command_t *cmd, const char **parsebuf, int dbloadp)
+parse_boolexp_F(dbref player, const char **parsebuf, int dbloadp)
 {
-	dbref player = cmd->player;
 	struct boolexp *b;
 	char *p;
 	struct match_data md;
@@ -172,7 +169,7 @@ parse_boolexp_F(command_t *cmd, const char **parsebuf, int dbloadp)
 	switch (**parsebuf) {
 	case '(':
 		(*parsebuf)++;
-		b = parse_boolexp_E(cmd, parsebuf, dbloadp);
+		b = parse_boolexp_E(player, parsebuf, dbloadp);
 		skip_whitespace(parsebuf);
 		if (b == TRUE_BOOLEXP || *(*parsebuf)++ != ')') {
 			free_boolexp(b);
@@ -185,7 +182,7 @@ parse_boolexp_F(command_t *cmd, const char **parsebuf, int dbloadp)
 		(*parsebuf)++;
 		b = alloc_boolnode();
 		b->type = BOOLEXP_NOT;
-		b->sub1 = parse_boolexp_F(cmd, parsebuf, dbloadp);
+		b->sub1 = parse_boolexp_F(player, parsebuf, dbloadp);
 		if (b->sub1 == TRUE_BOOLEXP) {
 			free_boolnode(b);
 			return TRUE_BOOLEXP;
@@ -215,7 +212,7 @@ parse_boolexp_F(command_t *cmd, const char **parsebuf, int dbloadp)
 
 		/* do the match */
 		if (!dbloadp) {
-			init_match(cmd, buf, TYPE_THING, &md);
+			init_match(player, buf, TYPE_THING, &md);
 			match_neighbor(&md);
 			match_possession(&md);
 			match_me(&md);
@@ -257,12 +254,12 @@ parse_boolexp_F(command_t *cmd, const char **parsebuf, int dbloadp)
 
 /* T -> F; T -> F & T */
 static struct boolexp *
-parse_boolexp_T(command_t *cmd, const char **parsebuf, int dbloadp)
+parse_boolexp_T(dbref player, const char **parsebuf, int dbloadp)
 {
 	struct boolexp *b;
 	struct boolexp *b2;
 
-	if ((b = parse_boolexp_F(cmd, parsebuf, dbloadp)) == TRUE_BOOLEXP) {
+	if ((b = parse_boolexp_F(player, parsebuf, dbloadp)) == TRUE_BOOLEXP) {
 		return b;
 	} else {
 		skip_whitespace(parsebuf);
@@ -272,7 +269,7 @@ parse_boolexp_T(command_t *cmd, const char **parsebuf, int dbloadp)
 			b2 = alloc_boolnode();
 			b2->type = BOOLEXP_AND;
 			b2->sub1 = b;
-			if ((b2->sub2 = parse_boolexp_T(cmd, parsebuf, dbloadp)) == TRUE_BOOLEXP) {
+			if ((b2->sub2 = parse_boolexp_T(player, parsebuf, dbloadp)) == TRUE_BOOLEXP) {
 				free_boolexp(b2);
 				return TRUE_BOOLEXP;
 			} else {
@@ -286,12 +283,12 @@ parse_boolexp_T(command_t *cmd, const char **parsebuf, int dbloadp)
 
 /* E -> T; E -> T | E */
 static struct boolexp *
-parse_boolexp_E(command_t *cmd, const char **parsebuf, int dbloadp)
+parse_boolexp_E(dbref player, const char **parsebuf, int dbloadp)
 {
 	struct boolexp *b;
 	struct boolexp *b2;
 
-	if ((b = parse_boolexp_T(cmd, parsebuf, dbloadp)) == TRUE_BOOLEXP) {
+	if ((b = parse_boolexp_T(player, parsebuf, dbloadp)) == TRUE_BOOLEXP) {
 		return b;
 	} else {
 		skip_whitespace(parsebuf);
@@ -301,7 +298,7 @@ parse_boolexp_E(command_t *cmd, const char **parsebuf, int dbloadp)
 			b2 = alloc_boolnode();
 			b2->type = BOOLEXP_OR;
 			b2->sub1 = b;
-			if ((b2->sub2 = parse_boolexp_E(cmd, parsebuf, dbloadp)) == TRUE_BOOLEXP) {
+			if ((b2->sub2 = parse_boolexp_E(player, parsebuf, dbloadp)) == TRUE_BOOLEXP) {
 				free_boolexp(b2);
 				return TRUE_BOOLEXP;
 			} else {
@@ -314,9 +311,9 @@ parse_boolexp_E(command_t *cmd, const char **parsebuf, int dbloadp)
 }
 
 struct boolexp *
-parse_boolexp(command_t *cmd, const char *buf, int dbloadp)
+parse_boolexp(dbref player, const char *buf, int dbloadp)
 {
-	return parse_boolexp_E(cmd, &buf, dbloadp);
+	return parse_boolexp_E(player, &buf, dbloadp);
 }
 
 /* parse a property expression

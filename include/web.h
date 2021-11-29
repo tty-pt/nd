@@ -9,7 +9,7 @@
 int web_geo_view(int descr, char *buf);
 int web_art(int descr, const char *art);
 int web_support(int descr);
-int web_look(command_t *cmd, dbref loc, char const *description);
+int web_look(dbref player, dbref loc, char const *description);
 void web_room_mcp(dbref room, void *msg);
 void * web_frame(int descr);
 void do_meme(command_t *cmd);

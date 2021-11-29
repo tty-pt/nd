@@ -37,7 +37,7 @@ do_teleport(command_t *cmd) {
 		victim = player;
 		to = arg1;
 	} else {
-		init_match(cmd, arg1, NOTYPE, &md);
+		init_match(cmd->player, arg1, NOTYPE, &md);
 		match_neighbor(&md);
 		match_possession(&md);
 		match_me(&md);
@@ -59,7 +59,7 @@ do_teleport(command_t *cmd) {
 #endif
 
 	/* get destination */
-	init_match(cmd, to, TYPE_PLAYER, &md);
+	init_match(player, to, TYPE_PLAYER, &md);
 	match_possession(&md);
 	match_me(&md);
 	match_here(&md);
@@ -120,8 +120,7 @@ do_teleport(command_t *cmd) {
 				break;
 			}
 			notify(victim, "You feel a wrenching sensation...");
-			command_t cmd_er = command_new_null(cmd->fd, victim);
-			enter_room(&cmd_er, destination, DBFETCH(victim)->location);
+			enter_room(victim, destination, DBFETCH(victim)->location);
 			break;
 		case TYPE_THING:
 			if (parent_loop_check(victim, destination)) {
@@ -257,7 +256,7 @@ do_unbless(command_t *cmd) {
 	}
 
 	/* get victim */
-	init_match(cmd, what, NOTYPE, &md);
+	init_match(player, what, NOTYPE, &md);
 	match_everything(&md);
 	if ((victim = noisy_match_result(&md)) == NOTHING) {
 		return;
@@ -295,7 +294,7 @@ do_bless(command_t *cmd) {
 	}
 
 	/* get victim */
-	init_match(cmd, what, NOTYPE, &md);
+	init_match(player, what, NOTYPE, &md);
 	match_everything(&md);
 	if ((victim = noisy_match_result(&md)) == NOTHING) {
 		return;
@@ -521,8 +520,7 @@ do_toad(command_t *cmd) {
 	} else {
 		/* we're ok */
 		/* do it */
-		command_t cmd_sc = command_new_null(cmd->fd, victim);
-		send_contents(&cmd_sc, HOME);
+		send_contents(victim, HOME);
 		for (stuff = 0; stuff < db_top; stuff++) {
 			if (OWNER(stuff) == victim) {
 				switch (Typeof(stuff)) {

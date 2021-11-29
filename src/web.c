@@ -22,10 +22,10 @@ web_support(int descr)
 }
 
 int
-web_geo_view(int descr, char *buf)
+web_geo_view(dbref player, char *buf)
 {
 	McpMesg msg;
-	McpFrame *mfr = web_frame(descr);
+	McpFrame *mfr = web_frame(PLAYER_FD(player));
 	if (!mfr)
                 return 1;
         mcp_mesg_init(&msg, MCP_WEB_PKG, "view");
@@ -51,15 +51,13 @@ web_art(int descr, char const *art)
 }
 
 int
-web_look(command_t *cmd, dbref loc, char const *description)
+web_look(dbref player, dbref loc, char const *description)
 {
-	dbref player = cmd->player;
-	int descr = cmd->fd;
         char buf[BUFSIZ];
         char buf2[BUFSIZ];
         dbref thing, can_see_loc;
 	McpMesg msg;
-	McpFrame *mfr = web_frame(descr);
+	McpFrame *mfr = web_frame(PLAYER_FD(player));
 	if (!mfr)
                 return 1;
 
@@ -73,7 +71,7 @@ web_look(command_t *cmd, dbref loc, char const *description)
 
         if (Typeof(loc) == TYPE_ROOM) {
                 mcp_mesg_arg_append(&msg, "room", "1");
-                snprintf(buf, sizeof(buf), "%d", gexits(cmd, loc));
+                snprintf(buf, sizeof(buf), "%d", gexits(player, loc));
                 mcp_mesg_arg_append(&msg, "exits", buf);
         } else {
 		if (GETSHOP(loc))

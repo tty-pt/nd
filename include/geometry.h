@@ -155,7 +155,7 @@ extern exit_t exit_map[];
 morton_t pos_morton(pos_t);
 void morton_pos(pos_t p, morton_t code);
 
-dbref e_exit_where(command_t *cmd, dbref loc, enum exit e);
+dbref e_exit_where(dbref player, dbref loc, enum exit e);
 int e_exit_can(dbref player, dbref exit);
 int e_ground(dbref room, enum exit e);
 void e_exit_dest_set(dbref exit, dbref dest);
@@ -167,10 +167,10 @@ void
 object_drop(dbref where, struct drop **drop);
 
 dbref
-contents_find(command_t *cmd, dbref where,
+contents_find(dbref player, dbref where,
 		const char *name);
 
-dbref e_exit_here(command_t *cmd, enum exit e);
+dbref e_exit_here(dbref player, enum exit e);
 void pos_move(pos_t d, pos_t o, enum exit e);
 enum exit dir_e(const char dir);
 const char e_dir(enum exit e);

@@ -124,7 +124,7 @@ do_clone(command_t *cmd)
 	/* All OK so far, so try to find the thing that should be cloned. We
 	   do not allow rooms, exits, etc. to be cloned for now. */
 
-	init_match(cmd, name, TYPE_THING, &md);
+	init_match(player, name, TYPE_THING, &md);
 	match_possession(&md);
 	match_neighbor(&md);
 	match_registered(&md);
@@ -316,13 +316,12 @@ do_create(command_t *cmd)
  *
  */
 dbref
-parse_source(command_t *cmd, const char *source_name)
+parse_source(dbref player, const char *source_name)
 {
-	dbref player = cmd->player;
 	dbref source;
 	struct match_data md;
 
-	init_match(cmd, source_name, NOTYPE, &md);
+	init_match(player, source_name, NOTYPE, &md);
 	/* source type can be any */
 	match_neighbor(&md);
 	match_me(&md);
@@ -450,7 +449,7 @@ do_action(command_t *cmd)
 		notify(player, "That's a strange name for an action!");
 		return;
 	}
-	if (((source = parse_source(cmd, qname)) == NOTHING))
+	if (((source = parse_source(player, qname)) == NOTHING))
 		return;
         if (!payfor(player, EXIT_COST)) {
                 notifyf(player, "Sorry, you don't have enough %s to make an action.", PENNIES);
@@ -512,7 +511,7 @@ do_attach(command_t *cmd) {
 		notify(player, "You must specify an action name and a source object.");
 		return;
 	}
-	init_match(cmd, action_name, TYPE_EXIT, &md);
+	init_match(player, action_name, TYPE_EXIT, &md);
 	match_all_exits(&md);
 	match_registered(&md);
 	match_absolute(&md);
@@ -527,7 +526,7 @@ do_attach(command_t *cmd) {
 		notify(player, "Permission denied. (you don't control the action you're trying to reattach)");
 		return;
 	}
-	if ((source = parse_source(cmd, source_name)) == NOTHING)
+	if ((source = parse_source(player, source_name)) == NOTHING)
 		return;
 
 	if (!unset_source(player, loc, action)) {

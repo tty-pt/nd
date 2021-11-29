@@ -223,10 +223,10 @@ object_drop(dbref where, struct drop **drop)
 }
 
 dbref
-contents_find(command_t *cmd, dbref where, const char *name)
+contents_find(dbref player, dbref where, const char *name)
 {
 	struct match_data md;
-	init_match_remote(cmd, where, name, TYPE_THING, &md);
+	init_match_remote(player, where, name, TYPE_THING, &md);
 	match_possession(&md);
         match_absolute(&md);
         if (md.exact_match == NOTHING)
@@ -237,10 +237,10 @@ contents_find(command_t *cmd, dbref where, const char *name)
 }
 
 dbref
-e_exit_where(command_t *cmd, dbref loc, enum exit e)
+e_exit_where(dbref player, dbref loc, enum exit e)
 {
 	struct match_data md;
-	init_match_remote(cmd, loc, e_name(e), TYPE_EXIT, &md),
+	init_match_remote(player, loc, e_name(e), TYPE_EXIT, &md),
 	match_room_exits(loc, &md);
 	return match_result(&md);
 }
@@ -281,9 +281,9 @@ e_exit_dest_set(dbref exit, dbref dest)
 }
 
 dbref
-e_exit_here(command_t *cmd, enum exit e)
+e_exit_here(dbref player, enum exit e)
 {
-	return e_exit_where(cmd, getloc(cmd->player), e);
+	return e_exit_where(player, getloc(player), e);
 }
 
 void

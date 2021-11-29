@@ -14,7 +14,6 @@ struct match_data {
 	int match_count;			/* holds total number of inexact matches */
 	dbref match_who;			/* player used for me, here, and messages */
 	dbref match_from;			/* object which is being matched around */
-	int match_descr;			/* descriptor initiating the match */
 	const char *match_name;		/* name to match */
 	int preferred_type;			/* preferred type */
 	int longest_match;			/* longest matched string */
@@ -28,10 +27,9 @@ struct match_data {
 /* Then get value from match_result() */
 
 /* initialize matcher */
-extern void init_match(command_t *cmd, const char *name, int type,
-
+extern void init_match(dbref player, const char *name, int type,
 					   struct match_data *md);
-extern void init_match_check_keys(command_t *cmd, const char *name, int type,
+extern void init_match_check_keys(dbref player, const char *name, int type,
 
 								  struct match_data *md);
 
