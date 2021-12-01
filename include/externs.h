@@ -14,7 +14,6 @@
 /* Definition of match_data */
 #include "match.h"
 /* Auto-generated list of extern functions */
-#include "externs-auto.h"
 #include "interface.h"
 
 #define warn(fmt, ...) fprintf(stderr, fmt, ## __VA_ARGS__)
@@ -63,6 +62,7 @@ extern void db_clear_object(dbref i);
 extern void do_create(command_t *);
 extern void do_clone(command_t *);
 extern void do_attach(command_t *cmd);
+void set_source(dbref player, dbref action, dbref source);
 extern int unset_source(dbref player, dbref loc, dbref action);
 extern void do_action(command_t *cmd);
 extern void copy_one_prop(dbref player, dbref source, dbref destination, char *propname, int ignore);
@@ -118,11 +118,10 @@ extern void do_advitam(command_t *cmd);
 extern void do_heal(command_t *);
 extern void do_status(command_t *);
 extern void do_train(command_t *);
-extern int kill_v(dbref player, const char *cmdstr);
-
-int do_stand_silent(dbref player);
 extern void do_sit(command_t *);
 extern void do_stand(command_t *);
+extern int kill_v(dbref player, const char *cmdstr);
+int do_stand_silent(dbref player);
 
 /* From move.c */
 extern void moveto(dbref what, dbref where);
@@ -164,6 +163,10 @@ extern int restricted(dbref player, dbref thing, object_flag_type flag);
 extern int payfor(dbref who, int cost);
 extern int ok_ascii_any(const char *name);
 extern int ok_name(const char *name);
+int ok_password(const char *password);
+int ok_player_name(const char *name);
+int test_lock_false_default(dbref player, dbref thing, const char *lockprop);
+int test_lock(dbref player, dbref thing, const char *lockprop);
 
 /* From rob.c */
 extern void do_give(command_t *);
@@ -200,16 +203,15 @@ extern void notify_except(dbref first, dbref exception, const char *msg, dbref w
 extern void notify_except_fmt(dbref first, dbref exception, char *format, ...);
 extern void notify_wts(dbref who, char const *a, char const *b, char *format, ...);
 extern void notify_wts_to(dbref who, dbref tar, char const *a, char const *b, char *format, ...);
+void notify_except(dbref first, dbref exception, const char *msg, dbref who);
 
 /* From stringutil.c */
 extern int string_prefix(const char *string, const char *prefix);
+const char * exit_prefix(register const char *string, register const char *prefix);
 extern const char *string_match(const char *src, const char *sub);
 extern char *intostr(int i);
 extern int prepend_string(char** before, char* start, const char* what);
-extern void prefix_message(char* Dest, const char* Src, const char* Prefix, int BufferLength, int SuppressIfPresent);
 extern int is_prop_prefix(const char* Property, const char* Prefix);
-extern int has_suffix(const char* text, const char* suffix);
-extern int has_suffix_char(const char* text, char suffix);
 
 /* From utils.c */
 extern int member(dbref thing, dbref list);
@@ -233,6 +235,7 @@ extern struct boolexp *copy_bool(struct boolexp *old);
 extern struct boolexp *getboolexp(FILE * f);
 extern struct boolexp *negate_boolexp(struct boolexp *b);
 extern void free_boolexp(struct boolexp *b);
+long size_boolexp(struct boolexp *b);
 
 /* From unparse.c */
 struct icon {
@@ -250,16 +253,23 @@ extern int equalstr(char *s, char *t);
 /* from interface.c */
 void do_flock(command_t *);
 int mcpframe_to_user(McpFrame * ptr);
-/* int mcpframe_to_descr(McpFrame * ptr); */
+int notify(dbref player, const char *msg);
+void notifyf(dbref player, char *format, ...);
+
+/* from property.c */
+void add_property(dbref player, const char *pname, const char *strval, int value);
+char * displayprop(dbref player, dbref obj, const char *name, char *buf, size_t bufsiz);
+long size_properties(dbref player, int load);
+void untouchprops_incremental(int limit);
+
+/* from props.c */
+void clear_propnode(PropPtr p);
+void copy_proplist(dbref obj, PropPtr * newer, PropPtr old);
+long size_proplist(PropPtr avl);
+
+/* from sanity.c */
+void sanechange(dbref player, const char *command);
+void sanfix(dbref player);
+void sanity(dbref player);
 
 #endif /* _EXTERNS_H */
-
-#ifdef DEFINE_HEADER_VERSIONS
-#ifndef externsh_version
-#define externsh_version
-const char *externs_h_version = "$RCSfile$ $Revision: 1.48 $";
-#endif
-#else
-extern const char *externs_h_version;
-#endif
-

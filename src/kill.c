@@ -471,6 +471,7 @@ kill_v(dbref player, char const *opcs)
 void
 sit(dbref player, const char *name)
 {
+        warn("sit %s %s\n", NAME(player), name);
 	if (GETSAT(player) != NOTHING) {
 		notify(player, "You are already sitting.");
 		return;

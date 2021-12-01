@@ -106,13 +106,6 @@ typedef struct McpFrame_T {
  *              const char* pkgname,
  *          );
  *
- *
- *****************************************************************
- *
- * void mcp_initialize();
- *
- *   Initializes MCP globally at startup time.
- *
  *****************************************************************
  *
  * void mcp_negotiation_start(McpFrame* mfr);
@@ -129,38 +122,6 @@ typedef struct McpFrame_T {
  *
  *****************************************************************
  *
- * void mcp_frame_clear(McpFrame* mfr);
- *
- *   Cleans up an McpFrame for a closing connection.
- *   You MUST call this when you are done using an McpFrame.
- *
- *****************************************************************
- *
- * void mcp_frame_package_add(
- *              McpFrame* mfr,
- *              char* package,
- *              McpVer minver,
- *              McpVer maxver
- *          );
- *
- *   Attempt to register a package for this connection.
- *   Returns EMCP_SUCCESS if the package was deemed supported.
- *   Returns EMCP_NOMCP if MCP is not supported on this connection.
- *   Returns EMCP_NOPACKAGE if the package versions didn't overlap.
- *
- *****************************************************************
- *
- * void mcp_frame_package_remove(
- *              McpFrame* mfr,
- *              char* package,
- *              McpVer minver,
- *              McpVer maxver
- *          );
- *
- *   Deregisters a package for a given frame.
- *
- *****************************************************************
- *
  * void mcp_frame_package_supported(
  *              McpFrame* mfr,
  *              char* package
@@ -168,42 +129,6 @@ typedef struct McpFrame_T {
  *
  *   Returns the supported version of the given package.
  *   Returns {0,0} if the package is not supported.
- *
- *****************************************************************
- *
- * void mcp_frame_package_docallback(
- *              McpFrame* mfr,
- *              McpMesg* msg
- *          );
- *
- *   Executes the callback function for the given message.
- *   Returns EMCP_SUCCESS if the call completed successfully.
- *   Returns EMCP_NOMCP if MCP is not supported for that connection.
- *   Returns EMCP_NOPACKAGE if the package is not supported.
- *
- *****************************************************************
- *
- * int mcp_frame_process_input(
- *           McpFrame* mfr,
- *           const char* linein,
- *           char *outbuf,
- *           int bufsize
- *      );
- *
- *   Check a line of input for MCP commands.
- *   Returns 0 if the line was an out-of-band MCP message.
- *   Returns 1 if the line was in-band data.
- *     outbuf will contain the in-band data on return, if any.
- *
- *****************************************************************
- *
- * void mcp_frame_output_inband(
- *             McpFrame* mfr,
- *             const char* lineout
- *         );
- *
- *   Sends a string to the given connection, using MCP escaping
- *     if needed and supported.
  *
  *****************************************************************
  *
@@ -241,16 +166,6 @@ typedef struct McpFrame_T {
  *
  *****************************************************************
  *
- * int mcp_mesg_arg_linecount(
- *         McpMesg* msg,
- *         const char* name
- *     );
- *
- *   Returns the count of the number of lines in the given arg of
- *   the given message.
- *
- *****************************************************************
- *
  * char* mcp_mesg_arg_getline(
  *         McpMesg* msg,
  *         const char* argname
@@ -277,15 +192,6 @@ typedef struct McpFrame_T {
  *
  *****************************************************************
  *
- * void mcp_mesg_arg_remove(
- *         McpMesg* msg,
- *         const char* argname
- *     );
- *
- *   Removes the named argument from the given message.
- *
- *****************************************************************
- *
  * int mcp_version_compare(McpVer v1, McpVer v2);
  *
  *   Compares two McpVer structs.
@@ -294,65 +200,25 @@ typedef struct McpFrame_T {
  *     Returns 0 (zero) if v1 == v2
  *     Returns positive if v1 >  v2
  *
- *****************************************************************
- *
- * McpVer mcp_version_select(
- *                McpVer min1,
- *                McpVer max1,
- *                McpVer min2,
- *                McpVer max2
- *            );
- *
- *   Given the min and max package versions supported by a client
- *     and server, this will return the highest version that is
- *     supported by both.
- *   Returns a McpVer of {0, 0} if there is no version overlap.
- *
  *****************************************************************/
 
 
 
 
-void mcp_initialize(void);
-void mcp_negotiation_start(McpFrame * mfr);
-
-void mcp_package_register(const char *pkgname, McpVer minver, McpVer maxver,
-						  McpPkg_CB callback, void *context, ContextCleanup_CB cleanup);
-void mcp_package_deregister(const char *pkgname);
-
 void mcp_frame_init(McpFrame * mfr, connection_t con);
 void mcp_frame_clear(McpFrame * mfr);
 
-int mcp_frame_package_add(McpFrame * mfr, const char *package, McpVer minver, McpVer maxver);
-void mcp_frame_package_remove(McpFrame * mfr, const char *package);
-void mcp_frame_package_renegotiate(const char *package);
 McpVer mcp_frame_package_supported(McpFrame * mfr, const char *package);
-int mcp_frame_package_docallback(McpFrame * mfr, McpMesg * msg);
 
 int mcp_frame_process_input(McpFrame * mfr, const char *linein, char *outbuf, int bufsize);
-void mcp_frame_output_inband(McpFrame * mfr, const char *lineout);
 int mcp_frame_output_mesg(McpFrame * mfr, McpMesg * msg);
 
 void mcp_mesg_init(McpMesg * msg, const char *package, const char *mesgname);
 void mcp_mesg_clear(McpMesg * msg);
 
-int mcp_mesg_arg_linecount(McpMesg * msg, const char *name);
 char *mcp_mesg_arg_getline(McpMesg * msg, const char *argname, int linenum);
 int mcp_mesg_arg_append(McpMesg * msg, const char *argname, const char *argval);
-void mcp_mesg_arg_remove(McpMesg * msg, const char *argname);
 
 int mcp_version_compare(McpVer v1, McpVer v2);
-McpVer mcp_version_select(McpVer min1, McpVer max1, McpVer min2, McpVer max2);
 
 #endif							/* MCP_H */
-
-#ifdef DEFINE_HEADER_VERSIONS
-
-#ifndef mcph_version
-#define mcph_version
-const char *mcp_h_version = "$RCSfile$ $Revision: 1.11 $";
-#endif
-#else
-extern const char *mcp_h_version;
-#endif
-

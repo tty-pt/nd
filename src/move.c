@@ -10,7 +10,6 @@
 #include "interface.h"
 #include "match.h"
 #include "externs.h"
-#include "fb.h"
 #include "geography.h"
 #include "item.h"
 #include "mob.h"

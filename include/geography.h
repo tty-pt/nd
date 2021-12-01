@@ -31,8 +31,6 @@ int geo_claim(dbref player, dbref room);
 int geo_v(dbref player, const char *);
 
 dbref geo_there(dbref where, enum exit e);
-void gexit_dest_set(dbref exit, dbref dest);
-int gexit_can(dbref player, dbref exit);
 void gexit_snull(dbref player, dbref exit);
 int gexits(dbref player, dbref where);
 

@@ -44,16 +44,3 @@ Parts of this code, in particular the dictionary based compression code,
   FB distribution of the TinyMUCK server.
 
  */
-
-
-
-#ifdef DEFINE_HEADER_VERSIONS
-
-#ifndef copyrighth_version
-#define copyrighth_version
-const char *copyright_h_version = "$RCSfile$ $Revision: 1.6 $";
-#endif
-#else
-extern const char *copyright_h_version;
-#endif
-

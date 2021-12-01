@@ -4,13 +4,9 @@
 /* Consider this code protected under the GNU public license, with explicit
  * permission to distribute when linked against openSSL. */
 
-#define DEFINE_HEADER_VERSIONS
-#include "fb.h"
-#undef DEFINE_HEADER_VERSIONS
 #include "copyright.h"
 #include "config.h"
 #include "match.h"
-#include "mpi.h"
 #include "web.h"
 
 #include <sys/types.h>
@@ -532,7 +528,7 @@ main(int argc, char **argv)
 			optflags |= OPT_SANITY_AUTOFIX;
 			break;
 		case 'v':
-			printf("%s\n", VERSION);
+			printf("0.0.1\n");
 			break;
 			
 		case 'C':
@@ -554,7 +550,6 @@ main(int argc, char **argv)
 	warn("INIT: TinyMUCK %s starting.", "version");
 	warn("%s PID is: %d", argv[0], getpid());
 
-	mcp_initialize();
 	if (init_game() < 0) {
 		warn("Couldn't load " STD_DB "!\n");
 		return 2;
@@ -931,21 +926,6 @@ SendText(McpFrame * mfr, const char *text)
 	descr_t *d = mfr->descriptor;
 	descr_inband(d->fd, text);
 }
-
-void
-FlushText(McpFrame * mfr)
-{
-	/* struct descriptor_data *d = (struct descriptor_data *)mfr->descriptor; */
-	/* if (d && !process_output(d)) { */
-	/* 	d->booted = 1; */
-	/* } */
-}
-
-/* int */
-/* mcpframe_to_descr(McpFrame * ptr) */
-/* { */
-/* 	return ((descr_t *) ptr->descriptor)->fd; */
-/* } */
 
 int
 mcpframe_to_user(McpFrame * ptr)

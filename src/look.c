@@ -12,7 +12,6 @@
 
 #include "mdb.h"
 #include "defaults.h"
-#include "mpi.h"
 #include "props.h"
 #include "interface.h"
 #include "match.h"

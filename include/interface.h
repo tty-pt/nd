@@ -24,7 +24,6 @@ extern dbref create_player(const char *name, const char *password);
 extern dbref connect_player(const char *name, const char *password);
 
 extern int init_game();
-extern void dump_database(void);
 extern void panic(const char *);
 
 #endif /* _INTERFACE_H */

@@ -172,7 +172,6 @@ extern struct plist *copy_prop(dbref old);
 
 extern PropPtr first_prop(dbref player, const char *dir, PropPtr * list, char *name, int maxlen);
 extern PropPtr next_prop(PropPtr list, PropPtr prop, char *name, int maxlen);
-extern char *next_prop_name(dbref player, char *outbuf, int outbuflen, char *name);
 
 extern int is_propdir(dbref player, const char *dir);
 
@@ -182,45 +181,15 @@ extern void add_prop_nofetch(dbref player, const char *type, const char *strval,
 extern void remove_property_nofetch(dbref player, const char *type);
 extern PropPtr first_prop_nofetch(dbref player, const char *dir, PropPtr * list, char *name, int maxlen);
 
-#ifdef DISKBASE
-extern int fetchprops_priority(dbref obj, int mode, const char *pdir);
-extern int fetchprops_nostamp(dbref obj);
-extern void fetchprops(dbref obj, const char *pdir);
-extern void unloadprops_with_prejudice(dbref obj);
-extern int disposeprops_notime(dbref obj);
-extern int disposeprops(dbref obj);
-extern void dirtyprops(dbref obj);
-extern void undirtyprops(dbref obj);
-extern int propfetch(dbref obj, PropPtr p);
-#endif							/* DISKBASE */
-
 extern PropPtr propdir_new_elem(PropPtr * root, char *path);
 extern PropPtr propdir_delete_elem(PropPtr root, char *path);
 extern PropPtr propdir_get_elem(PropPtr root, char *path);
 extern PropPtr propdir_first_elem(PropPtr root, char *path);
 extern PropPtr propdir_next_elem(PropPtr root, char *path);
-extern int propdir_check(PropPtr root, char *path);
-extern const char *propdir_name(const char *name);
-extern const char *propdir_unloaded(PropPtr root, const char *path);
 
 extern void db_putprop(FILE * f, const char *dir, PropPtr p);
 extern int db_get_single_prop(FILE * f, dbref obj, long pos, PropPtr pnode, const char *pdir);
 extern void db_getprops(FILE * f, dbref obj, const char *pdir);
 extern void db_dump_props(FILE * f, dbref obj);
 
-extern void reflist_add(dbref obj, const char* propname, dbref toadd);
-extern void reflist_del(dbref obj, const char* propname, dbref todel);
-extern int reflist_find(dbref obj, const char* propname, dbref tofind);
-
 #endif /* _PROPS_H */
-
-#ifdef DEFINE_HEADER_VERSIONS
-
-#ifndef propsh_version
-#define propsh_version
-const char *props_h_version = "$RCSfile$ $Revision: 1.16 $";
-#endif
-#else
-extern const char *props_h_version;
-#endif
-

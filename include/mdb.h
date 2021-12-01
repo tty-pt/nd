@@ -465,6 +465,7 @@ extern dbref parse_dbref(const char *);	/* parse a dbref */
 
 void objects_update(long long unsigned tick);
 void objects_init();
+dbref getparent(dbref obj);
 
 #define DOLIST(var, first) \
   for((var) = (first); (var) != NOTHING; (var) = DBFETCH(var)->next)
@@ -500,14 +501,3 @@ void objects_init();
   invoked.
 */
 #endif							/* __MDB_H */
-
-#ifdef DEFINE_HEADER_VERSIONS
-
-#ifndef dbh_version
-#define dbh_version
-const char *db_h_version = "$RCSfile$ $Revision: 1.49 $";
-#endif
-#else
-extern const char *db_h_version;
-#endif
-

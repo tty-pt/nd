@@ -9,7 +9,6 @@
 #include <stdio.h>
 #include <ctype.h>
 #include <string.h>
-#include "fbstrings.h"
 
 #include "mdb.h"
 #include "params.h"

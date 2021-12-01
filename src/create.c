@@ -14,7 +14,6 @@
 #include "interface.h"
 #include "externs.h"
 #include "match.h"
-#include "fbstrings.h"
 
 /*
  * copy a single property, identified by its name, from one object to

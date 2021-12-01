@@ -18,7 +18,6 @@
 #include "interface.h"
 #include "match.h"
 #include "externs.h"
-#include "fbstrings.h"
 #include "geography.h"
 #include "kill.h"
 

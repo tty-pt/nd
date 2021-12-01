@@ -5,14 +5,12 @@
 #include "config.h"
 
 #include "mdb.h"
-#include "mpi.h"
 #include "interface.h"
 #include "match.h"
 #include "params.h"
 #include "defaults.h"
 #include "props.h"
 #include "externs.h"
-#include "speech.h"
 #include <ctype.h>
 #include <stdarg.h>
 #include <string.h>
@@ -139,6 +137,15 @@ do_gripe(command_t *cmd)
 	wall_wizards(buf);
 }
 
+static int
+blank(const char *s)
+{
+	while (*s && isspace(*s))
+		s++;
+
+	return !(*s);
+}
+
 /* doesn't really belong here, but I couldn't figure out where else */
 void
 do_page(command_t *cmd)
@@ -218,14 +225,3 @@ notify_wts_to(dbref who, dbref tar, char const *a, char const *b, char *format, 
 	ONOTIFYF(who, "%s %s %s%s.", NAME(who), b, NAME(tar), buf);
 	va_end(args);
 }
-
-int
-blank(const char *s)
-{
-	while (*s && isspace(*s))
-		s++;
-
-	return !(*s);
-}
-static const char *speech_c_version = "$RCSfile$ $Revision: 1.13 $";
-const char *get_speech_c_version(void) { return speech_c_version; }
