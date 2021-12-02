@@ -458,11 +458,8 @@ kill_v(dbref player, char const *opcs)
 	} else if (*opcs == 'c' && isdigit(opcs[1])) {
 		struct mob *p = MOB(player);
 		unsigned slot = strtol(opcs + 1, &end, 0);
-
-		if (p->target <= 0)
-			p->target = player;
-
-		spell_cast(player, p->target, slot);
+                dbref target = p->target == NOTHING ? player : p->target;
+		spell_cast(player, target, slot);
 		return end - opcs;
 	} else
 		return 0;
@@ -471,7 +468,6 @@ kill_v(dbref player, char const *opcs)
 void
 sit(dbref player, const char *name)
 {
-        warn("sit %s %s\n", NAME(player), name);
 	if (GETSAT(player) != NOTHING) {
 		notify(player, "You are already sitting.");
 		return;

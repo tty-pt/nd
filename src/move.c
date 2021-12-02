@@ -248,28 +248,6 @@ enter_room(dbref player, dbref loc, dbref exit)
 	look_around(player);
 }
 
-void
-send_home(dbref thing, int puppethome)
-{
-	switch (Typeof(thing)) {
-	case TYPE_PLAYER:
-		/* send his possessions home first! */
-		/* that way he sees them when he arrives */
-		send_contents(thing, HOME);
-		enter_room(thing, PLAYER_HOME(thing), DBFETCH(thing)->location);
-		break;
-	case TYPE_THING:
-		if (puppethome)
-			send_contents(thing, HOME);
-		moveto(thing, HOME);	/* home */
-		break;
-	default:
-		/* no effect */
-		break;
-	}
-	return;
-}
-
 int
 can_move(dbref player, const char *direction, int lev)
 {
@@ -483,7 +461,7 @@ do_drop(command_t *cmd)
 		}
 		if (Typeof(cont) == TYPE_ROOM && (FLAGS(thing) & STICKY) &&
 			Typeof(thing) == TYPE_THING) {
-			send_home(thing, 0);
+                        moveto(thing, THING_HOME(thing));
 		} else {
 			int immediate_dropto = (Typeof(cont) == TYPE_ROOM &&
 									DBFETCH(cont)->sp.room.dropto != NOTHING
@@ -760,10 +738,11 @@ recycle(dbref player, dbref thing)
 			 */
 			if (DBFETCH(first)->location == thing) {
 				notifyf(player, "Escaping teleport loop!  Going home.");
-				moveto(first, HOME);
+				moveto(first, PLAYER_START);
 			}
 		} else {
-			moveto(first, HOME);
+			/* moveto(first, HOME); */
+                        recycle(player, first);
 		}
 	}
 

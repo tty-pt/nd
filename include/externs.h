@@ -126,7 +126,6 @@ int do_stand_silent(dbref player);
 /* From move.c */
 extern void moveto(dbref what, dbref where);
 extern void enter_room(dbref player, dbref loc, dbref exit);
-extern void send_home(dbref thing, int homepuppet);
 extern int parent_loop_check(dbref source, dbref dest);
 extern int can_move(dbref player, const char *direction, int lev);
 extern void go_move(dbref player, const char *dir, int lev);
