@@ -563,10 +563,6 @@ do_recycle(command_t *cmd)
 					notify(player, "Permission denied. (You may not recycle an exit you don't own)");
 					return;
 				}
-				if (!unset_source(player, DBFETCH(player)->location, thing)) {
-					notify(player, "You can't do that to an exit in another room.");
-					return;
-				}
 				break;
 			case TYPE_PLAYER:
 				notify(player, "You can't recycle a player!");

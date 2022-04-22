@@ -61,10 +61,6 @@ extern void db_clear_object(dbref i);
 /* From create.c */
 extern void do_create(command_t *);
 extern void do_clone(command_t *);
-extern void do_attach(command_t *cmd);
-void set_source(dbref player, dbref action, dbref source);
-extern int unset_source(dbref player, dbref loc, dbref action);
-extern void do_action(command_t *cmd);
 extern void copy_one_prop(dbref player, dbref source, dbref destination, char *propname, int ignore);
 
 /* From hashtab.c */
