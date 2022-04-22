@@ -72,38 +72,15 @@ extern char match_cmdname[BUFFER_LEN];
 #define SETPECHO(x,y)	SETMESG(x, MESGPROP_PECHO, y)
 
 #define LOADMESG(x,y,z)    {add_prop_nofetch(x,y,z,0); DBDIRTY(x);}
-#define LOADDESC(x,y)	LOADMESG(x, MESGPROP_DESC, y)
-#define LOADIDESC(x,y)	LOADMESG(x, MESGPROP_IDESC, y)
-#define LOADSUCC(x,y)	LOADMESG(x, MESGPROP_SUCC, y)
-#define LOADFAIL(x,y)	LOADMESG(x, MESGPROP_FAIL, y)
-#define LOADDROP(x,y)	LOADMESG(x, MESGPROP_DROP, y)
-#define LOADOSUCC(x,y)	LOADMESG(x, MESGPROP_OSUCC, y)
-#define LOADOFAIL(x,y)	LOADMESG(x, MESGPROP_OFAIL, y)
-#define LOADODROP(x,y)	LOADMESG(x, MESGPROP_ODROP, y)
 
 #define GETLOCK(x)    (get_property_lock(x, MESGPROP_LOCK))
 #define SETLOCK(x,y)  {PData mydat; mydat.flags = PROP_LOKTYP; mydat.data.lok = y; set_property(x, MESGPROP_LOCK, &mydat);}
-#define LOADLOCK(x,y) {PData mydat; mydat.flags = PROP_LOKTYP; mydat.data.lok = y; set_property_nofetch(x, MESGPROP_LOCK, &mydat); DBDIRTY(x);}
 #define CLEARLOCK(x)  {PData mydat; mydat.flags = PROP_LOKTYP; mydat.data.lok = TRUE_BOOLEXP; set_property(x, MESGPROP_LOCK, &mydat); DBDIRTY(x);}
 
-#define GETFLOCK(x)    (get_property_lock(x, MESGPROP_FLOCK))
-#define SETFLOCK(x,y)  {PData mydat; mydat.flags = PROP_LOKTYP; mydat.data.lok = y; set_property(x, MESGPROP_FLOCK, &mydat);}
-#define LOADFLOCK(x,y) {PData mydat; mydat.flags = PROP_LOKTYP; mydat.data.lok = y; set_property_nofetch(x, MESGPROP_FLOCK, &mydat); DBDIRTY(x);}
-#define CLEARFLOCK(x)  {PData mydat; mydat.flags = PROP_LOKTYP; mydat.data.lok = TRUE_BOOLEXP; set_property(x, MESGPROP_FLOCK, &mydat); DBDIRTY(x);}
-
-#define GETCONLOCK(x)    (get_property_lock(x, MESGPROP_CONLOCK))
 #define SETCONLOCK(x,y)  {PData mydat; mydat.flags = PROP_LOKTYP; mydat.data.lok = y; set_property(x, MESGPROP_CONLOCK, &mydat);}
-#define LOADCONLOCK(x,y) {PData mydat; mydat.flags = PROP_LOKTYP; mydat.data.lok = y; set_property_nofetch(x, MESGPROP_CONLOCK, &mydat); DBDIRTY(x);}
-#define CLEARCONLOCK(x)  {PData mydat; mydat.flags = PROP_LOKTYP; mydat.data.lok = TRUE_BOOLEXP; set_property(x, MESGPROP_CONLOCK, &mydat); DBDIRTY(x);}
-
-#define GETCHLOCK(x)    (get_property_lock(x, MESGPROP_CHLOCK))
-#define SETCHLOCK(x,y)  {PData mydat; mydat.flags = PROP_LOKTYP; mydat.data.lok = y; set_property(x, MESGPROP_CHLOCK, &mydat);}
-#define LOADCHLOCK(x,y) {PData mydat; mydat.flags = PROP_LOKTYP; mydat.data.lok = y; set_property_nofetch(x, MESGPROP_CHLOCK, &mydat); DBDIRTY(x);}
-#define CLEARCHLOCK(x)  {PData mydat; mydat.flags = PROP_LOKTYP; mydat.data.lok = TRUE_BOOLEXP; set_property(x, MESGPROP_CHLOCK, &mydat); DBDIRTY(x);}
 
 #define GETVALUE(x)	get_property_value(x, MESGPROP_VALUE)
 #define SETVALUE(x,y)	add_property(x, MESGPROP_VALUE, NULL, y)
-#define LOADVALUE(x,y)	add_prop_nofetch(x, MESGPROP_VALUE, NULL, y)
 
 #define MESGPROP_LID	"_/lid"
 #define SETLID(x,y)	set_property_value(x, MESGPROP_LID, y + 1)
@@ -259,9 +236,6 @@ enum at { ARMOR_LIGHT, ARMOR_MEDIUM, ARMOR_HEAVY, };
 #define NOTYPE              0x7	/* no particular type */
 #define TYPE_MASK           0x7	/* room for expansion */
 
-#define EXPANSION0		   0x08 /* Not a flag, but one add'l flag for
-								 * expansion purposes */
-
 #define WIZARD             0x10	/* gets automatic control */
 #define LINK_OK            0x20	/* anybody can link to this */
 #define DARK               0x40	/* contents of room are not printed */
@@ -270,7 +244,6 @@ enum at { ARMOR_LIGHT, ARMOR_MEDIUM, ARMOR_HEAVY, };
 /* #define DEBUG DARK */	/* Used to print debugging information on
 				 * on MUF programs */
 
-#define INTERNAL           0x80	/* internal-use-only flag */
 #define STICKY            0x100	/* this object goes home when dropped */
 #define SILENT STICKY
 #define BUILDER           0x200	/* this player can use construction commands */

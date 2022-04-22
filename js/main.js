@@ -861,40 +861,49 @@ function Game() {
                 }
 
                 switch (e.keyCode) {
-                        case 83: // "s"
-                                input.current.value = "say ";
+                        case 83: // s
+				if (e.shiftKey)
+					sendMessage("sit");
+				else {
+					input.current.value = "say ";
+					input.current.focus();
+					e.preventDefault();
+				}
+				break;
+                        case 65: // a
                                 input.current.focus();
                                 e.preventDefault();
                                 break;
-                        case 65: // "a"
-                                input.current.focus();
-                                e.preventDefault();
-                                break;
-                        case 75:
-                        case 38: // "ArrowUp"
+                        case 75: // k
+                        case 38: // ArrowUp
                                 if (e.shiftKey)
                                         sendMessage("K");
                                 else
                                         sendMessage("k");
                                 break;
-                        case 74:
-                        case 40: // "ArrowDown"
+                        case 74: // j
+                        case 40: // ArrowDown
                                 if (e.shiftKey)
                                         sendMessage("J");
                                 else
                                         sendMessage("j");
                                 break;
-                        case 72:
-                        case 37: // "ArrowLeft"
+                        case 72: // h
+                        case 37: // ArrowLeft
                                 sendMessage("h");
                                 break;
-                        case 76:
-                        case 39: // "ArrowRight"
+                        case 76: // l
+                        case 39: // ArrowRight
                                 sendMessage("l");
                                 break;
                         case 73: // i
                                 sendMessage("inventory");
                                 break;
+                        case 79: // o
+                                sendMessage("look");
+                                break;
+			default:
+				console.log(e);
                 }
         }
         useEffect(() => {

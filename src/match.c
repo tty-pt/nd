@@ -564,6 +564,3 @@ ematch_from(dbref player, dbref where, const char *name) {
 	match_list(DBFETCH(md.match_from)->contents, &md);
 	return md.exact_match;
 }
-
-static const char *match_c_version = "$RCSfile$ $Revision: 1.12 $";
-const char *get_match_c_version(void) { return match_c_version; }
