@@ -336,9 +336,8 @@ do_bio(command_t *cmd) {
 
 static void
 e_move(dbref player, enum exit e) {
-	struct match_data md;
 	const char dirs[] = { e_dir(e), '\0' };
-	dbref exit = match_exit_where(player, getloc(player), dirs);;
+	dbref exit = ematch_exit_at(player, getloc(player), dirs);;
 
 	switch (exit) {
 	case NOTHING:

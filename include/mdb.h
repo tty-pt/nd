@@ -39,7 +39,6 @@ extern char match_cmdname[BUFFER_LEN];
 #define MESGPROP_OECHO		"_/oecho"
 #define MESGPROP_PECHO		"_/pecho"
 #define MESGPROP_LOCK		"_/lok"
-#define MESGPROP_FLOCK		"@/flk"
 #define MESGPROP_CONLOCK	"_/clk"
 #define MESGPROP_CHLOCK		"_/chlk"
 #define MESGPROP_VALUE		"@/value"

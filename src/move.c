@@ -256,71 +256,73 @@ do_get(command_t *cmd)
 	const char *obj = cmd->argv[2];
 	dbref thing, cont;
 	int cando;
-	struct match_data md;
 
-	init_match(player, what, &md);
-	match_neighbor(&md);
-	match_possession(&md);
-        match_absolute(&md);
+	if (
+			((thing = ematch_near(player, what)) == NOTHING
+			 && (thing = ematch_mine(player, what)) == NOTHING)
+			|| thing == AMBIGUOUS
+	   )
+	{
+		notify(player, "I don't know what you mean.");
+		return;
+	}
 
-	if ((thing = noisy_match_result(&md)) != NOTHING) {
-		cont = thing;
+	cont = thing;
 
-                if (getloc(thing) != getloc(player) && !Wizard(OWNER(player))) {
-                        notify(player, "That is too far away from you.");
-                        return;
-                }
+	if (getloc(thing) != getloc(player) && !Wizard(OWNER(player))) {
+		notify(player, "That is too far away from you.");
+		return;
+	}
 
-		if (obj && *obj) {
-			thing = ematch_from(player, cont, obj);
-			if (thing == NOTHING)
-				return;
-			if (Typeof(cont) == TYPE_PLAYER) {
-				notify(player, "You can't steal things from players.");
-				return;
-			}
-			if (!test_lock_false_default(player, cont, "_/clk")) {
-				notify(player, "You can't open that container.");
-				return;
-			}
-		}
-		if (DBFETCH(thing)->location == player) {
-			notify(player, "You already have that!");
+	if (obj && *obj) {
+		thing = ematch_at(player, cont, obj);
+		if (thing == NOTHING)
 			return;
-		}
 		if (Typeof(cont) == TYPE_PLAYER) {
-			notify(player, "You can't steal stuff from players.");
+			notify(player, "You can't steal things from players.");
 			return;
 		}
-		if (parent_loop_check(thing, player)) {
-			notify(player, "You can't pick yourself up by your bootstraps!");
+		if (!test_lock_false_default(player, cont, "_/clk")) {
+			notify(player, "You can't open that container.");
 			return;
 		}
-		switch (Typeof(thing)) {
-		case TYPE_THING:
-			if (obj && *obj) {
-				cando = could_doit(player, thing);
-				if (!cando)
-					notify(player, "You can't get that.");
-			} else {
-                                if (OWNER(thing) != player
-                                    && (GETLID(thing) >= 0 || GETPLID(thing) >= 0))
-                                {
-                                        notify(player, "You can't pick that up.");
-                                        break;
-                                }
+	}
+	if (getloc(thing) == player) {
+		notify(player, "You already have that!");
+		return;
+	}
+	if (Typeof(cont) == TYPE_PLAYER) {
+		notify(player, "You can't steal stuff from players.");
+		return;
+	}
+	if (parent_loop_check(thing, player)) {
+		notify(player, "You can't pick yourself up by your bootstraps!");
+		return;
+	}
+	switch (Typeof(thing)) {
+	case TYPE_THING:
+		if (obj && *obj) {
+			cando = could_doit(player, thing);
+			if (!cando)
+				notify(player, "You can't get that.");
+		} else {
+			if (OWNER(thing) != player
+					&& (GETLID(thing) >= 0 || GETPLID(thing) >= 0))
+			{
+				notify(player, "You can't pick that up.");
+				break;
+			}
 
-				cando = can_doit(player, thing, "You can't pick that up.");
-			}
-			if (cando) {
-				moveto(thing, player);
-				notify(player, "Taken.");
-			}
-			break;
-		default:
-			notify(player, "You can't take that!");
-			break;
+			cando = can_doit(player, thing, "You can't pick that up.");
 		}
+		if (cando) {
+			moveto(thing, player);
+			notify(player, "Taken.");
+		}
+		break;
+	default:
+		notify(player, "You can't take that!");
+		break;
 	}
 }
 
@@ -333,32 +335,28 @@ do_drop(command_t *cmd)
 	dbref loc, cont;
 	dbref thing;
 	char buf[BUFFER_LEN];
-	struct match_data md;
 
 	if ((loc = getloc(player)) == NOTHING)
 		return;
 
-	init_match(player, name, &md);
-	match_possession(&md);
-        match_absolute(&md);
-	if ((thing = noisy_match_result(&md)) == NOTHING || thing == AMBIGUOUS)
+	if (
+			(thing = ematch_mine(player, name)) == NOTHING
+			|| thing == AMBIGUOUS
+	   )
+	{
+		notify(player, "I don't know what you mean.");
 		return;
-
-        if (getloc(thing) != player) {
-                notify(player, "You can't drop something you don't have.");
-                return;
-        }
+	}
 
 	cont = loc;
-	if (obj && *obj) {
-		init_match(player, obj, &md);
-		match_possession(&md);
-		match_neighbor(&md);
-		/* if (Wizard(OWNER(player))) */
-			match_absolute(&md);	/* the wizard has long fingers */
-		if ((cont = noisy_match_result(&md)) == NOTHING || thing == AMBIGUOUS) {
-			return;
-		}
+	if (
+			obj && *obj
+			&& (cont = ematch_mine(player, obj)) == NOTHING
+			&& (cont = ematch_near(player, obj)) == NOTHING
+	   )
+	{
+		notify(player, "I don't know what you mean.");
+		return;
 	}
         
 	switch (Typeof(thing)) {
@@ -423,79 +421,82 @@ do_recycle(command_t *cmd)
 	const char *name = cmd->argv[1];
 	dbref thing;
 	char buf[BUFFER_LEN];
-	struct match_data md;
 
 	NOGUEST("@recycle",player);
 
-	init_match(player, name, &md);
-	match_neighbor(&md);
-	match_possession(&md);
-	match_here(&md);
-	match_absolute(&md);
-	if ((thing = noisy_match_result(&md)) != NOTHING) {
+	if (
+			((thing = ematch_absolute(name)) == NOTHING
+			 && (thing = ematch_near(player, name)) == NOTHING
+			 && (thing = ematch_mine(player, name)) == NOTHING)
+			|| thing == AMBIGUOUS
+	   )
+	{
+		notify(player, "I don't know what you mean.");
+		return;
+	}
+
+
 #ifdef GOD_PRIV
 	if(!God(player) && God(OWNER(thing))) {
 		notify(player, "Only God may reclaim God's property.");
 		return;
 	}
 #endif
-		if (!controls(player, thing)) {
-			if(Wizard(OWNER(player)) && (Typeof(thing) == TYPE_GARBAGE))
-				notify(player, "That's already garbage!");
-			else
-				notify(player, "Permission denied. (You don't control what you want to recycle)");
-		} else {
-			switch (Typeof(thing)) {
-			case TYPE_ROOM:
-				if (OWNER(thing) != OWNER(player)) {
-					notify(player, "Permission denied. (You don't control the room you want to recycle)");
-					return;
-				}
-				if (thing == PLAYER_START) {
-					notify(player, "That is the player start room, and may not be recycled.");
-					return;
-				}
-				if (thing == GLOBAL_ENVIRONMENT) {
-					notify(player, "If you want to do that, why don't you just delete the database instead?  Room #0 contains everything, and is needed for database sanity.");
-					return;
-				}
-				break;
-			case TYPE_THING:
-				if (OWNER(thing) != OWNER(player)) {
-					notify(player, "Permission denied. (You can't recycle a thing you don't control)");
-					return;
-				}
-				/* player may be a zombie or puppet */
-				if (thing == player) {
-					snprintf(buf, sizeof(buf),
-							"%.512s's owner commands it to kill itself.  It blinks a few times in shock, and says, \"But.. but.. WHY?\"  It suddenly clutches it's heart, grimacing with pain..  Staggers a few steps before falling to it's knees, then plops down on it's face.  *thud*  It kicks its legs a few times, with weakening force, as it suffers a seizure.  It's color slowly starts changing to purple, before it explodes with a fatal *POOF*!",
-							NAME(thing));
-					notify_except(DBFETCH(getloc(thing))->contents, thing, buf, player);
-					notify(OWNER(player), buf);
-					notify(OWNER(player), "Now don't you feel guilty?");
-				}
-				break;
-			case TYPE_EXIT:
-				if (OWNER(thing) != OWNER(player)) {
-					notify(player, "Permission denied. (You may not recycle an exit you don't own)");
-					return;
-				}
-				break;
-			case TYPE_PLAYER:
-				notify(player, "You can't recycle a player!");
+	if (!controls(player, thing)) {
+		if(Wizard(OWNER(player)) && (Typeof(thing) == TYPE_GARBAGE))
+			notify(player, "That's already garbage!");
+		else
+			notify(player, "Permission denied. (You don't control what you want to recycle)");
+	} else {
+		switch (Typeof(thing)) {
+		case TYPE_ROOM:
+			if (OWNER(thing) != OWNER(player)) {
+				notify(player, "Permission denied. (You don't control the room you want to recycle)");
 				return;
-				/* NOTREACHED */
-				break;
-			case TYPE_GARBAGE:
-				notify(player, "That's already garbage!");
-				return;
-				/* NOTREACHED */
-				break;
 			}
-			snprintf(buf, sizeof(buf), "Thank you for recycling %.512s (#%d).", NAME(thing), thing);
-			recycle(player, thing);
-			notify(player, buf);
+			if (thing == PLAYER_START) {
+				notify(player, "That is the player start room, and may not be recycled.");
+				return;
+			}
+			if (thing == GLOBAL_ENVIRONMENT) {
+				notify(player, "If you want to do that, why don't you just delete the database instead?  Room #0 contains everything, and is needed for database sanity.");
+				return;
+			}
+			break;
+		case TYPE_THING:
+			if (OWNER(thing) != OWNER(player)) {
+				notify(player, "Permission denied. (You can't recycle a thing you don't control)");
+				return;
+			}
+			/* player may be a zombie or puppet */
+			if (thing == player) {
+				snprintf(buf, sizeof(buf),
+						"%.512s's owner commands it to kill itself.  It blinks a few times in shock, and says, \"But.. but.. WHY?\"  It suddenly clutches it's heart, grimacing with pain..  Staggers a few steps before falling to it's knees, then plops down on it's face.  *thud*  It kicks its legs a few times, with weakening force, as it suffers a seizure.  It's color slowly starts changing to purple, before it explodes with a fatal *POOF*!",
+						NAME(thing));
+				notify_except(DBFETCH(getloc(thing))->contents, thing, buf, player);
+				notify(OWNER(player), buf);
+				notify(OWNER(player), "Now don't you feel guilty?");
+			}
+			break;
+		case TYPE_EXIT:
+			if (OWNER(thing) != OWNER(player)) {
+				notify(player, "Permission denied. (You may not recycle an exit you don't own)");
+				return;
+			}
+			break;
+		case TYPE_PLAYER:
+			notify(player, "You can't recycle a player!");
+			return;
+			/* NOTREACHED */
+			break;
+		case TYPE_GARBAGE:
+			notify(player, "That's already garbage!");
+			return;
+			/* NOTREACHED */
+			break;
 		}
+		notifyf(player, "Thank you for recycling %.512s (#%d).", NAME(thing), thing);
+		recycle(player, thing);
 	}
 }
 

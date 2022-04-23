@@ -24,19 +24,24 @@ static dbref
 match_controlled(dbref player, const char *name)
 {
 	dbref match;
-	struct match_data md;
 
-	init_match(player, name, &md);
-	match_absolute(&md);
-	match_everything(&md);
+	if (
+			(
+			 (match = ematch_absolute(name)) == NOTHING
+			 && (match = ematch_all(player, name)) == NOTHING
+			) || match == AMBIGUOUS
+	   )
+	{
+		notify(player, "I don't know what you mean.");
+		return NOTHING;
+	}
 
-	match = noisy_match_result(&md);
-	if (match != NOTHING && !controls(player, match)) {
+	else if (!controls(player, match)) {
 		notify(player, "Permission denied. (You don't control what was matched)");
 		return NOTHING;
-	} else {
-		return match;
 	}
+
+	return match;
 }
 
 void
@@ -363,28 +368,24 @@ do_conlock(command_t *cmd)
 	const char *keyname = cmd->argv[2];
 	dbref thing;
 	struct boolexp *key;
-	struct match_data md;
 	PData mydat;
 
 	NOGUEST("@conlock",player);
 
-	init_match(player, name, &md);
-	match_absolute(&md);
-	match_everything(&md);
+	if (
+			(
+			 (thing = ematch_absolute(name)) == NOTHING
+			 && (thing = ematch_all(player, name)) == NOTHING
+			) || thing == AMBIGUOUS
+	   )
+	{
+		notify(player, "I don't know what you mean.");
+		return;
+	}
 
-	switch (thing = match_result(&md)) {
-	case NOTHING:
-		notify(player, "I don't see what you want to set the container-lock on!");
+	if (!controls(player, thing)) {
+		notify(player, "You can't set the container-lock on that!");
 		return;
-	case AMBIGUOUS:
-		notify(player, "I don't know which one you want to set the container-lock on!");
-		return;
-	default:
-		if (!controls(player, thing)) {
-			notify(player, "You can't set the container-lock on that!");
-			return;
-		}
-		break;
 	}
 
 	if (!*keyname) {
@@ -407,85 +408,30 @@ do_conlock(command_t *cmd)
 }
 
 void
-do_flock(command_t *cmd)
-{
-	dbref player = cmd->player;
-	const char *name = cmd->argv[1];
-	const char *keyname = cmd->argv[2];
-	dbref thing;
-	struct boolexp *key;
-	struct match_data md;
-	PData mydat;
-
-	NOGUEST("@force_lock",player);
-
-	init_match(player, name, &md);
-	match_absolute(&md);
-	match_everything(&md);
-
-	switch (thing = match_result(&md)) {
-	case NOTHING:
-		notify(player, "I don't see what you want to set the force-lock on!");
-		return;
-	case AMBIGUOUS:
-		notify(player, "I don't know which one you want to set the force-lock on!");
-		return;
-	default:
-		if (!controls(player, thing)) {
-			notify(player, "You can't set the force-lock on that!");
-			return;
-		}
-		break;
-	}
-
-	if (!*keyname) {
-		mydat.flags = PROP_LOKTYP;
-		mydat.data.lok = TRUE_BOOLEXP;
-		set_property(thing, "@/flk", &mydat);
-		notify(player, "Force lock cleared.");
-	} else {
-		key = parse_boolexp(player, keyname, 0);
-		if (key == TRUE_BOOLEXP) {
-			notify(player, "I don't understand that key.");
-		} else {
-			/* everything ok, do it */
-			mydat.flags = PROP_LOKTYP;
-			mydat.data.lok = key;
-			set_property(thing, "@/flk", &mydat);
-			notify(player, "Force lock set.");
-		}
-	}
-}
-
-void
 do_chlock(command_t *cmd) {
 	dbref player = cmd->player;
 	const char *name = cmd->argv[1];
 	const char *keyname = cmd->argv[2];
 	dbref thing;
 	struct boolexp *key;
-	struct match_data md;
 	PData mydat;
 
 	NOGUEST("@chown_lock",player);
 
-	init_match(player, name, &md);
-	match_absolute(&md);
-	match_everything(&md);
+	if (
+			(
+			 (thing = ematch_absolute(name)) == NOTHING
+			 && (thing = ematch_all(player, name)) == NOTHING
+			) || thing == AMBIGUOUS
+	   )
+	{
+		notify(player, "I don't know what you mean.");
+		return;
+	}
 
-	switch (thing = match_result(&md)) {
-	case NOTHING:
-		notify(player, "I don't see what you want to set the chown-lock on!");
+	if (!controls(player, thing)) {
+		notify(player, "You can't set the chown-lock on that!");
 		return;
-	case AMBIGUOUS:
-		notify(player, "I don't know which one you want to set the chown-lock on!");
-		return;
-	default:
-		if (!controls(player, thing)) {
-			notify(player, "You can't set the chown-lock on that!");
-			return;
-		}
-		break;
 	}
 
 	if (!*keyname) {
@@ -493,17 +439,18 @@ do_chlock(command_t *cmd) {
 		mydat.data.lok = TRUE_BOOLEXP;
 		set_property(thing, "_/chlk", &mydat);
 		notify(player, "Chown lock cleared.");
+		return;
+	}
+
+	key = parse_boolexp(player, keyname, 0);
+	if (key == TRUE_BOOLEXP) {
+		notify(player, "I don't understand that key.");
 	} else {
-		key = parse_boolexp(player, keyname, 0);
-		if (key == TRUE_BOOLEXP) {
-			notify(player, "I don't understand that key.");
-		} else {
-			/* everything ok, do it */
-			mydat.flags = PROP_LOKTYP;
-			mydat.data.lok = key;
-			set_property(thing, "_/chlk", &mydat);
-			notify(player, "Chown lock set.");
-		}
+		/* everything ok, do it */
+		mydat.flags = PROP_LOKTYP;
+		mydat.data.lok = key;
+		set_property(thing, "_/chlk", &mydat);
+		notify(player, "Chown lock set.");
 	}
 }
 
@@ -515,32 +462,28 @@ do_lock(command_t *cmd)
 	const char *keyname = cmd->argv[2];
 	dbref thing;
 	struct boolexp *key;
-	struct match_data md;
 
 	NOGUEST("@lock",player);
 
-	init_match(player, name, &md);
-	match_absolute(&md);
-	match_everything(&md);
-
-	switch (thing = match_result(&md)) {
-	case NOTHING:
-		notify(player, "I don't see what you want to lock!");
+	if (
+			(
+			 && (thing = ematch_absolute(name)) == NOTHING
+			 && (thing = ematch_all(player, name)) == NOTHING
+			) || thing == AMBIGUOUS
+	   )
+	{
+		notify(player, "I don't know what you mean.");
 		return;
-	case AMBIGUOUS:
-		notify(player, "I don't know which one you want to lock!");
-		return;
-	default:
-		if (Typeof(thing) == TYPE_EXIT
-		    && e_exit_is(thing)
-		    && geo_claim(player, getloc(thing)))
-			return;
+	}
 
-		if (!controls(player, thing)) {
-			notify(player, "You can't lock that!");
-			return;
-		}
-		break;
+	if (Typeof(thing) == TYPE_EXIT
+			&& e_exit_is(thing)
+			&& geo_claim(player, getloc(thing)))
+		return;
+
+	if (!controls(player, thing)) {
+		notify(player, "You can't lock that!");
+		return;
 	}
 
 	if(keyname && *keyname) {
@@ -628,17 +571,22 @@ do_chown(command_t *cmd)
 	const char *newowner = cmd->argv[2];
 	dbref thing;
 	dbref owner;
-	struct match_data md;
 
 	if (!*name) {
 		notify(player, "You must specify what you want to take ownership of.");
 		return;
 	}
-	init_match(player, name, &md);
-	match_everything(&md);
-	match_absolute(&md);
-	if ((thing = noisy_match_result(&md)) == NOTHING)
+
+	if (
+			(
+			 (thing = ematch_absolute(name)) == NOTHING
+			 (thing = ematch_all(player, name)) == NOTHING
+			) || thing == AMBIGUOUS
+	   )
+	{
+		notify(player, "I don't know what you mean.");
 		return;
+	}
 
 	if (*newowner && strcmp(newowner, "me")) {
 		if ((owner = lookup_player(newowner)) == NOTHING) {
@@ -871,7 +819,6 @@ do_propset(command_t *cmd)
 	char *p, *q;
 	char buf[BUFFER_LEN];
 	char *type, *pname, *value;
-	struct match_data md;
 	struct boolexp *lok;
 	PData mydat;
 
@@ -939,11 +886,17 @@ do_propset(command_t *cmd)
 		mydat.data.fval = strtod(value, NULL);
 		set_property(thing, pname, &mydat);
 	} else if (string_prefix("dbref", type)) {
-		init_match(player, value, &md);
-		match_absolute(&md);
-		match_everything(&md);
-		if ((ref = noisy_match_result(&md)) == NOTHING)
+		if (
+				(
+				 (ref = ematch_absolute(value)) == NOTHING
+				 && (ref = ematch_all(player, value)) == NOTHING
+				) || ref == AMBIGUOUS
+		   )
+		{
+			notify(player, "I don't know what you mean.");
 			return;
+		}
+
 		mydat.flags = PROP_REFTYP;
 		mydat.data.ref = ref;
 		set_property(thing, pname, &mydat);

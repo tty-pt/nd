@@ -277,7 +277,7 @@ do_kill(command_t *cmd)
 	const char *what = cmd->argv[1];
 	dbref here = getloc(player);
 	dbref target = strcmp(what, "me")
-		? ematch_from(player, here, what)
+		? ematch_near(player, what)
 		: player;
 	struct mob *att, *tar;
 
@@ -347,7 +347,7 @@ do_heal(command_t *cmd)
 	struct mob *tar;
 
 	if (strcmp(name, "me")) {
-		target = ematch_from(player, here, name);
+		target = ematch_near(player, name);
 
 	} else
 		target = player;
@@ -374,7 +374,7 @@ do_advitam(command_t *cmd)
 	dbref player = cmd->player;
 	const char *name = cmd->argv[1];
 	dbref here = getloc(player);
-	dbref target = ematch_from(player, here, name);
+	dbref target = ematch_near(player, name);
 
 	if (!(FLAGS(player) & WIZARD)
 	    || target == NOTHING
@@ -391,7 +391,7 @@ void
 do_givexp(command_t *cmd, const char *name, const char *amount)
 {
 	dbref player = cmd->player;
-	dbref target = ematch_from(player, getloc(player), name);
+	dbref target = ematch_near(player, name);
 	int amt = strtol(amount, NULL, 0);
 
 	if (!(FLAGS(player) & WIZARD)
@@ -479,7 +479,7 @@ sit(dbref player, const char *name)
 		return;
 	}
 
-	dbref seat = ematch_from(player, getloc(player), name);
+	dbref seat = ematch_near(player, name);
 	int max = GETSEATM(seat);
 	if (!max) {
 		notify(player, "You can't sit on that.");

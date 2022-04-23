@@ -29,26 +29,28 @@ do_teleport(command_t *cmd) {
 	dbref victim;
 	dbref destination;
 	const char *to;
-	struct match_data md;
 
 	/* get victim, destination */
 	if (*arg2 == '\0') {
 		victim = player;
 		to = arg1;
-	} else {
-		init_match(player, arg1, &md);
-		match_neighbor(&md);
-		match_possession(&md);
-		match_me(&md);
-		match_here(&md);
-		match_absolute(&md);
-		match_player(&md);
-
-		if ((victim = noisy_match_result(&md)) == NOTHING) {
-			return;
-		}
+	} else if (
+			(
+			 (victim = ematch_absolute(player, arg1)) == NOTHING
+			 && (victim = ematch_me(player, arg1)) == NOTHING
+			 && (victim = ematch_here(player, arg1)) == NOTHING
+			 && (victim = ematch_near(player, arg1)) == NOTHING
+			 && (victim = ematch_mine(player, arg1)) == NOTHING
+			 && (victim = ematch_player(player, arg1)) == NOTHING
+			) || victim == AMBIGUOUS
+			// match player
+		  )
+	{
+		notify(player, "I don't know what you mean.");
+		return;
+	} else
 		to = arg2;
-	}
+
 #ifdef GOD_PRIV
 	if(!God(player) && God(OWNER(victim))) {
 		notify(player, "God has already set that where He wants it to be.");
@@ -56,24 +58,23 @@ do_teleport(command_t *cmd) {
 	}
 #endif
 
-	/* get destination */
-	init_match(player, to, &md);
-	match_possession(&md);
-	match_me(&md);
-	match_here(&md);
-	match_home(&md);
-	match_absolute(&md);
-	if (Wizard(OWNER(player))) {
-		match_neighbor(&md);
-		match_player(&md);
+	if (
+			(
+			 (destination = ematch_absolute(to)) == NOTHING
+			 && (destination = ematch_me(player, to)) == NOTHING
+			 && (destination = ematch_here(player, to)) == NOTHING
+			 && (destination = ematch_home(to)) == NOTHING
+			 && (destination = ematch_mine(player, to)) == NOTHING
+			 && (destination = ematch_near(player, to)) == NOTHING
+			 && (destination = ematch_player(player, to)) == NOTHING
+			) || destination == AMBIGUOUS
+	   )
+	{
+		notify(player, "I don't know what you mean.");
+		return;
 	}
-	switch (destination = match_result(&md)) {
-	case NOTHING:
-		notify(player, "Send it where?");
-		break;
-	case AMBIGUOUS:
-		notify(player, "I don't know which destination you mean!");
-		break;
+
+	switch (destination) {
 	case HOME:
 		switch (Typeof(victim)) {
 		case TYPE_PLAYER:
@@ -170,7 +171,6 @@ do_teleport(command_t *cmd) {
 		}
 		break;
 	}
-	return;
 }
 
 int
@@ -238,7 +238,6 @@ do_unbless(command_t *cmd) {
 	const char *what = cmd->argv[1];
 	const char *propname = cmd->argv[2];
 	dbref victim;
-	struct match_data md;
 	char buf[BUFFER_LEN];
 	int cnt;
 
@@ -252,15 +251,18 @@ do_unbless(command_t *cmd) {
 		return;
 	}
 
-	/* get victim */
-	init_match(player, what, &md);
-	match_everything(&md);
-	if ((victim = noisy_match_result(&md)) == NOTHING) {
+	if (!Wizard(OWNER(player))) {
+		notify(player, "Permission denied. (You're not a wizard)");
 		return;
 	}
 
-	if (!Wizard(OWNER(player))) {
-		notify(player, "Permission denied. (You're not a wizard)");
+	/* get victim */
+	if (
+			(victim = ematch_all(player, what)) == NOTHING
+			|| victim == AMBIGUOUS
+	   )
+	{
+		notify(player, "I don't know what you mean.");
 		return;
 	}
 
@@ -276,7 +278,6 @@ do_bless(command_t *cmd) {
 	const char *what = cmd->argv[1];
 	const char *propname = cmd->argv[2];
 	dbref victim;
-	struct match_data md;
 	char buf[BUFFER_LEN];
 	int cnt;
 
@@ -291,9 +292,12 @@ do_bless(command_t *cmd) {
 	}
 
 	/* get victim */
-	init_match(player, what, &md);
-	match_everything(&md);
-	if ((victim = noisy_match_result(&md)) == NOTHING) {
+	if (
+			(victim = ematch_all(player, what)) == NOTHING
+			|| victim == AMBIGUOUS
+	   )
+	{
+		notify(player, "I don't know what you mean.");
 		return;
 	}
 

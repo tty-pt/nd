@@ -15,137 +15,63 @@
 #include "externs.h"
 
 void
-do_rob(command_t *cmd)
-{
-	dbref player = cmd->player;
-	const char *what = cmd->argv[1];
-	dbref thing;
-	char buf[BUFFER_LEN];
-	struct match_data md;
-
-	init_match(player, what, &md);
-	match_neighbor(&md);
-	match_me(&md);
-	if (Wizard(OWNER(player))) {
-		match_absolute(&md);
-		match_player(&md);
-	}
-	thing = match_result(&md);
-
-	switch (thing) {
-	case NOTHING:
-		notify(player, "Rob whom?");
-		break;
-	case AMBIGUOUS:
-		notify(player, "I don't know who you mean!");
-		break;
-	default:
-		if (Typeof(thing) != TYPE_PLAYER) {
-			notify(player, "Sorry, you can only rob other players.");
-		} else if (GETVALUE(thing) < 1) {
-			snprintf(buf, sizeof(buf), "%s has no %s.", NAME(thing), PENNIES);
-			notify(player, buf);
-			snprintf(buf, sizeof(buf),
-					"%s tried to rob you, but you have no %s to take.",
-					NAME(player), PENNIES);
-			notify(thing, buf);
-		} else if (can_doit(player, thing, "Your conscience tells you not to.")) {
-			/* steal a penny */
-			SETVALUE(OWNER(player), GETVALUE(OWNER(player)) + 1);
-			DBDIRTY(player);
-			SETVALUE(thing, GETVALUE(thing) - 1);
-			DBDIRTY(thing);
-			notifyf(player, "You stole a %s.", PENNY);
-			snprintf(buf, sizeof(buf), "%s stole one of your %s!", NAME(player), PENNIES);
-			notify(thing, buf);
-		}
-		break;
-	}
-}
-
-void
 do_give(command_t *cmd)
 {
 	dbref player = cmd->player;
 	const char *recipient = cmd->argv[1];
 	int amount = atoi(cmd->argv[2]);
 	dbref who;
-	char buf[BUFFER_LEN];
-	struct match_data md;
 
-	/* do amount consistency check */
 	if (amount < 0 && !Wizard(OWNER(player))) {
-		notify(player, "Try using the \"rob\" command.");
+		notify(player, "Invalid amount.");
 		return;
-	} else if (amount == 0) {
-		notifyf(player, "You must specify a positive number of %s.", PENNIES);
-		return;
-	}
-	/* check recipient */
-	init_match(player, recipient, &md);
-	match_neighbor(&md);
-	match_me(&md);
-	if (Wizard(OWNER(player))) {
-		match_player(&md);
-		match_absolute(&md);
-	}
-	switch (who = match_result(&md)) {
-	case NOTHING:
-		notify(player, "Give to whom?");
-		return;
-	case AMBIGUOUS:
-		notify(player, "I don't know who you mean!");
-		return;
-	default:
-		if (!Wizard(OWNER(player))) {
-			if (Typeof(who) != TYPE_PLAYER) {
-				notify(player, "You can only give to other players.");
-				return;
-			} else if (GETVALUE(who) + amount > MAX_PENNIES) {
-				notifyf(player, "That player doesn't need that many %s!", PENNIES);
-				return;
-			}
-		}
-		break;
 	}
 
-	/* try to do the give */
+	if (
+			(
+			 (who = ematch_me(player, recipient)) == NOTHING
+			 && (who = ematch_near(player, recipient)) == NOTHING
+			) || who == AMBIGUOUS
+	   )
+	{
+		notify(player, "I don't know what you mean.");
+		return;
+	}
+
+	if (!Wizard(OWNER(player))) {
+		if (Typeof(who) != TYPE_PLAYER) {
+			notify(player, "You can only give to other players.");
+			return;
+		} else if (GETVALUE(who) + amount > MAX_PENNIES) {
+			notifyf(player, "That player doesn't need that many %s!", PENNIES);
+			return;
+		}
+	}
+
 	if (!payfor(player, amount)) {
 		notifyf(player, "You don't have that many %s to give!", PENNIES);
-	} else {
-		/* he can do it */
-		switch (Typeof(who)) {
-		case TYPE_PLAYER:
-			SETVALUE(who, GETVALUE(who) + amount);
-			if(amount >= 0) {
-				snprintf(buf, sizeof(buf), "You give %d %s to %s.",
-						amount, amount == 1 ? PENNY : PENNIES, NAME(who));
-				notify(player, buf);
-				snprintf(buf, sizeof(buf), "%s gives you %d %s.",
-						NAME(player), amount, amount == 1 ? PENNY : PENNIES);
-				notify(who, buf);
-			} else {
-				snprintf(buf, sizeof(buf), "You take %d %s from %s.",
-						-amount, amount == -1 ? PENNY : PENNIES, NAME(who));
-				notify(player, buf);
-				snprintf(buf, sizeof(buf), "%s takes %d %s from you!",
-						NAME(player), -amount, -amount == 1 ? PENNY : PENNIES);
-				notify(who, buf);
-			}
-			break;
-		case TYPE_THING:
-			SETVALUE(who, (GETVALUE(who) + amount));
-			snprintf(buf, sizeof(buf), "You change the value of %s to %d %s.",
-					NAME(who),
-					GETVALUE(who), GETVALUE(who) == 1 ? PENNY : PENNIES);
-			notify(player, buf);
-			break;
-		default:
-			notifyf(player, "You can't give %s to that!", PENNIES);
-			break;
-		}
-		DBDIRTY(who);
+		return;
 	}
+
+	if (Typeof(who) != TYPE_PLAYER) {
+		notifyf(player, "You can't give %s to that!", PENNIES);
+		return;
+	}
+
+	SETVALUE(who, GETVALUE(who) + amount);
+
+	if (amount >= 0) {
+		notifyf(player, "You give %d %s to %s.",
+				amount, amount == 1 ? PENNY : PENNIES, NAME(who));
+
+		notifyf(who, "%s gives you %d %s.",
+				NAME(player), amount, amount == 1 ? PENNY : PENNIES);
+	} else {
+		notifyf(player, "You take %d %s from %s.",
+				-amount, amount == -1 ? PENNY : PENNIES, NAME(who));
+		notifyf(who, "%s takes %d %s from you!",
+				NAME(player), -amount, -amount == 1 ? PENNY : PENNIES);
+	}
+
+	DBDIRTY(who);
 }
-static const char *rob_c_version = "$RCSfile$ $Revision: 1.10 $";
-const char *get_rob_c_version(void) { return rob_c_version; }

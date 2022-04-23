@@ -40,7 +40,6 @@ void do_newpassword(command_t *);
 void do_oecho(command_t *);
 void do_propset(command_t *);
 void do_sweep(command_t *);
-void do_whisper(command_t *);
 void do_pecho(command_t *);
 void do_pose(command_t *);
 void do_score(command_t *);
@@ -89,8 +88,6 @@ extern void do_examine(command_t *cmd);
 extern void do_inventory(command_t *cmd);
 extern void do_find(command_t *);
 extern void do_owned(command_t *);
-extern void do_trace(command_t *);
-extern void do_entrances(command_t *);
 extern void do_contents(command_t *);
 
 /* from item.c */
@@ -241,7 +238,6 @@ extern const char *unparse_boolexp(dbref player, struct boolexp *b, int fullname
 extern int equalstr(char *s, char *t);
 
 /* from interface.c */
-void do_flock(command_t *);
 int mcpframe_to_user(McpFrame * ptr);
 int notify(dbref player, const char *msg);
 void notifyf(dbref player, char *format, ...);

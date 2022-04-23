@@ -160,7 +160,6 @@ parse_boolexp_F(dbref player, const char **parsebuf, int dbloadp)
 {
 	struct boolexp *b;
 	char *p;
-	struct match_data md;
 	char buf[BUFFER_LEN];
 	char msg[BUFFER_LEN];
 
@@ -211,23 +210,19 @@ parse_boolexp_F(dbref player, const char **parsebuf, int dbloadp)
 
 		/* do the match */
 		if (!dbloadp) {
-			init_match(player, buf, &md);
-			match_neighbor(&md);
-			match_possession(&md);
-			match_me(&md);
-			match_here(&md);
-			match_absolute(&md);
-			match_player(&md);
-			b->thing = match_result(&md);
-
-			if (b->thing == NOTHING) {
-				snprintf(msg, sizeof(msg), "I don't see %s here.", buf);
-				notify(player, msg);
-				free_boolnode(b);
-				return TRUE_BOOLEXP;
-			} else if (b->thing == AMBIGUOUS) {
-				snprintf(msg, sizeof(msg), "I don't know which %s you mean!", buf);
-				notify(player, msg);
+			if (
+					(
+					 (b->thing = ematch_absolute(buf)) == NOTHING
+					 && (b->thing = ematch_me(player, buf)) == NOTHING
+					 && (b->thing = ematch_here(player, buf)) == NOTHING
+					 && (b->thing = ematch_mine(player, buf)) == NOTHING
+					 && (b->thing = ematch_near(player, buf)) == NOTHING
+					 && (b->thing = ematch_near(player, buf)) == NOTHING
+					 && (b->thing = ematch_player(player, buf)) == NOTHING
+					) || b->thing == AMBIGUOUS
+			   )
+			{
+				notify(player, "I don't what you mean.");
 				free_boolnode(b);
 				return TRUE_BOOLEXP;
 			} else {

@@ -260,7 +260,7 @@ do_talk(command_t *cmd) {
         dbref player = cmd->player;
         dbref loc = getloc(player);
         const char *npcs = cmd->argv[1];
-        dbref npc = *npcs ? ematch_from(cmd->player, loc, npcs) : NOTHING;
+        dbref npc = *npcs ? ematch_near(player, npcs) : NOTHING;
 
         if (npc <= 0) {
                 notify(player, "Can't find that.");

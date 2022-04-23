@@ -131,10 +131,6 @@ core_command_t cmds[] = {
 	}, {
 		.name = "drop_message",
 		.cb = &do_drop_message,
-	}, {
-		.name = "entrances",
-		.cb = &do_entrances,
-
 		/* sane_dump_object(player, arg1); /1* examine *1/ */
 	}, {
 		.name = "fail",
@@ -145,9 +141,6 @@ core_command_t cmds[] = {
 	/* }, { */
 	/* 	.name = "force", */
 	/* 	.cb = &do_force, */
-	}, {
-		.name = "flock",
-		.cb = &do_flock,
 	}, {
 		.name = "heal",
 		.cb = &do_heal,
@@ -229,9 +222,6 @@ core_command_t cmds[] = {
 		.name = "toad",
 		.cb = &do_toad,
 	}, {
-		.name = "trace",
-		.cb = &do_trace,
-	}, {
 		.name = "unbless",
 		.cb = &do_unbless,
 	}, {
@@ -301,9 +291,6 @@ core_command_t cmds[] = {
 		.name = "pose",
 		.cb = &do_pose,
 	}, {
-		.name = "rob",
-		.cb = &do_rob,
-	}, {
 		.name = "say",
 		.cb = &do_say,
 	}, {
@@ -333,9 +320,6 @@ core_command_t cmds[] = {
 	}, {
 		.name = "unequip",
 		.cb = &do_unequip,
-	}, {
-		.name = "whisper",
-		.cb = &do_whisper,
 	},
 };
 

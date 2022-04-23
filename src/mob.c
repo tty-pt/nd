@@ -514,7 +514,7 @@ do_eat(command_t *cmd)
 	dbref player = cmd->player;
 	const char *what = cmd->argv[1];
 	struct mob *p = MOB(player);
-	dbref item = ematch_from(player, player, what);
+	dbref item = ematch_mine(player, what);
 	int food;
 
 	if (item < 0

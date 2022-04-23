@@ -7,73 +7,79 @@
 #include "command.h"
 #include "mdb.h"
 
-struct match_data {
-	dbref exact_match;			/* holds result of exact match */
-	dbref last_match;			/* holds result of last match */
-	int match_count;			/* holds total number of inexact matches */
-	dbref match_who;			/* player used for me, here, and messages */
-	dbref match_from;			/* object which is being matched around */
-	const char *match_name;		/* name to match */
-	int longest_match;			/* longest matched string */
-	int match_level;			/* the highest priority level so far */
-};
+extern dbref ematch_at(dbref player, dbref where, const char *name);
+extern dbref ematch_player(dbref player, const char *name);
+extern dbref ematch_absolute(const char *name);
 
-/* match functions */
-/* Usage: init_match(descr, player, name, type); match_this(); match_that(); ... */
-/* Then get value from match_result() */
+inline dbref
+ematch_wabsolute(dbref player, const char *name)
+{
+	if (Wizard(OWNER(player)))
+		return ematch_absolute(name);
+	else
+		return NOTHING;
+}
 
-/* initialize matcher */
-extern void init_match(dbref player, const char *name,
-					   struct match_data *md);
+inline dbref
+ematch_me(dbref player, const char *str)
+{
+	if (!strcmp(str, "me"))
+		return player;
+	else
+		return NOTHING;
+}
 
-/* match (LOOKUP_TOKEN)player */
-extern void match_player(struct match_data *md);
+inline dbref
+ematch_here(dbref player, const char *str)
+{
+	if (!strcmp(str, "here"))
+		return getloc(player);
+	else
+		return NOTHING;
+}
 
-/* match (NUMBER_TOKEN)number */
-extern void match_absolute(struct match_data *md);
+inline dbref
+ematch_home(const char *str)
+{
+	if (!strcmp(str, "home"))
+		return HOME;
+	else
+		return NOTHING;
+}
 
-extern void match_me(struct match_data *md);
+inline dbref
+ematch_mine(dbref player, const char *str)
+{
+	return ematch_at(player, player, str);
+}
 
-extern void match_here(struct match_data *md);
+inline dbref
+ematch_near(dbref player, const char *str)
+{
+	return ematch_at(player, getloc(player), str);
+}
 
-extern void match_home(struct match_data *md);
+extern dbref ematch_exit_at(dbref player, dbref loc, const char *name);
 
-/* match something player is carrying */
-extern void match_possession(struct match_data *md);
+inline dbref
+ematch_all(dbref player, const char *name)
+{
+	dbref res;
 
-/* match something in the same room as player */
-extern void match_neighbor(struct match_data *md);
+	if (
+			(res = ematch_me(player, name)) == NOTHING
+			&& (res = ematch_here(player, name)) == NOTHING
+			&& (res = ematch_near(player, name)) == NOTHING
+			&& (res = ematch_mine(player, name)) == NOTHING
+			&& (res = ematch_wabsolute(player, name)) == NOTHING
+	   )
+		return NOTHING;
 
-/* match an exit from player's room */
-extern dbref match_exit_where(dbref player, dbref loc, char *name);
+	else
+		return res;
+}
 
-/* all of the above, except only Wizards do match_absolute and match_player */
-extern void match_everything(struct match_data *md);
-
-/* return match results */
-extern dbref match_result(struct match_data *md);	/* returns AMBIGUOUS for
-
-													   multiple inexacts */
 #define NOMATCH_MESSAGE "I don't see that here."
 #define AMBIGUOUS_MESSAGE "I don't know which one you mean!"
 
-extern dbref noisy_match_result(struct match_data *md);
-
-				/* wrapper for match_result */
-				/* noisily notifies player */
-				/* returns matched object or NOTHING */
-
-extern dbref ematch_from(dbref player, dbref where, const char *name);
-
 #endif /* _MATCH_H */
-
-#ifdef DEFINE_HEADER_VERSIONS
-
-#ifndef matchh_version
-#define matchh_version
-const char *match_h_version = "$RCSfile$ $Revision: 1.7 $";
-#endif
-#else
-extern const char *match_h_version;
-#endif
-

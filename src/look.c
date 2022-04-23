@@ -129,108 +129,48 @@ do_look_at(command_t *cmd)
 {
 	dbref player = cmd->player;
 	const char *name = cmd->argv[1];
-	const char *detail = cmd->argv[2];
 	dbref thing;
-	struct match_data md;
-	/* int res; */
-	char buf[BUFFER_LEN];
 
 	if (*name == '\0' || !strcmp(name, "here")) {
 		if ((thing = getloc(player)) != NOTHING) {
 			look_room(player, thing, 1);
 		}
-	} else {
-		/* look at a thing here */
-		init_match(player, name, &md);
-		match_neighbor(&md);
-		match_possession(&md);
-                match_absolute(&md);
-		if (Wizard(OWNER(player))) {
-			match_player(&md);
+	} else if (
+			(
+			 (thing = ematch_absolute(name)) == NOTHING
+			 && (thing = ematch_here(player, name)) == NOTHING
+			 && (thing = ematch_me(player, name)) == NOTHING
+			 && (thing = ematch_near(player, name)) == NOTHING
+			 && (thing = ematch_mine(player, name)) == NOTHING
+			) || thing == AMBIGUOUS
+		  )
+	{
+		notify(player, "I don't know what you mean.");
+		return;
+	}
+
+	switch (Typeof(thing)) {
+	case TYPE_ROOM:
+		look_room(player, thing, 1);
+		break;
+	case TYPE_PLAYER:
+		if (web_look(player, thing, GETDESC(thing))) {
+			look_simple(player, thing);
+			look_contents(player, thing, "Carrying:");
 		}
-		match_here(&md);
-		match_me(&md);
-
-		thing = match_result(&md);
-
-                if (Typeof(thing) != TYPE_ROOM && getloc(thing) != getloc(player)) {
-                        notify(player, "That is too far away to see.");
-                        return;
-                }
-
-		if (thing != NOTHING && thing != AMBIGUOUS && !*detail) {
-			switch (Typeof(thing)) {
-			case TYPE_ROOM:
-				if (getloc(player) != thing && !can_link_to(player, TYPE_ROOM, thing)) {
-					notify(player, "Permission denied. (you're not where you want to look, and can't link to it)");
-				} else {
-					look_room(player, thing, 1);
-				}
-				break;
-			case TYPE_PLAYER:
-				if (getloc(player) != getloc(thing)
-					&& !controls(player, thing)) {
-					notify(player, "Permission denied. (Your location isn't the same as what you're looking at)");
-				} else if (web_look(player, thing, GETDESC(thing))) {
-					look_simple(player, thing);
-					look_contents(player, thing, "Carrying:");
-				}
-				break;
-			case TYPE_THING:
-				if (getloc(player) != getloc(thing)
-					&& getloc(thing) != player && !controls(player, thing)) {
-					notify(player, "Permission denied. (You're not in the same room as or carrying the object)");
-				} else if (web_look(player, thing, GETDESC(thing))) {
-					look_simple(player, thing);
-					if (!(FLAGS(thing) & HAVEN)) {
-						look_contents(player, thing, "Contains:");
-					}
-				}
-				break;
-			default:
-				if (web_look(player, thing, GETDESC(thing)))
-                                        look_simple(player, thing);
-				break;
+		break;
+	case TYPE_THING:
+		if (web_look(player, thing, GETDESC(thing))) {
+			look_simple(player, thing);
+			if (!(FLAGS(thing) & HAVEN)) {
+				look_contents(player, thing, "Contains:");
 			}
-		} else if (thing == NOTHING || (*detail && thing != AMBIGUOUS)) {
-			int ambig_flag = 0;
-			char propname[BUFFER_LEN];
-			PropPtr propadr, pptr, lastmatch = NULL;
-
-			if (thing == NOTHING) {
-				thing = getloc(player);
-				snprintf(buf, sizeof(buf), "%s", name);
-			} else {
-				snprintf(buf, sizeof(buf), "%s", detail);
-			}
-
-
-			lastmatch = NULL;
-			propadr = first_prop(thing, "_details/", &pptr, propname, sizeof(propname));
-			while (propadr) {
-				if (exit_prefix(propname, buf)) {
-					if (lastmatch) {
-						lastmatch = NULL;
-						ambig_flag = 1;
-						break;
-					} else {
-						lastmatch = propadr;
-					}
-				}
-				propadr = next_prop(pptr, propadr, propname, sizeof(propname));
-			}
-			if (lastmatch && PropType(lastmatch) == PROP_STRTYP) {
-				notify(player, PropDataStr(lastmatch));
-			} else if (ambig_flag) {
-				notify(player, AMBIGUOUS_MESSAGE);
-			} else if (*detail) {
-				notify(player, "You see nothing special.");
-			} else {
-				notify(player, NOMATCH_MESSAGE);
-			}
-		} else {
-			notify(player, AMBIGUOUS_MESSAGE);
 		}
+		break;
+	default:
+		if (web_look(player, thing, GETDESC(thing)))
+			look_simple(player, thing);
+		break;
 	}
 }
 
@@ -311,29 +251,23 @@ do_examine(command_t *cmd)
 	dbref content;
 	dbref exit;
 	int i, cnt;
-	struct match_data md;
 
 	if (*name == '\0') {
 		if ((thing = getloc(player)) == NOTHING)
 			return;
-	} else {
-		/* look it up */
-		init_match(player, name, &md);
-
-		match_neighbor(&md);
-		match_possession(&md);
-		match_absolute(&md);
-
-		/* only Wizards can examine other players */
-		if (Wizard(OWNER(player)))
-			match_player(&md);
-
-		match_here(&md);
-		match_me(&md);
-
-		/* get result */
-		if ((thing = noisy_match_result(&md)) == NOTHING)
-			return;
+	} else if (
+			(
+			 (thing = ematch_absolute(name)) == NOTHING
+			 && (thing = ematch_me(player, name)) == NOTHING
+			 && (thing = ematch_here(player, name)) == NOTHING
+			 && (thing = ematch_near(player, name)) == NOTHING
+			 && (thing = ematch_mine(player, name)) == NOTHING
+			 && (thing = ematch_player(player, name)) == NOTHING
+			) || thing == AMBIGUOUS
+		  )
+	{
+		notify(player, "I don't know what you mean.");
+		return;
 	}
 
 	if (!can_link(player, thing)) {
@@ -954,110 +888,6 @@ do_owned(command_t *cmd)
 }
 
 void
-do_trace(command_t *cmd)
-{
-	dbref player = cmd->fd;
-	const char *name = cmd->argv[1];
-	int depth = atoi(cmd->argv[2]);
-	dbref thing;
-	int i;
-	struct match_data md;
-
-	init_match(player, name, &md);
-	match_absolute(&md);
-	match_here(&md);
-	match_me(&md);
-	match_neighbor(&md);
-	match_possession(&md);
-	if ((thing = noisy_match_result(&md)) == NOTHING || thing == AMBIGUOUS)
-		return;
-
-	for (i = 0; (!depth || i < depth) && thing != NOTHING; i++) {
-		if (controls(player, thing) || can_link_to(player, NOTYPE, thing))
-			notify(player, unparse_object(player, thing));
-		else
-			notify(player, "**Missing**");
-		thing = DBFETCH(thing)->location;
-	}
-	notify(player, "***End of List***");
-}
-
-void // TODO REMOVE?
-do_entrances(command_t *cmd)
-{
-	dbref player = cmd->player;
-	const char *name = cmd->argv[1];
-	const char *flags = cmd->argv[2];
-	dbref i, j;
-	dbref thing;
-	struct match_data md;
-	struct flgchkdat check;
-	int total = 0;
-	int output_type = init_checkflags(player, flags, &check);
-
-	if (*name == '\0') {
-		thing = getloc(player);
-	} else {
-		init_match(player, name, &md);
-		match_neighbor(&md);
-		match_possession(&md);
-		if (Wizard(OWNER(player))) {
-			match_absolute(&md);
-			match_player(&md);
-		}
-		match_here(&md);
-		match_me(&md);
-
-		thing = noisy_match_result(&md);
-	}
-	if (thing == NOTHING) {
-		notify(player, "I don't know what object you mean.");
-		return;
-	}
-	if (!controls(OWNER(player), thing)) {
-		notify(player, "Permission denied. (You can't list entrances of objects you don't control)");
-		return;
-	}
-	init_checkflags(player, flags, &check);
-	for (i = 0; i < db_top; i++) {
-		if (checkflags(i, check)) {
-			switch (Typeof(i)) {
-			case TYPE_EXIT:
-				for (j = DBFETCH(i)->sp.exit.ndest; j--;) {
-					if (DBFETCH(i)->sp.exit.dest[j] == thing) {
-						display_objinfo(player, i, output_type);
-						total++;
-					}
-				}
-				break;
-			case TYPE_PLAYER:
-				if (PLAYER_HOME(i) == thing) {
-					display_objinfo(player, i, output_type);
-					total++;
-				}
-				break;
-			case TYPE_THING:
-				if (THING_HOME(i) == thing) {
-					display_objinfo(player, i, output_type);
-					total++;
-				}
-				break;
-			case TYPE_ROOM:
-				if (DBFETCH(i)->sp.room.dropto == thing) {
-					display_objinfo(player, i, output_type);
-					total++;
-				}
-				break;
-			case TYPE_GARBAGE:
-				break;
-			}
-		}
-	}
-	notify(player, "***End of List***");
-	notifyf(player, "%d objects found.", total);
-}
-
-void
 do_contents(command_t *cmd)
 {
 	dbref player = cmd->player;
@@ -1065,28 +895,27 @@ do_contents(command_t *cmd)
 	const char *flags = cmd->argv[2];
 	dbref i;
 	dbref thing;
-	struct match_data md;
 	struct flgchkdat check;
 	int total = 0;
 	int output_type = init_checkflags(player, flags, &check);
 
 	if (*name == '\0') {
 		thing = getloc(player);
-	} else {
-		init_match(player, name, &md);
-		match_me(&md);
-		match_here(&md);
-		match_neighbor(&md);
-		match_possession(&md);
-		if (Wizard(OWNER(player))) {
-			match_absolute(&md);
-			match_player(&md);
-		}
-
-		thing = noisy_match_result(&md);
-	}
-	if (thing == NOTHING)
+	} else if (
+			(
+			 (thing = ematch_absolute(name)) == NOTHING
+			 && (thing = ematch_me(player, name)) == NOTHING
+			 && (thing = ematch_here(player, name)) == NOTHING
+			 && (thing = ematch_near(player, name)) == NOTHING
+			 && (thing = ematch_mine(player, name)) == NOTHING
+			 && (thing = ematch_player(player, name)) == NOTHING
+			) || thing == AMBIGUOUS
+		  )
+	{
+		notify(player, "I don't known what you mean.");
 		return;
+	}
+
 	if (!controls(OWNER(player), thing)) {
 		notify(player, "Permission denied. (You can't get the contents of something you don't control)");
 		return;
@@ -1126,25 +955,23 @@ do_sweep(command_t *cmd)
 	const char *name = cmd->argv[1];
 	dbref thing, ref, loc;
 	int flag;
-	struct match_data md;
 	char buf[BUFFER_LEN];
 
 	if (*name == '\0') {
 		thing = getloc(player);
-	} else {
-		init_match(player, name, &md);
-		match_me(&md);
-		match_here(&md);
-		match_neighbor(&md);
-		match_possession(&md);
-		if (Wizard(OWNER(player))) {
-			match_absolute(&md);
-			match_player(&md);
-		}
-		thing = noisy_match_result(&md);
-	}
-	if (thing == NOTHING) {
-		notify(player, "I don't know what object you mean.");
+	} else if (
+			(
+			 (thing = ematch_absolute(name)) == NOTHING
+			 && (thing = ematch_me(player, name)) == NOTHING
+			 && (thing = ematch_here(player, name)) == NOTHING
+			 && (thing = ematch_near(player, name)) == NOTHING
+			 && (thing = ematch_mine(player, name)) == NOTHING
+			 && (thing = ematch_absolute(name)) == NOTHING
+			 && (thing = ematch_player(name)) == NOTHING
+			) || thing == AMBIGUOUS
+		  )
+	{
+		notify(player, "I don't know what you mean.");
 		return;
 	}
 

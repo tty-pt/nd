@@ -225,7 +225,7 @@ object_drop(dbref where, struct drop **drop)
 dbref
 e_exit_where(dbref player, dbref loc, enum exit e)
 {
-	return match_exit_where(player, loc, e_name(e));
+	return ematch_exit_at(player, loc, e_name(e));
 }
 
 int

@@ -36,43 +36,6 @@ do_say(command_t *cmd)
 }
 
 void
-do_whisper(command_t *cmd)
-{
-	dbref player = cmd->player;
-	const char *arg1 = cmd->argv[1];
-	const char *arg2 = cmd->argv[2];
-	dbref who;
-	char buf[BUFFER_LEN];
-	struct match_data md;
-
-	init_match(player, arg1, &md);
-	match_neighbor(&md);
-	match_me(&md);
-	if (Wizard(player) && Typeof(player) == TYPE_PLAYER) {
-		match_absolute(&md);
-		match_player(&md);
-	}
-	switch (who = match_result(&md)) {
-	case NOTHING:
-		notify(player, "Whisper to whom?");
-		break;
-	case AMBIGUOUS:
-		notify(player, "I don't know who you mean!");
-		break;
-	default:
-		snprintf(buf, sizeof(buf), "%s whispers, \"%s\"", NAME(player), arg2);
-		if (!notify(who, buf)) {
-			snprintf(buf, sizeof(buf), "%s is not connected.", NAME(who));
-			notify(player, buf);
-			break;
-		}
-		snprintf(buf, sizeof(buf), "You whisper, \"%s\" to %s.", arg2, NAME(who));
-		notify(player, buf);
-		break;
-	}
-}
-
-void
 do_pose(command_t *cmd)
 {
 	dbref player = cmd->player;

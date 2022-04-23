@@ -104,7 +104,6 @@ do_clone(command_t *cmd)
 	static char buf[BUFFER_LEN];
 	dbref  thing, clonedthing;
 	int    cost;
-	struct match_data md;
 
 	/* Perform sanity checks */
 
@@ -123,16 +122,15 @@ do_clone(command_t *cmd)
 	/* All OK so far, so try to find the thing that should be cloned. We
 	   do not allow rooms, exits, etc. to be cloned for now. */
 
-	init_match(player, name, &md);
-	match_possession(&md);
-	match_neighbor(&md);
-	match_absolute(&md);
-	
-	if ((thing = noisy_match_result(&md)) == NOTHING)
-		return;
-
-	if (thing == AMBIGUOUS) {
-		notify(player, "I don't know which one you mean!");
+	if (
+			(
+			 (thing = ematch_absolute(name)) == NOTHING
+			 && (thing = ematch_mine(player, name)) == NOTHING
+			 && (thing = ematch_near(player, name)) == NOTHING
+			) || thing == AMBIGUOUS
+	   )
+	{
+		notify(player, "I don't know what you mean.");
 		return;
 	}
 
