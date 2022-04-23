@@ -211,13 +211,12 @@ parse_boolexp_F(dbref player, const char **parsebuf, int dbloadp)
 
 		/* do the match */
 		if (!dbloadp) {
-			init_match(player, buf, TYPE_THING, &md);
+			init_match(player, buf, &md);
 			match_neighbor(&md);
 			match_possession(&md);
 			match_me(&md);
 			match_here(&md);
 			match_absolute(&md);
-			match_registered(&md);
 			match_player(&md);
 			b->thing = match_result(&md);
 

@@ -46,7 +46,6 @@ void do_pose(command_t *);
 void do_score(command_t *);
 void do_view(command_t *);
 void do_meme(command_t *);
-void init_match_remote(dbref player, dbref what, const char *name, int type, struct match_data *md);
 void send_contents(dbref player, dbref dest);
 void do_doing(command_t *cmd);
 
@@ -123,9 +122,7 @@ int do_stand_silent(dbref player);
 extern void moveto(dbref what, dbref where);
 extern void enter_room(dbref player, dbref loc, dbref exit);
 extern int parent_loop_check(dbref source, dbref dest);
-extern int can_move(dbref player, const char *direction, int lev);
-extern void go_move(dbref player, const char *dir, int lev);
-extern void do_move(command_t *);
+extern void go_move(dbref player, const char *dir);
 extern void do_get(command_t *);
 extern void do_drop(command_t *);
 extern void do_recycle(command_t *);
@@ -191,9 +188,7 @@ extern void set_flags_from_tunestr(dbref obj, const char* flags);
 /* From speech.c */
 #define ONOTIFYF(who, ...) notify_except_fmt(DBFETCH(getloc(who))->contents, who, __VA_ARGS__)
 extern void do_wall(command_t *cmd);
-extern void do_gripe(command_t *cmd);
 extern void do_say(command_t *cmd);
-extern void do_page(command_t *cmd);
 extern void notify_except(dbref first, dbref exception, const char *msg, dbref who);
 extern void notify_except_fmt(dbref first, dbref exception, char *format, ...);
 extern void notify_wts(dbref who, char const *a, char const *b, char *format, ...);

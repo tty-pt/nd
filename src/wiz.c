@@ -36,13 +36,12 @@ do_teleport(command_t *cmd) {
 		victim = player;
 		to = arg1;
 	} else {
-		init_match(cmd->player, arg1, NOTYPE, &md);
+		init_match(player, arg1, &md);
 		match_neighbor(&md);
 		match_possession(&md);
 		match_me(&md);
 		match_here(&md);
 		match_absolute(&md);
-		match_registered(&md);
 		match_player(&md);
 
 		if ((victim = noisy_match_result(&md)) == NOTHING) {
@@ -58,13 +57,12 @@ do_teleport(command_t *cmd) {
 #endif
 
 	/* get destination */
-	init_match(player, to, TYPE_PLAYER, &md);
+	init_match(player, to, &md);
 	match_possession(&md);
 	match_me(&md);
 	match_here(&md);
 	match_home(&md);
 	match_absolute(&md);
-	match_registered(&md);
 	if (Wizard(OWNER(player))) {
 		match_neighbor(&md);
 		match_player(&md);
@@ -255,7 +253,7 @@ do_unbless(command_t *cmd) {
 	}
 
 	/* get victim */
-	init_match(player, what, NOTYPE, &md);
+	init_match(player, what, &md);
 	match_everything(&md);
 	if ((victim = noisy_match_result(&md)) == NOTHING) {
 		return;
@@ -293,7 +291,7 @@ do_bless(command_t *cmd) {
 	}
 
 	/* get victim */
-	init_match(player, what, NOTYPE, &md);
+	init_match(player, what, &md);
 	match_everything(&md);
 	if ((victim = noisy_match_result(&md)) == NOTHING) {
 		return;

@@ -336,8 +336,42 @@ do_bio(command_t *cmd) {
 
 static void
 e_move(dbref player, enum exit e) {
+	struct match_data md;
 	const char dirs[] = { e_dir(e), '\0' };
-	go_move(player, dirs, 0);
+	dbref exit = match_exit_where(player, getloc(player), dirs);;
+
+	switch (exit) {
+	case NOTHING:
+		notify(player, "You can't go that way.");
+		break;
+	default:
+		CBUG(exit == AMBIGUOUS);
+		CBUG(!e_exit_is(exit));
+
+		/* we got one */
+		/* check to see if we got through */
+		if (!can_doit(player, exit, "You can't go that way."))
+			break;
+
+		{
+			dbref dest;
+			union specific sp;
+			sp = DBFETCH(exit)->sp;
+
+			if (sp.exit.ndest && sp.exit.dest[0] != NOTHING)
+				dest = sp.exit.dest[0];
+			else
+				dest = geo_there(getloc(exit), exit_e(exit));
+
+			if (dest > 0)
+				enter_room(player, dest, exit);
+			else {
+				dest = geo_room(player, exit);
+				enter_room(player, dest, exit);
+			}
+		}
+		break;
+	}
 }
 
 // exclusively called by trigger() and carve, in vertical situations

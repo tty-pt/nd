@@ -664,11 +664,10 @@ db_read(FILE * f)
 	int i;
 	dbref grow, thisref;
 	struct object *o;
-	const char *special, *version;
+	const char *special;
 	char c;
 
 	/* Parse the header */
-	version = getstring_noalloc( f );
 	grow = getref(f);
 	db_grow( grow );
 

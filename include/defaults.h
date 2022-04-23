@@ -98,12 +98,6 @@
 /* Enable or diable the global 'HOME' command. */
 #define ALLOW_HOME 1
 
-/* With this defined to 1, exits that aren't on TYPE_THING objects will */
-/* always act as if they have at least a Priority Level of 1.  */
-/* Define this if you want to use this server with an old db, and don't want */
-/* to re-set the Levels of all the LOOK, DISCONNECT, and CONNECT actions. */
-#define COMPATIBLE_PRIORITIES 1
-
 /* Flags that new players will be created with. */
 #define PCREATE_FLAGS "C"
 

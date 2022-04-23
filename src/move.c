@@ -248,84 +248,6 @@ enter_room(dbref player, dbref loc, dbref exit)
 	look_around(player);
 }
 
-int
-can_move(dbref player, const char *direction, int lev)
-{
-	struct match_data md;
-
-#if ALLOW_HOME
-	if (!strcmp(direction, "home"))
-		return 1;
-#endif
-
-	/* otherwise match on exits */
-	init_match(player, direction, TYPE_EXIT, &md);
-	md.match_level = lev;
-	match_all_exits(&md);
-	return (last_match_result(&md) != NOTHING);
-}
-
-void
-trigger(dbref player, dbref exit)
-{
-	dbref dest;
-
-	CBUG(!e_exit_is(exit));
-	// quickfix for gexits
-	union specific sp
-		= DBFETCH(exit)->sp;
-
-	if (sp.exit.ndest && sp.exit.dest[0] != NOTHING)
-		dest = sp.exit.dest[0];
-	else
-		dest = geo_there(getloc(exit), exit_e(exit));
-
-	if (dest > 0) {
-		enter_room(player, dest, exit);
-	} else {
-		dest = geo_room(player, exit);
-		enter_room(player, dest, exit);
-	}
-}
-
-void
-go_move(dbref player, const char *direction, int lev)
-{
-	dbref loc;
-
-	struct match_data md;
-	dbref exit;
-
-	/* find the exit */
-	init_match_check_keys(player, direction, TYPE_EXIT, &md);
-	md.match_level = lev;
-	match_all_exits(&md);
-	switch (exit = match_result(&md)) {
-	case NOTHING:
-		notify(player, "You can't go that way.");
-		break;
-	case AMBIGUOUS:
-		notify(player, "I don't know which way you mean!");
-		break;
-	default:
-		/* we got one */
-		/* check to see if we got through */
-		loc = DBFETCH(player)->location;
-
-		if (!can_doit(player, exit, "You can't go that way."))
-			break;
-
-		trigger(player, exit);
-		break;
-	}
-}
-
-void
-do_move(command_t *cmd)
-{
-	go_move(cmd->player, cmd->argv[1], atoi(cmd->argv[2]));
-}
-
 void
 do_get(command_t *cmd)
 {
@@ -336,7 +258,7 @@ do_get(command_t *cmd)
 	int cando;
 	struct match_data md;
 
-	init_match_check_keys(player, what, TYPE_THING, &md);
+	init_match(player, what, &md);
 	match_neighbor(&md);
 	match_possession(&md);
         match_absolute(&md);
@@ -350,12 +272,9 @@ do_get(command_t *cmd)
                 }
 
 		if (obj && *obj) {
-			init_match_check_keys(player, obj, TYPE_THING, &md);
-			match_rmatch(cont, &md);
-                        match_absolute(&md);
-			if ((thing = noisy_match_result(&md)) == NOTHING) {
+			thing = ematch_from(player, cont, obj);
+			if (thing == NOTHING)
 				return;
-			}
 			if (Typeof(cont) == TYPE_PLAYER) {
 				notify(player, "You can't steal things from players.");
 				return;
@@ -419,7 +338,7 @@ do_drop(command_t *cmd)
 	if ((loc = getloc(player)) == NOTHING)
 		return;
 
-	init_match(player, name, NOTYPE, &md);
+	init_match(player, name, &md);
 	match_possession(&md);
         match_absolute(&md);
 	if ((thing = noisy_match_result(&md)) == NOTHING || thing == AMBIGUOUS)
@@ -432,7 +351,7 @@ do_drop(command_t *cmd)
 
 	cont = loc;
 	if (obj && *obj) {
-		init_match(player, obj, NOTYPE, &md);
+		init_match(player, obj, &md);
 		match_possession(&md);
 		match_neighbor(&md);
 		/* if (Wizard(OWNER(player))) */
@@ -508,11 +427,9 @@ do_recycle(command_t *cmd)
 
 	NOGUEST("@recycle",player);
 
-	init_match(player, name, TYPE_THING, &md);
-	match_all_exits(&md);
+	init_match(player, name, &md);
 	match_neighbor(&md);
 	match_possession(&md);
-	match_registered(&md);
 	match_here(&md);
 	match_absolute(&md);
 	if ((thing = noisy_match_result(&md)) != NOTHING) {

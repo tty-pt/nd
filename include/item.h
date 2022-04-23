@@ -15,7 +15,6 @@ struct wts {
 
 extern struct wts phys_wts[];
 
-/* dbref contents_find(int descr, dbref player, dbref what, const char *name); */
 int equip_affect(dbref who, dbref eq);
 dbref unequip(dbref player, unsigned eql);
 int equip(dbref player, dbref eq);

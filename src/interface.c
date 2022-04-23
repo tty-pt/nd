@@ -93,14 +93,8 @@ core_command_t cmds[] = {
 		.cb = &do_httpget,
 		.flags = CF_NOAUTH | CF_NOARGS,
 	}, {
-		.name = "action",
-		.cb = &do_action,
-	}, {
 		.name = "advitam",
 		.cb = &do_advitam,
-	}, {
-		.name = "attach",
-		.cb = &do_attach,
 	}, {
 		.name = "bless",
 		.cb = &do_bless,
@@ -277,9 +271,6 @@ core_command_t cmds[] = {
 		.name = "give",
 		.cb = &do_give,
 	}, {
-		.name = "gripe",
-		.cb = &do_gripe,
-	}, {
 		.name = "help",
 		.cb = &do_help,
 	}, {
@@ -306,9 +297,6 @@ core_command_t cmds[] = {
 	}, {
 		.name = "news",
 		.cb = &do_news,
-	}, {
-		.name = "page",
-		.cb = &do_page,
 	}, {
 		.name = "pose",
 		.cb = &do_pose,
@@ -747,7 +735,6 @@ do_auth(command_t *cmd)
 	int fd = cmd->fd;
 	char *user = cmd->argv[1];
 	char *password = cmd->argv[2];
-	int created = 0;
 	dbref player = connect_player(user, password);
 	descr_t *d = &descr_map[fd];
 
@@ -761,7 +748,6 @@ do_auth(command_t *cmd)
 			return;
 		}
 
-		created = 1;
 		mob_put(player);
 	} else if (PLAYER_FD(player) > 0) {
                 descr_inband(fd, "That player is already connected.\r\n");
@@ -1006,7 +992,7 @@ shovechars()
 {
 	struct timeval timeout;
 	descr_t *d;
-	int avail_descriptors, i;
+	int i;
 
 	sockfd = make_socket(TINYPORT);
 
@@ -1016,8 +1002,6 @@ shovechars()
 	}
 
 	FD_SET(sockfd, &activefds);
-
-	avail_descriptors = sysconf(_SC_OPEN_MAX) - 5;
 
 	/* Daemonize */
 	if ((optflags & OPT_DETACH) && daemon(1, 1) != 0)

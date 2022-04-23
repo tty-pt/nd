@@ -166,10 +166,6 @@ object_add(struct object_skeleton o, dbref where);
 void
 object_drop(dbref where, struct drop **drop);
 
-dbref
-contents_find(dbref player, dbref where,
-		const char *name);
-
 dbref e_exit_here(dbref player, enum exit e);
 void pos_move(pos_t d, pos_t o, enum exit e);
 enum exit dir_e(const char dir);

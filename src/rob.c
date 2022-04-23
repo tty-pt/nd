@@ -23,7 +23,7 @@ do_rob(command_t *cmd)
 	char buf[BUFFER_LEN];
 	struct match_data md;
 
-	init_match(player, what, TYPE_PLAYER, &md);
+	init_match(player, what, &md);
 	match_neighbor(&md);
 	match_me(&md);
 	if (Wizard(OWNER(player))) {
@@ -82,7 +82,7 @@ do_give(command_t *cmd)
 		return;
 	}
 	/* check recipient */
-	init_match(player, recipient, TYPE_PLAYER, &md);
+	init_match(player, recipient, &md);
 	match_neighbor(&md);
 	match_me(&md);
 	if (Wizard(OWNER(player))) {

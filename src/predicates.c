@@ -104,7 +104,7 @@ can_link(dbref who, dbref what)
 int
 could_doit(dbref player, dbref thing)
 {
-	dbref source, dest, owner;
+	dbref source, dest;
 
 	if (Typeof(thing) == TYPE_EXIT) {
 		/* If exit is unlinked, can't do it.
@@ -116,7 +116,6 @@ could_doit(dbref player, dbref thing)
 				return 0;
 		}
 
-		owner = OWNER(thing);
 		source = DBFETCH(player)->location;
 		dest = *(DBFETCH(thing)->sp.exit.dest);
 

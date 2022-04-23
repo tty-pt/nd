@@ -141,11 +141,9 @@ do_look_at(command_t *cmd)
 		}
 	} else {
 		/* look at a thing here */
-		init_match(player, name, NOTYPE, &md);
-		match_all_exits(&md);
+		init_match(player, name, &md);
 		match_neighbor(&md);
 		match_possession(&md);
-		/* match_registered(&md); */
                 match_absolute(&md);
 		if (Wizard(OWNER(player))) {
 			match_player(&md);
@@ -320,13 +318,11 @@ do_examine(command_t *cmd)
 			return;
 	} else {
 		/* look it up */
-		init_match(player, name, NOTYPE, &md);
+		init_match(player, name, &md);
 
-		match_all_exits(&md);
 		match_neighbor(&md);
 		match_possession(&md);
 		match_absolute(&md);
-		match_registered(&md);
 
 		/* only Wizards can examine other players */
 		if (Wizard(OWNER(player)))
@@ -967,13 +963,12 @@ do_trace(command_t *cmd)
 	int i;
 	struct match_data md;
 
-	init_match(player, name, NOTYPE, &md);
+	init_match(player, name, &md);
 	match_absolute(&md);
 	match_here(&md);
 	match_me(&md);
 	match_neighbor(&md);
 	match_possession(&md);
-	match_registered(&md);
 	if ((thing = noisy_match_result(&md)) == NOTHING || thing == AMBIGUOUS)
 		return;
 
@@ -987,7 +982,7 @@ do_trace(command_t *cmd)
 	notify(player, "***End of List***");
 }
 
-void
+void // TODO REMOVE?
 do_entrances(command_t *cmd)
 {
 	dbref player = cmd->player;
@@ -1003,11 +998,9 @@ do_entrances(command_t *cmd)
 	if (*name == '\0') {
 		thing = getloc(player);
 	} else {
-		init_match(player, name, NOTYPE, &md);
-		match_all_exits(&md);
+		init_match(player, name, &md);
 		match_neighbor(&md);
 		match_possession(&md);
-		match_registered(&md);
 		if (Wizard(OWNER(player))) {
 			match_absolute(&md);
 			match_player(&md);
@@ -1080,13 +1073,11 @@ do_contents(command_t *cmd)
 	if (*name == '\0') {
 		thing = getloc(player);
 	} else {
-		init_match(player, name, NOTYPE, &md);
+		init_match(player, name, &md);
 		match_me(&md);
 		match_here(&md);
-		match_all_exits(&md);
 		match_neighbor(&md);
 		match_possession(&md);
-		match_registered(&md);
 		if (Wizard(OWNER(player))) {
 			match_absolute(&md);
 			match_player(&md);
@@ -1128,7 +1119,7 @@ do_contents(command_t *cmd)
 	notifyf(player, "%d objects found.", total);
 }
 
-void
+void // TODO REMOVE?
 do_sweep(command_t *cmd)
 {
 	dbref player = cmd->player;
@@ -1141,13 +1132,11 @@ do_sweep(command_t *cmd)
 	if (*name == '\0') {
 		thing = getloc(player);
 	} else {
-		init_match(player, name, NOTYPE, &md);
+		init_match(player, name, &md);
 		match_me(&md);
 		match_here(&md);
-		match_all_exits(&md);
 		match_neighbor(&md);
 		match_possession(&md);
-		match_registered(&md);
 		if (Wizard(OWNER(player))) {
 			match_absolute(&md);
 			match_player(&md);

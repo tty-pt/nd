@@ -123,10 +123,9 @@ do_clone(command_t *cmd)
 	/* All OK so far, so try to find the thing that should be cloned. We
 	   do not allow rooms, exits, etc. to be cloned for now. */
 
-	init_match(player, name, TYPE_THING, &md);
+	init_match(player, name, &md);
 	match_possession(&md);
 	match_neighbor(&md);
-	match_registered(&md);
 	match_absolute(&md);
 	
 	if ((thing = noisy_match_result(&md)) == NOTHING)

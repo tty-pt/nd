@@ -106,7 +106,7 @@ do_equip(command_t *cmd)
 {
 	dbref player = cmd->player;
 	char const *name = cmd->argv[1];
-	dbref eq = contents_find(player, player, name);
+	dbref eq = ematch_from(player, player, name);
 
 	if (eq < 0) {
 		notify(player, "You are not carrying that.");

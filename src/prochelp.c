@@ -282,9 +282,6 @@ print_sections(FILE * f, FILE * hf, int cols)
 	char buf[256];
 	char buf3[256];
 	char buf4[256];
-	int cnt;
-	int width;
-	int hcol;
 	char *currsect;
 
 	fprintf(f, "~\n");
@@ -297,11 +294,8 @@ print_sections(FILE * f, FILE * hf, int cols)
 	if (cols < 1) {
 		cols = 1;
 	}
-	width = 78 / cols;
 	for (sptr = secthead; sptr; sptr = sptr->next) {
 		currsect = sptr->section;
-		cnt = 0;
-		hcol = 0;
 		buf[0] = '\0';
 		strlcpy(sectname, currsect, sizeof(sectname));
 		sectptr = index(sectname, '|');

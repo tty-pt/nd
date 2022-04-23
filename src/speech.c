@@ -45,7 +45,7 @@ do_whisper(command_t *cmd)
 	char buf[BUFFER_LEN];
 	struct match_data md;
 
-	init_match(player, arg1, TYPE_PLAYER, &md);
+	init_match(player, arg1, &md);
 	match_neighbor(&md);
 	match_me(&md);
 	if (Wizard(player) && Typeof(player) == TYPE_PLAYER) {
@@ -107,34 +107,6 @@ do_wall(command_t *cmd)
 	} else {
 		notify(player, "But what do you want to do with the wall?");
 	}
-}
-
-void
-do_gripe(command_t *cmd)
-{
-	dbref player = cmd->player;
-	const char *message = cmd->argv[1];
-	dbref loc;
-	char buf[BUFFER_LEN];
-
-	if (!message || !*message) {
-		if (Wizard(player)) {
-			/* FIXME */
-			/* spit_file(player, LOG_GRIPE); */
-		} else {
-			notify(player, "If you wish to gripe, use 'gripe <message>'.");
-		}
-		return;
-	}
-
-	loc = DBFETCH(player)->location;
-	warn("GRIPE from %s(%d) in %s(%d): %s",
-			  NAME(player), player, NAME(loc), loc, message);
-
-	notify(player, "Your complaint has been duly noted.");
-
-	snprintf(buf, sizeof(buf), "## GRIPE from %s: %s", NAME(player), message);
-	wall_wizards(buf);
 }
 
 static int

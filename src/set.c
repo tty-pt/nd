@@ -26,7 +26,7 @@ match_controlled(dbref player, const char *name)
 	dbref match;
 	struct match_data md;
 
-	init_match(player, name, NOTYPE, &md);
+	init_match(player, name, &md);
 	match_absolute(&md);
 	match_everything(&md);
 
@@ -368,7 +368,7 @@ do_conlock(command_t *cmd)
 
 	NOGUEST("@conlock",player);
 
-	init_match(player, name, NOTYPE, &md);
+	init_match(player, name, &md);
 	match_absolute(&md);
 	match_everything(&md);
 
@@ -419,7 +419,7 @@ do_flock(command_t *cmd)
 
 	NOGUEST("@force_lock",player);
 
-	init_match(player, name, NOTYPE, &md);
+	init_match(player, name, &md);
 	match_absolute(&md);
 	match_everything(&md);
 
@@ -469,7 +469,7 @@ do_chlock(command_t *cmd) {
 
 	NOGUEST("@chown_lock",player);
 
-	init_match(player, name, NOTYPE, &md);
+	init_match(player, name, &md);
 	match_absolute(&md);
 	match_everything(&md);
 
@@ -519,7 +519,7 @@ do_lock(command_t *cmd)
 
 	NOGUEST("@lock",player);
 
-	init_match(player, name, NOTYPE, &md);
+	init_match(player, name, &md);
 	match_absolute(&md);
 	match_everything(&md);
 
@@ -634,7 +634,7 @@ do_chown(command_t *cmd)
 		notify(player, "You must specify what you want to take ownership of.");
 		return;
 	}
-	init_match(player, name, NOTYPE, &md);
+	init_match(player, name, &md);
 	match_everything(&md);
 	match_absolute(&md);
 	if ((thing = noisy_match_result(&md)) == NOTHING)
@@ -939,7 +939,7 @@ do_propset(command_t *cmd)
 		mydat.data.fval = strtod(value, NULL);
 		set_property(thing, pname, &mydat);
 	} else if (string_prefix("dbref", type)) {
-		init_match(player, value, NOTYPE, &md);
+		init_match(player, value, &md);
 		match_absolute(&md);
 		match_everything(&md);
 		if ((ref = noisy_match_result(&md)) == NOTHING)

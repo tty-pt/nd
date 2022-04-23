@@ -66,7 +66,7 @@ do_buy(command_t *cmd)
 		return;
 	}
 
-	dbref item = contents_find(player, npc, name);
+	dbref item = ematch_from(player, npc, name);
 
 	if (item == NOTHING) {
 		notifyf(player, "%s does not sell %s.", NAME(npc), name);
@@ -106,7 +106,7 @@ do_sell(command_t *cmd)
 		return;
 	}
 
-	dbref item = contents_find(player, player, name);
+	dbref item = ematch_from(player, player, name);
 
         if (item == NOTHING) {
 		notify(player, "You don't have that item.");

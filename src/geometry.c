@@ -223,26 +223,9 @@ object_drop(dbref where, struct drop **drop)
 }
 
 dbref
-contents_find(dbref player, dbref where, const char *name)
-{
-	struct match_data md;
-	init_match_remote(player, where, name, TYPE_THING, &md);
-	match_possession(&md);
-        match_absolute(&md);
-        if (md.exact_match == NOTHING)
-                return NOTHING;
-        if (getloc(md.exact_match) != where)
-                return NOTHING;
-	return md.exact_match;
-}
-
-dbref
 e_exit_where(dbref player, dbref loc, enum exit e)
 {
-	struct match_data md;
-	init_match_remote(player, loc, e_name(e), TYPE_EXIT, &md),
-	match_room_exits(loc, &md);
-	return match_result(&md);
+	return match_exit_where(player, loc, e_name(e));
 }
 
 int
