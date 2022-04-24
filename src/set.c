@@ -352,7 +352,7 @@ do_conlock(command_t *cmd)
 	if (!*keyname) {
 		mydat.flags = PROP_LOKTYP;
 		mydat.data.lok = TRUE_BOOLEXP;
-		set_property(thing, "_/clk", &mydat);
+		set_property_nofetch(thing, "_/clk", &mydat);
 		notify(player, "Container lock cleared.");
 	} else {
 		key = parse_boolexp(player, keyname, 0);
@@ -362,7 +362,7 @@ do_conlock(command_t *cmd)
 			/* everything ok, do it */
 			mydat.flags = PROP_LOKTYP;
 			mydat.data.lok = key;
-			set_property(thing, "_/clk", &mydat);
+			set_property_nofetch(thing, "_/clk", &mydat);
 			notify(player, "Container lock set.");
 		}
 	}
@@ -390,7 +390,7 @@ do_chlock(command_t *cmd) {
 	if (!*keyname) {
 		mydat.flags = PROP_LOKTYP;
 		mydat.data.lok = TRUE_BOOLEXP;
-		set_property(thing, "_/chlk", &mydat);
+		set_property_nofetch(thing, "_/chlk", &mydat);
 		notify(player, "Chown lock cleared.");
 		return;
 	}
@@ -402,7 +402,7 @@ do_chlock(command_t *cmd) {
 		/* everything ok, do it */
 		mydat.flags = PROP_LOKTYP;
 		mydat.data.lok = key;
-		set_property(thing, "_/chlk", &mydat);
+		set_property_nofetch(thing, "_/chlk", &mydat);
 		notify(player, "Chown lock set.");
 	}
 }
@@ -814,7 +814,7 @@ do_propset(command_t *cmd)
 		}
 		mydat.flags = PROP_FLTTYP;
 		mydat.data.fval = strtod(value, NULL);
-		set_property(thing, pname, &mydat);
+		set_property_nofetch(thing, pname, &mydat);
 	} else if (string_prefix("dbref", type)) {
 		ref = ematch_all(player, value);
 		if (ref == NOTHING) {
@@ -824,7 +824,7 @@ do_propset(command_t *cmd)
 
 		mydat.flags = PROP_REFTYP;
 		mydat.data.ref = ref;
-		set_property(thing, pname, &mydat);
+		set_property_nofetch(thing, pname, &mydat);
 	} else if (string_prefix("lock", type)) {
 		lok = parse_boolexp(player, value, 0);
 		if (lok == TRUE_BOOLEXP) {
@@ -833,7 +833,7 @@ do_propset(command_t *cmd)
 		}
 		mydat.flags = PROP_LOKTYP;
 		mydat.data.lok = lok;
-		set_property(thing, pname, &mydat);
+		set_property_nofetch(thing, pname, &mydat);
 	} else if (string_prefix("erase", type)) {
 		if (*value) {
 			notify(player, "Don't give a value when erasing a property.");

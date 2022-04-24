@@ -1567,7 +1567,7 @@ Added the following MCP primitives to support MCP:
 
 2.2fb6.00a20
 Changed the packaging scripts to preserve modification dates on source files.
-Changed all calls to set_property() to be 64 bit clean.
+Changed all calls to set_property_nofetch() to be 64 bit clean.
 Fixed a bug in the debugger's "prim" command.
 Fixed an error that excluded topwords.c from the release packages.
 Fixed a crasher bug with 63 & 64 character filenames in the data/info dir.

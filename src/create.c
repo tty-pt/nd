@@ -51,7 +51,7 @@ copy_one_prop(dbref player, dbref source, dbref destination, char *propname, int
 		}
 
 		/* now hook the new property into the destination object. */
-		set_property(destination, propname + ignore, &newprop);
+		set_property_nofetch(destination, propname + ignore, &newprop);
 	}
 	
 	return;
@@ -286,6 +286,6 @@ do_create(command_t *cmd)
 		snprintf(buf, sizeof(buf), "_reg/%s", rname);
 		mydat.flags = PROP_REFTYP;
 		mydat.data.ref = thing;
-		set_property(player, buf, &mydat);
+		set_property_nofetch(player, buf, &mydat);
 	}
 }

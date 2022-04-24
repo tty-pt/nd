@@ -107,12 +107,6 @@ set_property_nofetch(dbref player, const char *pname, PData * dat)
 
 
 void
-set_property(dbref player, const char *name, PData * dat)
-{
-	set_property_nofetch(player, name, dat);
-}
-
-void
 set_property_value(dbref obj, const char *propstr, int val)
 {
 	PData mydat;
@@ -179,7 +173,7 @@ set_lock_property(dbref player, const char *pname, const char *lok)
 	} else {
 		mydat.data.lok = parse_boolexp(1, lok, 1);
 	}
-	set_property(player, pname, &mydat);
+	set_property_nofetch(player, pname, &mydat);
 }
 
 
