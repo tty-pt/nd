@@ -257,7 +257,6 @@ void
 do_talk(command_t *cmd) {
         const char buf[BUFSIZ];
         dbref player = cmd->player;
-        dbref loc = getloc(player);
         const char *npcs = cmd->argv[1];
         dbref npc = *npcs ? ematch_near(player, npcs) : NOTHING;
 

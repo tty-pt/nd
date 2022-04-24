@@ -346,8 +346,6 @@ do_conlock(command_t *cmd)
 	struct boolexp *key;
 	PData mydat;
 
-	NOGUEST("@conlock",player);
-
 	if (
 			(
 			 (thing = ematch_absolute(name)) == NOTHING
@@ -391,8 +389,6 @@ do_chlock(command_t *cmd) {
 	dbref thing;
 	struct boolexp *key;
 	PData mydat;
-
-	NOGUEST("@chown_lock",player);
 
 	if (
 			(
@@ -438,8 +434,6 @@ do_lock(command_t *cmd)
 	const char *keyname = cmd->argv[2];
 	dbref thing;
 	struct boolexp *key;
-
-	NOGUEST("@lock",player);
 
 	if (
 			(

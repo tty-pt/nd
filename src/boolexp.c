@@ -161,7 +161,6 @@ parse_boolexp_F(dbref player, const char **parsebuf, int dbloadp)
 	struct boolexp *b;
 	char *p;
 	char buf[BUFFER_LEN];
-	char msg[BUFFER_LEN];
 
 	skip_whitespace(parsebuf);
 	switch (**parsebuf) {

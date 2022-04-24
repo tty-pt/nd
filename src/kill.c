@@ -342,7 +342,6 @@ do_heal(command_t *cmd)
 {
 	dbref player = cmd->player;
 	const char *name = cmd->argv[1];
-	dbref here = getloc(player);
 	dbref target;
 	struct mob *tar;
 
@@ -373,7 +372,6 @@ do_advitam(command_t *cmd)
 {
 	dbref player = cmd->player;
 	const char *name = cmd->argv[1];
-	dbref here = getloc(player);
 	dbref target = ematch_near(player, name);
 
 	if (!(FLAGS(player) & WIZARD)
