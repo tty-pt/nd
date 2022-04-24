@@ -139,7 +139,6 @@ extern PropPtr new_prop(PropPtr * l, char *path);
 extern PropPtr delete_prop(PropPtr * list, char *name);
 
 
-extern void set_property(dbref player, const char *pname, PData * dat);
 void set_property_value(dbref obj, const char *propstr, int val);
 void set_property_hash(dbref obj, const char *propstr, int idx, int val);
 void set_property_mark(dbref obj, const char *propstr, char mark, char *value);
