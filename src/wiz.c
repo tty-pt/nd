@@ -36,7 +36,7 @@ do_teleport(command_t *cmd) {
 		to = arg1;
 	} else if (
 			(
-			 (victim = ematch_absolute(player, arg1)) == NOTHING
+			 (victim = ematch_absolute(arg1)) == NOTHING
 			 && (victim = ematch_me(player, arg1)) == NOTHING
 			 && (victim = ematch_here(player, arg1)) == NOTHING
 			 && (victim = ematch_near(player, arg1)) == NOTHING

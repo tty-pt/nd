@@ -96,30 +96,29 @@ match_absolute(struct match_data *md)
 	}
 }
 
-static void
-match_list(dbref first, struct match_data *md)
+static dbref
+ematch_list(dbref player, dbref first, const char *name)
 {
 	dbref absolute;
-	struct mob *mob = MOB(md->match_who);
+	struct mob *mob = MOB(player);
 	unsigned nth = mob->select;
 	mob->select = 0;
 
-	absolute = ematch_absolute(md->match_name);
-	if (!controls(OWNER(md->match_from), absolute))
+	absolute = ematch_absolute(name);
+	if (!controls(OWNER(player), absolute))
 		absolute = NOTHING;
 
 	DOLIST(first, first) {
 		if (first == absolute) {
-			md->exact_match = first;
-			return;
-		} else if (string_match(NAME(first), md->match_name)) {
-			if (md->exact_match <= 0 && nth <= 0)
-				md->exact_match = first;
+			return first;
+		} else if (string_match(NAME(first), name)) {
+			if (nth <= 0)
+				return first;
 			nth--;
-			md->last_match = first;
-			(md->match_count)++;
 		}
 	}
+
+	return NOTHING;
 }
 
 /*
@@ -194,13 +193,11 @@ ematch_exit_at(dbref player, dbref loc, const char *name)
 dbref
 ematch_at(dbref player, dbref where, const char *name) {
 	dbref what;
-	struct match_data md;
+
 	what = ematch_absolute(name);
+
 	if (what != NOTHING && getloc(what) == where)
 		return what;
-	init_match(player, name, &md);
-	md.match_from = where;
-	match_list(DBFETCH(where)->contents, &md);
-	what = md.exact_match;
-	return what;
+
+	return ematch_list(player, DBFETCH(where)->contents, name);
 }

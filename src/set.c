@@ -437,7 +437,7 @@ do_lock(command_t *cmd)
 
 	if (
 			(
-			 && (thing = ematch_absolute(name)) == NOTHING
+			 (thing = ematch_absolute(name)) == NOTHING
 			 && (thing = ematch_all(player, name)) == NOTHING
 			) || thing == AMBIGUOUS
 	   )
@@ -548,7 +548,7 @@ do_chown(command_t *cmd)
 	if (
 			(
 			 (thing = ematch_absolute(name)) == NOTHING
-			 (thing = ematch_all(player, name)) == NOTHING
+			 && (thing = ematch_all(player, name)) == NOTHING
 			) || thing == AMBIGUOUS
 	   )
 	{

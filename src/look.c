@@ -966,8 +966,7 @@ do_sweep(command_t *cmd)
 			 && (thing = ematch_here(player, name)) == NOTHING
 			 && (thing = ematch_near(player, name)) == NOTHING
 			 && (thing = ematch_mine(player, name)) == NOTHING
-			 && (thing = ematch_absolute(name)) == NOTHING
-			 && (thing = ematch_player(name)) == NOTHING
+			 && (thing = ematch_player(player, name)) == NOTHING
 			) || thing == AMBIGUOUS
 		  )
 	{
