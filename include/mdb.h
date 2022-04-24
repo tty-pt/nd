@@ -42,7 +42,6 @@ extern char match_cmdname[BUFFER_LEN];
 #define MESGPROP_CONLOCK	"_/clk"
 #define MESGPROP_CHLOCK		"_/chlk"
 #define MESGPROP_VALUE		"@/value"
-#define MESGPROP_GUEST		"@/isguest"
 
 #define GETMESG(x,y)   (get_property_class(x, y))
 #define GETDESC(x)	GETMESG(x, MESGPROP_DESC)
@@ -223,9 +222,6 @@ enum at { ARMOR_LIGHT, ARMOR_MEDIUM, ARMOR_HEAVY, };
 #define GETAVATAR(x)	GETMESG(x, MESGPROP_AVATAR)
 #define SETAVATAR(x, y)	SETMESG(x, MESGPROP_AVATAR, y)
 
-#define ISGUEST(x)	(get_property(x, MESGPROP_GUEST) != NULL)
-#define NOGUEST(_cmd,x) if(ISGUEST(x)) { char tmpstr[BUFFER_LEN]; warn("Guest %s(#%d) failed attempt to %s.\n",NAME(x),x,_cmd); snprintf(tmpstr, sizeof(tmpstr), "Guests are not allowed to %s.\r", _cmd); notify(x,tmpstr); return; }
-
 #define TYPE_ROOM           0x0
 #define TYPE_THING          0x1
 #define TYPE_EXIT           0x2
@@ -355,6 +351,9 @@ struct player_specific {
 union specific {				/* I've been railroaded! */
 	struct {					/* ROOM-specific fields */
 		dbref dropto;
+		/* unsigned flags; */
+		unsigned char exits;
+		unsigned char doors;
 	} room;
 	struct {					/* EXIT-specific fields */
 		int ndest;

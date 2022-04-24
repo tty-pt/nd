@@ -107,8 +107,6 @@ do_clone(command_t *cmd)
 
 	/* Perform sanity checks */
 
-	NOGUEST("@clone",player);
-
 	if (!Builder(player)) {
 		notify(player, "That command is restricted to authorized builders.");
 		return;
@@ -219,8 +217,6 @@ do_create(command_t *cmd)
 	static char buf[BUFFER_LEN];
 	char buf2[BUFFER_LEN];
 	char *rname, *qname;
-
-	NOGUEST("@create",player);
 
 	strlcpy(buf2, acost, sizeof(buf2));
 	for (rname = buf2; (*rname && (*rname != '=')); rname++) ;

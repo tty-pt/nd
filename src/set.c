@@ -53,8 +53,6 @@ do_name(command_t *cmd)
 	dbref thing;
 	char *password;
 
-	NOGUEST("@name",player);
-
 	if ((thing = match_controlled(player, name)) != NOTHING) {
 		/* check for bad name */
 		if (*newname == '\0') {
@@ -124,8 +122,6 @@ do_describe(command_t *cmd)
 	const char *description = cmd->argv[2];
 	dbref thing;
 
-	NOGUEST("@describe",player);
-
 	if ((thing = match_controlled(player, name)) != NOTHING) {
 		SETDESC(thing, description);
 		if(description && *description) {
@@ -143,8 +139,6 @@ do_idescribe(command_t *cmd)
 	const char *name = cmd->argv[1];
 	const char *description = cmd->argv[2];
 	dbref thing;
-
-	NOGUEST("@idescribe",player);
 
 	if ((thing = match_controlled(player, name)) != NOTHING) {
 		SETIDESC(thing, description);
@@ -164,8 +158,6 @@ do_doing(command_t *cmd)
 	const char *name = cmd->argv[1];
 	const char *mesg = cmd->argv[2];
 
-	NOGUEST("@doing", player);
-
 	if ((thing = match_controlled(player, name)) != NOTHING) {
 		SETDOING(thing, mesg);
 		if(mesg && *mesg) {
@@ -184,8 +176,6 @@ do_fail(command_t *cmd)
 	const char *message = cmd->argv[2];
 	dbref thing;
 
-	NOGUEST("@fail",player);
-
 	if ((thing = match_controlled(player, name)) != NOTHING) {
 		SETFAIL(thing, message);
 		if(message && *message) {
@@ -203,8 +193,6 @@ do_success(command_t *cmd)
 	const char *name = cmd->argv[1];
 	const char *message = cmd->argv[2];
 	dbref thing;
-
-	NOGUEST("@success",player);
 
 	if ((thing = match_controlled(player, name)) != NOTHING) {
 		SETSUCC(thing, message);
@@ -225,8 +213,6 @@ do_drop_message(command_t *cmd)
 	const char *message = cmd->argv[2];
 	dbref thing;
 
-	NOGUEST("@drop",player);
-
 	if ((thing = match_controlled(player, name)) != NOTHING) {
 		SETDROP(thing, message);
 		if(message && *message) {
@@ -244,8 +230,6 @@ do_osuccess(command_t *cmd)
 	const char *name = cmd->argv[1];
 	const char *message = cmd->argv[2];
 	dbref thing;
-
-	NOGUEST("@osuccess",player);
 
 	if ((thing = match_controlled(player, name)) != NOTHING) {
 		SETOSUCC(thing, message);
@@ -265,8 +249,6 @@ do_ofail(command_t *cmd)
 	const char *message = cmd->argv[2];
 	dbref thing;
 
-	NOGUEST("@ofail",player);
-
 	if ((thing = match_controlled(player, name)) != NOTHING) {
 		SETOFAIL(thing, message);
 		if(message && *message) {
@@ -284,8 +266,6 @@ do_odrop(command_t *cmd)
 	const char *name = cmd->argv[1];
 	const char *message = cmd->argv[2];
 	dbref thing;
-
-	NOGUEST("@odrop",player);
 
 	if ((thing = match_controlled(player, name)) != NOTHING) {
 		SETODROP(thing, message);
@@ -305,8 +285,6 @@ do_oecho(command_t *cmd)
 	const char *message = cmd->argv[2];
 	dbref thing;
 
-	NOGUEST("@oecho",player);
-
 	if ((thing = match_controlled(player, name)) != NOTHING) {
 		SETOECHO(thing, message);
 		if(message && *message) {
@@ -324,8 +302,6 @@ do_pecho(command_t *cmd)
 	const char *name = cmd->argv[1];
 	const char *message = cmd->argv[2];
 	dbref thing;
-
-	NOGUEST("@pecho",player);
 
 	if ((thing = match_controlled(player, name)) != NOTHING) {
 		SETPECHO(thing, message);
@@ -512,8 +488,6 @@ do_unlock(command_t *cmd)
 	const char *name = cmd->argv[1];
 	dbref thing;
 
-	NOGUEST("@unlock",player);
-
 	if ((thing = match_controlled(player, name)) != NOTHING) {
 		CLEARLOCK(thing);
 		notify(player, "Unlocked.");
@@ -678,8 +652,6 @@ do_set(command_t *cmd)
 	const char *p;
 	object_flag_type f;
 
-	NOGUEST("@set",player);
-
 	/* find thing */
 	if ((thing = match_controlled(player, name)) == NOTHING)
 		return;
@@ -821,8 +793,6 @@ do_propset(command_t *cmd)
 	char *type, *pname, *value;
 	struct boolexp *lok;
 	PData mydat;
-
-	NOGUEST("@propset",player);
 
 	/* find thing */
 	if ((thing = match_controlled(player, name)) == NOTHING)

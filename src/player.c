@@ -127,7 +127,6 @@ do_password(command_t *cmd)
 	dbref player = cmd->player;
 	const char *old = cmd->argv[1];
 	const char *newobj = cmd->argv[2];
-	NOGUEST("@password",player);
 
 	if (!PLAYER_PASSWORD(player) || !check_password(player, old)) {
 		notify(player, "Sorry, old password did not match current password.");

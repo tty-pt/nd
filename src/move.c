@@ -422,8 +422,6 @@ do_recycle(command_t *cmd)
 	dbref thing;
 	char buf[BUFFER_LEN];
 
-	NOGUEST("@recycle",player);
-
 	if (
 			((thing = ematch_absolute(name)) == NOTHING
 			 && (thing = ematch_near(player, name)) == NOTHING
