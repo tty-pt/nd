@@ -141,8 +141,6 @@ unparse_object(dbref player, dbref loc)
 	switch (loc) {
 	case NOTHING:
 		return "*NOTHING*";
-	case AMBIGUOUS:
-		return "*AMBIGUOUS*";
 	case HOME:
 		return "*HOME*";
 	default:

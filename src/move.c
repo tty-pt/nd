@@ -258,12 +258,11 @@ do_get(command_t *cmd)
 	int cando;
 
 	if (
-			((thing = ematch_near(player, what)) == NOTHING
-			 && (thing = ematch_mine(player, what)) == NOTHING)
-			|| thing == AMBIGUOUS
+			(thing = ematch_near(player, what)) == NOTHING
+			&& (thing = ematch_mine(player, what)) == NOTHING
 	   )
 	{
-		notify(player, "I don't know what you mean.");
+		notify(player, NOMATCH_MESSAGE);
 		return;
 	}
 
@@ -341,10 +340,9 @@ do_drop(command_t *cmd)
 
 	if (
 			(thing = ematch_mine(player, name)) == NOTHING
-			|| thing == AMBIGUOUS
 	   )
 	{
-		notify(player, "I don't know what you mean.");
+		notify(player, NOMATCH_MESSAGE);
 		return;
 	}
 
@@ -423,13 +421,12 @@ do_recycle(command_t *cmd)
 	char buf[BUFFER_LEN];
 
 	if (
-			((thing = ematch_absolute(name)) == NOTHING
-			 && (thing = ematch_near(player, name)) == NOTHING
-			 && (thing = ematch_mine(player, name)) == NOTHING)
-			|| thing == AMBIGUOUS
+			(thing = ematch_absolute(name)) == NOTHING
+			&& (thing = ematch_near(player, name)) == NOTHING
+			&& (thing = ematch_mine(player, name)) == NOTHING
 	   )
 	{
-		notify(player, "I don't know what you mean.");
+		notify(player, NOMATCH_MESSAGE);
 		return;
 	}
 

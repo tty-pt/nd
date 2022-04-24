@@ -7,18 +7,12 @@
 #include "command.h"
 #include "mdb.h"
 
+#define NOMATCH_MESSAGE "I don't know what you mean."
+
 extern dbref ematch_at(dbref player, dbref where, const char *name);
 extern dbref ematch_player(dbref player, const char *name);
 extern dbref ematch_absolute(const char *name);
-
-inline dbref
-ematch_wabsolute(dbref player, const char *name)
-{
-	if (Wizard(OWNER(player)))
-		return ematch_absolute(name);
-	else
-		return NOTHING;
-}
+extern dbref ematch_exit_at(dbref player, dbref loc, const char *name);
 
 inline dbref
 ematch_me(dbref player, const char *str)
@@ -59,9 +53,10 @@ ematch_near(dbref player, const char *str)
 	return ematch_at(player, getloc(player), str);
 }
 
-extern dbref ematch_exit_at(dbref player, dbref loc, const char *name);
-
-inline dbref
+/* all ematch minus ematch_home
+ * (not found by the linker if it is not static?)
+ */
+static inline dbref
 ematch_all(dbref player, const char *name)
 {
 	dbref res;
@@ -69,17 +64,15 @@ ematch_all(dbref player, const char *name)
 	if (
 			(res = ematch_me(player, name)) == NOTHING
 			&& (res = ematch_here(player, name)) == NOTHING
+			&& (res = ematch_absolute(name)) == NOTHING
 			&& (res = ematch_near(player, name)) == NOTHING
 			&& (res = ematch_mine(player, name)) == NOTHING
-			&& (res = ematch_wabsolute(player, name)) == NOTHING
+			&& (res = ematch_player(player, name)) == NOTHING
 	   )
 		return NOTHING;
 
 	else
 		return res;
 }
-
-#define NOMATCH_MESSAGE "I don't see that here."
-#define AMBIGUOUS_MESSAGE "I don't know which one you mean!"
 
 #endif /* _MATCH_H */

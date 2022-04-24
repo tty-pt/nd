@@ -136,16 +136,14 @@ do_look_at(command_t *cmd)
 			look_room(player, thing, 1);
 		}
 	} else if (
-			(
-			 (thing = ematch_absolute(name)) == NOTHING
-			 && (thing = ematch_here(player, name)) == NOTHING
-			 && (thing = ematch_me(player, name)) == NOTHING
-			 && (thing = ematch_near(player, name)) == NOTHING
-			 && (thing = ematch_mine(player, name)) == NOTHING
-			) || thing == AMBIGUOUS
+			(thing = ematch_absolute(name)) == NOTHING
+			&& (thing = ematch_here(player, name)) == NOTHING
+			&& (thing = ematch_me(player, name)) == NOTHING
+			&& (thing = ematch_near(player, name)) == NOTHING
+			&& (thing = ematch_mine(player, name)) == NOTHING
 		  )
 	{
-		notify(player, "I don't know what you mean.");
+		notify(player, NOMATCH_MESSAGE);
 		return;
 	}
 
@@ -255,18 +253,8 @@ do_examine(command_t *cmd)
 	if (*name == '\0') {
 		if ((thing = getloc(player)) == NOTHING)
 			return;
-	} else if (
-			(
-			 (thing = ematch_absolute(name)) == NOTHING
-			 && (thing = ematch_me(player, name)) == NOTHING
-			 && (thing = ematch_here(player, name)) == NOTHING
-			 && (thing = ematch_near(player, name)) == NOTHING
-			 && (thing = ematch_mine(player, name)) == NOTHING
-			 && (thing = ematch_player(player, name)) == NOTHING
-			) || thing == AMBIGUOUS
-		  )
-	{
-		notify(player, "I don't know what you mean.");
+	} else if ((thing = ematch_all(player, name)) == NOTHING) {
+		notify(player, NOMATCH_MESSAGE);
 		return;
 	}
 
@@ -901,18 +889,8 @@ do_contents(command_t *cmd)
 
 	if (*name == '\0') {
 		thing = getloc(player);
-	} else if (
-			(
-			 (thing = ematch_absolute(name)) == NOTHING
-			 && (thing = ematch_me(player, name)) == NOTHING
-			 && (thing = ematch_here(player, name)) == NOTHING
-			 && (thing = ematch_near(player, name)) == NOTHING
-			 && (thing = ematch_mine(player, name)) == NOTHING
-			 && (thing = ematch_player(player, name)) == NOTHING
-			) || thing == AMBIGUOUS
-		  )
-	{
-		notify(player, "I don't known what you mean.");
+	} else if ((thing = ematch_all(player, name)) == NOTHING) {
+		notify(player, NOMATCH_MESSAGE);
 		return;
 	}
 
@@ -959,18 +937,8 @@ do_sweep(command_t *cmd)
 
 	if (*name == '\0') {
 		thing = getloc(player);
-	} else if (
-			(
-			 (thing = ematch_absolute(name)) == NOTHING
-			 && (thing = ematch_me(player, name)) == NOTHING
-			 && (thing = ematch_here(player, name)) == NOTHING
-			 && (thing = ematch_near(player, name)) == NOTHING
-			 && (thing = ematch_mine(player, name)) == NOTHING
-			 && (thing = ematch_player(player, name)) == NOTHING
-			) || thing == AMBIGUOUS
-		  )
-	{
-		notify(player, "I don't know what you mean.");
+	} else if ((thing = ematch_all(player, name)) == NOTHING) {
+		notify(player, NOMATCH_MESSAGE);
 		return;
 	}
 

@@ -344,7 +344,6 @@ e_move(dbref player, enum exit e) {
 		notify(player, "You can't go that way.");
 		break;
 	default:
-		CBUG(exit == AMBIGUOUS);
 		CBUG(!e_exit_is(exit));
 
 		/* we got one */

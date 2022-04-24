@@ -34,19 +34,8 @@ do_teleport(command_t *cmd) {
 	if (*arg2 == '\0') {
 		victim = player;
 		to = arg1;
-	} else if (
-			(
-			 (victim = ematch_absolute(arg1)) == NOTHING
-			 && (victim = ematch_me(player, arg1)) == NOTHING
-			 && (victim = ematch_here(player, arg1)) == NOTHING
-			 && (victim = ematch_near(player, arg1)) == NOTHING
-			 && (victim = ematch_mine(player, arg1)) == NOTHING
-			 && (victim = ematch_player(player, arg1)) == NOTHING
-			) || victim == AMBIGUOUS
-			// match player
-		  )
-	{
-		notify(player, "I don't know what you mean.");
+	} else if ((victim = ematch_all(player, arg1)) == NOTHING) {
+		notify(player, NOMATCH_MESSAGE);
 		return;
 	} else
 		to = arg2;
@@ -59,18 +48,11 @@ do_teleport(command_t *cmd) {
 #endif
 
 	if (
-			(
-			 (destination = ematch_absolute(to)) == NOTHING
-			 && (destination = ematch_me(player, to)) == NOTHING
-			 && (destination = ematch_here(player, to)) == NOTHING
-			 && (destination = ematch_home(to)) == NOTHING
-			 && (destination = ematch_mine(player, to)) == NOTHING
-			 && (destination = ematch_near(player, to)) == NOTHING
-			 && (destination = ematch_player(player, to)) == NOTHING
-			) || destination == AMBIGUOUS
+			(destination = ematch_home(to)) == NOTHING
+			&& (destination = ematch_all(player, to)) == NOTHING
 	   )
 	{
-		notify(player, "I don't know what you mean.");
+		notify(player, NOMATCH_MESSAGE);
 		return;
 	}
 
@@ -257,12 +239,9 @@ do_unbless(command_t *cmd) {
 	}
 
 	/* get victim */
-	if (
-			(victim = ematch_all(player, what)) == NOTHING
-			|| victim == AMBIGUOUS
-	   )
-	{
-		notify(player, "I don't know what you mean.");
+	victim = ematch_all(player, what);
+	if (victim == NOTHING) {
+		notify(player, NOMATCH_MESSAGE);
 		return;
 	}
 
@@ -292,12 +271,9 @@ do_bless(command_t *cmd) {
 	}
 
 	/* get victim */
-	if (
-			(victim = ematch_all(player, what)) == NOTHING
-			|| victim == AMBIGUOUS
-	   )
-	{
-		notify(player, "I don't know what you mean.");
+	victim = ematch_all(player, what);
+	if (victim == NOTHING) {
+		notify(player, NOMATCH_MESSAGE);
 		return;
 	}
 

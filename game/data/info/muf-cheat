@@ -186,7 +186,7 @@ SYNTAX
         flag?                   ( d s -- i )    object, string -- boolean
 	mlevel                  ( d -- i )      object -- mucker level.
         match                   ( s -- d )      thing, dbref (#-1 = NOTHING,
-                                                #-2 = AMBIGUOUS, #-3 = HOME)
+                                                #-3 = HOME)
         rmatch                  ( d s -- d )    object, thing, dbref           
 	part_pmatch             ( s -- d )      partial name -- dbref
         copyobj                 ( d -- d' )     returns dbref of new object

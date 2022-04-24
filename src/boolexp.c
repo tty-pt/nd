@@ -209,19 +209,8 @@ parse_boolexp_F(dbref player, const char **parsebuf, int dbloadp)
 
 		/* do the match */
 		if (!dbloadp) {
-			if (
-					(
-					 (b->thing = ematch_absolute(buf)) == NOTHING
-					 && (b->thing = ematch_me(player, buf)) == NOTHING
-					 && (b->thing = ematch_here(player, buf)) == NOTHING
-					 && (b->thing = ematch_mine(player, buf)) == NOTHING
-					 && (b->thing = ematch_near(player, buf)) == NOTHING
-					 && (b->thing = ematch_near(player, buf)) == NOTHING
-					 && (b->thing = ematch_player(player, buf)) == NOTHING
-					) || b->thing == AMBIGUOUS
-			   )
-			{
-				notify(player, "I don't what you mean.");
+			if ((b->thing = ematch_all(player, buf)) == NOTHING) {
+				notify(player, NOMATCH_MESSAGE);
 				free_boolnode(b);
 				return TRUE_BOOLEXP;
 			} else {

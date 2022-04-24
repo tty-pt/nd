@@ -121,11 +121,9 @@ do_clone(command_t *cmd)
 	   do not allow rooms, exits, etc. to be cloned for now. */
 
 	if (
-			(
-			 (thing = ematch_absolute(name)) == NOTHING
-			 && (thing = ematch_mine(player, name)) == NOTHING
-			 && (thing = ematch_near(player, name)) == NOTHING
-			) || thing == AMBIGUOUS
+			(thing = ematch_absolute(name)) == NOTHING
+			&& (thing = ematch_mine(player, name)) == NOTHING
+			&& (thing = ematch_near(player, name)) == NOTHING
 	   )
 	{
 		notify(player, "I don't know what you mean.");

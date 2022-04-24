@@ -17,44 +17,6 @@
 #include "mob.h"
 #include "kill.h"
 
-struct match_data {
-	dbref exact_match;			/* holds result of exact match */
-	dbref last_match;			/* holds result of last match */
-	int match_count;			/* holds total number of inexact matches */
-	dbref match_who;			/* player used for me, here, and messages */
-	dbref match_from;			/* object which is being matched around */
-	const char *match_name;		/* name to match */
-	int longest_match;			/* longest matched string */
-};
-
-static void
-init_match(dbref player, const char *name, struct match_data *md)
-{
-	md->exact_match = md->last_match = NOTHING;
-	md->match_count = 0;
-	md->match_who = player;
-	md->match_from = player;
-	md->match_name = name;
-	md->longest_match = 0;
-}
-
-dbref
-match_result(struct match_data *md)
-{
-	if (md->exact_match != NOTHING) {
-		return (md->exact_match);
-	} else {
-		switch (md->match_count) {
-		case 0:
-			return NOTHING;
-		case 1:
-			return (md->last_match);
-		default:
-			return AMBIGUOUS;
-		}
-	}
-}
-
 dbref
 ematch_player(dbref player, const char *name)
 {
@@ -86,16 +48,6 @@ ematch_absolute(const char *name)
 		return NOTHING;
 }
 
-void
-match_absolute(struct match_data *md)
-{
-	dbref match;
-
-	if ((match = ematch_absolute(md->match_name)) != NOTHING) {
-		md->exact_match = match;
-	}
-}
-
 static dbref
 ematch_list(dbref player, dbref first, const char *name)
 {
@@ -121,33 +73,28 @@ ematch_list(dbref player, dbref first, const char *name)
 	return NOTHING;
 }
 
-/*
- * match_exits matches a list of exits, starting with 'first'.
- * It will match exits of players, rooms, or things.
- */
-static void
-match_exits(dbref first, struct match_data *md)
+static dbref
+ematch_exit(dbref player, dbref first, const char *name)
 {
 	dbref exit, absolute;
 	const char *exitname, *p;
 
 	if (first == NOTHING)
-		return;					/* Easy fail match */
-	if (getloc(md->match_from) == NOTHING)
-		return;
+		return NOTHING;
 
-	absolute = ematch_absolute(md->match_name);	/* parse #nnn entries */
-	if (!controls(OWNER(md->match_from), absolute))
+	CBUG(getloc(player) == NOTHING);
+
+	absolute = ematch_absolute(name);
+	if (!controls(OWNER(player), absolute))
 		absolute = NOTHING;
 
 	DOLIST(exit, first) {
-		if (exit == absolute) {
-			md->exact_match = exit;
-			continue;
-		}
+		if (exit == absolute)
+			return exit;
+
 		exitname = NAME(exit);
 		while (*exitname) {		/* for all exit aliases */
-			for (p = md->match_name;	/* check out 1 alias */
+			for (p = name;	/* check out 1 alias */
 				 *p &&
 				 tolower(*p) == tolower(*exitname) &&
 				 *exitname != EXIT_DELIMITER;
@@ -160,34 +107,24 @@ match_exits(dbref first, struct match_data *md)
 					exitname++;
 				CBUG(getloc(exit) == NOTHING);
 				CBUG(Typeof(getloc(exit)) != TYPE_ROOM);
-				if (*exitname == '\0' || *exitname == EXIT_DELIMITER) {
-					/* we got a match on this alias */
-					if (strlen(md->match_name) - strlen(p) > md->longest_match) {
-						md->exact_match = exit;
-						md->longest_match = strlen(md->match_name) - strlen(p);
-					}
-					goto next_exit;
-				}
+				if (*exitname == '\0' || *exitname == EXIT_DELIMITER)
+					return exit;
 			}
 			/* we didn't get it, go on to next alias */
 			while (*exitname && *exitname++ != EXIT_DELIMITER) ;
 			while (isspace(*exitname))
 				exitname++;
-		}						/* end of while alias string matches */
-	  next_exit:
-		;
+		}
 	}
+
+	return NOTHING;
 }
 
 dbref
 ematch_exit_at(dbref player, dbref loc, const char *name)
 {
-	struct match_data md;
 	CBUG(Typeof(loc) != TYPE_ROOM);
-	init_match(player, name, &md);
-	md.match_from = loc;
-	match_exits(DBFETCH(loc)->exits, &md);
-	return match_result(&md);
+	return ematch_exit(player, DBFETCH(loc)->exits, name);
 }
 
 dbref

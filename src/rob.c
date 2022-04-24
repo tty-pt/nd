@@ -28,13 +28,11 @@ do_give(command_t *cmd)
 	}
 
 	if (
-			(
-			 (who = ematch_me(player, recipient)) == NOTHING
-			 && (who = ematch_near(player, recipient)) == NOTHING
-			) || who == AMBIGUOUS
+			(who = ematch_me(player, recipient)) == NOTHING
+			&& (who = ematch_near(player, recipient)) == NOTHING
 	   )
 	{
-		notify(player, "I don't know what you mean.");
+		notify(player, NOMATCH_MESSAGE);
 		return;
 	}
 

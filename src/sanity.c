@@ -1061,6 +1061,3 @@ sanechange(dbref player, const char *command)
 		SanPrint(player, "## Old value was %s", buf2);
 	}
 }
-
-static const char *sanity_c_version = "$RCSfile$ $Revision: 1.18 $";
-const char *get_sanity_c_version(void) { return sanity_c_version; }

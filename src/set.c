@@ -23,16 +23,10 @@
 static dbref
 match_controlled(dbref player, const char *name)
 {
-	dbref match;
+	dbref match = ematch_all(player, name);
 
-	if (
-			(
-			 (match = ematch_absolute(name)) == NOTHING
-			 && (match = ematch_all(player, name)) == NOTHING
-			) || match == AMBIGUOUS
-	   )
-	{
-		notify(player, "I don't know what you mean.");
+	if (match == NOTHING) {
+		notify(player, NOMATCH_MESSAGE);
 		return NOTHING;
 	}
 
@@ -342,18 +336,12 @@ do_conlock(command_t *cmd)
 	dbref player = cmd->player;
 	const char *name = cmd->argv[1];
 	const char *keyname = cmd->argv[2];
-	dbref thing;
+	dbref thing = ematch_all(player, name);
 	struct boolexp *key;
 	PData mydat;
 
-	if (
-			(
-			 (thing = ematch_absolute(name)) == NOTHING
-			 && (thing = ematch_all(player, name)) == NOTHING
-			) || thing == AMBIGUOUS
-	   )
-	{
-		notify(player, "I don't know what you mean.");
+	if (thing == NOTHING) {
+		notify(player, NOMATCH_MESSAGE);
 		return;
 	}
 
@@ -386,18 +374,12 @@ do_chlock(command_t *cmd) {
 	dbref player = cmd->player;
 	const char *name = cmd->argv[1];
 	const char *keyname = cmd->argv[2];
-	dbref thing;
+	dbref thing = ematch_all(player, name);
 	struct boolexp *key;
 	PData mydat;
 
-	if (
-			(
-			 (thing = ematch_absolute(name)) == NOTHING
-			 && (thing = ematch_all(player, name)) == NOTHING
-			) || thing == AMBIGUOUS
-	   )
-	{
-		notify(player, "I don't know what you mean.");
+	if (thing == NOTHING) {
+		notify(player, NOMATCH_MESSAGE);
 		return;
 	}
 
@@ -432,17 +414,11 @@ do_lock(command_t *cmd)
 	dbref player = cmd->player;
 	const char *name = cmd->argv[1];
 	const char *keyname = cmd->argv[2];
-	dbref thing;
+	dbref thing = ematch_all(player, name);
 	struct boolexp *key;
 
-	if (
-			(
-			 (thing = ematch_absolute(name)) == NOTHING
-			 && (thing = ematch_all(player, name)) == NOTHING
-			) || thing == AMBIGUOUS
-	   )
-	{
-		notify(player, "I don't know what you mean.");
+	if (thing == NOTHING) {
+		notify(player, NOMATCH_MESSAGE);
 		return;
 	}
 
@@ -545,14 +521,9 @@ do_chown(command_t *cmd)
 		return;
 	}
 
-	if (
-			(
-			 (thing = ematch_absolute(name)) == NOTHING
-			 && (thing = ematch_all(player, name)) == NOTHING
-			) || thing == AMBIGUOUS
-	   )
-	{
-		notify(player, "I don't know what you mean.");
+	thing = ematch_all(player, name);
+	if (thing == NOTHING) {
+		notify(player, NOMATCH_MESSAGE);
 		return;
 	}
 
@@ -850,14 +821,9 @@ do_propset(command_t *cmd)
 		mydat.data.fval = strtod(value, NULL);
 		set_property(thing, pname, &mydat);
 	} else if (string_prefix("dbref", type)) {
-		if (
-				(
-				 (ref = ematch_absolute(value)) == NOTHING
-				 && (ref = ematch_all(player, value)) == NOTHING
-				) || ref == AMBIGUOUS
-		   )
-		{
-			notify(player, "I don't know what you mean.");
+		ref = ematch_all(player, value);
+		if (ref == NOTHING) {
+			notify(player, NOMATCH_MESSAGE);
 			return;
 		}
 
