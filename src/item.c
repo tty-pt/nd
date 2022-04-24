@@ -77,7 +77,7 @@ equip(dbref who, dbref eq)
 		return 1;
 
 	SETEQ(who, eql, eq);
-	DBFETCH(eq)->flags |= DARK;
+	db[eq].flags |= DARK;
 
 	notifyf(who, "You equip %s.", NAME(eq));
         if (Typeof(who) == TYPE_PLAYER) {
@@ -150,7 +150,7 @@ unequip(dbref who, unsigned eql)
 	}
 
 	SETEQ(who, eql, 0);
-	DBFETCH(eq)->flags &= ~DARK;
+	db[eq].flags &= ~DARK;
         if (Typeof(who) == TYPE_PLAYER) {
                 web_content_in(who, eq);
                 web_stats(who);

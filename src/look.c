@@ -56,8 +56,8 @@ look_contents(dbref player, dbref loc, const char *contents_name)
 	can_see_loc = (!Dark(loc) || controls(player, loc));
 
 	/* check to see if there is anything there */
-	if (DBFETCH(loc)->contents > 0) {
-                DOLIST(thing, DBFETCH(loc)->contents) {
+	if (db[loc].contents > 0) {
+                DOLIST(thing, db[loc].contents) {
                         if (can_see(player, thing, can_see_loc)) {
                                 buf_l += snprintf(&buf[buf_l], BUFSIZ - buf_l,
                                          "\n%s", unparse_object(player, thing));
@@ -229,8 +229,8 @@ size_object(dbref i, int load)
 	}
 	byts += size_properties(i, load);
 
-	if (Typeof(i) == TYPE_EXIT && DBFETCH(i)->sp.exit.dest) {
-		byts += sizeof(dbref) * DBFETCH(i)->sp.exit.ndest;
+	if (Typeof(i) == TYPE_EXIT && db[i].sp.exit.dest) {
+		byts += sizeof(dbref) * db[i].sp.exit.ndest;
 	} else if (Typeof(i) == TYPE_PLAYER && PLAYER_PASSWORD(i)) {
 		byts += strlen(PLAYER_PASSWORD(i)) + 1;
 	}
@@ -275,7 +275,7 @@ do_examine(command_t *cmd)
 				(int) (BUFFER_LEN - strlen(NAME(OWNER(thing))) - 35),
 				unparse_object(player, thing),
 				NAME(OWNER(thing)));
-		strlcat(buf, unparse_object(player, DBFETCH(thing)->location), sizeof(buf));
+		strlcat(buf, unparse_object(player, db[thing].location), sizeof(buf));
 		break;
 	case TYPE_THING:
 		snprintf(buf, sizeof(buf), "%.*s  Owner: %s  Value: %d",
@@ -368,21 +368,21 @@ do_examine(command_t *cmd)
 	notify(player, buf);
 
 	/* show him the contents */
-	if (DBFETCH(thing)->contents != NOTHING) {
+	if (db[thing].contents != NOTHING) {
 		if (Typeof(thing) == TYPE_PLAYER)
 			notify(player, "Carrying:");
 		else
 			notify(player, "Contents:");
-		DOLIST(content, DBFETCH(thing)->contents) {
+		DOLIST(content, db[thing].contents) {
 			notify(player, unparse_object(player, content));
 		}
 	}
 	switch (Typeof(thing)) {
 	case TYPE_ROOM:
 		/* tell him about exits */
-		if (DBFETCH(thing)->exits != NOTHING) {
+		if (db[thing].exits != NOTHING) {
 			notify(player, "Exits:");
-			DOLIST(exit, DBFETCH(thing)->exits) {
+			DOLIST(exit, db[thing].exits) {
 				notify(player, unparse_object(player, exit));
 			}
 		} else {
@@ -390,9 +390,9 @@ do_examine(command_t *cmd)
 		}
 
 		/* print dropto if present */
-		if (DBFETCH(thing)->sp.room.dropto != NOTHING) {
+		if (db[thing].sp.room.dropto != NOTHING) {
 			snprintf(buf, sizeof(buf), "Dropped objects go to: %s",
-					unparse_object(player, DBFETCH(thing)->sp.room.dropto));
+					unparse_object(player, db[thing].sp.room.dropto));
 			notify(player, buf);
 		}
 		break;
@@ -401,16 +401,16 @@ do_examine(command_t *cmd)
 		snprintf(buf, sizeof(buf), "Home: %s", unparse_object(player, THING_HOME(thing)));	/* home */
 		notify(player, buf);
 		/* print location if player can link to it */
-		if (DBFETCH(thing)->location != NOTHING && (controls(player, DBFETCH(thing)->location)
+		if (db[thing].location != NOTHING && (controls(player, db[thing].location)
 													|| can_link_to(player, NOTYPE,
-																   DBFETCH(thing)->location))) {
-			snprintf(buf, sizeof(buf), "Location: %s", unparse_object(player, DBFETCH(thing)->location));
+																   db[thing].location))) {
+			snprintf(buf, sizeof(buf), "Location: %s", unparse_object(player, db[thing].location));
 			notify(player, buf);
 		}
 		/* print thing's actions, if any */
-		if (DBFETCH(thing)->exits != NOTHING) {
+		if (db[thing].exits != NOTHING) {
 			notify(player, "Actions/exits:");
-			DOLIST(exit, DBFETCH(thing)->exits) {
+			DOLIST(exit, db[thing].exits) {
 				notify(player, unparse_object(player, exit));
 			}
 		} else {
@@ -424,16 +424,16 @@ do_examine(command_t *cmd)
 		notify(player, buf);
 
 		/* print location if player can link to it */
-		if (DBFETCH(thing)->location != NOTHING && (controls(player, DBFETCH(thing)->location)
+		if (db[thing].location != NOTHING && (controls(player, db[thing].location)
 													|| can_link_to(player, NOTYPE,
-																   DBFETCH(thing)->location))) {
-			snprintf(buf, sizeof(buf), "Location: %s", unparse_object(player, DBFETCH(thing)->location));
+																   db[thing].location))) {
+			snprintf(buf, sizeof(buf), "Location: %s", unparse_object(player, db[thing].location));
 			notify(player, buf);
 		}
 		/* print player's actions, if any */
-		if (DBFETCH(thing)->exits != NOTHING) {
+		if (db[thing].exits != NOTHING) {
 			notify(player, "Actions/exits:");
-			DOLIST(exit, DBFETCH(thing)->exits) {
+			DOLIST(exit, db[thing].exits) {
 				notify(player, unparse_object(player, exit));
 			}
 		} else {
@@ -441,15 +441,15 @@ do_examine(command_t *cmd)
 		}
 		break;
 	case TYPE_EXIT:
-		if (DBFETCH(thing)->location != NOTHING) {
-			snprintf(buf, sizeof(buf), "Source: %s", unparse_object(player, DBFETCH(thing)->location));
+		if (db[thing].location != NOTHING) {
+			snprintf(buf, sizeof(buf), "Source: %s", unparse_object(player, db[thing].location));
 			notify(player, buf);
 		}
 		/* print destinations */
-		if (DBFETCH(thing)->sp.exit.ndest == 0)
+		if (db[thing].sp.exit.ndest == 0)
 			break;
-		for (i = 0; i < DBFETCH(thing)->sp.exit.ndest; i++) {
-			switch ((DBFETCH(thing)->sp.exit.dest)[i]) {
+		for (i = 0; i < db[thing].sp.exit.ndest; i++) {
+			switch ((db[thing].sp.exit.dest)[i]) {
 			case NOTHING:
 				break;
 			case HOME:
@@ -457,7 +457,7 @@ do_examine(command_t *cmd)
 				break;
 			default:
 				snprintf(buf, sizeof(buf), "Destination: %s",
-						unparse_object(player, (DBFETCH(thing)->sp.exit.dest)[i]));
+						unparse_object(player, (db[thing].sp.exit.dest)[i]));
 				notify(player, buf);
 				break;
 			}
@@ -488,7 +488,7 @@ do_inventory(command_t *cmd)
 	dbref thing;
 
         if (web_look(player, player, GETDESC(player))) {
-                if ((thing = DBFETCH(player)->contents) == NOTHING) {
+                if ((thing = db[player].contents) == NOTHING) {
                         notify(player, "You aren't carrying anything.");
                 } else {
                         notify(player, "You are carrying:");
@@ -724,11 +724,11 @@ checkflags(dbref what, struct flgchkdat check)
 	if (check.forlink) {
 		switch (Typeof(what)) {
 		case TYPE_ROOM:
-			if ((DBFETCH(what)->sp.room.dropto == NOTHING) != (!check.islinked))
+			if ((db[what].sp.room.dropto == NOTHING) != (!check.islinked))
 				return (0);
 			break;
 		case TYPE_EXIT:
-			if ((!DBFETCH(what)->sp.exit.ndest) != (!check.islinked))
+			if ((!db[what].sp.exit.ndest) != (!check.islinked))
 				return (0);
 			break;
 		case TYPE_PLAYER:
@@ -767,19 +767,19 @@ display_objinfo(dbref player, dbref obj, int output_type)
 		switch (Typeof(obj)) {
 		case TYPE_ROOM:
 			snprintf(buf, sizeof(buf), "%-38.512s  %.512s", buf2,
-					unparse_object(player, DBFETCH(obj)->sp.room.dropto));
+					unparse_object(player, db[obj].sp.room.dropto));
 			break;
 		case TYPE_EXIT:
-			if (DBFETCH(obj)->sp.exit.ndest == 0) {
+			if (db[obj].sp.exit.ndest == 0) {
 				snprintf(buf, sizeof(buf), "%-38.512s  %.512s", buf2, "*UNLINKED*");
 				break;
 			}
-			if (DBFETCH(obj)->sp.exit.ndest > 1) {
+			if (db[obj].sp.exit.ndest > 1) {
 				snprintf(buf, sizeof(buf), "%-38.512s  %.512s", buf2, "*METALINKED*");
 				break;
 			}
 			snprintf(buf, sizeof(buf), "%-38.512s  %.512s", buf2,
-					unparse_object(player, DBFETCH(obj)->sp.exit.dest[0]));
+					unparse_object(player, db[obj].sp.exit.dest[0]));
 			break;
 		case TYPE_PLAYER:
 			snprintf(buf, sizeof(buf), "%-38.512s  %.512s", buf2, unparse_object(player, PLAYER_HOME(obj)));
@@ -794,7 +794,7 @@ display_objinfo(dbref player, dbref obj, int output_type)
 		break;
 	case 3:					/* locations */
 		snprintf(buf, sizeof(buf), "%-38.512s  %.512s", buf2,
-				unparse_object(player, DBFETCH(obj)->location));
+				unparse_object(player, db[obj].location));
 		break;
 	case 4:
 		return;
@@ -899,7 +899,7 @@ do_contents(command_t *cmd)
 		return;
 	}
 	init_checkflags(player, flags, &check);
-	DOLIST(i, DBFETCH(thing)->contents) {
+	DOLIST(i, db[thing].contents) {
 		if (checkflags(i, check)) {
 			display_objinfo(player, i, output_type);
 			total++;
@@ -913,7 +913,7 @@ do_contents(command_t *cmd)
 	case TYPE_ROOM:
 	case TYPE_THING:
 	case TYPE_PLAYER:
-		i = DBFETCH(thing)->exits;
+		i = db[thing].exits;
 		break;
 	}
 	DOLIST(i, i) {
@@ -950,8 +950,8 @@ do_sweep(command_t *cmd)
 	snprintf(buf, sizeof(buf), "Listeners in %s:", unparse_object(player, thing));
 	notify(player, buf);
 
-	ref = DBFETCH(thing)->contents;
-	for (; ref != NOTHING; ref = DBFETCH(ref)->next) {
+	ref = db[thing].contents;
+	for (; ref != NOTHING; ref = db[ref].next) {
 		switch (Typeof(ref)) {
 		case TYPE_PLAYER:
 			if (!Dark(thing)) {

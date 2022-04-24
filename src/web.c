@@ -97,7 +97,7 @@ web_look(dbref player, dbref loc, char const *description)
 	can_see_loc = (!Dark(loc) || controls(player, loc));
 
 	// use callbacks for mcp like this versus telnet
-        DOLIST(thing, DBFETCH(loc)->contents) {
+        DOLIST(thing, db[loc].contents) {
                 if (can_see(player, thing, can_see_loc)) {
                         struct icon ico = icon(thing);
                         mcp_mesg_init(&msg, MCP_WEB_PKG, "look-content");
@@ -123,9 +123,9 @@ web_look(dbref player, dbref loc, char const *description)
 void web_room_mcp(dbref room, void *msg) {
 	dbref tmp;
 
-	for (tmp = DBFETCH(room)->contents;
+	for (tmp = db[room].contents;
 	     tmp > 0;
-	     tmp = DBFETCH(tmp)->next)
+	     tmp = db[tmp].next)
 	{
 		if (Typeof(tmp) != TYPE_PLAYER)
 			continue;
@@ -140,7 +140,7 @@ void web_room_mcp(dbref room, void *msg) {
 }
 
 void web_obs_mcp(dbref thing, void *msg) {
-	struct object *o = DBFETCH(thing);
+	struct object *o = &db[thing];
 	struct observer_node *node = o->first_observer;
 
 	for (node = o->first_observer; node; node = node->next)
@@ -193,7 +193,7 @@ web_content_out(dbref loc, dbref thing) {
 
 void
 web_content_in(dbref loc, dbref thing) {
-	/* dbref loc = DBFETCH(thing)->location; */
+	/* dbref loc = db[thing].location; */
 	struct icon ico = icon(thing);
 	char buf[BUFSIZ];
 	McpMesg msg;

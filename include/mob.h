@@ -12,7 +12,7 @@
 
 
 /* FIXME use ref as index */
-#define MOB(who) (DBFETCH(who)->mob)
+#define MOB(who) (db[who].mob)
 
 #define MOB_SKELETON(mob_id) (&mob_skeleton_map[mob_id])
 

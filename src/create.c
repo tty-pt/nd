@@ -167,11 +167,11 @@ do_clone(command_t *cmd)
 		/* initialize everything */
 		NAME(clonedthing) = alloc_string(NAME(thing));
 		ALLOC_THING_SP(clonedthing);
-		DBFETCH(clonedthing)->location = player;
+		db[clonedthing].location = player;
 		OWNER(clonedthing) = OWNER(player);
 		SETVALUE(clonedthing, GETVALUE(thing));
 		/* FIXME: should we clone attached actions? */
-		DBFETCH(clonedthing)->exits = NOTHING;
+		db[clonedthing].exits = NOTHING;
 		FLAGS(clonedthing) = FLAGS(thing);
 
 		/* copy all properties */
@@ -186,7 +186,7 @@ do_clone(command_t *cmd)
 		THING_SET_HOME(clonedthing, THING_HOME(thing));
 
 		/* link it in */
-		PUSH(clonedthing, DBFETCH(player)->contents);
+		PUSH(clonedthing, db[player].contents);
 
 		/* and we're done */
 		snprintf(buf, sizeof(buf), "%s created with number %d.", NAME(thing), clonedthing);
@@ -254,17 +254,17 @@ do_create(command_t *cmd)
 		/* initialize everything */
 		NAME(thing) = alloc_string(name);
 		ALLOC_THING_SP(thing);
-		DBFETCH(thing)->location = player;
+		db[thing].location = player;
 		OWNER(thing) = OWNER(player);
 		SETVALUE(thing, OBJECT_ENDOWMENT(cost));
-		DBFETCH(thing)->exits = NOTHING;
+		db[thing].exits = NOTHING;
 		FLAGS(thing) = TYPE_THING;
 
 		/* endow the object */
 		if (GETVALUE(thing) > MAX_OBJECT_ENDOWMENT) {
 			SETVALUE(thing, MAX_OBJECT_ENDOWMENT);
 		}
-		if ((loc = DBFETCH(player)->location) != NOTHING && controls(player, loc)) {
+		if ((loc = db[player].location) != NOTHING && controls(player, loc)) {
 			THING_SET_HOME(thing, loc);	/* home */
 		} else {
 			THING_SET_HOME(thing, player);	/* home */
@@ -272,7 +272,7 @@ do_create(command_t *cmd)
 		}
 
 		/* link it in */
-		PUSH(thing, DBFETCH(player)->contents);
+		PUSH(thing, db[player].contents);
 
 		/* and we're done */
 		snprintf(buf, sizeof(buf), "%s created with number %d.", name, thing);

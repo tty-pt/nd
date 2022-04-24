@@ -100,7 +100,7 @@ do_teleport(command_t *cmd) {
 				break;
 			}
 			notify(victim, "You feel a wrenching sensation...");
-			enter_room(victim, destination, DBFETCH(victim)->location);
+			enter_room(victim, destination, db[victim].location);
 			break;
 		case TYPE_THING:
 			if (parent_loop_check(victim, destination)) {
@@ -114,15 +114,15 @@ do_teleport(command_t *cmd) {
 			}
 			if (!((controls(player, destination) ||
 				   can_link_to(player, NOTYPE, destination)) &&
-				  (controls(player, victim) || controls(player, DBFETCH(victim)->location)))) {
+				  (controls(player, victim) || controls(player, db[victim].location)))) {
 				notify(player, "Permission denied. (must control dest and be able to link to it, or control dest's loc)");
 				break;
 			}
 			/* check for non-sticky dropto */
 			if (Typeof(destination) == TYPE_ROOM
-				&& DBFETCH(destination)->sp.room.dropto != NOTHING
+				&& db[destination].sp.room.dropto != NOTHING
 				&& !(FLAGS(destination) & STICKY))
-						destination = DBFETCH(destination)->sp.room.dropto;
+						destination = db[destination].sp.room.dropto;
 			moveto(victim, destination);
 			notify(player, "Teleported.");
 			break;

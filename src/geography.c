@@ -108,15 +108,15 @@ gexit(dbref loc, dbref loc2, enum exit e)
 
 	/* Initialize everything */
 	NAME(ref) = alloc_string(e_fname(e));
-	DBFETCH(ref)->location = loc;
+	db[ref].location = loc;
 	OWNER(ref) = 1;
 	FLAGS(ref) = TYPE_EXIT;
 
 	/* link it in */
-	PUSH(ref, DBFETCH(loc)->exits);
+	PUSH(ref, db[loc].exits);
 
-	DBFETCH(ref)->sp.exit.ndest = 1;
-	DBFETCH(ref)->sp.exit.dest = (dbref *) malloc(sizeof(dbref));
+	db[ref].sp.exit.ndest = 1;
+	db[ref].sp.exit.dest = (dbref *) malloc(sizeof(dbref));
 	e_exit_dest_set(ref, loc2);
 
 	return ref;
@@ -186,7 +186,7 @@ geo_claim(dbref player, dbref room) {
 
 	SETTMP(room, 0);
 	OWNER(room) = player;
-	room = DBFETCH(room)->contents;
+	room = db[room].contents;
 
 	DOLIST(room, room)
 		if (Typeof(room) == TYPE_EXIT && e_exit_is(room))
@@ -294,13 +294,12 @@ static dbref
 geo_room_at(dbref player, pos_t pos)
 {
 	struct bio *bio;
-	static const dbref loc = 0;
 	dbref there;
 	bio = noise_point(pos);
         there = object_add(biomes[bio->bio_idx], 0);
 	map_put(pos, there, DB_NOOVERWRITE);
-	DBFETCH(there)->exits = NOTHING;
-	DBFETCH(there)->sp.room.dropto = NOTHING;
+	db[there].exits = NOTHING;
+	db[there].sp.room.dropto = NOTHING;
 	/* FLAGS(there) = TYPE_ROOM | (FLAGS(cmd->player) & JUMP_OK); */
 	CBUG(there <= 0);
 	exits_infer(player, there);
@@ -348,7 +347,7 @@ e_move(dbref player, enum exit e) {
 		{
 			dbref dest;
 			union specific sp;
-			sp = DBFETCH(exit)->sp;
+			sp = db[exit].sp;
 
 			if (sp.exit.ndest && sp.exit.dest[0] != NOTHING)
 				dest = sp.exit.dest[0];
@@ -394,7 +393,7 @@ geo_clean(dbref player, dbref here)
 	if (!GETTMP(here))
 		return here;
 
-	tmp = DBFETCH(here)->contents;
+	tmp = db[here].contents;
 	DOLIST(tmp, tmp)
 		if (Typeof(tmp) == TYPE_PLAYER) {
 			/* CBUG(tmp == cmd->player); */

@@ -293,8 +293,8 @@ view_build_exit_z(dbref player, view_tile_t *t, dbref loc, enum exit e) {
 	register dbref tmp
 		= e_exit_where(player, loc, e);
 
-	if (tmp > 0 && DBFETCH(tmp)->sp.exit.ndest
-			&& DBFETCH(tmp)->sp.exit.dest[0] >= 0)
+	if (tmp > 0 && db[tmp].sp.exit.ndest
+			&& db[tmp].sp.exit.dest[0] >= 0)
 
 		t->exits |= e;
 }
@@ -327,7 +327,7 @@ view_build_exit_s(dbref player, view_tile_t *t,
 
 static inline ucoord_t
 view_build_flags(dbref loc) {
-	dbref tmp = DBFETCH(loc)->contents;
+	dbref tmp = db[loc].contents;
 	ucoord_t flags = 0;
 
 	DOLIST(tmp, tmp) switch (Typeof(tmp)) {

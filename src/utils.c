@@ -56,12 +56,12 @@ remove_first(dbref first, dbref what)
 
 	/* special case if it's the first one */
 	if (first == what) {
-		return DBFETCH(first)->next;
+		return db[first].next;
 	} else {
 		/* have to find it */
 		DOLIST(prev, first) {
-			if (DBFETCH(prev)->next == what) {
-				DBFETCH(prev)->next = DBFETCH(what)->next;
+			if (db[prev].next == what) {
+				db[prev].next = db[what].next;
 				return first;
 			}
 		}
@@ -75,8 +75,8 @@ member(dbref thing, dbref list)
 	DOLIST(list, list) {
 		if (list == thing)
 			return 1;
-		if ((DBFETCH(list)->contents)
-			&& (member(thing, DBFETCH(list)->contents))) {
+		if ((db[list].contents)
+			&& (member(thing, db[list].contents))) {
 			return 1;
 		}
 	}
@@ -92,7 +92,7 @@ reverse(dbref list)
 
 	newlist = NOTHING;
 	while (list != NOTHING) {
-		rest = DBFETCH(list)->next;
+		rest = db[list].next;
 		PUSH(list, newlist);
 		list = rest;
 	}

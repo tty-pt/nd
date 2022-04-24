@@ -469,20 +469,20 @@ controls_link(dbref who, dbref what)
 	switch (Typeof(what)) {
 	case TYPE_EXIT:
 		{
-			int i = DBFETCH(what)->sp.exit.ndest;
+			int i = db[what].sp.exit.ndest;
 
 			while (i > 0) {
-				if (controls(who, DBFETCH(what)->sp.exit.dest[--i]))
+				if (controls(who, db[what].sp.exit.dest[--i]))
 					return 1;
 			}
-			if (who == OWNER(DBFETCH(what)->location))
+			if (who == OWNER(db[what].location))
 				return 1;
 			return 0;
 		}
 
 	case TYPE_ROOM:
 		{
-			if (controls(who, DBFETCH(what)->sp.room.dropto))
+			if (controls(who, db[what].sp.room.dropto))
 				return 1;
 			return 0;
 		}
@@ -546,7 +546,7 @@ do_chown(command_t *cmd)
 #endif /* GOD_PRIV */
 	if (!Wizard(OWNER(player))) {
 		if (Typeof(thing) != TYPE_EXIT ||
-			(DBFETCH(thing)->sp.exit.ndest && !controls_link(player, thing))) {
+			(db[thing].sp.exit.ndest && !controls_link(player, thing))) {
 			if (!(FLAGS(thing) & CHOWN_OK) ||
 				!test_lock(player, thing, "_/chlk")) {
 				notify(player, "You can't take possession of that.");
@@ -557,14 +557,14 @@ do_chown(command_t *cmd)
 
 	switch (Typeof(thing)) {
 	case TYPE_ROOM:
-		if (!Wizard(OWNER(player)) && DBFETCH(player)->location != thing) {
+		if (!Wizard(OWNER(player)) && db[player].location != thing) {
 			notify(player, "You can only chown \"here\".");
 			return;
 		}
 		OWNER(thing) = OWNER(owner);
 		break;
 	case TYPE_THING:
-		if (!Wizard(OWNER(player)) && DBFETCH(thing)->location != player) {
+		if (!Wizard(OWNER(player)) && db[thing].location != player) {
 			notify(player, "You aren't carrying that.");
 			return;
 		}

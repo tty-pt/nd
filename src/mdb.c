@@ -125,7 +125,7 @@ db_grow(dbref newtop)
 void
 db_clear_object(dbref i)
 {
-	struct object *o = DBFETCH(i);
+	struct object *o = &db[i];
 
 	memset(o, 0, sizeof(struct object));
 
@@ -149,7 +149,7 @@ object_new(void)
 
 	if (recyclable != NOTHING) {
 		newobj = recyclable;
-		recyclable = DBFETCH(newobj)->next;
+		recyclable = db[newobj].next;
 		db_free_object(newobj);
 	} else {
 		newobj = db_top;
@@ -225,7 +225,7 @@ extern FILE *delta_outfile;
 int
 db_write_object(FILE * f, dbref i)
 {
-	struct object *o = DBFETCH(i);
+	struct object *o = &db[i];
 	int j;
 	putstring(f, NAME(i));
 	putref(f, o->location);
@@ -439,7 +439,7 @@ db_free_object(dbref i)
 {
 	struct object *o;
 
-	o = DBFETCH(i);
+	o = &db[i];
 	if (NAME(i))
 		free((void *) NAME(i));
 
@@ -476,7 +476,7 @@ db_obs_add(dbref observable, dbref observer) {
 	struct object *o;
 	struct observer_node *node = (struct observer_node *)
 		malloc(sizeof(struct observer_node));
-	o = DBFETCH(observable);
+	o = &db[observable];
 	node->next = o->first_observer;
 	node->who = observer;
 	o->first_observer = node;
@@ -484,7 +484,7 @@ db_obs_add(dbref observable, dbref observer) {
 
 int
 db_obs_remove(dbref observable, dbref observer) {
-	struct object *o = DBFETCH(observable);
+	struct object *o = &db[observable];
 	struct observer_node *cur, *prev = NULL;
 
 	for (cur = o->first_observer; cur; ) {
@@ -677,7 +677,7 @@ db_read(FILE * f)
 			db_grow(thisref + 1);
 
 			/* read it in */
-			o = DBFETCH(thisref);
+			o = &db[thisref];
 			db_read_object_foxen(f, o, thisref);
 			if (Typeof(thisref) == TYPE_PLAYER) {
 				OWNER(thisref) = thisref;
@@ -696,7 +696,7 @@ db_read(FILE * f)
 					free((void *) special);
 				for (i = 0; i < db_top; i++) {
 					if (Typeof(i) == TYPE_GARBAGE) {
-						DBFETCH(i)->next = recyclable;
+						db[i].next = recyclable;
 						recyclable = i;
 					}
 				}
@@ -715,7 +715,7 @@ dbref
 object_copy(dbref player, dbref old)
 {
         dbref nu = object_new();
-	struct object *newp = DBFETCH(nu);
+	struct object *newp = &db[nu];
 	NAME(nu) = alloc_string(NAME(old));
 	if (Typeof(old) == TYPE_THING) {
 		ALLOC_THING_SP(nu);
@@ -727,7 +727,7 @@ object_copy(dbref player, dbref old)
 	newp->contents = NOTHING;
 	newp->next = NOTHING;
 	newp->location = NOTHING;
-        newp->flags = DBFETCH(old)->flags;
+        newp->flags = db[old].flags;
         OWNER(nu) = OWNER(old);
         return nu;
 }

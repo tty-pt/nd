@@ -150,11 +150,11 @@ object_add(struct object_skeleton o, dbref where)
         SETAVATAR(nu, o.avatar);
 	SETDESC(nu, alloc_string(o.description));
 	ALLOC_THING_SP(nu);
-	DBFETCH(nu)->location = where;
+	db[nu].location = where;
 	OWNER(nu) = 1;
 	FLAGS(nu) = TYPE_THING;
 	THING_SET_HOME(nu, where);
-	PUSH(nu, DBFETCH(where)->contents);
+	PUSH(nu, db[where].contents);
 
 	switch (o.type) {
 	case S_TYPE_EQUIPMENT:
@@ -188,8 +188,8 @@ object_add(struct object_skeleton o, dbref where)
 		break;
         case S_TYPE_BIOME:
                 FLAGS(nu) = TYPE_ROOM;
-                DBFETCH(nu)->exits = NOTHING;
-                DBFETCH(nu)->sp.room.dropto = NOTHING;
+                db[nu].exits = NOTHING;
+                db[nu].sp.room.dropto = NOTHING;
                 SETTMP(nu, 1);
 	case S_TYPE_OTHER:
 		break;
@@ -250,7 +250,7 @@ e_ground(dbref room, enum exit e)
 void
 e_exit_dest_set(dbref exit, dbref dest)
 {
-	union specific *sp = &DBFETCH(exit)->sp;
+	union specific *sp = &db[exit].sp;
 #ifdef PRECOVERY
 	if (!sp->exit.ndest) {
 		sp->exit.dest = (dbref *)malloc(sizeof(dbref));
@@ -333,9 +333,9 @@ e_exit_is(dbref exit)
 dbref
 e_exit_dest(dbref exit)
 {
-	if (!DBFETCH(exit)->sp.exit.ndest)
+	if (!db[exit].sp.exit.ndest)
 		return NOTHING;
 
 	else
-		return DBFETCH(exit)->sp.exit.dest[0];
+		return db[exit].sp.exit.dest[0];
 }

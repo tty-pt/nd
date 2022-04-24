@@ -12,13 +12,13 @@ extern dbref object_copy(dbref player, dbref old);
 static inline dbref
 vendor_find(dbref where)
 {
-	dbref tmp = DBFETCH(where)->contents;
+	dbref tmp = db[where].contents;
 
 	while (tmp > 0) {
 		if (Typeof(tmp) == TYPE_THING && GETSHOP(tmp))
 			return tmp;
 
-		tmp = DBFETCH(tmp)->next;
+		tmp = db[tmp].next;
 	}
 
 	return NOTHING;
@@ -40,7 +40,7 @@ do_shop(command_t *cmd)
         if (!web_look(player, npc, GETDESC(npc)))
             return;
 
-	dbref tmp = DBFETCH(npc)->contents;
+	dbref tmp = db[npc].contents;
 
 	while (tmp > 0) {
 		if (GETINF(tmp))
@@ -50,7 +50,7 @@ do_shop(command_t *cmd)
 			notifyf(player, "%-13s %5dP",
 				NAME(tmp), GETVALUE(tmp));
 
-		tmp = DBFETCH(tmp)->next;
+		tmp = db[tmp].next;
 	}
 }
 

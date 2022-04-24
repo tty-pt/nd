@@ -15,8 +15,6 @@
 
 #define BUFFER_LEN 8192
 
-#define DBFETCH(x)  (db + (x))
-
 #define NAME(x)     (db[x].name)
 #define FLAGS(x)    (db[x].flags)
 #define OWNER(x)    (db[x].owner)
@@ -320,7 +318,7 @@ struct player_specific {
         const char *dialog;
 };
 
-#define THING_SP(x)		(DBFETCH(x)->sp.player.sp)
+#define THING_SP(x)		(db[x].sp.player.sp)
 #define ALLOC_THING_SP(x)       { PLAYER_SP(x) = (struct player_specific *)malloc(sizeof(struct player_specific)); }
 #define FREE_THING_SP(x)        { dbref foo = x; free(PLAYER_SP(foo)); PLAYER_SP(foo) = NULL; }
 
@@ -328,7 +326,7 @@ struct player_specific {
 
 #define THING_SET_HOME(x,y)	(PLAYER_SP(x)->home = y)
 
-#define PLAYER_SP(x)		(DBFETCH(x)->sp.player.sp)
+#define PLAYER_SP(x)		(db[x].sp.player.sp)
 #define ALLOC_PLAYER_SP(x)      { PLAYER_SP(x) = (struct player_specific *)malloc(sizeof(struct player_specific)); bzero(PLAYER_SP(x),sizeof(struct player_specific));}
 #define FREE_PLAYER_SP(x)       { dbref foo = x; free(PLAYER_SP(foo)); PLAYER_SP(foo) = NULL; }
 
@@ -432,16 +430,15 @@ void objects_init();
 dbref getparent(dbref obj);
 
 #define DOLIST(var, first) \
-  for((var) = (first); (var) != NOTHING; (var) = DBFETCH(var)->next)
+  for((var) = (first); (var) != NOTHING; (var) = db[var].next)
 #define PUSH(thing, locative) \
-    {DBFETCH((thing))->next = (locative); (locative) = (thing);}
-#define getloc(thing) (DBFETCH(thing)->location)
+    {db[thing].next = (locative); (locative) = (thing);}
+#define getloc(thing) (db[thing].location)
 
 /*
   Usage guidelines:
 
-  To obtain an object pointer use DBFETCH(i).  Pointers returned by DBFETCH
-  may become invalid after a call to object_new().
+  To obtain an object use db[i].
 
   The programmer is responsible for managing storage for string
   components of entries; db_read will produce malloc'd strings.  The

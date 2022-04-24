@@ -147,7 +147,7 @@ body(dbref player, dbref mob)
 	dbref tmp;
 	unsigned n = 0;
 
-	for (; (tmp = DBFETCH(mob)->contents) != NOTHING; ) {
+	for (; (tmp = db[mob].contents) != NOTHING; ) {
 		if (Typeof(tmp) == TYPE_GARBAGE)
 			continue;
 		unequip(mob, GETEQL(tmp));

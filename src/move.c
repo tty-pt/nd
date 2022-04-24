@@ -30,16 +30,16 @@ moveto(dbref what, dbref where)
 	CBUG(where == HOME);
 
 	/* remove what from old loc */
-	loc = DBFETCH(what)->location;
+	loc = db[what].location;
         if (loc != NOTHING) {
                 web_content_out(loc, what);
-		DBFETCH(loc)->contents = remove_first(DBFETCH(loc)->contents, what);
+		db[loc].contents = remove_first(db[loc].contents, what);
         }
 
 	/* test for special cases */
 	switch (where) {
 	case NOTHING:
-		DBFETCH(what)->location = NOTHING;
+		db[what].location = NOTHING;
 		return;					/* NOTHING doesn't have contents */
 	}
 
@@ -69,8 +69,8 @@ moveto(dbref what, dbref where)
         }
 
 	/* now put what in where */
-	PUSH(what, DBFETCH(where)->contents);
-	DBFETCH(what)->location = where;
+	PUSH(what, db[where].contents);
+	db[what].location = where;
 	web_content_in(where, what);
         CBUG(getloc(what) != where);
 }
@@ -83,15 +83,15 @@ send_contents(dbref loc, dbref dest)
 	dbref rest;
 	dbref where;
 
-	first = DBFETCH(loc)->contents;
-	DBFETCH(loc)->contents = NOTHING;
+	first = db[loc].contents;
+	db[loc].contents = NOTHING;
 
 	/* blast locations of everything in list */
 	DOLIST(rest, first)
-		DBFETCH(rest)->location = NOTHING;
+		db[rest].location = NOTHING;
 
 	while (first != NOTHING) {
-		rest = DBFETCH(first)->next;
+		rest = db[first].next;
 		if (Typeof(first) != TYPE_THING) {
 			moveto(first, loc);
 		} else {
@@ -101,7 +101,7 @@ send_contents(dbref loc, dbref dest)
 		first = rest;
 	}
 
-	DBFETCH(loc)->contents = reverse(DBFETCH(loc)->contents);
+	db[loc].contents = reverse(db[loc].contents);
 }
 
 /* What are we doing here?  Quick explanation - we want to prevent
@@ -223,7 +223,7 @@ enter_room(dbref player, dbref loc, dbref exit)
 	char buf[BUFFER_LEN];
 
 	/* get old location */
-	old = DBFETCH(player)->location;
+	old = db[player].location;
 
 	/* CBUG(loc == old); */
 
@@ -233,12 +233,12 @@ enter_room(dbref player, dbref loc, dbref exit)
 	CBUG(old == NOTHING);
 
 	snprintf(buf, sizeof(buf), "%s has left.", NAME(player));
-	notify_except(DBFETCH(old)->contents, player, buf, player);
+	notify_except(db[old].contents, player, buf, player);
 
 	geo_clean(player, old);
 
 	snprintf(buf, sizeof(buf), "%s has arrived.", NAME(player));
-	notify_except(DBFETCH(loc)->contents, player, buf, player);
+	notify_except(db[loc].contents, player, buf, player);
 
 	mobs_aggro(player);
 	/* TODO geo_notify(descr, player); */
@@ -377,11 +377,11 @@ do_drop(command_t *cmd)
                         moveto(thing, THING_HOME(thing));
 		} else {
 			int immediate_dropto = (Typeof(cont) == TYPE_ROOM &&
-									DBFETCH(cont)->sp.room.dropto != NOTHING
+									db[cont].sp.room.dropto != NOTHING
 
 									&& !(FLAGS(cont) & STICKY));
 
-			moveto(thing, immediate_dropto ? DBFETCH(cont)->sp.room.dropto : cont);
+			moveto(thing, immediate_dropto ? db[cont].sp.room.dropto : cont);
 		}
 		if (Typeof(cont) == TYPE_THING) {
 			notify(player, "Put away.");
@@ -401,7 +401,7 @@ do_drop(command_t *cmd)
 			notify(player, GETDROP(loc));
 
 		snprintf(buf, sizeof(buf), "%s drops %s.", NAME(player), NAME(thing));
-		notify_except(DBFETCH(loc)->contents, player, buf, player);
+		notify_except(db[loc].contents, player, buf, player);
 
 		break;
 	default:
@@ -466,7 +466,7 @@ do_recycle(command_t *cmd)
 				snprintf(buf, sizeof(buf),
 						"%.512s's owner commands it to kill itself.  It blinks a few times in shock, and says, \"But.. but.. WHY?\"  It suddenly clutches it's heart, grimacing with pain..  Staggers a few steps before falling to it's knees, then plops down on it's face.  *thud*  It kicks its legs a few times, with weakening force, as it suffers a seizure.  It's color slowly starts changing to purple, before it explodes with a fatal *POOF*!",
 						NAME(thing));
-				notify_except(DBFETCH(getloc(thing))->contents, thing, buf, player);
+				notify_except(db[getloc(thing)].contents, thing, buf, player);
 				notify(OWNER(player), buf);
 				notify(OWNER(player), "Now don't you feel guilty?");
 			}
@@ -507,37 +507,37 @@ recycle(dbref player, dbref thing)
 	case TYPE_ROOM:
 		if (!Wizard(OWNER(thing)))
 			SETVALUE(OWNER(thing), GETVALUE(OWNER(thing)) + ROOM_COST);
-		for (first = DBFETCH(thing)->exits; first != NOTHING; first = rest) {
-			rest = DBFETCH(first)->next;
-			if (DBFETCH(first)->location == NOTHING
-			    || DBFETCH(first)->location == thing) {
+		for (first = db[thing].exits; first != NOTHING; first = rest) {
+			rest = db[first].next;
+			if (db[first].location == NOTHING
+			    || db[first].location == thing) {
 				if (e_exit_is(first))
 					gexit_snull(player, first);
 				recycle(player, first);
 			}
 		}
 		if (GETTMP(thing))
-			for (first = DBFETCH(thing)->contents; first != NOTHING; first = rest) {
-				rest = DBFETCH(first)->next;
+			for (first = db[thing].contents; first != NOTHING; first = rest) {
+				rest = db[first].next;
 				if (Typeof(first) != TYPE_PLAYER)
 					recycle(player, first);
 			}
-		notify_except(DBFETCH(thing)->contents, NOTHING,
+		notify_except(db[thing].contents, NOTHING,
 					  "You feel a wrenching sensation...", player);
 		map_delete(thing);
 		break;
 	case TYPE_THING:
 		if (!Wizard(OWNER(thing)))
 			SETVALUE(OWNER(thing), GETVALUE(OWNER(thing)) + GETVALUE(thing));
-		for (first = DBFETCH(thing)->exits; first != NOTHING; first = rest) {
-			rest = DBFETCH(first)->next;
-			if (DBFETCH(first)->location == NOTHING || DBFETCH(first)->location == thing)
+		for (first = db[thing].exits; first != NOTHING; first = rest) {
+			rest = db[first].next;
+			if (db[first].location == NOTHING || db[first].location == thing)
 				recycle(player, first);
 		}
 		if (GETTMP(getloc(thing))) {
 			SETTMP(thing, 1);
-			for (first = DBFETCH(thing)->contents; first != NOTHING; first = rest) {
-				rest = DBFETCH(first)->next;
+			for (first = db[thing].contents; first != NOTHING; first = rest) {
+				rest = db[first].next;
 				recycle(player, first);
 			}
 		}
@@ -546,7 +546,7 @@ recycle(dbref player, dbref thing)
 		if (!Wizard(OWNER(thing)))
 			SETVALUE(OWNER(thing), GETVALUE(OWNER(thing)) + EXIT_COST);
 		if (!Wizard(OWNER(thing)))
-			if (DBFETCH(thing)->sp.exit.ndest != 0)
+			if (db[thing].sp.exit.ndest != 0)
 				SETVALUE(OWNER(thing), GETVALUE(OWNER(thing)) + LINK_COST);
 		break;
 	}
@@ -554,10 +554,10 @@ recycle(dbref player, dbref thing)
 	for (rest = 0; rest < db_top; rest++) {
 		switch (Typeof(rest)) {
 		case TYPE_ROOM:
-			if (DBFETCH(rest)->sp.room.dropto == thing)
-				DBFETCH(rest)->sp.room.dropto = NOTHING;
-			if (DBFETCH(rest)->exits == thing)
-				DBFETCH(rest)->exits = DBFETCH(thing)->next;
+			if (db[rest].sp.room.dropto == thing)
+				db[rest].sp.room.dropto = NOTHING;
+			if (db[rest].exits == thing)
+				db[rest].exits = db[thing].next;
 			if (OWNER(rest) == thing)
 				OWNER(rest) = GOD;
 			break;
@@ -576,8 +576,8 @@ recycle(dbref player, dbref thing)
 			  }
 			  THING_SET_HOME(rest, loc);
 			}
-			if (DBFETCH(rest)->exits == thing)
-				DBFETCH(rest)->exits = DBFETCH(thing)->next;
+			if (db[rest].exits == thing)
+				db[rest].exits = db[thing].next;
 			if (OWNER(rest) == thing)
 				OWNER(rest) = GOD;
 			break;
@@ -585,13 +585,13 @@ recycle(dbref player, dbref thing)
 			{
 				int i, j;
 
-				for (i = j = 0; i < DBFETCH(rest)->sp.exit.ndest; i++) {
-					if ((DBFETCH(rest)->sp.exit.dest)[i] != thing)
-						(DBFETCH(rest)->sp.exit.dest)[j++] = (DBFETCH(rest)->sp.exit.dest)[i];
+				for (i = j = 0; i < db[rest].sp.exit.ndest; i++) {
+					if ((db[rest].sp.exit.dest)[i] != thing)
+						(db[rest].sp.exit.dest)[j++] = (db[rest].sp.exit.dest)[i];
 				}
-				if (j < DBFETCH(rest)->sp.exit.ndest) {
+				if (j < db[rest].sp.exit.ndest) {
 					SETVALUE(OWNER(rest), GETVALUE(OWNER(rest)) + LINK_COST);
-					DBFETCH(rest)->sp.exit.ndest = j;
+					db[rest].sp.exit.ndest = j;
 				}
 			}
 			if (OWNER(rest) == thing)
@@ -600,24 +600,24 @@ recycle(dbref player, dbref thing)
 		case TYPE_PLAYER:
 			if (PLAYER_HOME(rest) == thing)
 				PLAYER_SET_HOME(rest, PLAYER_START);
-			if (DBFETCH(rest)->exits == thing)
-				DBFETCH(rest)->exits = DBFETCH(thing)->next;
+			if (db[rest].exits == thing)
+				db[rest].exits = db[thing].next;
 			break;
 		}
-		if (DBFETCH(rest)->contents == thing)
-			DBFETCH(rest)->contents = DBFETCH(thing)->next;
-		if (DBFETCH(rest)->next == thing)
-			DBFETCH(rest)->next = DBFETCH(thing)->next;
+		if (db[rest].contents == thing)
+			db[rest].contents = db[thing].next;
+		if (db[rest].next == thing)
+			db[rest].next = db[thing].next;
 	}
 
 	looplimit = db_top;
-	while ((looplimit-- > 0) && ((first = DBFETCH(thing)->contents) != NOTHING)) {
+	while ((looplimit-- > 0) && ((first = db[thing].contents) != NOTHING)) {
 		if (Typeof(first) == TYPE_PLAYER) {
-			enter_room(first, HOME, DBFETCH(thing)->location);
+			enter_room(first, HOME, db[thing].location);
 			/* If the room is set to drag players back, there'll be no
 			 * reasoning with it.  DRAG the player out.
 			 */
-			if (DBFETCH(first)->location == thing) {
+			if (db[first].location == thing) {
 				notifyf(player, "Escaping teleport loop!  Going home.");
 				moveto(first, PLAYER_START);
 			}
@@ -638,7 +638,7 @@ recycle(dbref player, dbref thing)
 	SETDESC(thing, "<recyclable>");
 	FLAGS(thing) = TYPE_GARBAGE;
 
-	DBFETCH(thing)->next = recyclable;
+	db[thing].next = recyclable;
 	recyclable = thing;
 }
 static const char *move_c_version = "$RCSfile$ $Revision: 1.38 $";

@@ -92,19 +92,19 @@ create_player(const char *name, const char *password)
 
 	/* initialize everything */
 	NAME(player) = alloc_string(name);
-	DBFETCH(player)->location = PLAYER_START;	/* home */
+	db[player].location = PLAYER_START;	/* home */
 	FLAGS(player) = TYPE_PLAYER;
 	OWNER(player) = player;
 	ALLOC_PLAYER_SP(player);
 	PLAYER_SET_HOME(player, PLAYER_START);
-	DBFETCH(player)->exits = NOTHING;
+	db[player].exits = NOTHING;
 
 	SETVALUE(player, START_PENNIES);
 	PLAYER_SET_PASSWORD(player, NULL);
 	set_password(player, password);
 
 	/* link him to PLAYER_START */
-	PUSH(player, DBFETCH(PLAYER_START)->contents);
+	PUSH(player, db[PLAYER_START].contents);
 	add_player(player);
 
 	FLAGS(player) |= CHOWN_OK;

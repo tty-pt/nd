@@ -112,8 +112,8 @@ eval_boolexp_rec(dbref player, struct boolexp *b, dbref thing)
 			if (b->thing == NOTHING)
 				return 0;
 			return (b->thing == player || b->thing == OWNER(player)
-					|| member(b->thing, DBFETCH(player)->contents)
-					|| b->thing == DBFETCH(player)->location);
+					|| member(b->thing, db[player].contents)
+					|| b->thing == db[player].location);
 		case BOOLEXP_PROP:
 			if (PropType(b->prop_check) == PROP_STRTYP) {
 				if (has_property_strict(thing, PropName(b->prop_check),

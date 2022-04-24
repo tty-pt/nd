@@ -178,7 +178,7 @@ extern void do_conlock(command_t *);
 extern void set_flags_from_tunestr(dbref obj, const char* flags);
 
 /* From speech.c */
-#define ONOTIFYF(who, ...) notify_except_fmt(DBFETCH(getloc(who))->contents, who, __VA_ARGS__)
+#define ONOTIFYF(who, ...) notify_except_fmt(db[getloc(who)].contents, who, __VA_ARGS__)
 extern void do_wall(command_t *cmd);
 extern void do_say(command_t *cmd);
 extern void notify_except(dbref first, dbref exception, const char *msg, dbref who);

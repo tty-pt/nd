@@ -124,7 +124,7 @@ dbref
 ematch_exit_at(dbref player, dbref loc, const char *name)
 {
 	CBUG(Typeof(loc) != TYPE_ROOM);
-	return ematch_exit(player, DBFETCH(loc)->exits, name);
+	return ematch_exit(player, db[loc].exits, name);
 }
 
 dbref
@@ -136,5 +136,5 @@ ematch_at(dbref player, dbref where, const char *name) {
 	if (what != NOTHING && getloc(what) == where)
 		return what;
 
-	return ematch_list(player, DBFETCH(where)->contents, name);
+	return ematch_list(player, db[where].contents, name);
 }

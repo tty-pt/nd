@@ -417,7 +417,7 @@ mob_put(dbref who)
 
         CBUG(!mob);
 
-	o = DBFETCH(who);
+	o = &db[who];
         o->mob = mob;
 
 	memset(mob, 0, sizeof(struct mob));
@@ -496,7 +496,7 @@ mobs_aggro(dbref player)
 
         CBUG(GETLID(player) < 0);
 
-	DOLIST(tmp, DBFETCH(getloc(player))->contents) {
+	DOLIST(tmp, db[getloc(player)].contents) {
 		int lid = GETLID(tmp);
 		if (lid >= 0 && GETAGGRO(tmp)) {
 			struct mob *mob = MOB(tmp);
@@ -542,7 +542,7 @@ respawn(dbref who)
         struct mob *mob = MOB(who);
         mob->hp = HP_MAX(who);
         mob->mp = MP_MAX(who);
-	notify_except_fmt(DBFETCH(where)->contents, who,
+	notify_except_fmt(db[where].contents, who,
 			  "%s appears.", NAME(who));
 }
 

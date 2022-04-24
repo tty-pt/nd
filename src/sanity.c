@@ -19,12 +19,12 @@
 #include "props.h"
 #include "search.h"
 
-#define TYPEOF(i)   (DBFETCH((i))->flags & TYPE_MASK)
-#define LOCATION(x) (DBFETCH((x))->location)
+#define TYPEOF(i)   (db[i].flags & TYPE_MASK)
+#define LOCATION(x) (db[x].location)
 
-#define CONTENTS(x) (DBFETCH((x))->contents)
-#define EXITS(x)    (DBFETCH((x))->exits)
-#define NEXTOBJ(x)  (DBFETCH((x))->next)
+#define CONTENTS(x) (db[x].contents)
+#define EXITS(x)    (db[x].exits)
+#define NEXTOBJ(x)  (db[x].next)
 
 #define unparse(x) ((char*)unparse_object(GOD, (x)))
 
@@ -186,7 +186,7 @@ check_room(dbref player, dbref obj)
 {
 	dbref i;
 
-	i = DBFETCH(obj)->sp.room.dropto;
+	i = db[obj].sp.room.dropto;
 
 	if (!valid_ref(i) && i != HOME) {
 		violate(player, obj, "has its dropto set to an invalid object");
@@ -217,11 +217,11 @@ check_exit(dbref player, dbref obj)
 {
 	int i;
 
-	if (DBFETCH(obj)->sp.exit.ndest < 0)
+	if (db[obj].sp.exit.ndest < 0)
 		violate(player, obj, "has a negative link count.");
-	for (i = 0; i < DBFETCH(obj)->sp.exit.ndest; i++) {
-		if (!valid_ref((DBFETCH(obj)->sp.exit.dest)[i]) &&
-			(DBFETCH(obj)->sp.exit.dest)[i] != HOME) {
+	for (i = 0; i < db[obj].sp.exit.ndest; i++) {
+		if (!valid_ref((db[obj].sp.exit.dest)[i]) &&
+			(db[obj].sp.exit.dest)[i] != HOME) {
 			violate(player, obj, "has an invalid object as one of its link destinations");
 		}
 	}
@@ -479,7 +479,7 @@ cut_bad_recyclable(void)
 		if (!valid_ref(loop) || TYPEOF(loop) != TYPE_GARBAGE || FLAGS(loop) & SANEBIT) {
 			SanFixed(loop, "Recyclable object %s is not TYPE_GARBAGE");
 			if (prev != NOTHING)
-				DBFETCH(prev)->next = NOTHING;
+				db[prev].next = NOTHING;
 			else {
 				recyclable = NOTHING;
 			}
@@ -487,7 +487,7 @@ cut_bad_recyclable(void)
 		}
 		FLAGS(loop) |= SANEBIT;
 		prev = loop;
-		loop = DBFETCH(loop)->next;
+		loop = db[loop].next;
 	}
 }
 
@@ -515,14 +515,14 @@ cut_bad_contents(dbref obj)
 				SanFixed2(obj, loop, "Contents chain for %s cut at %s");
 			}
 			if (prev != NOTHING)
-				DBFETCH(prev)->next = NOTHING;
+				db[prev].next = NOTHING;
 			else
 				CONTENTS(obj) = NOTHING;
 			return;
 		}
 		FLAGS(loop) |= SANEBIT;
 		prev = loop;
-		loop = DBFETCH(loop)->next;
+		loop = db[loop].next;
 	}
 }
 
@@ -548,14 +548,14 @@ cut_bad_exits(dbref obj)
 				SanFixed2(obj, loop, "Exits chain for %s cut at %s");
 			}
 			if (prev != NOTHING)
-				DBFETCH(prev)->next = NOTHING;
+				db[prev].next = NOTHING;
 			else
 				EXITS(obj) = NOTHING;
 			return;
 		}
 		FLAGS(loop) |= SANEBIT;
 		prev = loop;
-		loop = DBFETCH(loop)->next;
+		loop = db[loop].next;
 	}
 }
 
@@ -600,10 +600,10 @@ create_lostandfound(dbref * player, dbref * room)
 	*room = object_new();
 	NAME(*room) = alloc_string("lost+found");
 	LOCATION(*room) = GLOBAL_ENVIRONMENT;
-	DBFETCH(*room)->exits = NOTHING;
-	DBFETCH(*room)->sp.room.dropto = NOTHING;
+	db[*room].exits = NOTHING;
+	db[*room].sp.room.dropto = NOTHING;
 	FLAGS(*room) = TYPE_ROOM | SANEBIT;
-	PUSH(*room, DBFETCH(GLOBAL_ENVIRONMENT)->contents);
+	PUSH(*room, db[GLOBAL_ENVIRONMENT].contents);
 	SanFixed(*room, "Using %s to resolve unknown location");
 
 	while (lookup_player(player_name) != NOTHING && strlen(player_name) < PLAYER_NAME_LIMIT) {
@@ -627,7 +627,7 @@ create_lostandfound(dbref * player, dbref * room)
 		rpass = rand_password();
 		PLAYER_SET_PASSWORD(*player, NULL);
 		set_password(*player, rpass);
-		PUSH(*player, DBFETCH(*room)->contents);
+		PUSH(*player, db[*room].contents);
 		add_player(*player);
 		warn("Using %s (with password %s) to resolve "
 				 "unknown owner", unparse(*player), rpass);
@@ -640,14 +640,14 @@ fix_room(dbref obj)
 {
 	dbref i;
 
-	i = DBFETCH(obj)->sp.room.dropto;
+	i = db[obj].sp.room.dropto;
 
 	if (!valid_ref(i) && i != HOME) {
 		SanFixed(obj, "Removing invalid drop-to from %s");
-		DBFETCH(obj)->sp.room.dropto = NOTHING;
+		db[obj].sp.room.dropto = NOTHING;
 	} else if (i >= 0 && TYPEOF(i) != TYPE_THING && TYPEOF(i) != TYPE_ROOM) {
 		SanFixed2(obj, i, "Removing drop-to on %s to %s");
-		DBFETCH(obj)->sp.room.dropto = NOTHING;
+		db[obj].sp.room.dropto = NOTHING;
 	}
 }
 
@@ -670,13 +670,13 @@ fix_exit(dbref obj)
 {
 	int i, j;
 
-	for (i = 0; i < DBFETCH(obj)->sp.exit.ndest;) {
-		if (!valid_obj((DBFETCH(obj)->sp.exit.dest)[i]) &&
-			(DBFETCH(obj)->sp.exit.dest)[i] != HOME) {
+	for (i = 0; i < db[obj].sp.exit.ndest;) {
+		if (!valid_obj((db[obj].sp.exit.dest)[i]) &&
+			(db[obj].sp.exit.dest)[i] != HOME) {
 			SanFixed(obj, "Removing invalid destination from %s");
-			DBFETCH(obj)->sp.exit.ndest--;
-			for (j = i; j < DBFETCH(obj)->sp.exit.ndest; j++) {
-				(DBFETCH(obj)->sp.exit.dest)[i] = (DBFETCH(obj)->sp.exit.dest)[i + 1];
+			db[obj].sp.exit.ndest--;
+			for (j = i; j < db[obj].sp.exit.ndest; j++) {
+				(db[obj].sp.exit.dest)[i] = (db[obj].sp.exit.dest)[i + 1];
 			}
 		} else {
 			i++;
@@ -760,12 +760,12 @@ find_misplaced_objects(void)
 
 						loop1 = LOCATION(loop);
 						if (CONTENTS(loop1) == loop)
-							CONTENTS(loop1) = DBFETCH(loop)->next;
+							CONTENTS(loop1) = db[loop].next;
 						else
 							for (loop1 = CONTENTS(loop1);
-								 loop1 != NOTHING; loop1 = DBFETCH(loop1)->next) {
-								if (DBFETCH(loop1)->next == loop) {
-									DBFETCH(loop1)->next = DBFETCH(loop)->next;
+								 loop1 != NOTHING; loop1 = db[loop1].next) {
+								if (db[loop1].next == loop) {
+									db[loop1].next = db[loop].next;
 									break;
 								}
 							}
@@ -826,17 +826,17 @@ adopt_orphans(void)
 			case TYPE_ROOM:
 			case TYPE_THING:
 			case TYPE_PLAYER:
-				DBFETCH(loop)->next = DBFETCH(LOCATION(loop))->contents;
-				DBFETCH(LOCATION(loop))->contents = loop;
+				db[loop].next = db[LOCATION(loop)].contents;
+				db[LOCATION(loop)].contents = loop;
 				SanFixed2(loop, LOCATION(loop), "Orphaned object %s added to contents of %s");
 				break;
 			case TYPE_EXIT:
-				DBFETCH(loop)->next = DBFETCH(LOCATION(loop))->exits;
-				DBFETCH(LOCATION(loop))->exits = loop;
+				db[loop].next = db[LOCATION(loop)].exits;
+				db[LOCATION(loop)].exits = loop;
 				SanFixed2(loop, LOCATION(loop), "Orphaned exit %s added to exits of %s");
 				break;
 			case TYPE_GARBAGE:
-				DBFETCH(loop)->next = recyclable;
+				db[loop].next = recyclable;
 				recyclable = loop;
 				SanFixedRef(loop, "Litter object %d moved to recycle bin");
 				break;
@@ -851,9 +851,9 @@ adopt_orphans(void)
 void
 clean_global_environment(void)
 {
-	if (DBFETCH(GLOBAL_ENVIRONMENT)->next != NOTHING) {
+	if (db[GLOBAL_ENVIRONMENT].next != NOTHING) {
 		SanFixed(GLOBAL_ENVIRONMENT, "Removed the global environment %s from a chain");
-		DBFETCH(GLOBAL_ENVIRONMENT)->next = NOTHING;
+		db[GLOBAL_ENVIRONMENT].next = NOTHING;
 	}
 	if (LOCATION(GLOBAL_ENVIRONMENT) != NOTHING) {
 		SanFixed2(GLOBAL_ENVIRONMENT, LOCATION(GLOBAL_ENVIRONMENT),

@@ -32,7 +32,7 @@ do_say(command_t *cmd)
 	snprintf(buf, sizeof(buf), "You say, \"%s\"", message);
 	notify(player, buf);
 	snprintf(buf, sizeof(buf), "%s says, \"%s\"", NAME(player), message);
-	notify_except(DBFETCH(loc)->contents, player, buf, player);
+	notify_except(db[loc].contents, player, buf, player);
 }
 
 void
@@ -48,7 +48,7 @@ do_pose(command_t *cmd)
 
 	/* notify everybody */
 	snprintf(buf, sizeof(buf), "%s %s", NAME(player), message);
-	notify_except(DBFETCH(loc)->contents, NOTHING, buf, player);
+	notify_except(db[loc].contents, NOTHING, buf, player);
 }
 
 void
@@ -105,10 +105,10 @@ do_page(command_t *cmd)
 	}
 	if (blank(arg2))
 		snprintf(buf, sizeof(buf), "You sense that %s is looking for you in %s.",
-				NAME(player), NAME(DBFETCH(player)->location));
+				NAME(player), NAME(db[player].location));
 	else
 		snprintf(buf, sizeof(buf), "%s pages from %s: \"%s\"", NAME(player),
-				NAME(DBFETCH(player)->location), arg2);
+				NAME(db[player].location), arg2);
 	if (notify(target, buf))
 		notify(player, "Your message has been sent.");
 	else {

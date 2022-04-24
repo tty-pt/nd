@@ -86,7 +86,7 @@ can_link(dbref who, dbref what)
 {
 	/* Anyone can link an exit that is currently unlinked. */
 	return (controls(who, what) || ((Typeof(what) == TYPE_EXIT)
-									&& DBFETCH(what)->sp.exit.ndest == 0));
+									&& db[what].sp.exit.ndest == 0));
 }
 
 /*
@@ -109,15 +109,15 @@ could_doit(dbref player, dbref thing)
 	if (Typeof(thing) == TYPE_EXIT) {
 		/* If exit is unlinked, can't do it.
 		 * Unless its a geo exit */
-		if (DBFETCH(thing)->sp.exit.ndest == 0) {
+		if (db[thing].sp.exit.ndest == 0) {
 			if (e_exit_is(thing))
 				goto geo;
 			else
 				return 0;
 		}
 
-		source = DBFETCH(player)->location;
-		dest = *(DBFETCH(thing)->sp.exit.dest);
+		source = db[player].location;
+		dest = *(db[thing].sp.exit.dest);
 
 		if (dest < 0 && e_exit_is(thing))
 			goto geo;
@@ -126,7 +126,7 @@ could_doit(dbref player, dbref thing)
 			/* Check for additional restrictions related to player dests */
 			dbref destplayer = dest;
 
-			dest = DBFETCH(dest)->location;
+			dest = db[dest].location;
 			/* If the dest player isn't JUMP_OK, or if the dest player's loc
 			 * is set BOUND, can't do it. */
 			if (!(FLAGS(destplayer) & JUMP_OK) || (FLAGS(dest) & BUILDER)) {
@@ -135,8 +135,8 @@ could_doit(dbref player, dbref thing)
 		}
 
 		/* for actions */
-		if ((DBFETCH(thing)->location != NOTHING) &&
-			(Typeof(DBFETCH(thing)->location) != TYPE_ROOM)) {
+		if ((db[thing].location != NOTHING) &&
+			(Typeof(db[thing].location) != TYPE_ROOM)) {
 
 			/* If this is an exit on a Thing or a Player... */
 
@@ -288,13 +288,13 @@ controls(dbref who, dbref what)
 	 * security hole. -winged */
 	/*
 	 * if (Typeof(what) == TYPE_EXIT) {
-	 *    int     i = DBFETCH(what)->sp.exit.ndest;
+	 *    int     i = db[what].sp.exit.ndest;
 	 *
 	 *    while (i > 0) {
-	 *        if (who == OWNER(DBFETCH(what)->sp.exit.dest[--i]))
+	 *        if (who == OWNER(db[what].sp.exit.dest[--i]))
 	 *            return 1;
 	 *    }
-	 *    if (who == OWNER(DBFETCH(what)->location))
+	 *    if (who == OWNER(db[what].location))
 	 *        return 1;
 	 * }
 	 */
