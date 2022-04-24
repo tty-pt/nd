@@ -51,7 +51,7 @@
 #define GETOECHO(x)	GETMESG(x, MESGPROP_OECHO)
 #define GETPECHO(x)	GETMESG(x, MESGPROP_PECHO)
 
-#define SETMESG(x,y,z)    {add_property(x, y, z, 0);}
+#define SETMESG(x,y,z)    {add_prop_nofetch(x, y, z, 0);}
 #define SETDESC(x,y)	SETMESG(x, MESGPROP_DESC, y)
 #define SETIDESC(x,y)	SETMESG(x, MESGPROP_IDESC, y)
 #define SETSUCC(x,y)	SETMESG(x, MESGPROP_SUCC, y)
@@ -73,7 +73,7 @@
 #define SETCONLOCK(x,y)  {PData mydat; mydat.flags = PROP_LOKTYP; mydat.data.lok = y; set_property(x, MESGPROP_CONLOCK, &mydat);}
 
 #define GETVALUE(x)	get_property_value(x, MESGPROP_VALUE)
-#define SETVALUE(x,y)	add_property(x, MESGPROP_VALUE, NULL, y)
+#define SETVALUE(x,y)	add_prop_nofetch(x, MESGPROP_VALUE, NULL, y)
 
 #define MESGPROP_LID	"_/lid"
 #define SETLID(x,y)	set_property_value(x, MESGPROP_LID, y + 1)

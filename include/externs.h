@@ -238,7 +238,6 @@ int notify(dbref player, const char *msg);
 void notifyf(dbref player, char *format, ...);
 
 /* from property.c */
-void add_property(dbref player, const char *pname, const char *strval, int value);
 char * displayprop(dbref player, dbref obj, const char *name, char *buf, size_t bufsiz);
 long size_properties(dbref player, int load);
 void untouchprops_incremental(int limit);

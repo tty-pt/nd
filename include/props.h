@@ -144,7 +144,6 @@ void set_property_value(dbref obj, const char *propstr, int val);
 void set_property_hash(dbref obj, const char *propstr, int idx, int val);
 void set_property_mark(dbref obj, const char *propstr, char mark, char *value);
 void set_property_dbref(dbref obj, const char *propstr, dbref val);
-extern void add_property(dbref player, const char *type, const char *strval, int value);
 
 extern void remove_property_list(dbref player, int all);
 extern void remove_property(dbref player, const char *type);

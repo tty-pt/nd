@@ -204,14 +204,6 @@ add_prop_nofetch(dbref player, const char *pname, const char *strval, int value)
 }
 
 
-/* adds a new property to an object */
-void
-add_property(dbref player, const char *pname, const char *strval, int value)
-{
-
-	add_prop_nofetch(player, pname, strval, value);
-}
-
 
 void
 remove_proplist_item(dbref player, PropPtr p, int allp)

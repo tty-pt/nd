@@ -676,11 +676,10 @@ do_set(command_t *cmd)
 			remove_property(thing, type);
 			notify(player, "Property removed.");
 		} else {
-			if (ival) {
-				add_property(thing, type, NULL, ival);
-			} else {
-				add_property(thing, type, pname, 0);
-			}
+			if (ival)
+				add_prop_nofetch(thing, type, NULL, ival);
+			else
+				add_prop_nofetch(thing, type, pname, 0);
 			notify(player, "Property set.");
 		}
 		free((void *) x);
@@ -800,14 +799,14 @@ do_propset(command_t *cmd)
 		return;
 	}
 
-	if (!*type || string_prefix("string", type)) {
-		add_property(thing, pname, value, 0);
-	} else if (string_prefix("integer", type)) {
+	if (!*type || string_prefix("string", type))
+		add_prop_nofetch(thing, pname, value, 0);
+	else if (string_prefix("integer", type)) {
 		if (!number(value)) {
 			notify(player, "That's not an integer!");
 			return;
 		}
-		add_property(thing, pname, NULL, atoi(value));
+		add_prop_nofetch(thing, pname, NULL, atoi(value));
 	} else if (string_prefix("float", type)) {
 		if (!ifloat(value)) {
 			notify(player, "That's not a floating point number!");
