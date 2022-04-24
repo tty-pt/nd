@@ -120,17 +120,9 @@ do_clone(command_t *cmd)
 	/* All OK so far, so try to find the thing that should be cloned. We
 	   do not allow rooms, exits, etc. to be cloned for now. */
 
-	if (
-			(
-			 (thing = ematch_absolute(name)) == NOTHING
-			 && (thing = ematch_mine(player, name)) == NOTHING
-			 && (thing = ematch_near(player, name)) == NOTHING
-			) || thing == AMBIGUOUS
-	   )
-	{
-		notify(player, "I don't know what you mean.");
+	if ((thing = ematch_noisy(player, name, MCH_ABS | MCH_MINE | MCH_NEAR)
+	    ) == NOTHING)
 		return;
-	}
 
 	/* Further sanity checks */
 

@@ -25,16 +25,8 @@ match_controlled(dbref player, const char *name)
 {
 	dbref match;
 
-	if (
-			(
-			 (match = ematch_absolute(name)) == NOTHING
-			 && (match = ematch_all(player, name)) == NOTHING
-			) || match == AMBIGUOUS
-	   )
-	{
-		notify(player, "I don't know what you mean.");
+	if ((match = ematch_noisy(player, name, MCH_ABS | MCH_ALL)) == NOTHING)
 		return NOTHING;
-	}
 
 	else if (!controls(player, match)) {
 		notify(player, "Permission denied. (You don't control what was matched)");
@@ -342,22 +334,12 @@ do_conlock(command_t *cmd)
 	dbref player = cmd->player;
 	const char *name = cmd->argv[1];
 	const char *keyname = cmd->argv[2];
-	dbref thing;
+	dbref thing = ematch_noisy(player, name, MCH_ABS | MCH_ALL);
 	struct boolexp *key;
 	PData mydat;
 
-	NOGUEST("@conlock",player);
-
-	if (
-			(
-			 (thing = ematch_absolute(name)) == NOTHING
-			 && (thing = ematch_all(player, name)) == NOTHING
-			) || thing == AMBIGUOUS
-	   )
-	{
-		notify(player, "I don't know what you mean.");
+	if (thing == NOTHING)
 		return;
-	}
 
 	if (!controls(player, thing)) {
 		notify(player, "You can't set the container-lock on that!");
@@ -388,22 +370,12 @@ do_chlock(command_t *cmd) {
 	dbref player = cmd->player;
 	const char *name = cmd->argv[1];
 	const char *keyname = cmd->argv[2];
-	dbref thing;
+	dbref thing = ematch_noisy(player, name, MCH_ABS | MCH_ALL);
 	struct boolexp *key;
 	PData mydat;
 
-	NOGUEST("@chown_lock",player);
-
-	if (
-			(
-			 (thing = ematch_absolute(name)) == NOTHING
-			 && (thing = ematch_all(player, name)) == NOTHING
-			) || thing == AMBIGUOUS
-	   )
-	{
-		notify(player, "I don't know what you mean.");
+	if (thing == NOTHING)
 		return;
-	}
 
 	if (!controls(player, thing)) {
 		notify(player, "You can't set the chown-lock on that!");
@@ -436,21 +408,11 @@ do_lock(command_t *cmd)
 	dbref player = cmd->player;
 	const char *name = cmd->argv[1];
 	const char *keyname = cmd->argv[2];
-	dbref thing;
+	dbref thing = ematch_noisy(player, name, MCH_ABS | MCH_ALL);
 	struct boolexp *key;
 
-	NOGUEST("@lock",player);
-
-	if (
-			(
-			 && (thing = ematch_absolute(name)) == NOTHING
-			 && (thing = ematch_all(player, name)) == NOTHING
-			) || thing == AMBIGUOUS
-	   )
-	{
-		notify(player, "I don't know what you mean.");
+	if (thing == NOTHING)
 		return;
-	}
 
 	if (Typeof(thing) == TYPE_EXIT
 			&& e_exit_is(thing)
@@ -551,16 +513,9 @@ do_chown(command_t *cmd)
 		return;
 	}
 
-	if (
-			(
-			 (thing = ematch_absolute(name)) == NOTHING
-			 (thing = ematch_all(player, name)) == NOTHING
-			) || thing == AMBIGUOUS
-	   )
-	{
-		notify(player, "I don't know what you mean.");
+	thing = ematch_noisy(player, name, MCH_ABS | MCH_ALL);
+	if (thing == NOTHING)
 		return;
-	}
 
 	if (*newowner && strcmp(newowner, "me")) {
 		if ((owner = lookup_player(newowner)) == NOTHING) {
@@ -856,16 +811,9 @@ do_propset(command_t *cmd)
 		mydat.data.fval = strtod(value, NULL);
 		set_property(thing, pname, &mydat);
 	} else if (string_prefix("dbref", type)) {
-		if (
-				(
-				 (ref = ematch_absolute(value)) == NOTHING
-				 && (ref = ematch_all(player, value)) == NOTHING
-				) || ref == AMBIGUOUS
-		   )
-		{
-			notify(player, "I don't know what you mean.");
+		ref = ematch_noisy(player, value, MCH_ABS | MCH_ALL);
+		if (ref == NOTHING)
 			return;
-		}
 
 		mydat.flags = PROP_REFTYP;
 		mydat.data.ref = ref;

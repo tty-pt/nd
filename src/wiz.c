@@ -34,21 +34,13 @@ do_teleport(command_t *cmd) {
 	if (*arg2 == '\0') {
 		victim = player;
 		to = arg1;
-	} else if (
-			(
-			 (victim = ematch_absolute(player, arg1)) == NOTHING
-			 && (victim = ematch_me(player, arg1)) == NOTHING
-			 && (victim = ematch_here(player, arg1)) == NOTHING
-			 && (victim = ematch_near(player, arg1)) == NOTHING
-			 && (victim = ematch_mine(player, arg1)) == NOTHING
-			 && (victim = ematch_player(player, arg1)) == NOTHING
-			) || victim == AMBIGUOUS
-			// match player
-		  )
-	{
-		notify(player, "I don't know what you mean.");
+	} else if ((victim = ematch_noisy(player, arg1, MCH_ABS | MCH_ME
+					| MCH_HERE | MCH_NEAR | MCH_MINE
+					| MCH_PLAYER)
+		   ) == NOTHING)
+
 		return;
-	} else
+	else
 		to = arg2;
 
 #ifdef GOD_PRIV
@@ -58,21 +50,12 @@ do_teleport(command_t *cmd) {
 	}
 #endif
 
-	if (
-			(
-			 (destination = ematch_absolute(to)) == NOTHING
-			 && (destination = ematch_me(player, to)) == NOTHING
-			 && (destination = ematch_here(player, to)) == NOTHING
-			 && (destination = ematch_home(to)) == NOTHING
-			 && (destination = ematch_mine(player, to)) == NOTHING
-			 && (destination = ematch_near(player, to)) == NOTHING
-			 && (destination = ematch_player(player, to)) == NOTHING
-			) || destination == AMBIGUOUS
-	   )
-	{
-		notify(player, "I don't know what you mean.");
+	if ((destination = ematch_noisy(player, to, MCH_ABS | MCH_ME | MCH_HERE
+					| MCH_HOME | MCH_MINE | MCH_NEAR
+					| MCH_PLAYER)
+	    ) == NOTHING)
+
 		return;
-	}
 
 	switch (destination) {
 	case HOME:
@@ -257,14 +240,8 @@ do_unbless(command_t *cmd) {
 	}
 
 	/* get victim */
-	if (
-			(victim = ematch_all(player, what)) == NOTHING
-			|| victim == AMBIGUOUS
-	   )
-	{
-		notify(player, "I don't know what you mean.");
+	if ((victim = ematch_noisy(player, what, MCH_ALL)) == NOTHING)
 		return;
-	}
 
 	cnt = blessprops_wildcard(player, victim, "", propname, 0);
 	snprintf(buf, sizeof(buf), "%d propert%s unblessed.", cnt, (cnt == 1)? "y" : "ies");
@@ -292,14 +269,8 @@ do_bless(command_t *cmd) {
 	}
 
 	/* get victim */
-	if (
-			(victim = ematch_all(player, what)) == NOTHING
-			|| victim == AMBIGUOUS
-	   )
-	{
-		notify(player, "I don't know what you mean.");
+	if ((victim = ematch_noisy(player, what, MCH_ALL)) == NOTHING)
 		return;
-	}
 
 #ifdef GOD_PRIV
 	if(!God(player) && God(OWNER(victim))) {

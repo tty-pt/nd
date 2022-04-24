@@ -277,14 +277,16 @@ do_kill(command_t *cmd)
 	const char *what = cmd->argv[1];
 	dbref here = getloc(player);
 	dbref target = strcmp(what, "me")
-		? ematch_near(player, what)
+		? ematch_noisy(player, what, MCH_NEAR)
 		: player;
 	struct mob *att, *tar;
 
         att = GETLID(player) ? MOB(player) : mob_put(player);
 
+	if (target == NOTHING)
+		return;
+
 	if (FLAGS(here) & HAVEN
-	    || target == NOTHING
 	    || player == target
 	    || !(tar = MOB(target)))
 	{
@@ -342,18 +344,17 @@ do_heal(command_t *cmd)
 {
 	dbref player = cmd->player;
 	const char *name = cmd->argv[1];
-	dbref here = getloc(player);
 	dbref target;
 	struct mob *tar;
 
 	if (strcmp(name, "me")) {
-		target = ematch_near(player, name);
-
+		target = ematch_noisy(player, name, MCH_NEAR);
+		if (target == NOTHING)
+			return;
 	} else
 		target = player;
 
 	if (!(FLAGS(player) & WIZARD)
-	    || target < 0
 	    || GETLID(target) < 0) {
                 notify(player, "You can't do that.");
                 return;
@@ -373,11 +374,12 @@ do_advitam(command_t *cmd)
 {
 	dbref player = cmd->player;
 	const char *name = cmd->argv[1];
-	dbref here = getloc(player);
-	dbref target = ematch_near(player, name);
+	dbref target = ematch_noisy(player, name, MCH_NEAR);
+
+	if (target == NOTHING)
+		return;
 
 	if (!(FLAGS(player) & WIZARD)
-	    || target == NOTHING
 	    || OWNER(target) != player) {
 		notify(player, "You can't do that.");
 		return;
@@ -391,11 +393,13 @@ void
 do_givexp(command_t *cmd, const char *name, const char *amount)
 {
 	dbref player = cmd->player;
-	dbref target = ematch_near(player, name);
+	dbref target = ematch_noisy(player, name, MCH_NEAR);
 	int amt = strtol(amount, NULL, 0);
+	
+	if (target == NOTHING)
+		return;
 
-	if (!(FLAGS(player) & WIZARD)
-	    || target == NOTHING)
+	if (!(FLAGS(player) & WIZARD))
 		notify(player, "You can't do that.");
 	else
 		_xp_award(target, amt);
@@ -479,7 +483,11 @@ sit(dbref player, const char *name)
 		return;
 	}
 
-	dbref seat = ematch_near(player, name);
+	dbref seat = ematch_noisy(player, name, MCH_NEAR);
+
+	if (seat == NOTHING)
+		return;
+
 	int max = GETSEATM(seat);
 	if (!max) {
 		notify(player, "You can't sit on that.");

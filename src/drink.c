@@ -61,12 +61,10 @@ do_drink(command_t *cmd)
 		return;
 	}
 
-	vial = ematch_mine(player, name);
+	vial = ematch_noisy(player, name, MCH_MINE);
 
-	if (vial == NOTHING) {
-		notify(player, "Drink what?");
+	if (vial == NOTHING)
 		return;
-	}
 
 	drink(player, vial);
 	/* if (drink(player, vial)) { */
@@ -81,13 +79,11 @@ do_fill(command_t *cmd)
 	dbref player = cmd->player;
 	const char *vial_s = cmd->argv[1];
 	const char *source_s = cmd->argv[2];
-	dbref vial = ematch_mine(player, vial_s);
+	dbref vial = ematch_noisy(player, vial_s, MCH_MINE);
 	unsigned m, n;
 
-	if (vial == NOTHING) {
-		notify(player, "Fill what?");
+	if (vial == NOTHING)
 		return;
-	}
 
 	m = GETCONSUM(vial);
 	if (!m) {
@@ -101,12 +97,10 @@ do_fill(command_t *cmd)
 		return;
 	}
 
-	dbref source = ematch_near(player, source_s);
+	dbref source = ematch_noisy(player, source_s, MCH_NEAR);
 
-	if (source < 0) {
-		notify(player, "Invalid source.");
+	if (source == NOTHING)
 		return;
-	}
 
 	int dr = GETDRINK(source);
 

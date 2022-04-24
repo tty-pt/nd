@@ -106,12 +106,10 @@ do_equip(command_t *cmd)
 {
 	dbref player = cmd->player;
 	char const *name = cmd->argv[1];
-	dbref eq = ematch_at(player, player, name);
+	dbref eq = ematch_noisy(player, name, MCH_MINE);
 
-	if (eq < 0) {
-		notify(player, "You are not carrying that.");
+	if (eq == NOTHING)
 		return;
-	}
 
 	if (equip(player, eq)) { 
 		notify(player, "You can't equip that.");

@@ -514,11 +514,13 @@ do_eat(command_t *cmd)
 	dbref player = cmd->player;
 	const char *what = cmd->argv[1];
 	struct mob *p = MOB(player);
-	dbref item = ematch_mine(player, what);
+	dbref item = ematch_noisy(player, what, MCH_MINE);
 	int food;
 
-	if (item < 0
-	    || (food = GETFOOD(item)) < 0) {
+	if (item == NOTHING)
+		return;
+
+	if ((food = GETFOOD(item)) < 0) {
 		notify(player, "You can't eat that.");
 		return;
 	}

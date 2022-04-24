@@ -257,14 +257,11 @@ void
 do_talk(command_t *cmd) {
         const char buf[BUFSIZ];
         dbref player = cmd->player;
-        dbref loc = getloc(player);
         const char *npcs = cmd->argv[1];
-        dbref npc = *npcs ? ematch_near(player, npcs) : NOTHING;
+        dbref npc = *npcs ? ematch_noisy(player, npcs, MCH_NEAR) : NOTHING;
 
-        if (npc <= 0) {
-                notify(player, "Can't find that.");
+        if (npc == NOTHING)
                 return;
-        }
 
         snprintf((char *) buf, sizeof(buf), "_/dialog/%d", npc);
 

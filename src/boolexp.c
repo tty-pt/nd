@@ -161,7 +161,6 @@ parse_boolexp_F(dbref player, const char **parsebuf, int dbloadp)
 	struct boolexp *b;
 	char *p;
 	char buf[BUFFER_LEN];
-	char msg[BUFFER_LEN];
 
 	skip_whitespace(parsebuf);
 	switch (**parsebuf) {
@@ -210,19 +209,12 @@ parse_boolexp_F(dbref player, const char **parsebuf, int dbloadp)
 
 		/* do the match */
 		if (!dbloadp) {
-			if (
-					(
-					 (b->thing = ematch_absolute(buf)) == NOTHING
-					 && (b->thing = ematch_me(player, buf)) == NOTHING
-					 && (b->thing = ematch_here(player, buf)) == NOTHING
-					 && (b->thing = ematch_mine(player, buf)) == NOTHING
-					 && (b->thing = ematch_near(player, buf)) == NOTHING
-					 && (b->thing = ematch_near(player, buf)) == NOTHING
-					 && (b->thing = ematch_player(player, buf)) == NOTHING
-					) || b->thing == AMBIGUOUS
-			   )
+			b->thing = ematch_noisy(player, buf, MCH_ABS | MCH_ME
+					| MCH_HERE | MCH_MINE | MCH_NEAR
+					| MCH_PLAYER);
+
+			if (b->thing == NOTHING)
 			{
-				notify(player, "I don't what you mean.");
 				free_boolnode(b);
 				return TRUE_BOOLEXP;
 			} else {

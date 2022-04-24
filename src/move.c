@@ -254,18 +254,12 @@ do_get(command_t *cmd)
 	dbref player = cmd->player;
 	const char *what = cmd->argv[1];
 	const char *obj = cmd->argv[2];
-	dbref thing, cont;
+	dbref thing = ematch_noisy(player, what, MCH_NEAR | MCH_MINE),
+	      cont;
 	int cando;
 
-	if (
-			((thing = ematch_near(player, what)) == NOTHING
-			 && (thing = ematch_mine(player, what)) == NOTHING)
-			|| thing == AMBIGUOUS
-	   )
-	{
-		notify(player, "I don't know what you mean.");
+	if (thing == NOTHING)
 		return;
-	}
 
 	cont = thing;
 
@@ -275,7 +269,7 @@ do_get(command_t *cmd)
 	}
 
 	if (obj && *obj) {
-		thing = ematch_at(player, cont, obj);
+		thing = ematch_at(player, cont, obj); // FIXME can't it be AMBIGUOUS?
 		if (thing == NOTHING)
 			return;
 		if (Typeof(cont) == TYPE_PLAYER) {
@@ -339,25 +333,16 @@ do_drop(command_t *cmd)
 	if ((loc = getloc(player)) == NOTHING)
 		return;
 
-	if (
-			(thing = ematch_mine(player, name)) == NOTHING
-			|| thing == AMBIGUOUS
-	   )
-	{
-		notify(player, "I don't know what you mean.");
+	thing = ematch_noisy(player, name, MCH_MINE);
+
+	if (thing == NOTHING)
 		return;
-	}
 
 	cont = loc;
-	if (
-			obj && *obj
-			&& (cont = ematch_mine(player, obj)) == NOTHING
-			&& (cont = ematch_near(player, obj)) == NOTHING
-	   )
-	{
-		notify(player, "I don't know what you mean.");
+	if (obj && *obj && (cont = ematch_noisy(player, obj, MCH_MINE
+					| MCH_NEAR)
+			   ) == NOTHING)
 		return;
-	}
         
 	switch (Typeof(thing)) {
 	case TYPE_THING:
@@ -419,20 +404,12 @@ do_recycle(command_t *cmd)
 {
 	dbref player = cmd->player;
 	const char *name = cmd->argv[1];
-	dbref thing;
+	dbref thing = ematch_noisy(player, name, MCH_ABS | MCH_NEAR
+			| MCH_MINE);
 	char buf[BUFFER_LEN];
 
-	if (
-			((thing = ematch_absolute(name)) == NOTHING
-			 && (thing = ematch_near(player, name)) == NOTHING
-			 && (thing = ematch_mine(player, name)) == NOTHING)
-			|| thing == AMBIGUOUS
-	   )
-	{
-		notify(player, "I don't know what you mean.");
+	if (thing == NOTHING)
 		return;
-	}
-
 
 #ifdef GOD_PRIV
 	if(!God(player) && God(OWNER(thing))) {

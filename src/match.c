@@ -27,6 +27,45 @@ struct match_data {
 	int longest_match;			/* longest matched string */
 };
 
+inline dbref
+ematch_me(dbref player, const char *str)
+{
+	if (!strcmp(str, "me"))
+		return player;
+	else
+		return NOTHING;
+}
+
+inline dbref
+ematch_here(dbref player, const char *str)
+{
+	if (!strcmp(str, "here"))
+		return getloc(player);
+	else
+		return NOTHING;
+}
+
+inline dbref
+ematch_home(const char *str)
+{
+	if (!strcmp(str, "home"))
+		return HOME;
+	else
+		return NOTHING;
+}
+
+inline dbref
+ematch_mine(dbref player, const char *str)
+{
+	return ematch_at(player, player, str);
+}
+
+inline dbref
+ematch_near(dbref player, const char *str)
+{
+	return ematch_at(player, getloc(player), str);
+}
+
 static void
 init_match(dbref player, const char *name, struct match_data *md)
 {
@@ -203,4 +242,48 @@ ematch_at(dbref player, dbref where, const char *name) {
 	match_list(DBFETCH(where)->contents, &md);
 	what = md.exact_match;
 	return what;
+}
+
+dbref
+ematch(dbref player, const char *name, unsigned char flags)
+{
+	dbref res;
+	
+	if ((flags & MCH_ABS) && (res = ematch_absolute(name)) != NOTHING)
+		return res;
+
+	if ((flags & MCH_ME) && (res = ematch_me(player, name)) != NOTHING)
+		return res;
+
+	if ((flags & MCH_HERE) && (res = ematch_here(player, name)) != NOTHING)
+		return res;
+
+	if ((flags & MCH_HOME) && (res = ematch_home(name)) != NOTHING)
+		return res;
+	
+	if ((flags & MCH_PLAYER) && (res = ematch_player(player, name)) != NOTHING)
+		return res;
+
+	if ((flags & MCH_MINE) && (res = ematch_mine(player, name)) != NOTHING)
+		return res;
+
+	if ((flags & MCH_NEAR) && (res = ematch_near(player, name)) != NOTHING)
+		return res;
+
+	return NOTHING;
+}
+
+dbref
+ematch_noisy(dbref player, const char *name, unsigned char flags)
+{
+	dbref res = ematch(player, name, flags);
+
+	switch (res) {
+	case NOTHING:
+	case AMBIGUOUS:
+		notify(player, "I don't know what you mean.");
+		return NOTHING;
+	default:
+		return res;
+	}
 }

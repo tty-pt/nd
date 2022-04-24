@@ -27,16 +27,9 @@ do_give(command_t *cmd)
 		return;
 	}
 
-	if (
-			(
-			 (who = ematch_me(player, recipient)) == NOTHING
-			 && (who = ematch_near(player, recipient)) == NOTHING
-			) || who == AMBIGUOUS
-	   )
-	{
-		notify(player, "I don't know what you mean.");
+	who = ematch_noisy(player, recipient, MCH_ME | MCH_NEAR);
+	if (who == NOTHING)
 		return;
-	}
 
 	if (!Wizard(OWNER(player))) {
 		if (Typeof(who) != TYPE_PLAYER) {

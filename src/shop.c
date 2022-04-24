@@ -106,12 +106,10 @@ do_sell(command_t *cmd)
 		return;
 	}
 
-	dbref item = ematch_mine(player, name);
+	dbref item = ematch_noisy(player, name, MCH_MINE);
 
-        if (item == NOTHING) {
-		notify(player, "You don't have that item.");
+        if (item == NOTHING)
 		return;
-        }
 
         int cost = GETVALUE(item);
         int npchas = GETVALUE(npc);
