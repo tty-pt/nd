@@ -15,12 +15,7 @@
 
 #define BUFFER_LEN 8192
 
-extern char match_args[BUFFER_LEN];
-extern char match_cmdname[BUFFER_LEN];
-
 #define DBFETCH(x)  (db + (x))
-#define DBDIRTY(x)  {db[x].flags |= OBJECT_CHANGED;}
-#define DBSTORE(x, y, z)    {DBFETCH(x)->y = z; DBDIRTY(x);}
 
 #define NAME(x)     (db[x].name)
 #define FLAGS(x)    (db[x].flags)
@@ -69,11 +64,11 @@ extern char match_cmdname[BUFFER_LEN];
 #define SETOECHO(x,y)	SETMESG(x, MESGPROP_OECHO, y)
 #define SETPECHO(x,y)	SETMESG(x, MESGPROP_PECHO, y)
 
-#define LOADMESG(x,y,z)    {add_prop_nofetch(x,y,z,0); DBDIRTY(x);}
+#define LOADMESG(x,y,z)    add_prop_nofetch(x,y,z,0)
 
 #define GETLOCK(x)    (get_property_lock(x, MESGPROP_LOCK))
 #define SETLOCK(x,y)  {PData mydat; mydat.flags = PROP_LOKTYP; mydat.data.lok = y; set_property(x, MESGPROP_LOCK, &mydat);}
-#define CLEARLOCK(x)  {PData mydat; mydat.flags = PROP_LOKTYP; mydat.data.lok = TRUE_BOOLEXP; set_property(x, MESGPROP_LOCK, &mydat); DBDIRTY(x);}
+#define CLEARLOCK(x)  {PData mydat; mydat.flags = PROP_LOKTYP; mydat.data.lok = TRUE_BOOLEXP; set_property(x, MESGPROP_LOCK, &mydat); }
 
 #define SETCONLOCK(x,y)  {PData mydat; mydat.flags = PROP_LOKTYP; mydat.data.lok = y; set_property(x, MESGPROP_CONLOCK, &mydat);}
 
@@ -259,15 +254,13 @@ enum at { ARMOR_LIGHT, ARMOR_MEDIUM, ARMOR_HEAVY, };
 #define QUELL           0x80000	/* When set, wiz-perms are turned off */
 #define INTERACTIVE    0x200000	/* internal: denotes player is in editor, or
 								 * muf READ. */
-#define OBJECT_CHANGED 0x400000	/* internal: when an object is dbdirty()ed,
-								 * set this */
 #define SAVED_DELTA    0x800000	/* internal: object last saved to delta file */
 #define READMODE     0x10000000	/* internal: when set, player is in a READ */
 #define SANEBIT      0x20000000	/* internal: used to check db sanity */
 
 
 /* what flags to NOT dump to disk. */
-#define DUMP_MASK    (INTERACTIVE | SAVED_DELTA | OBJECT_CHANGED | READMODE | SANEBIT)
+#define DUMP_MASK    (INTERACTIVE | SAVED_DELTA | READMODE | SANEBIT)
 
 
 typedef long object_flag_type;
@@ -441,7 +434,7 @@ dbref getparent(dbref obj);
 #define DOLIST(var, first) \
   for((var) = (first); (var) != NOTHING; (var) = DBFETCH(var)->next)
 #define PUSH(thing, locative) \
-    {DBSTORE((thing), next, (locative)); (locative) = (thing);}
+    {DBFETCH((thing))->next = (locative); (locative) = (thing);}
 #define getloc(thing) (DBFETCH(thing)->location)
 
 /*
@@ -449,20 +442,6 @@ dbref getparent(dbref obj);
 
   To obtain an object pointer use DBFETCH(i).  Pointers returned by DBFETCH
   may become invalid after a call to object_new().
-
-  To update an object, use DBSTORE(i, f, v), where i is the object number,
-  f is the field (after ->), and v is the new value.
-
-  If you have updated an object without using DBSTORE, use DBDIRTY(i) before
-  leaving the routine that did the update.
-
-  When using PUSH, be sure to call DBDIRTY on the object which contains
-  the locative (see PUSH definition above).
-
-  Some fields are now handled in a unique way, since they are always memory
-  resident, even in the GDBM_DATABASE disk-based muck.  These are: name,
-  flags and owner.  Refer to these by NAME(i), FLAGS(i) and OWNER(i).
-  Always call DBDIRTY(i) after updating one of these fields.
 
   The programmer is responsible for managing storage for string
   components of entries; db_read will produce malloc'd strings.  The

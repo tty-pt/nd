@@ -165,13 +165,6 @@
 #define FALSE 0
 
 /*
- * Memory/malloc stuff.
- */
-#undef LOG_PROPS
-#undef LOG_DISKBASE
-#undef DEBUGDBDIRTY
-
-/*
  * Include all the good standard headers here.
  */
 #include <stdio.h>

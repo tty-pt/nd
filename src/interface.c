@@ -914,7 +914,6 @@ descr_close(descr_t *d)
 			db_obs_remove(last_observed, d->player);
 
 		PLAYER_SP(d->player)->fd = -1;
-		DBDIRTY(d->player);
 		d->flags = 0;
 		d->player = NOTHING;
 	} else

@@ -187,12 +187,10 @@ do_clone(command_t *cmd)
 
 		/* link it in */
 		PUSH(clonedthing, DBFETCH(player)->contents);
-		DBDIRTY(player);
 
 		/* and we're done */
 		snprintf(buf, sizeof(buf), "%s created with number %d.", NAME(thing), clonedthing);
 		notify(player, buf);
-		DBDIRTY(clonedthing);
 	}
 	
 }
@@ -275,12 +273,10 @@ do_create(command_t *cmd)
 
 		/* link it in */
 		PUSH(thing, DBFETCH(player)->contents);
-		DBDIRTY(player);
 
 		/* and we're done */
 		snprintf(buf, sizeof(buf), "%s created with number %d.", name, thing);
 		notify(player, buf);
-		DBDIRTY(thing);
 	}
 	if (*rname) {
 		PData mydat;

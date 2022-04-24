@@ -104,7 +104,6 @@ do_name(command_t *cmd)
 		}
 		NAME(thing) = alloc_string(newname);
 		notify(player, "Name set.");
-		DBDIRTY(thing);
 	}
 }
 
@@ -589,7 +588,6 @@ do_chown(command_t *cmd)
 		snprintf(buf, sizeof(buf), "Owner changed to %s.", unparse_object(player, owner));
 		notify(player, buf);
 	}
-	DBDIRTY(thing);
 }
 
 
@@ -736,12 +734,10 @@ do_set(command_t *cmd)
 	if (*flag == NOT_TOKEN) {
 		/* reset the flag */
 		FLAGS(thing) &= ~f;
-		DBDIRTY(thing);
 		notify(player, "Flag reset.");
 	} else {
 		/* set the flag */
 		FLAGS(thing) |= f;
-		DBDIRTY(thing);
 		notify(player, "Flag set.");
 	}
 }
@@ -891,7 +887,6 @@ set_flags_from_tunestr(dbref obj, const char* tunestr)
 		FLAGS(obj) |= f;
 		p++;
 	}
-	DBDIRTY(obj);
 }
 
 

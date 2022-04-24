@@ -380,7 +380,6 @@ payfor(dbref who, int cost)
 		return 1;
 	} else if (GETVALUE(who) >= cost) {
 		SETVALUE(who, GETVALUE(who) - cost);
-		DBDIRTY(who);
 		return 1;
 	} else {
 		return 0;

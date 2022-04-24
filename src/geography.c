@@ -114,12 +114,10 @@ gexit(dbref loc, dbref loc2, enum exit e)
 
 	/* link it in */
 	PUSH(ref, DBFETCH(loc)->exits);
-	DBDIRTY(loc);
 
 	DBFETCH(ref)->sp.exit.ndest = 1;
 	DBFETCH(ref)->sp.exit.dest = (dbref *) malloc(sizeof(dbref));
 	e_exit_dest_set(ref, loc2);
-	DBDIRTY(ref);
 
 	return ref;
 }
@@ -304,8 +302,6 @@ geo_room_at(dbref player, pos_t pos)
 	DBFETCH(there)->exits = NOTHING;
 	DBFETCH(there)->sp.room.dropto = NOTHING;
 	/* FLAGS(there) = TYPE_ROOM | (FLAGS(cmd->player) & JUMP_OK); */
-	/* DBDIRTY(there); */
-	/* DBDIRTY(loc); */
 	CBUG(there <= 0);
 	exits_infer(player, there);
 
@@ -319,8 +315,6 @@ geo_room_at(dbref player, pos_t pos)
 	plants_add(player, there,
 			&bio->pd, bio->ty,
 			bio->tmp, bio->rn);
-	DBDIRTY(there);
-	DBDIRTY(loc);
 	return there;
 }
 

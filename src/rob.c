@@ -70,6 +70,4 @@ do_give(command_t *cmd)
 		notifyf(who, "%s takes %d %s from you!",
 				NAME(player), -amount, -amount == 1 ? PENNY : PENNIES);
 	}
-
-	DBDIRTY(who);
 }

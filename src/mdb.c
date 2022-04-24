@@ -138,7 +138,6 @@ db_clear_object(dbref i)
 	o->first_observer = NULL;
 	o->mob = NULL;
 
-	/* DBDIRTY(i); */
 	/* flags you must initialize yourself */
 	/* type-specific fields you must also initialize */
 }
@@ -159,7 +158,6 @@ object_new(void)
 
 	/* clear it out */
 	db_clear_object(newobj);
-	DBDIRTY(newobj);
 	return newobj;
 }
 
@@ -278,18 +276,15 @@ int deltas_count = 0;
 
 /* mode == 1 for dumping all objects.  mode == 0 for deltas only.  */
 
-void
+static inline void
 db_write_list(FILE * f, int mode)
 {
 	dbref i;
 
 	for (i = db_top; i-- > 0;) {
-		if (mode == 1 || (FLAGS(i) & OBJECT_CHANGED)) {
-			if (fprintf(f, "#%d\n", i) < 0)
-				abort();
-			db_write_object(f, i);
-			FLAGS(i) &= ~OBJECT_CHANGED;	/* clear changed flag */
-		}
+		if (fprintf(f, "#%d\n", i) < 0)
+			abort();
+		db_write_object(f, i);
 	}
 }
 
@@ -649,7 +644,7 @@ db_read_object_foxen(FILE * f, struct object *o, dbref objno)
 		PLAYER_SET_HOME(objno, (prop_flag ? getref(f) : j));
 		o->exits = getref(f);
 		password = getstring(f);
-		set_password_raw(objno, password);
+		PLAYER_SET_PASSWORD(objno, password);
 		PLAYER_SP(objno)->fd = -1;
 		PLAYER_SP(objno)->last_observed = NOTHING;
 		break;
@@ -734,7 +729,6 @@ object_copy(dbref player, dbref old)
 	newp->location = NOTHING;
         newp->flags = DBFETCH(old)->flags;
         OWNER(nu) = OWNER(old);
-	DBDIRTY(nu);
         return nu;
 }
 

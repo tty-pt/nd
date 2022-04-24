@@ -304,7 +304,6 @@ do_stats(command_t *cmd) {
 	int players;
 	int garbage = 0;
 	int total;
-	int altered = 0;
 	dbref i;
 	dbref owner=NOTHING;
 	char buf[BUFFER_LEN];
@@ -328,9 +327,6 @@ do_stats(command_t *cmd) {
 
 
 				/* count objects marked as changed. */
-				if ((OWNER(i) == owner) && (FLAGS(i) & OBJECT_CHANGED))
-					altered++;
-
 				switch (Typeof(i)) {
 				case TYPE_ROOM:
 					if (OWNER(i) == owner)
@@ -356,12 +352,6 @@ do_stats(command_t *cmd) {
 			}
 		} else {
 			for (i = 0; i < db_top; i++) {
-
-
-				/* count objects marked as changed. */
-				if (FLAGS(i) & OBJECT_CHANGED)
-					altered++;
-
 				switch (Typeof(i)) {
 				case TYPE_ROOM:
 					total++;
@@ -505,7 +495,6 @@ do_toad(command_t *cmd) {
 				case TYPE_THING:
 				case TYPE_EXIT:
 					OWNER(stuff) = recipient;
-					DBDIRTY(stuff);
 					break;
 				}
 			}
@@ -529,7 +518,6 @@ do_toad(command_t *cmd) {
 		snprintf(buf, sizeof(buf), "A slimy toad named %s", NAME(victim));
 		free((void *) NAME(victim));
 		NAME(victim) = alloc_string(buf);
-		DBDIRTY(victim);
 
 		boot_player_off(victim); /* Disconnect the toad */
 
@@ -576,7 +564,6 @@ do_newpassword(command_t *cmd)
 
 		/* it's ok, do it */
 		set_password(victim, password);
-		DBDIRTY(victim);
 		notify(player, "Password changed.");
 		snprintf(buf, sizeof(buf), "Your password has been changed by %s.", NAME(player));
 		notify(victim, buf);

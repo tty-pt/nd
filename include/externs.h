@@ -30,11 +30,6 @@ enum opts {
 };
 extern short optflags;
 
-/* Prototypes for externs not defined elsewhere */
-
-extern char match_args[];
-extern char match_cmdname[];
-
 /* from timequeue.c */
 void do_newpassword(command_t *);
 void do_oecho(command_t *);

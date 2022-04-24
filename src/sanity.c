@@ -461,12 +461,10 @@ cut_all_chains(dbref obj)
 	if (CONTENTS(obj) != NOTHING) {
 		SanFixed(obj, "Cleared contents of %s");
 		CONTENTS(obj) = NOTHING;
-		DBDIRTY(obj);
 	}
 	if (EXITS(obj) != NOTHING) {
 		SanFixed(obj, "Cleared exits of %s");
 		EXITS(obj) = NOTHING;
-		DBDIRTY(obj);
 	}
 }
 
@@ -480,10 +478,9 @@ cut_bad_recyclable(void)
 	while (loop != NOTHING) {
 		if (!valid_ref(loop) || TYPEOF(loop) != TYPE_GARBAGE || FLAGS(loop) & SANEBIT) {
 			SanFixed(loop, "Recyclable object %s is not TYPE_GARBAGE");
-			if (prev != NOTHING) {
+			if (prev != NOTHING)
 				DBFETCH(prev)->next = NOTHING;
-				DBDIRTY(prev);
-			} else {
+			else {
 				recyclable = NOTHING;
 			}
 			return;
@@ -517,13 +514,10 @@ cut_bad_contents(dbref obj)
 			} else {
 				SanFixed2(obj, loop, "Contents chain for %s cut at %s");
 			}
-			if (prev != NOTHING) {
+			if (prev != NOTHING)
 				DBFETCH(prev)->next = NOTHING;
-				DBDIRTY(prev);
-			} else {
+			else
 				CONTENTS(obj) = NOTHING;
-				DBDIRTY(obj);
-			}
 			return;
 		}
 		FLAGS(loop) |= SANEBIT;
@@ -553,13 +547,10 @@ cut_bad_exits(dbref obj)
 			} else {
 				SanFixed2(obj, loop, "Exits chain for %s cut at %s");
 			}
-			if (prev != NOTHING) {
+			if (prev != NOTHING)
 				DBFETCH(prev)->next = NOTHING;
-				DBDIRTY(prev);
-			} else {
+			else
 				EXITS(obj) = NOTHING;
-				DBDIRTY(obj);
-			}
 			return;
 		}
 		FLAGS(loop) |= SANEBIT;
@@ -637,15 +628,11 @@ create_lostandfound(dbref * player, dbref * room)
 		PLAYER_SET_PASSWORD(*player, NULL);
 		set_password(*player, rpass);
 		PUSH(*player, DBFETCH(*room)->contents);
-		DBDIRTY(*player);
 		add_player(*player);
 		warn("Using %s (with password %s) to resolve "
 				 "unknown owner", unparse(*player), rpass);
 	}
 	OWNER(*room) = *player;
-	DBDIRTY(*room);
-	DBDIRTY(*player);
-	DBDIRTY(GLOBAL_ENVIRONMENT);
 }
 
 void
@@ -658,11 +645,9 @@ fix_room(dbref obj)
 	if (!valid_ref(i) && i != HOME) {
 		SanFixed(obj, "Removing invalid drop-to from %s");
 		DBFETCH(obj)->sp.room.dropto = NOTHING;
-		DBDIRTY(obj);
 	} else if (i >= 0 && TYPEOF(i) != TYPE_THING && TYPEOF(i) != TYPE_ROOM) {
 		SanFixed2(obj, i, "Removing drop-to on %s to %s");
 		DBFETCH(obj)->sp.room.dropto = NOTHING;
-		DBDIRTY(obj);
 	}
 }
 
@@ -677,7 +662,6 @@ fix_thing(dbref obj)
 						  TYPEOF(i) != TYPE_PLAYER)) {
 		SanFixed2(obj, OWNER(obj), "Setting the home on %s to %s, it's owner");
 		THING_SET_HOME(obj, OWNER(obj));
-		DBDIRTY(obj);
 	}
 }
 
@@ -691,7 +675,6 @@ fix_exit(dbref obj)
 			(DBFETCH(obj)->sp.exit.dest)[i] != HOME) {
 			SanFixed(obj, "Removing invalid destination from %s");
 			DBFETCH(obj)->sp.exit.ndest--;
-			DBDIRTY(obj);
 			for (j = i; j < DBFETCH(obj)->sp.exit.ndest; j++) {
 				(DBFETCH(obj)->sp.exit.dest)[i] = (DBFETCH(obj)->sp.exit.dest)[i + 1];
 			}
@@ -711,7 +694,6 @@ fix_player(dbref obj)
 	if (!valid_obj(i) || TYPEOF(i) != TYPE_ROOM) {
 		SanFixed2(obj, PLAYER_START, "Setting the home on %s to %s");
 		PLAYER_SET_HOME(obj, PLAYER_START);
-		DBDIRTY(obj);
 	}
 }
 
@@ -758,7 +740,6 @@ find_misplaced_objects(void)
 				NAME(loop) = alloc_string("Unnamed");
 				}
 			SanFixed(loop, "Gave a name to %s");
-			DBDIRTY(loop);
 		}
 		if (TYPEOF(loop) != TYPE_GARBAGE) {
 			if (!valid_obj(OWNER(loop)) || TYPEOF(OWNER(loop)) != TYPE_PLAYER) {
@@ -767,7 +748,6 @@ find_misplaced_objects(void)
 				}
 				SanFixed2(loop, player, "Set owner of %s to %s");
 				OWNER(loop) = player;
-				DBDIRTY(loop);
 			}
 			if (loop != GLOBAL_ENVIRONMENT && (!valid_obj(LOCATION(loop)) ||
 											   TYPEOF(LOCATION(loop)) == TYPE_GARBAGE ||
@@ -779,15 +759,13 @@ find_misplaced_objects(void)
 						dbref loop1;
 
 						loop1 = LOCATION(loop);
-						if (CONTENTS(loop1) == loop) {
+						if (CONTENTS(loop1) == loop)
 							CONTENTS(loop1) = DBFETCH(loop)->next;
-							DBDIRTY(loop1);
-						} else
+						else
 							for (loop1 = CONTENTS(loop1);
 								 loop1 != NOTHING; loop1 = DBFETCH(loop1)->next) {
 								if (DBFETCH(loop1)->next == loop) {
 									DBFETCH(loop1)->next = DBFETCH(loop)->next;
-									DBDIRTY(loop1);
 									break;
 								}
 							}
@@ -799,8 +777,6 @@ find_misplaced_objects(void)
 					}
 					LOCATION(loop) = room;
 				}
-				DBDIRTY(loop);
-				DBDIRTY(LOCATION(loop));
 				if (TYPEOF(loop) == TYPE_EXIT) {
 					PUSH(loop, EXITS(LOCATION(loop)));
 				} else {
@@ -813,12 +789,10 @@ find_misplaced_objects(void)
 			if (OWNER(loop) != NOTHING) {
 				SanFixedRef(loop, "Set owner of recycled object #%d to NOTHING");
 				OWNER(loop) = NOTHING;
-				DBDIRTY(loop);
 			}
 			if (LOCATION(loop) != NOTHING) {
 				SanFixedRef(loop, "Set location of recycled object #%d to NOTHING");
 				LOCATION(loop) = NOTHING;
-				DBDIRTY(loop);
 			}
 		}
 		switch (TYPEOF(loop)) {
@@ -848,7 +822,6 @@ adopt_orphans(void)
 
 	for (loop = 0; loop < db_top; loop++) {
 		if (!(FLAGS(loop) & SANEBIT)) {
-			DBDIRTY(loop);
 			switch (TYPEOF(loop)) {
 			case TYPE_ROOM:
 			case TYPE_THING:
@@ -881,13 +854,11 @@ clean_global_environment(void)
 	if (DBFETCH(GLOBAL_ENVIRONMENT)->next != NOTHING) {
 		SanFixed(GLOBAL_ENVIRONMENT, "Removed the global environment %s from a chain");
 		DBFETCH(GLOBAL_ENVIRONMENT)->next = NOTHING;
-		DBDIRTY(GLOBAL_ENVIRONMENT);
 	}
 	if (LOCATION(GLOBAL_ENVIRONMENT) != NOTHING) {
 		SanFixed2(GLOBAL_ENVIRONMENT, LOCATION(GLOBAL_ENVIRONMENT),
 				  "Removed the global environment %s from %s");
 		LOCATION(GLOBAL_ENVIRONMENT) = NOTHING;
-		DBDIRTY(GLOBAL_ENVIRONMENT);
 	}
 }
 
@@ -994,31 +965,26 @@ sanechange(dbref player, const char *command)
 	if (!strcmp(field, "next")) {
 		strlcpy(buf2, unparse(NEXTOBJ(d)), sizeof(buf2));
 		NEXTOBJ(d) = v;
-		DBDIRTY(d);
 		SanPrint(player, "## Setting #%d's next field to %s", d, unparse(v));
 
 	} else if (!strcmp(field, "exits")) {
 		strlcpy(buf2, unparse(EXITS(d)), sizeof(buf2));
 		EXITS(d) = v;
-		DBDIRTY(d);
 		SanPrint(player, "## Setting #%d's Exits list start to %s", d, unparse(v));
 
 	} else if (!strcmp(field, "contents")) {
 		strlcpy(buf2, unparse(CONTENTS(d)), sizeof(buf2));
 		CONTENTS(d) = v;
-		DBDIRTY(d);
 		SanPrint(player, "## Setting #%d's Contents list start to %s", d, unparse(v));
 
 	} else if (!strcmp(field, "location")) {
 		strlcpy(buf2, unparse(LOCATION(d)), sizeof(buf2));
 		LOCATION(d) = v;
-		DBDIRTY(d);
 		SanPrint(player, "## Setting #%d's location to %s", d, unparse(v));
 
 	} else if (!strcmp(field, "owner")) {
 		strlcpy(buf2, unparse(OWNER(d)), sizeof(buf2));
 		OWNER(d) = v;
-		DBDIRTY(d);
 		SanPrint(player, "## Setting #%d's owner to %s", d, unparse(v));
 
 	} else if (!strcmp(field, "home")) {
@@ -1038,7 +1004,6 @@ sanechange(dbref player, const char *command)
 
 		strlcpy(buf2, unparse(*ip), sizeof(buf2));
 		*ip = v;
-		DBDIRTY(d);
 		printf("Setting home to: %s\n", unparse(v));
 
 	} else {

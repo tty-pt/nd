@@ -42,13 +42,6 @@ check_password(dbref player, const char* password)
 }
 
 void
-set_password_raw(dbref player, const char* password)
-{
-	PLAYER_SET_PASSWORD(player, password);
-	DBDIRTY(player);
-}
-
-void
 set_password(dbref player, const char* password)
 {
 #ifdef __OpenBSD__
@@ -56,12 +49,12 @@ set_password(dbref player, const char* password)
 	if (crypt_newhash(password, "bcrypt,4", hash, sizeof(hash))) {
 		perror("crypt_newhash");
 	}
-	set_password_raw(player, alloc_string(hash));
+	PLAYER_SET_PASSWORD(player, alloc_string(hash));
 #else
 	char *enc;
 	enc = crypt(password, "$5$iamsha-256encryptedwhatashame$");
 	CBUG(!enc);
-	set_password_raw(player, alloc_string(enc));
+	PLAYER_SET_PASSWORD(player, alloc_string(enc));
 #endif
 }
 
@@ -107,14 +100,12 @@ create_player(const char *name, const char *password)
 	DBFETCH(player)->exits = NOTHING;
 
 	SETVALUE(player, START_PENNIES);
-	set_password_raw(player, NULL);
+	PLAYER_SET_PASSWORD(player, NULL);
 	set_password(player, password);
 
 	/* link him to PLAYER_START */
 	PUSH(player, DBFETCH(PLAYER_START)->contents);
 	add_player(player);
-	DBDIRTY(player);
-	DBDIRTY(PLAYER_START);
 
 	FLAGS(player) |= CHOWN_OK;
 
@@ -134,7 +125,6 @@ do_password(command_t *cmd)
 		notify(player, "Bad new password (no spaces allowed).");
 	} else {
 		set_password(player, newobj);
-		DBDIRTY(player);
 		notify(player, "Password changed.");
 	}
 }

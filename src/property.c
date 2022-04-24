@@ -110,7 +110,6 @@ void
 set_property(dbref player, const char *name, PData * dat)
 {
 	set_property_nofetch(player, name, dat);
-	DBDIRTY(player);
 }
 
 void
@@ -120,7 +119,6 @@ set_property_value(dbref obj, const char *propstr, int val)
 	mydat.flags = PROP_INTTYP;
 	mydat.data.val = val;
 	set_property_nofetch(obj, propstr, &mydat);
-	DBDIRTY(obj);
 }
 
 int // FIXME
@@ -134,7 +132,6 @@ addc_property_value(dbref obj, const char *pname, int val, int cap)
 		if (cur > cap)
 			cur = cap;
 		PropDataVal(p) = cur;
-		DBDIRTY(obj);
 	} else {
 		cur = val > cap ? cap : val;
 		add_prop_nofetch(obj, pname, "", cur);
@@ -169,7 +166,6 @@ set_property_dbref(dbref obj, const char *propstr, dbref val)
 	mydat.flags = PROP_REFTYP;
 	mydat.data.ref = val;
 	set_property_nofetch(obj, propstr, &mydat);
-	DBDIRTY(obj);
 }
 
 void
@@ -214,7 +210,6 @@ add_property(dbref player, const char *pname, const char *strval, int value)
 {
 
 	add_prop_nofetch(player, pname, strval, value);
-	DBDIRTY(player);
 }
 
 
@@ -262,7 +257,6 @@ remove_property_list(dbref player, int all)
 		}
 	}
 
-	DBDIRTY(player);
 }
 
 /* removes property --- if it's not there then ignore */
@@ -277,7 +271,6 @@ remove_property_nofetch(dbref player, const char *pname)
 	l = DBFETCH(player)->properties;
 	l = propdir_delete_elem(l, buf);
 	DBFETCH(player)->properties = l;
-	DBDIRTY(player);
 }
 
 

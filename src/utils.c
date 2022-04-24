@@ -61,7 +61,7 @@ remove_first(dbref first, dbref what)
 		/* have to find it */
 		DOLIST(prev, first) {
 			if (DBFETCH(prev)->next == what) {
-				DBSTORE(prev, next, DBFETCH(what)->next);
+				DBFETCH(prev)->next = DBFETCH(what)->next;
 				return first;
 			}
 		}
@@ -94,7 +94,6 @@ reverse(dbref list)
 	while (list != NOTHING) {
 		rest = DBFETCH(list)->next;
 		PUSH(list, newlist);
-		DBDIRTY(newlist);
 		list = rest;
 	}
 	return newlist;

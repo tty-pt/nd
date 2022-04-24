@@ -33,13 +33,13 @@ moveto(dbref what, dbref where)
 	loc = DBFETCH(what)->location;
         if (loc != NOTHING) {
                 web_content_out(loc, what);
-                DBSTORE(loc, contents, remove_first(DBFETCH(loc)->contents, what));
+		DBFETCH(loc)->contents = remove_first(DBFETCH(loc)->contents, what);
         }
 
 	/* test for special cases */
 	switch (where) {
 	case NOTHING:
-		DBSTORE(what, location, NOTHING);
+		DBFETCH(what)->location = NOTHING;
 		return;					/* NOTHING doesn't have contents */
 	}
 
@@ -70,8 +70,7 @@ moveto(dbref what, dbref where)
 
 	/* now put what in where */
 	PUSH(what, DBFETCH(where)->contents);
-	DBDIRTY(where);
-	DBSTORE(what, location, where);
+	DBFETCH(what)->location = where;
 	web_content_in(where, what);
         CBUG(getloc(what) != where);
 }
@@ -85,12 +84,11 @@ send_contents(dbref loc, dbref dest)
 	dbref where;
 
 	first = DBFETCH(loc)->contents;
-	DBSTORE(loc, contents, NOTHING);
+	DBFETCH(loc)->contents = NOTHING;
 
 	/* blast locations of everything in list */
-	DOLIST(rest, first) {
-		DBSTORE(rest, location, NOTHING);
-	}
+	DOLIST(rest, first)
+		DBFETCH(rest)->location = NOTHING;
 
 	while (first != NOTHING) {
 		rest = DBFETCH(first)->next;
@@ -103,7 +101,7 @@ send_contents(dbref loc, dbref dest)
 		first = rest;
 	}
 
-	DBSTORE(loc, contents, reverse(DBFETCH(loc)->contents));
+	DBFETCH(loc)->contents = reverse(DBFETCH(loc)->contents);
 }
 
 /* What are we doing here?  Quick explanation - we want to prevent
@@ -509,7 +507,6 @@ recycle(dbref player, dbref thing)
 	case TYPE_ROOM:
 		if (!Wizard(OWNER(thing)))
 			SETVALUE(OWNER(thing), GETVALUE(OWNER(thing)) + ROOM_COST);
-		DBDIRTY(OWNER(thing));
 		for (first = DBFETCH(thing)->exits; first != NOTHING; first = rest) {
 			rest = DBFETCH(first)->next;
 			if (DBFETCH(first)->location == NOTHING
@@ -532,7 +529,6 @@ recycle(dbref player, dbref thing)
 	case TYPE_THING:
 		if (!Wizard(OWNER(thing)))
 			SETVALUE(OWNER(thing), GETVALUE(OWNER(thing)) + GETVALUE(thing));
-		DBDIRTY(OWNER(thing));
 		for (first = DBFETCH(thing)->exits; first != NOTHING; first = rest) {
 			rest = DBFETCH(first)->next;
 			if (DBFETCH(first)->location == NOTHING || DBFETCH(first)->location == thing)
@@ -552,25 +548,18 @@ recycle(dbref player, dbref thing)
 		if (!Wizard(OWNER(thing)))
 			if (DBFETCH(thing)->sp.exit.ndest != 0)
 				SETVALUE(OWNER(thing), GETVALUE(OWNER(thing)) + LINK_COST);
-		DBDIRTY(OWNER(thing));
 		break;
 	}
 
 	for (rest = 0; rest < db_top; rest++) {
 		switch (Typeof(rest)) {
 		case TYPE_ROOM:
-			if (DBFETCH(rest)->sp.room.dropto == thing) {
+			if (DBFETCH(rest)->sp.room.dropto == thing)
 				DBFETCH(rest)->sp.room.dropto = NOTHING;
-				DBDIRTY(rest);
-			}
-			if (DBFETCH(rest)->exits == thing) {
+			if (DBFETCH(rest)->exits == thing)
 				DBFETCH(rest)->exits = DBFETCH(thing)->next;
-				DBDIRTY(rest);
-			}
-			if (OWNER(rest) == thing) {
+			if (OWNER(rest) == thing)
 				OWNER(rest) = GOD;
-				DBDIRTY(rest);
-			}
 			break;
 		case TYPE_THING:
 			if (THING_HOME(rest) == thing) {
@@ -586,16 +575,11 @@ recycle(dbref player, dbref thing)
 			    }
 			  }
 			  THING_SET_HOME(rest, loc);
-			  DBDIRTY(rest);
 			}
-			if (DBFETCH(rest)->exits == thing) {
+			if (DBFETCH(rest)->exits == thing)
 				DBFETCH(rest)->exits = DBFETCH(thing)->next;
-				DBDIRTY(rest);
-			}
-			if (OWNER(rest) == thing) {
+			if (OWNER(rest) == thing)
 				OWNER(rest) = GOD;
-				DBDIRTY(rest);
-			}
 			break;
 		case TYPE_EXIT:
 			{
@@ -607,35 +591,23 @@ recycle(dbref player, dbref thing)
 				}
 				if (j < DBFETCH(rest)->sp.exit.ndest) {
 					SETVALUE(OWNER(rest), GETVALUE(OWNER(rest)) + LINK_COST);
-					DBDIRTY(OWNER(rest));
 					DBFETCH(rest)->sp.exit.ndest = j;
-					DBDIRTY(rest);
 				}
 			}
-			if (OWNER(rest) == thing) {
+			if (OWNER(rest) == thing)
 				OWNER(rest) = GOD;
-				DBDIRTY(rest);
-			}
 			break;
 		case TYPE_PLAYER:
-			if (PLAYER_HOME(rest) == thing) {
+			if (PLAYER_HOME(rest) == thing)
 				PLAYER_SET_HOME(rest, PLAYER_START);
-				DBDIRTY(rest);
-			}
-			if (DBFETCH(rest)->exits == thing) {
+			if (DBFETCH(rest)->exits == thing)
 				DBFETCH(rest)->exits = DBFETCH(thing)->next;
-				DBDIRTY(rest);
-			}
 			break;
 		}
-		/*
-		 *if (DBFETCH(rest)->location == thing)
-		 *    DBSTORE(rest, location, NOTHING);
-		 */
 		if (DBFETCH(rest)->contents == thing)
-			DBSTORE(rest, contents, DBFETCH(thing)->next);
+			DBFETCH(rest)->contents = DBFETCH(thing)->next;
 		if (DBFETCH(rest)->next == thing)
-			DBSTORE(rest, next, DBFETCH(thing)->next);
+			DBFETCH(rest)->next = DBFETCH(thing)->next;
 	}
 
 	looplimit = db_top;
@@ -668,7 +640,6 @@ recycle(dbref player, dbref thing)
 
 	DBFETCH(thing)->next = recyclable;
 	recyclable = thing;
-	DBDIRTY(thing);
 }
 static const char *move_c_version = "$RCSfile$ $Revision: 1.38 $";
 const char *get_move_c_version(void) { return move_c_version; }

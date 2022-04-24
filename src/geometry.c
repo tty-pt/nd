@@ -155,7 +155,6 @@ object_add(struct object_skeleton o, dbref where)
 	FLAGS(nu) = TYPE_THING;
 	THING_SET_HOME(nu, where);
 	PUSH(nu, DBFETCH(where)->contents);
-	DBDIRTY(where);
 
 	switch (o.type) {
 	case S_TYPE_EQUIPMENT:
