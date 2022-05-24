@@ -72,7 +72,7 @@ extern void do_motd(command_t *);
 extern void do_info(command_t *);
 
 /* From look.c */
-extern void look_room(dbref player, dbref room, int verbose);
+extern void look_room(dbref player, dbref room);
 extern long size_object(dbref i, int load);
 
 

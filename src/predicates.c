@@ -192,6 +192,11 @@ can_doit(dbref player, dbref thing, const char *default_fail_msg)
 		return 0;
 	}
 
+	if (!MOB(player)) {
+		notify(player, "You are not a mob.");
+		return 0;
+	}
+
 	if (MOB(player)->klock) {
 		notify(player, "You can not do that right now.");
 		return 0;

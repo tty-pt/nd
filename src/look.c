@@ -88,7 +88,7 @@ look_simple(dbref player, dbref thing)
 }
 
 void
-look_room(dbref player, dbref loc, int verbose)
+look_room(dbref player, dbref loc)
 {
 	char const *description = "";
 	/* tell him the name, and the number if he can link to it */
@@ -121,7 +121,7 @@ look_around(dbref player)
 
 	if ((loc = getloc(player)) == NOTHING)
 		return;
-	look_room(player, loc, 1);
+	look_room(player, loc);
 }
 
 void
@@ -133,7 +133,7 @@ do_look_at(command_t *cmd)
 
 	if (*name == '\0' || !strcmp(name, "here")) {
 		if ((thing = getloc(player)) != NOTHING) {
-			look_room(player, thing, 1);
+			look_room(player, thing);
 		}
 	} else if (
 			(thing = ematch_absolute(name)) == NOTHING
@@ -149,7 +149,7 @@ do_look_at(command_t *cmd)
 
 	switch (Typeof(thing)) {
 	case TYPE_ROOM:
-		look_room(player, thing, 1);
+		look_room(player, thing);
 		break;
 	case TYPE_PLAYER:
 		if (web_look(player, thing, GETDESC(thing))) {

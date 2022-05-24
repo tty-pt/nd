@@ -29,6 +29,17 @@
 #include <sys/select.h>
 #include <openssl/ssl.h>
 
+#include <err.h>
+
+#include "descr.h"
+
+#ifdef CONFIG_SECURE
+#include <openssl/bio.h>
+#include <openssl/err.h>
+#include <sys/socket.h>
+#include <pwd.h>
+#endif
+
 #include "mdb.h"
 #include "interface.h"
 #include "command.h"
@@ -61,23 +72,14 @@ enum descr_flags {
 	DF_WEBSOCKET = 4,
 };
 
-struct ws {
-	int flags;
-	unsigned ip;
-	unsigned old;
-};
-
-
-typedef struct descr_st {
-	int fd, flags;
-	dbref player;
-	McpFrame mcpframe;
-} descr_t;
-
 #define CMD_HASH_SIZE 512
 
 static hash_tab cmds_hashed[CMD_HASH_SIZE];
 long long unsigned tick = 0;
+
+#ifdef CONFIG_SECURE
+SSL_CTX *sslctx;
+#endif
 
 void do_bio(command_t *cmd);
 extern void do_auth(command_t *cmd);
@@ -576,7 +578,7 @@ descr_inband(int fd, const char *s)
 	if (d->flags & DF_WEBSOCKET)
 		return ws_write(d->fd, s, len);
 	else
-		return write(d->fd, s, len);
+		return WRITE(d->fd, s, len);
 }
 
 int
@@ -789,7 +791,8 @@ command_process(command_t *cmd)
 	command_debug(cmd, "command_process");
 
 	// set current descriptor (needed for death)
-	CBUG(GETLID(player) < 0);
+	if (GETLID(player) < 0)
+		mob_put(player);
 	struct mob *mob = MOB(player);
 	mob->descr = descr;
 
@@ -825,7 +828,7 @@ descr_read(descr_t *d)
 		}
 		ret -= 1;
 	} else {
-		ret = read(d->fd, buf, BUFFER_LEN);
+		ret = READ(d->fd, buf, BUFFER_LEN);
 		switch (ret) {
 		case -1:
 			if (errno == EAGAIN)
@@ -878,6 +881,19 @@ descr_new()
 	memset(d, 0, sizeof(descr_t));
 	d->fd = fd;
 	d->player = -1;
+
+#ifdef CONFIG_SECURE
+	d->cSSL = SSL_new(sslctx);
+	SSL_set_fd(d->cSSL, fd);
+
+	if (SSL_accept(d->cSSL) <= 0) {
+		ERR_print_errors_fp(stderr);
+		SSL_shutdown(d->cSSL);
+		SSL_free(d->cSSL);
+		close(fd);
+		return NULL;
+	}
+#endif
 
 	if (fcntl(fd, F_SETFL, O_NONBLOCK) == -1) {
 		perror("make_nonblocking: fcntl");
@@ -977,6 +993,9 @@ shovechars()
 	descr_t *d;
 	int i;
 
+	if (geteuid())
+		errx(1, "need root privileges");
+
 	sockfd = make_socket(TINYPORT);
 
 	if (sockfd <= 0) {
@@ -985,6 +1004,31 @@ shovechars()
 	}
 
 	FD_SET(sockfd, &activefds);
+
+#ifdef CONFIG_SECURE
+	SSL_load_error_strings();
+	SSL_library_init();
+	OpenSSL_add_all_algorithms();
+	sslctx = SSL_CTX_new(TLS_server_method());
+	SSL_CTX_set_ecdh_auto(sslctx, 1);
+	SSL_CTX_use_certificate_file(sslctx, "/etc/ssl/tty.pt.crt" , SSL_FILETYPE_PEM);
+	SSL_CTX_use_PrivateKey_file(sslctx, "/etc/ssl/private/tty.pt.key", SSL_FILETYPE_PEM);
+	ERR_print_errors_fp(stderr);
+
+	struct passwd *pw = getpwnam("www");
+	if (pw == NULL)
+		errx(1, "unknown user %s", "www");
+
+	if (chroot("/var/www") != 0 || chdir("/") != 0)
+		err(1, "%s", "/var/www");
+
+	if (setgroups(1, &pw->pw_gid) ||
+			setresgid(pw->pw_gid, pw->pw_gid, pw->pw_gid) ||
+			setresuid(pw->pw_uid, pw->pw_uid, pw->pw_uid)) {
+		fprintf(stderr, "%s: cannot drop privileges", __func__);
+		exit(1);
+	}
+#endif
 
 	/* Daemonize */
 	if ((optflags & OPT_DETACH) && daemon(1, 1) != 0)

@@ -3,7 +3,7 @@
 #include "canvas.js"
 #include "vendor.js"
 
-#define CONFIG_PROTO "ws"
+#define CONFIG_PROTO "wss"
 
 class Modal extends React.Component {
 	constructor(props) {

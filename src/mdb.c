@@ -277,7 +277,7 @@ int deltas_count = 0;
 /* mode == 1 for dumping all objects.  mode == 0 for deltas only.  */
 
 static inline void
-db_write_list(FILE * f, int mode)
+db_write_list(FILE * f)
 {
 	dbref i;
 
@@ -292,11 +292,11 @@ db_write_list(FILE * f, int mode)
 dbref
 db_write(FILE * f)
 {
-	putstring(f, "***Foxen9 TinyMUCK DUMP Format***" );
+	// putstring(f, "***Foxen9 TinyMUCK DUMP Format***" );
 
 	putref(f, db_top);
 
-	db_write_list(f, 1);
+	db_write_list(f);
 
 	fseek(f, 0L, 2);
 	putstring(f, "***END OF DUMP***");

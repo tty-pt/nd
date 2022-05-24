@@ -1,26 +1,11 @@
+#include "descr.h"
 #include "externs.h"
 #include "ws.h"
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
-/* #include <arpa/inet.h> */
 #include <sys/select.h>
 #include <openssl/sha.h>
-
-/* #include <openssl/bio.h> */
-/* #include <openssl/ssl.h> */
-/* #include <openssl/err.h> */
-/* #include <sys/socket.h> */
-
-#ifdef CONFIG_SECURE
-#define WS_READ(cfd, to, len) \
-	SSL_read(wss[cfd].cSSL, to, len)
-#define WS_WRITE(cfd, from, len) \
-	SSL_write(wss[cfd].cSSL, from, len)
-#else
-#define WS_READ(cfd, to, len) read(cfd, to, len)
-#define WS_WRITE(cfd, from, len) write(cfd, from, len)
-#endif
 
 #define OPCODE(head) ((unsigned char) (head[0] & 0x0f))
 #define PAYLOAD_LEN(head) ((unsigned char) (head[1] & 0x7f))
@@ -31,19 +16,6 @@ struct ws_frame {
 	uint64_t pl;
 	char data[BUFSIZ];
 };
-
-struct ws {
-	/* SSL *cSSL; */
-	/* char username[32]; */
-	/* char password[32]; */
-	/* char *mcpk, *mcpv; */
-	unsigned long hash;
-	/* int cfd, tfd; */
-	int flags;
-	unsigned addr;
-};
-
-static struct ws wss[FD_SETSIZE];
 
 #ifdef __OpenBSD__
 int __b64_ntop(unsigned char const *src, size_t srclength,
@@ -109,7 +81,7 @@ ws_handshake(int cfd, char *buf) {
 	/* char buf[BUFSIZ]; */
 	char *s;
 
-	/* warn("ws_handshake %s", buf); */
+	// warn("ws_handshake %s", buf);
         for (s = buf; s && *s; s = strchr(s, '\n'))
                 if (!strncasecmp(++s, kkey, sizeof(kkey) - 1)) {
                         SHA_CTX c;
@@ -121,10 +93,10 @@ ws_handshake(int cfd, char *buf) {
                         SHA1_Update(&c, "258EAFA5-E914-47DA-95CA-C5AB0DC85B11", 36);
                         SHA1_Final(hash, &c);
                         b64_ntop(hash, sizeof(hash), result, sizeof(result));
-                        WS_WRITE(cfd, common_resp, sizeof(common_resp) - 1);
-                        WS_WRITE(cfd, result, sizeof(result) - 1);
-                        wss[cfd].hash = * (unsigned long *) result;
-                        WS_WRITE(cfd, "\r\n\r\n", 4);
+                        WRITE(cfd, common_resp, sizeof(common_resp) - 1);
+                        WRITE(cfd, result, sizeof(result) - 1);
+                        // wss[cfd].hash = * (unsigned long *) result;
+                        WRITE(cfd, "\r\n\r\n", 4);
                         return 0;
                 }
 
@@ -140,23 +112,23 @@ ws_write(int cfd, const void *data, size_t n)
 
 	if (n < 126) {
 		head[1] |= n;
-		if (WS_WRITE(cfd, head, sizeof(head)) < sizeof(head))
+		if (WRITE(cfd, head, sizeof(head)) < sizeof(head))
 			return -1;
 	} else if (n < (1 << 16)) {
 		uint16_t nn = htons(n);
 		head[1] |= 126;
-		if (WS_WRITE(cfd, head, sizeof(head)) < sizeof(head)
-		    || WS_WRITE(cfd, &nn, sizeof(nn)) < sizeof(nn))
+		if (WRITE(cfd, head, sizeof(head)) < sizeof(head)
+		    || WRITE(cfd, &nn, sizeof(nn)) < sizeof(nn))
 			return -1;
 	} else {
 		uint64_t nn = htonl(n);
 		head[1] |= 127;
-		if (WS_WRITE(cfd, head, sizeof(head)) < sizeof(head)
-		    || WS_WRITE(cfd, &nn, sizeof(nn)) < sizeof(nn))
+		if (WRITE(cfd, head, sizeof(head)) < sizeof(head)
+		    || WRITE(cfd, &nn, sizeof(nn)) < sizeof(nn))
 			return -1;
 	}
 
-	return WS_WRITE(cfd, data, n) < n;
+	return WRITE(cfd, data, n) < n;
 }
 
 static inline void
@@ -164,9 +136,8 @@ ws_close_policy(int cfd) {
 	unsigned char head[2] = { 0x88, 0x02 };
 	unsigned code = 1008;
 
-	WS_WRITE(cfd, head, sizeof(head));
-	WS_WRITE(cfd, &code, sizeof(code));
-	/* SET_FLAGS(&wss[cfd], CLOSING); */
+	WRITE(cfd, head, sizeof(head));
+	WRITE(cfd, &code, sizeof(code));
 }
 
 int
@@ -176,7 +147,7 @@ ws_read(int cfd, char *data, size_t len)
 	uint64_t pl;
 	int i, n;
 
-	n = WS_READ(cfd, frame.head, sizeof(frame.head));
+	n = READ(cfd, frame.head, sizeof(frame.head));
 	if (n != sizeof(frame.head))
 		goto error;
 
@@ -184,13 +155,13 @@ ws_read(int cfd, char *data, size_t len)
 
 	if (pl == 126) {
 		uint16_t rpl;
-		n = WS_READ(cfd, &rpl, sizeof(rpl));
+		n = READ(cfd, &rpl, sizeof(rpl));
 		if (n != sizeof(rpl))
 			goto error;
 		pl = rpl;
 	} else if (pl == 127) {
 		uint64_t rpl;
-		n = WS_READ(cfd, &rpl, sizeof(rpl));
+		n = READ(cfd, &rpl, sizeof(rpl));
 		if (n != sizeof(rpl))
 			goto error;
 		pl = rpl;
@@ -198,14 +169,15 @@ ws_read(int cfd, char *data, size_t len)
 
 	frame.pl = pl;
 
-	n = WS_READ(cfd, frame.mk, sizeof(frame.mk));
+	n = READ(cfd, frame.mk, sizeof(frame.mk));
+
 	if (n != sizeof(frame.mk))
 		goto error;
 
 	if (OPCODE(frame.head) == 8)
 		return 0;
 
-	n = WS_READ(cfd, frame.data, pl);
+	n = READ(cfd, frame.data, pl);
 	if (n != pl)
 		goto error;
 

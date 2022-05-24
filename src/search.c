@@ -6,6 +6,7 @@
 #include <db.h>
 #endif
 #include "externs.h"
+// #define PRECOVERY
 
 typedef struct {
 	dbref what;
@@ -285,6 +286,9 @@ _map_put(morton_t code, dbref thing, int flags)
 	data.size = sizeof(code);
 
 	ret = ipdb->put(ipdb, NULL, &key, &data, flags);
+	if (ret) {
+		debug("room %d %s", thing, db_strerror(ret));
+	}
 	CBUG(ret);
 }
 
@@ -309,6 +313,8 @@ _map_where(dbref room)
 
 	if ((bad = ipdb->get(ipdb, NULL, &key, &data, 0))) {
 		static morton_t code = 130056652770671ULL;
+		if (bad == DB_NOTFOUND)
+			_map_put(code, room, 0);
 		debug("room %d %s", room, db_strerror(bad));
 		return code;
 	}
