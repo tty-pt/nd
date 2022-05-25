@@ -20,8 +20,8 @@ extern McpFrame *descr_mcpframe(int c);
 
 /* the following symbols are provided by game.c */
 
-extern dbref create_player(const char *name, const char *password);
-extern dbref connect_player(const char *name, const char *password);
+extern dbref create_player(const char *name);
+extern dbref connect_player(const char *name);
 
 extern int init_game();
 extern void panic(const char *);

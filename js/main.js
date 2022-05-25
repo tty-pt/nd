@@ -338,6 +338,7 @@ function gameReducer(state, action) {
 }
 
 function GameContextProvider(props) {
+        const [ open, setOpen ] = useState(false);
         const { children } = props;
 
         const [state, dispatch] = useReducer(
@@ -367,6 +368,7 @@ function GameContextProvider(props) {
 
         function onOpen() {
                 output("socket connection open");
+                setOpen(true);
         }
 
         function onClose() {
@@ -381,6 +383,7 @@ function GameContextProvider(props) {
                         session,
                         sendMessage,
                         dispatch,
+                        open,
                 }}
         >
                 { children }
@@ -409,7 +412,7 @@ function RoomTitleAndArt() {
         if (!obj)
                 return null;
 
-        const src = "art/" + (obj.art || "unknown.jpg");
+        const src = "/neverdark/art/" + (obj.art || "unknown.jpg");
 
         return (<div className="vn fg f fic">
                 <div className="tm pxs tac">{ obj.name }</div>
@@ -561,7 +564,7 @@ function TargetTitleAndArt() {
 
         const obj = objects[target];
 
-        const src = "art/" + (obj.art || "unknown_small.jpg");
+        const src = "/neverdark/art/" + (obj.art || "unknown_small.jpg");
 
         return (<>
                 <div className="tm pxs tac">{obj.name}</div>
@@ -578,7 +581,7 @@ function Avatar(props) {
         if (item.avatar)
                 return <img
                         className={"s_" + size + " sv" + size}
-                        src={"art/" + item.avatar}
+                        src={"/neverdark/art/" + item.avatar}
                         { ...rest }
                 />;
         else
@@ -626,11 +629,11 @@ function Contents(props) {
 
 function RB(props) {
         const { children, onClick } = props;
-        return <a className="round txl ps c0" onClick={onClick}>{ children }</a>;
+        return <a className="round tsxl ps c0" onClick={onClick}>{ children }</a>;
 }
 
 function RBT(props) {
-        return <a className="round txl ps"></a>;
+        return <a className="round tsxl ps"></a>;
 }
 
 function RBI(props) {
@@ -958,53 +961,36 @@ function Game() {
         </>);
 }
 
-const { BrowserRouter, Switch, Route, Redirect, useHistory } = ReactRouterDOM;
-
-function Login() {
-        const { sendMessage, me, authFail } = useContext(GameContext);
-
-        function onSubmit(e) {
-                const fd = new FormData(e.target);
-                sendMessage("auth " + fd.get("user") + "=" + fd.get("pass"));
-                e.preventDefault();
-        }
-
-        if (me)
-                return <Redirect to="/" />;
-
-        return (<div className="vn f sf fic fcc">
-                <h1>Login</h1>
-                <form className="vs" onSubmit={onSubmit}>
-                        <label>
-                                Username
-                                <input name="user" />
-                        </label>
-                        <label>
-                                Password
-                                <input name="pass" type="password" />
-                        </label>
-                        <input type="submit" value="login" />
-                </form>
-                { authFail ? <div className="cf1">Invalid authentication</div> : null }
-        </div>);
+function getCookie(cname) {
+	let name = cname + "=";
+	let decodedCookie = decodeURIComponent(document.cookie);
+	let ca = decodedCookie.split(';');
+	for(let i = 0; i <ca.length; i++) {
+		let c = ca[i];
+		while (c.charAt(0) == ' ') {
+			c = c.substring(1);
+		}
+		if (c.indexOf(name) == 0) {
+			return c.substring(name.length, c.length);
+		}
+	}
+	return "";
 }
 
-function AppRouter() {
-        const { me } = useContext(GameContext);
+function InnerApp() {
+        const { open, sendMessage } = useContext(GameContext);
 
-        return (<BrowserRouter basename="/neverdark">
-                <Switch>
-                        <Route path="/login" component={Login} />
-                        <Route path="/">
-                                { me ? <Game /> : <Redirect to="/login" /> }
-                        </Route>
-                </Switch>
-        </BrowserRouter>);
+	useEffect(() => {
+		if (open)
+			sendMessage("auth " + getCookie("QSESSION"));
+	}, [open]);
+
+        return (<Game />);
 }
 
 function App() {
         return (<GameContextProvider>
-                <AppRouter />
+                <InnerApp />
         </GameContextProvider>);
 }
 

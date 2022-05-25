@@ -77,7 +77,7 @@
 #define PENNY_RATE 0			/* 1/chance of getting a penny per room */
 #define START_PENNIES 50		/* # of pennies a player's created with */
 
-#define PLAYER_START ((dbref) 17)	/* room number of player start location */
+#define PLAYER_START ((dbref) 0)	/* room number of player start location */
 
 /* Server support of @doing (reads the _/do prop on WHOs) */
 #define WHO_DOING 1

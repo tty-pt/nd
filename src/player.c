@@ -58,34 +58,28 @@ set_password(dbref player, const char* password)
 #endif
 }
 
-
 dbref
-connect_player(const char *name, const char *password)
+connect_player(const char *qsession)
 {
-	dbref player;
+	char buf[BUFSIZ];
+	FILE *fp;
 
-	if (*name == NUMBER_TOKEN && number(name + 1) && atoi(name + 1)) {
-		player = (dbref) atoi(name + 1);
-		if ((player < 0) || (player >= db_top) || (Typeof(player) != TYPE_PLAYER))
-			player = NOTHING;
-	} else {
-		player = lookup_player(name);
-	}
-	if (player == NOTHING)
-		return NOTHING;
-	if (!check_password(player, password))
+	snprintf(buf, sizeof(buf), "/sessions/%s", qsession);
+	fp = fopen(buf, "r");
+
+	if (!fp)
 		return NOTHING;
 
-	return player;
+	fscanf(fp, "%s", buf);
+	fclose(fp);
+
+	return lookup_player(buf);
 }
 
 dbref
-create_player(const char *name, const char *password)
+create_player(const char *name)
 {
 	dbref player;
-
-	if (!ok_player_name(name) || !ok_password(password))
-		return NOTHING;
 
 	/* else he doesn't already exist, create him */
 	player = object_new();
@@ -101,7 +95,7 @@ create_player(const char *name, const char *password)
 
 	SETVALUE(player, START_PENNIES);
 	PLAYER_SET_PASSWORD(player, NULL);
-	set_password(player, password);
+	set_password(player, "123");
 
 	/* link him to PLAYER_START */
 	PUSH(player, db[PLAYER_START].contents);

@@ -313,8 +313,8 @@ _map_where(dbref room)
 
 	if ((bad = ipdb->get(ipdb, NULL, &key, &data, 0))) {
 		static morton_t code = 130056652770671ULL;
-		if (bad == DB_NOTFOUND)
-			_map_put(code, room, 0);
+		/* if (bad == DB_NOTFOUND) */
+		/* 	_map_put(code, room, 0); */
 		debug("room %d %s", room, db_strerror(bad));
 		return code;
 	}

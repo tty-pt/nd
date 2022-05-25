@@ -1,7 +1,7 @@
 let canvas = document.querySelector("canvas");
 let ctx = canvas.getContext('2d');
 let tilemap = document.createElement("img");
-tilemap.src = "./art/tilemap.png";
+tilemap.src = "/neverdark/art/tilemap.png";
 tilemap.classList.add("dn");
 
 const ACT_LOOK = 0;

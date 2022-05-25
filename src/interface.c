@@ -37,8 +37,8 @@
 #include <openssl/bio.h>
 #include <openssl/err.h>
 #include <sys/socket.h>
-#include <pwd.h>
 #endif
+#include <pwd.h>
 
 #include "mdb.h"
 #include "interface.h"
@@ -176,9 +176,6 @@ core_command_t cmds[] = {
 	}, {
 		.name = "password",
 		.cb = &do_password,
-	}, {
-		.name = "pcreate",
-		.cb = &do_pcreate,
 	}, {
 		.name = "pecho",
 		.cb = &do_pecho,
@@ -718,22 +715,29 @@ do_httpget(command_t *cmd)
 void
 do_auth(command_t *cmd)
 {
+	char buf[BUFSIZ];
 	int fd = cmd->fd;
-	char *user = cmd->argv[1];
-	char *password = cmd->argv[2];
-	dbref player = connect_player(user, password);
+	char *qsession = cmd->argv[1];
+	FILE *fp;
+	dbref player;
 	descr_t *d = &descr_map[fd];
 
+	snprintf(buf, sizeof(buf), "/sessions/%s", qsession);
+	fp = fopen(buf, "r");
+
+	if (!fp) {
+		descr_inband(fd, "No such session\r\n");
+		web_auth_fail(fd, 1);
+		return;
+	}
+
+	fscanf(fp, "%s", buf);
+	fclose(fp);
+
+	player = lookup_player(buf);
+
 	if (player == NOTHING) {
-		player = create_player(user, password);
-
-		if (player == NOTHING) {
-			descr_inband(fd, "Either there is already a player with"
-					" that name, or that name is illegal.\r\n");
-                        web_auth_fail(fd, 1);
-			return;
-		}
-
+		player = create_player(buf);
 		mob_put(player);
 	} else if (PLAYER_FD(player) > 0) {
                 descr_inband(fd, "That player is already connected.\r\n");
@@ -996,15 +1000,6 @@ shovechars()
 	if (geteuid())
 		errx(1, "need root privileges");
 
-	sockfd = make_socket(TINYPORT);
-
-	if (sockfd <= 0) {
-		perror("make_socket");
-		return sockfd;
-	}
-
-	FD_SET(sockfd, &activefds);
-
 #ifdef CONFIG_SECURE
 	SSL_load_error_strings();
 	SSL_library_init();
@@ -1014,6 +1009,7 @@ shovechars()
 	SSL_CTX_use_certificate_file(sslctx, "/etc/ssl/tty.pt.crt" , SSL_FILETYPE_PEM);
 	SSL_CTX_use_PrivateKey_file(sslctx, "/etc/ssl/private/tty.pt.key", SSL_FILETYPE_PEM);
 	ERR_print_errors_fp(stderr);
+#endif
 
 	struct passwd *pw = getpwnam("www");
 	if (pw == NULL)
@@ -1028,7 +1024,15 @@ shovechars()
 		fprintf(stderr, "%s: cannot drop privileges", __func__);
 		exit(1);
 	}
-#endif
+
+	sockfd = make_socket(TINYPORT);
+
+	if (sockfd <= 0) {
+		perror("make_socket");
+		return sockfd;
+	}
+
+	FD_SET(sockfd, &activefds);
 
 	/* Daemonize */
 	if ((optflags & OPT_DETACH) && daemon(1, 1) != 0)

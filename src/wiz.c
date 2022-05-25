@@ -573,29 +573,6 @@ do_newpassword(command_t *cmd)
 }
 
 void
-do_pcreate(command_t *cmd) {
-	dbref player = cmd->player;
-	const char *user = cmd->argv[1];
-	const char *password = cmd->argv[2];
-	dbref newguy;
-	char buf[BUFFER_LEN];
-
-	if (!Wizard(player) || Typeof(player) != TYPE_PLAYER) {
-		notify(player, "Only a Wizard player can create a player.");
-		return;
-	}
-	newguy = create_player(user, password);
-	if (newguy == NOTHING) {
-		notify(player, "Create failed.");
-	} else {
-		warn("PCREATED %s(%d) by %s(%d)", NAME(newguy), newguy, NAME(player), player);
-		mob_put(newguy);
-		snprintf(buf, sizeof(buf), "Player %s created as object #%d.", user, newguy);
-		notify(player, buf);
-	}
-}
-
-void
 do_usage(command_t *cmd) {
 	dbref player = cmd->player;
 	int pid, psize;
