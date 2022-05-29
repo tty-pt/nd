@@ -735,11 +735,11 @@ function Help() {
         return (<>
                 <b>Help</b><br />
                 <br />
-                Hopefully on a mobile phone you will be able to use<br />
-                the interface to interact with the game. But here are<br />
-                the keyboard commands for the game:<br />
-                <br />
-                <b>Normal mode:</b><br />
+		Use "a" to focus the textbox input.<br />
+		Input "X" to teleport to the starting position.<br />
+
+		<br />
+                <b>More details: Normal mode:</b><br />
                 <p>
                         <b>s</b> To chat.<br />
                         <b>a</b> to send commands.<br />
@@ -758,20 +758,12 @@ function Help() {
                         <b>Down</b> to travel down in history.<br />
                         <b>Ctrl+u</b> to delete input text.<br />
                 </p>
-                this game is very early stage, and it still requires a<br />
-                                lot of work. but i might not be able to provide it full-time.<br />
-                <br />
-                You can use it freely to chat with your friends.<br />
-                Meme at will.<br />
                 <br />
                 You can check out the code <a href="https://github.com/tty-pt/neverdark">here</a>.<br />
                 <br />
-                Hopefully the users will be able to create game content in the future.<br />
-                Meanwhile i will be working at the engine for that to be possible.<br />
-                <br />
                 The help command is very useful. Try issuing "help help".<br />
 
-                                <p><b>help startingout</b> will get you further.</p>
+		<p><b>also see help X, walking, w</b> </p>
         </>);
 }
 

@@ -121,7 +121,7 @@ struct object_skeleton biomes[] = {
 	[BIOME_WOODLAND] = {
 		.name = "woodland",
                 .description = "",
-                .art = "",
+                .art = "woodland.jpeg",
                 .avatar = "",
                 .type = S_TYPE_BIOME,
                 .sp = { .biome = {
@@ -131,7 +131,7 @@ struct object_skeleton biomes[] = {
 	[BIOME_TEMPERATE_SEASONAL_FOREST] = {
 		.name = "temperate seasonal forest",
                 .description = "",
-                .art = "",
+                .art = "temperate_seasonal_forest.jpeg",
                 .avatar = "",
                 .type = S_TYPE_BIOME,
                 .sp = { .biome = {
@@ -141,7 +141,7 @@ struct object_skeleton biomes[] = {
 	[BIOME_TEMPERATE_RAINFOREST] = {
 		.name = "temperate rainforest",
                 .description = "",
-                .art = "",
+                .art = "temperate_rainforest.jpeg",
                 .avatar = "",
                 .type = S_TYPE_BIOME,
                 .sp = { .biome = {
@@ -152,7 +152,7 @@ struct object_skeleton biomes[] = {
 	[BIOME_DESERT] = {
 		.name = "desert",
                 .description = "",
-                .art = "",
+                .art = "desert.jpeg",
                 .avatar = "",
                 .type = S_TYPE_BIOME,
                 .sp = { .biome = {
@@ -162,7 +162,7 @@ struct object_skeleton biomes[] = {
 	[BIOME_SAVANNAH] = {
 		.name = "savannah",
                 .description = "",
-                .art = "",
+                .art = "savannah.jpeg",
                 .avatar = "",
                 .type = S_TYPE_BIOME,
                 .sp = { .biome = {
@@ -172,7 +172,7 @@ struct object_skeleton biomes[] = {
 	[BIOME_TROPICAL_SEASONAL_FOREST] = {
 		.name = "tropical seasonal forest",
                 .description = "",
-                .art = "",
+                .art = "tropical_seasonal_forest.jpeg",
                 .avatar = "",
                 .type = S_TYPE_BIOME,
                 .sp = { .biome = {

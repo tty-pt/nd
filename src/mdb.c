@@ -11,6 +11,7 @@
 #include "params.h"
 #include "defaults.h"
 #include "interface.h"
+#include "geography.h"
 
 #include "externs.h"
 
@@ -738,6 +739,22 @@ object_update(dbref what, long long unsigned tick) {
 		mob_update(what, tick);
 }
 
+static void
+room0_update(long long unsigned tick)
+{
+	dbref thing;
+	DOLIST(thing, db[0].contents) {
+		if (Typeof(thing) == TYPE_PLAYER) {
+			if (!God(thing)) {
+				struct cmd_dir cd;
+				cd.rep = STARTING_POSITION;
+				cd.dir = '\0';
+				geo_teleport(thing, cd);
+			}
+		}
+	}
+}
+
 void
 objects_update(long long unsigned tick)
 {
@@ -745,6 +762,8 @@ objects_update(long long unsigned tick)
 	dbref i;
 	for (i = db_top; i-- > 0;)
 		object_update(i, tick);
+
+	room0_update(tick);
 }
 
 static inline void

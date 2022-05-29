@@ -40,6 +40,12 @@
 #endif
 #include <pwd.h>
 
+#ifdef __OpenBSD__
+#include <db4/db.h>
+#else
+#include <db.h>
+#endif
+
 #include "mdb.h"
 #include "interface.h"
 #include "command.h"
@@ -484,7 +490,7 @@ main(int argc, char **argv)
 
 	memset(descr_map, 0, sizeof(descr_map));
 
-	while ((c = getopt(argc, argv, "dsyvSC:")) != -1) {
+	while ((c = getopt(argc, argv, "dsyvS:")) != -1) {
 		switch (c) {
 		case 'd':
 			optflags |= OPT_DETACH;
@@ -502,12 +508,6 @@ main(int argc, char **argv)
 			printf("0.0.1\n");
 			break;
 			
-		case 'C':
-			if (chdir(optarg)) {
-				perror("chdir");
-				return 4;
-			}
-			break;
 		default:
 			show_program_usage(*argv);
 			return 1;
@@ -518,8 +518,36 @@ main(int argc, char **argv)
 		}
 	}
 
+	if (geteuid())
+		errx(1, "need root privileges");
+
+#ifdef CONFIG_SECURE
+	SSL_load_error_strings();
+	SSL_library_init();
+	OpenSSL_add_all_algorithms();
+	sslctx = SSL_CTX_new(TLS_server_method());
+	SSL_CTX_set_ecdh_auto(sslctx, 1);
+	SSL_CTX_use_certificate_file(sslctx, "/etc/ssl/tty.pt.crt" , SSL_FILETYPE_PEM);
+	SSL_CTX_use_PrivateKey_file(sslctx, "/etc/ssl/private/tty.pt.key", SSL_FILETYPE_PEM);
+	ERR_print_errors_fp(stderr);
+#endif
+
 	warn("INIT: TinyMUCK %s starting.", "version");
 	warn("%s PID is: %d", argv[0], getpid());
+
+	struct passwd *pw = getpwnam("www");
+	if (pw == NULL)
+		errx(1, "unknown user %s", "www");
+
+	if (chroot("/var/www") != 0 || chdir("/htdocs/neverdark/game") != 0)
+		err(1, "%s", "/var/www");
+
+	if (setgroups(1, &pw->pw_gid) ||
+			setresgid(pw->pw_gid, pw->pw_gid, pw->pw_gid) ||
+			setresuid(pw->pw_uid, pw->pw_uid, pw->pw_uid)) {
+		fprintf(stderr, "%s: cannot drop privileges", __func__);
+		exit(1);
+	}
 
 	if (init_game() < 0) {
 		warn("Couldn't load " STD_DB "!\n");
@@ -527,7 +555,11 @@ main(int argc, char **argv)
 	}
         objects_init();
 
-	CBUG(map_init());
+	int ret = map_init();
+	if (ret) {
+		warn("map_init %s", db_strerror(ret));
+		exit(1);
+	}
 	commands_init();
 
 	signal(SIGPIPE, SIG_IGN);
@@ -996,34 +1028,6 @@ shovechars()
 	struct timeval timeout;
 	descr_t *d;
 	int i;
-
-	if (geteuid())
-		errx(1, "need root privileges");
-
-#ifdef CONFIG_SECURE
-	SSL_load_error_strings();
-	SSL_library_init();
-	OpenSSL_add_all_algorithms();
-	sslctx = SSL_CTX_new(TLS_server_method());
-	SSL_CTX_set_ecdh_auto(sslctx, 1);
-	SSL_CTX_use_certificate_file(sslctx, "/etc/ssl/tty.pt.crt" , SSL_FILETYPE_PEM);
-	SSL_CTX_use_PrivateKey_file(sslctx, "/etc/ssl/private/tty.pt.key", SSL_FILETYPE_PEM);
-	ERR_print_errors_fp(stderr);
-#endif
-
-	struct passwd *pw = getpwnam("www");
-	if (pw == NULL)
-		errx(1, "unknown user %s", "www");
-
-	if (chroot("/var/www") != 0 || chdir("/") != 0)
-		err(1, "%s", "/var/www");
-
-	if (setgroups(1, &pw->pw_gid) ||
-			setresgid(pw->pw_gid, pw->pw_gid, pw->pw_gid) ||
-			setresuid(pw->pw_uid, pw->pw_uid, pw->pw_uid)) {
-		fprintf(stderr, "%s: cannot drop privileges", __func__);
-		exit(1);
-	}
 
 	sockfd = make_socket(TINYPORT);
 

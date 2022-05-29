@@ -243,21 +243,22 @@ map_mki_code(DB *sec, const DBT *key, const DBT *data, DBT *result)
 
 int
 map_init() {
-	if (db_create(&ipdb, dbe, 0)
-	    || ipdb->open(ipdb, NULL, "geo.db", "dp", DB_HASH, DB_CREATE, 0664))
-		return -1;
+	int ret = 0;
+	if ((ret = db_create(&ipdb, dbe, 0))
+	    || (ret = ipdb->open(ipdb, NULL, "geo.db", "dp", DB_HASH, DB_CREATE, 0664)))
+		return ret;
 
-	if (db_create(&pdb, dbe, 0)
-	    || pdb->set_bt_compare(pdb, map_cmp)
-	    || pdb->open(pdb, NULL, "geo.db", "pd", DB_BTREE, DB_CREATE, 0664)
-	    || ipdb->associate(ipdb, NULL, pdb, map_mki_code, DB_CREATE))
+	if ((ret = db_create(&pdb, dbe, 0))
+	    || (ret = pdb->set_bt_compare(pdb, map_cmp))
+	    || (ret = pdb->open(pdb, NULL, "geo.db", "pd", DB_BTREE, DB_CREATE, 0664))
+	    || (ret = ipdb->associate(ipdb, NULL, pdb, map_mki_code, DB_CREATE)))
 	
 		pdb->close(pdb, 0);
 	else
 		return 0;
 
 	ipdb->close(ipdb, 0);
-	return -1;
+	return ret;
 }
 
 int

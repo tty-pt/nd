@@ -30,12 +30,6 @@
 #define GEON_M (GEON_SIZE * GEON_SIZE)
 #define GEON_BDI (GEON_SIZE * (GEON_SIZE - 1))
 
-struct cmd_dir {
-	char dir;
-	enum exit e;
-	morton_t rep;
-};
-
 typedef void op_a_t(dbref player, enum exit e);
 typedef int op_b_t(dbref player, struct cmd_dir cd);
 typedef struct {
@@ -672,8 +666,8 @@ tell_pos(dbref player, struct cmd_dir cd) {
 	return ret;
 }
 
-static int
-teleport(dbref player, struct cmd_dir cd)
+int
+geo_teleport(dbref player, struct cmd_dir cd)
 {
 	pos_t pos;
 	dbref there;
@@ -720,7 +714,7 @@ recall(dbref player, struct cmd_dir cd)
 		return 0;
 	cd.rep = strtoull(xs, NULL, 0);
 	cd.dir = '\0';
-	teleport(player, cd);
+	geo_teleport(player, cd);
 	return 1;
 }
 
@@ -765,7 +759,7 @@ op_t op_map[] = {
 	['w'] = { .op.a = &e_wall },
 	['W'] = { .op.a = &unwall },
 	['x'] = { .op.b = &tell_pos, .type = 1 },
-	['X'] = { .op.b = &teleport, .type = 1 },
+	['X'] = { .op.b = &geo_teleport, .type = 1 },
 	['m'] = { .op.b = &mark, .type = 1 },
 	['"'] = { .op.b = &recall, .type = 1 },
 	['#'] = { .op.b = &pull, .type = 1 },

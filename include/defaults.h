@@ -78,6 +78,7 @@
 #define START_PENNIES 50		/* # of pennies a player's created with */
 
 #define PLAYER_START ((dbref) 0)	/* room number of player start location */
+#define STARTING_POSITION 0x0		/* starting geographical position */
 
 /* Server support of @doing (reads the _/do prop on WHOs) */
 #define WHO_DOING 1

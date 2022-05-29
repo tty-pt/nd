@@ -11,6 +11,12 @@
 #define NIGHT_IS	(day_tick > (1 << (DAY_Y - 1)))
 #define GEXPAND(c)	geo_map[(int) c]
 
+struct cmd_dir {
+	char dir;
+	enum exit e;
+	morton_t rep;
+};
+
 extern unsigned short day_tick;
 extern const char *geo_map[]; // map of characters for commands, not geo_view
 
@@ -36,5 +42,7 @@ int gexits(dbref player, dbref where);
 
 /* void geo_notify(int descr, dbref player); */
 dbref geo_clean(dbref player, dbref here);
+
+int geo_teleport(dbref player, struct cmd_dir cd);
 
 #endif

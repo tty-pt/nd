@@ -512,9 +512,9 @@ x (*)
 ~
 ~
 X
-[<number>]X (*)
+X[<number>] (*)
 
-  Teleports you to a morton number position in the universe.
+  Teleports you to a position in the universe.
 
 ~~alsosee x
 ~
