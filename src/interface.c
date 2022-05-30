@@ -133,16 +133,7 @@ core_command_t cmds[] = {
 	}, {
 		.name = "describe",
 		.cb = &do_describe,
-	}, {
-		.name = "doing",
-		.cb = &do_doing,
-	}, {
-		.name = "drop_message",
-		.cb = &do_drop_message,
 		/* sane_dump_object(player, arg1); /1* examine *1/ */
-	}, {
-		.name = "fail",
-		.cb = &do_fail,
 	}, {
 		.name = "find",
 		.cb = &do_find,
@@ -153,9 +144,6 @@ core_command_t cmds[] = {
 		.name = "heal",
 		.cb = &do_heal,
 	}, {
-		.name = "idescribe",
-		.cb = &do_idescribe,
-	}, {
 		.name = "lock",
 		.cb = &do_lock,
 	}, {
@@ -165,26 +153,11 @@ core_command_t cmds[] = {
 		.name = "newpassword",
 		.cb = &do_newpassword,
 	}, {
-		.name = "odrop",
-		.cb = &do_odrop,
-	}, {
-		.name = "oecho",
-		.cb = &do_oecho,
-	/* }, { */
-	/* 	.name = "ofail", */
-	/* 	.cb = &do_ofail, */
-	}, {
-		.name = "osuccess",
-		.cb = &do_osuccess,
-	}, {
 		.name = "owned",
 		.cb = &do_owned,
 	}, {
 		.name = "password",
 		.cb = &do_password,
-	}, {
-		.name = "pecho",
-		.cb = &do_pecho,
 	}, {
 		.name = "propset",
 		.cb = &do_propset,
@@ -208,9 +181,6 @@ core_command_t cmds[] = {
 	}, {
 		.name = "stats",
 		.cb = &do_stats,
-	}, {
-		.name = "success",
-		.cb = &do_success,
 	}, {
 		.name = "sweep",
 		.cb = &do_sweep,

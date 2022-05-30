@@ -21,48 +21,15 @@
 
 /* defines for possible data access mods. */
 #define MESGPROP_DESC		"_/de"
-#define MESGPROP_IDESC		"_/ide"
-#define MESGPROP_SUCC		"_/sc"
-#define MESGPROP_OSUCC		"_/osc"
-#define MESGPROP_FAIL		"_/fl"
-#define MESGPROP_OFAIL		"_/ofl"
-#define MESGPROP_DROP		"_/dr"
-#define MESGPROP_ODROP		"_/odr"
-#define MESGPROP_DOING		"_/do"
-#define MESGPROP_OECHO		"_/oecho"
-#define MESGPROP_PECHO		"_/pecho"
 #define MESGPROP_LOCK		"_/lok"
 #define MESGPROP_CONLOCK	"_/clk"
-#define MESGPROP_CHLOCK		"_/chlk"
 #define MESGPROP_VALUE		"@/value"
 
 #define GETMESG(x,y)   (get_property_class(x, y))
 #define GETDESC(x)	GETMESG(x, MESGPROP_DESC)
-#define GETIDESC(x)	GETMESG(x, MESGPROP_IDESC)
-#define GETSUCC(x)	GETMESG(x, MESGPROP_SUCC)
-#define GETOSUCC(x)	GETMESG(x, MESGPROP_OSUCC)
-#define GETFAIL(x)	GETMESG(x, MESGPROP_FAIL)
-#define GETOFAIL(x)	GETMESG(x, MESGPROP_OFAIL)
-#define GETDROP(x)	GETMESG(x, MESGPROP_DROP)
-#define GETODROP(x)	GETMESG(x, MESGPROP_ODROP)
-#define GETDOING(x)	GETMESG(x, MESGPROP_DOING)
-#define GETOECHO(x)	GETMESG(x, MESGPROP_OECHO)
-#define GETPECHO(x)	GETMESG(x, MESGPROP_PECHO)
 
 #define SETMESG(x,y,z)    {add_prop_nofetch(x, y, z, 0);}
 #define SETDESC(x,y)	SETMESG(x, MESGPROP_DESC, y)
-#define SETIDESC(x,y)	SETMESG(x, MESGPROP_IDESC, y)
-#define SETSUCC(x,y)	SETMESG(x, MESGPROP_SUCC, y)
-#define SETFAIL(x,y)	SETMESG(x, MESGPROP_FAIL, y)
-#define SETDROP(x,y)	SETMESG(x, MESGPROP_DROP, y)
-#define SETOSUCC(x,y)	SETMESG(x, MESGPROP_OSUCC, y)
-#define SETOFAIL(x,y)	SETMESG(x, MESGPROP_OFAIL, y)
-#define SETODROP(x,y)	SETMESG(x, MESGPROP_ODROP, y)
-#define SETDOING(x,y)	SETMESG(x, MESGPROP_DOING, y)
-#define SETOECHO(x,y)	SETMESG(x, MESGPROP_OECHO, y)
-#define SETPECHO(x,y)	SETMESG(x, MESGPROP_PECHO, y)
-
-#define LOADMESG(x,y,z)    add_prop_nofetch(x,y,z,0)
 
 #define GETLOCK(x)    (get_property_lock(x, MESGPROP_LOCK))
 #define SETLOCK(x,y)  {PData mydat; mydat.flags = PROP_LOKTYP; mydat.data.lok = y; set_property_nofetch(x, MESGPROP_LOCK, &mydat);}
@@ -355,7 +322,6 @@ union specific {				/* I've been railroaded! */
 	} player;
 };
 
-
 /* timestamps record */
 
 struct observer_node {
@@ -364,7 +330,6 @@ struct observer_node {
 };
 
 struct object {
-
         struct observer_node *first_observer;
 	const char *name;
 	dbref location;				/* pointer to container */
@@ -398,20 +363,15 @@ typedef struct t_hash_entry hash_entry;
 typedef hash_entry *hash_tab;
 
 #define PLAYER_HASH_SIZE   (1024)	/* Table for player lookups */
-#define COMP_HASH_SIZE     (256)	/* Table for compiler keywords */
-#define DEFHASHSIZE        (256)	/* Table for compiler $defines */
 
 extern struct object *db;
 extern dbref db_top;
 
 extern char *alloc_string(const char *);
-extern struct shared_string *alloc_prog_string(const char *);
 extern dbref object_new(void);		/* return a new object */
 
 extern struct boolexp *getboolexp(FILE *);	/* get a boolexp */
 extern void putboolexp(FILE *, struct boolexp *);	/* put a boolexp */
-
-extern int db_write_object(FILE *, dbref);	/* write one object to file */
 
 extern dbref db_write(FILE * f);	/* write db to file, return # of objects */
 
@@ -422,8 +382,6 @@ extern int db_obs_remove(dbref observable, dbref observer);
  /* Warning: destroys existing db contents! */
 
 extern void db_free(void);
-
-extern dbref parse_dbref(const char *);	/* parse a dbref */
 
 void objects_update(long long unsigned tick);
 void objects_init();

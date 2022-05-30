@@ -100,10 +100,6 @@ look_room(dbref player, dbref loc)
 		}
 		/* tell him the appropriate messages if he has the key */
 		can_doit(player, loc, 0);
-	} else {
-		if (GETIDESC(loc)) {
-			description = GETIDESC(loc);
-		}
 	}
 
 	if (web_look(player, loc, description)) {
@@ -318,50 +314,6 @@ do_examine(command_t *cmd)
 			unparse_boolexp(player, get_property_lock(thing, "@/flk"), 1));
 	notify(player, buf);
 
-	if (GETSUCC(thing)) {
-		snprintf(buf, sizeof(buf), "Success: %s", GETSUCC(thing));
-		notify(player, buf);
-	}
-	if (GETFAIL(thing)) {
-		snprintf(buf, sizeof(buf), "Fail: %s", GETFAIL(thing));
-		notify(player, buf);
-	}
-	if (GETDROP(thing)) {
-		snprintf(buf, sizeof(buf), "Drop: %s", GETDROP(thing));
-		notify(player, buf);
-	}
-	if (GETOSUCC(thing)) {
-		snprintf(buf, sizeof(buf), "Osuccess: %s", GETOSUCC(thing));
-		notify(player, buf);
-	}
-	if (GETOFAIL(thing)) {
-		snprintf(buf, sizeof(buf), "Ofail: %s", GETOFAIL(thing));
-		notify(player, buf);
-	}
-	if (GETODROP(thing)) {
-		snprintf(buf, sizeof(buf), "Odrop: %s", GETODROP(thing));
-		notify(player, buf);
-	}
-
-#if WHO_DOING
-	if (GETDOING(thing)) {
-		snprintf(buf, sizeof(buf), "Doing: %s", GETDOING(thing));
-		notify(player, buf);
-	}
-#endif
-	if (GETOECHO(thing)) {
-		snprintf(buf, sizeof(buf), "Oecho: %s", GETOECHO(thing));
-		notify(player, buf);
-	}
-	if (GETPECHO(thing)) {
-		snprintf(buf, sizeof(buf), "Pecho: %s", GETPECHO(thing));
-		notify(player, buf);
-	}
-	if (GETIDESC(thing)) {
-		snprintf(buf, sizeof(buf), "Idesc: %s", GETIDESC(thing));
-		notify(player, buf);
-	}
-
 	notify(player, "[ Use 'examine <object>=/' to list root properties. ]");
 
 	snprintf(buf, sizeof(buf), "Memory used: %ld bytes", size_object(thing, 1));
@@ -369,10 +321,7 @@ do_examine(command_t *cmd)
 
 	/* show him the contents */
 	if (db[thing].contents != NOTHING) {
-		if (Typeof(thing) == TYPE_PLAYER)
-			notify(player, "Carrying:");
-		else
-			notify(player, "Contents:");
+		notify(player, "Contents:");
 		DOLIST(content, db[thing].contents) {
 			notify(player, unparse_object(player, content));
 		}

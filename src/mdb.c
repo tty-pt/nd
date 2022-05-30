@@ -219,11 +219,7 @@ putproperties(FILE * f, dbref obj)
 }
 
 
-extern FILE *input_file;
-extern FILE *delta_infile;
-extern FILE *delta_outfile;
-
-int
+static int
 db_write_object(FILE * f, dbref i)
 {
 	struct object *o = &db[i];
@@ -268,15 +264,6 @@ db_write_object(FILE * f, dbref i)
 	return 0;
 }
 
-int deltas_count = 0;
-
-#ifndef CLUMP_LOAD_SIZE
-#define CLUMP_LOAD_SIZE 20
-#endif
-
-
-/* mode == 1 for dumping all objects.  mode == 0 for deltas only.  */
-
 static inline void
 db_write_list(FILE * f)
 {
@@ -293,8 +280,6 @@ db_write_list(FILE * f)
 dbref
 db_write(FILE * f)
 {
-	// putstring(f, "***Foxen9 TinyMUCK DUMP Format***" );
-
 	putref(f, db_top);
 
 	db_write_list(f);
@@ -303,30 +288,7 @@ db_write(FILE * f)
 	putstring(f, "***END OF DUMP***");
 
 	fflush(f);
-	deltas_count = 0;
 	return (db_top);
-}
-
-dbref
-parse_dbref(const char *s)
-{
-	const char *p;
-	long x;
-
-	x = atol(s);
-	if (x > 0) {
-		return x;
-	} else if (x == 0) {
-		/* check for 0 */
-		for (p = s; *p; p++) {
-			if (*p == '0')
-				return 0;
-			if (!isspace(*p))
-				break;
-		}
-	}
-	/* else x < 0 or s != 0 */
-	return NOTHING;
 }
 
 #define getstring(x) alloc_string(getstring_noalloc(x))
@@ -642,7 +604,9 @@ db_read_object_foxen(FILE * f, struct object *o, dbref objno)
 		return;
 	case TYPE_PLAYER:
 		ALLOC_PLAYER_SP(objno);
-		PLAYER_SET_HOME(objno, (prop_flag ? getref(f) : j));
+		/* PLAYER_SET_HOME(objno, (prop_flag ? getref(f) : j)); */
+		if (prop_flag)
+			getref(f);
 		o->exits = getref(f);
 		password = getstring(f);
 		PLAYER_SET_PASSWORD(objno, password);

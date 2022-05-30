@@ -392,14 +392,7 @@ do_drop(command_t *cmd)
 			return;
 		}
 
-		if (GETDROP(thing))
-			notify(player, GETDROP(thing));
-		else
-			notify(player, "Dropped.");
-
-		if (GETDROP(loc))
-			notify(player, GETDROP(loc));
-
+		notify(player, "Dropped.");
 		snprintf(buf, sizeof(buf), "%s drops %s.", NAME(player), NAME(thing));
 		notify_except(db[loc].contents, player, buf, player);
 

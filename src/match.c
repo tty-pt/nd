@@ -33,6 +33,28 @@ ematch_player(dbref player, const char *name)
 	return NOTHING;
 }
 
+static dbref
+parse_dbref(const char *s)
+{
+	const char *p;
+	long x;
+
+	x = atol(s);
+	if (x > 0) {
+		return x;
+	} else if (x == 0) {
+		/* check for 0 */
+		for (p = s; *p; p++) {
+			if (*p == '0')
+				return 0;
+			if (!isspace(*p))
+				break;
+		}
+	}
+	/* else x < 0 or s != 0 */
+	return NOTHING;
+}
+
 /* returns nnn if name = #nnn, else NOTHING */
 dbref
 ematch_absolute(const char *name)

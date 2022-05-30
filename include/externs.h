@@ -32,7 +32,6 @@ extern short optflags;
 
 /* from timequeue.c */
 void do_newpassword(command_t *);
-void do_oecho(command_t *);
 void do_propset(command_t *);
 void do_sweep(command_t *);
 void do_pecho(command_t *);
@@ -41,7 +40,6 @@ void do_score(command_t *);
 void do_view(command_t *);
 void do_meme(command_t *);
 void send_contents(dbref player, dbref dest);
-void do_doing(command_t *cmd);
 
 /* from db.c */
 extern int number(const char *s);
@@ -159,13 +157,6 @@ extern void do_rob(command_t *);
 /* From set.c */
 extern void do_name(command_t *);
 extern void do_describe(command_t *);
-extern void do_idescribe(command_t *);
-extern void do_fail(command_t *);
-extern void do_success(command_t *);
-extern void do_drop_message(command_t *);
-extern void do_osuccess(command_t *);
-extern void do_ofail(command_t *);
-extern void do_odrop(command_t *);
 extern int setlockstr(dbref player, dbref thing, const char *keyname);
 extern void do_lock(command_t *);
 extern void do_unlock(command_t *);

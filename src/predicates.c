@@ -217,9 +217,7 @@ can_doit(dbref player, dbref thing, const char *default_fail_msg)
 
 	if (!could_doit(player, thing)) {
 		/* can't do it */
-		if (GETFAIL(thing)) {
-			notify(player, GETFAIL(thing));
-		} else if (door) {
+		if (door) {
 			notifyf(player, "That %s is locked.", dwts);
 		} else if (default_fail_msg) {
 			notify(player, default_fail_msg);
@@ -232,9 +230,7 @@ can_doit(dbref player, dbref thing, const char *default_fail_msg)
 			notifyf(player, "You open the %s.", dwts);
 
 		/* can do it */
-		if (GETSUCC(thing)) {
-			notify(player, GETSUCC(thing));
-		} else if (Typeof(thing) == TYPE_EXIT && e_exit_is(thing))
+		if (Typeof(thing) == TYPE_EXIT && e_exit_is(thing))
 			notifyf(player, "You go %s.", e_name(exit_e(thing)));
 		if (door)
 			notifyf(player, "You close the %s.", dwts);
