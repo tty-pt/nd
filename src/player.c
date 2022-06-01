@@ -27,37 +27,6 @@ lookup_player(const char *name)
 	}
 }
 
-int
-check_password(dbref player, const char* password)
-{
-	const char *pword = PLAYER_PASSWORD(player);
-#ifdef __OpenBSD__
-	return !crypt_checkpass(password, pword);
-#else
-	char *enc;
-	enc = crypt(password, "k?");
-	CBUG(!enc);
-	return !strcmp(enc, pword);
-#endif
-}
-
-void
-set_password(dbref player, const char* password)
-{
-#ifdef __OpenBSD__
-	char hash[64];
-	if (crypt_newhash(password, "bcrypt,4", hash, sizeof(hash))) {
-		perror("crypt_newhash");
-	}
-	PLAYER_SET_PASSWORD(player, alloc_string(hash));
-#else
-	char *enc;
-	enc = crypt(password, "$5$iamsha-256encryptedwhatashame$");
-	CBUG(!enc);
-	PLAYER_SET_PASSWORD(player, alloc_string(enc));
-#endif
-}
-
 dbref
 connect_player(const char *qsession)
 {
@@ -91,11 +60,8 @@ create_player(const char *name)
 	OWNER(player) = player;
 	ALLOC_PLAYER_SP(player);
 	PLAYER_SET_HOME(player, PLAYER_START);
-	db[player].exits = NOTHING;
 
 	SETVALUE(player, START_PENNIES);
-	PLAYER_SET_PASSWORD(player, NULL);
-	set_password(player, "123");
 
 	/* link him to PLAYER_START */
 	PUSH(player, db[PLAYER_START].contents);
@@ -104,23 +70,6 @@ create_player(const char *name)
 	FLAGS(player) |= CHOWN_OK;
 
 	return player;
-}
-
-void
-do_password(command_t *cmd)
-{
-	dbref player = cmd->player;
-	const char *old = cmd->argv[1];
-	const char *newobj = cmd->argv[2];
-
-	if (!PLAYER_PASSWORD(player) || !check_password(player, old)) {
-		notify(player, "Sorry, old password did not match current password.");
-	} else if (!ok_password(newobj)) {
-		notify(player, "Bad new password (no spaces allowed).");
-	} else {
-		set_password(player, newobj);
-		notify(player, "Password changed.");
-	}
 }
 
 void

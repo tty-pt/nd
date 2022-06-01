@@ -542,12 +542,6 @@ m<char>
 to the current geographical position.
 ~
 ~
-@password
-@PASSWORD <old password>=<new password>
-
-  This changes your password.
-~
-~
 gripe
 GRIPE <message>
 

@@ -107,7 +107,7 @@ gexit(dbref loc, dbref loc2, enum exit e)
 	FLAGS(ref) = TYPE_EXIT;
 
 	/* link it in */
-	PUSH(ref, db[loc].exits);
+	PUSH(ref, db[loc].sp.room.exits);
 
 	db[ref].sp.exit.ndest = 1;
 	db[ref].sp.exit.dest = (dbref *) malloc(sizeof(dbref));
@@ -292,7 +292,7 @@ geo_room_at(dbref player, pos_t pos)
 	bio = noise_point(pos);
         there = object_add(biomes[bio->bio_idx], 0);
 	map_put(pos, there, DB_NOOVERWRITE);
-	db[there].exits = NOTHING;
+	db[there].sp.room.exits = NOTHING;
 	db[there].sp.room.dropto = NOTHING;
 	/* FLAGS(there) = TYPE_ROOM | (FLAGS(cmd->player) & JUMP_OK); */
 	CBUG(there <= 0);

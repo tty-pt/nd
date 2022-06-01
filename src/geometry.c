@@ -188,7 +188,7 @@ object_add(struct object_skeleton o, dbref where)
 		break;
         case S_TYPE_BIOME:
                 FLAGS(nu) = TYPE_ROOM;
-                db[nu].exits = NOTHING;
+                db[nu].sp.room.exits = NOTHING;
                 db[nu].sp.room.dropto = NOTHING;
                 SETTMP(nu, 1);
 	case S_TYPE_OTHER:

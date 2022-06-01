@@ -500,7 +500,7 @@ recycle(dbref player, dbref thing)
 	case TYPE_ROOM:
 		if (!Wizard(OWNER(thing)))
 			SETVALUE(OWNER(thing), GETVALUE(OWNER(thing)) + ROOM_COST);
-		for (first = db[thing].exits; first != NOTHING; first = rest) {
+		for (first = db[thing].sp.room.exits; first != NOTHING; first = rest) {
 			rest = db[first].next;
 			if (db[first].location == NOTHING
 			    || db[first].location == thing) {
@@ -522,11 +522,6 @@ recycle(dbref player, dbref thing)
 	case TYPE_THING:
 		if (!Wizard(OWNER(thing)))
 			SETVALUE(OWNER(thing), GETVALUE(OWNER(thing)) + GETVALUE(thing));
-		for (first = db[thing].exits; first != NOTHING; first = rest) {
-			rest = db[first].next;
-			if (db[first].location == NOTHING || db[first].location == thing)
-				recycle(player, first);
-		}
 		if (GETTMP(getloc(thing))) {
 			SETTMP(thing, 1);
 			for (first = db[thing].contents; first != NOTHING; first = rest) {
@@ -549,8 +544,8 @@ recycle(dbref player, dbref thing)
 		case TYPE_ROOM:
 			if (db[rest].sp.room.dropto == thing)
 				db[rest].sp.room.dropto = NOTHING;
-			if (db[rest].exits == thing)
-				db[rest].exits = db[thing].next;
+			if (db[rest].sp.room.exits == thing)
+				db[rest].sp.room.exits = db[thing].next;
 			if (OWNER(rest) == thing)
 				OWNER(rest) = GOD;
 			break;
@@ -569,8 +564,6 @@ recycle(dbref player, dbref thing)
 			  }
 			  THING_SET_HOME(rest, loc);
 			}
-			if (db[rest].exits == thing)
-				db[rest].exits = db[thing].next;
 			if (OWNER(rest) == thing)
 				OWNER(rest) = GOD;
 			break;
@@ -593,8 +586,6 @@ recycle(dbref player, dbref thing)
 		case TYPE_PLAYER:
 			if (PLAYER_HOME(rest) == thing)
 				PLAYER_SET_HOME(rest, PLAYER_START);
-			if (db[rest].exits == thing)
-				db[rest].exits = db[thing].next;
 			break;
 		}
 		if (db[rest].contents == thing)

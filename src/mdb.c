@@ -128,12 +128,14 @@ db_clear_object(dbref i)
 {
 	struct object *o = &db[i];
 
+	if (Typeof(i) == TYPE_ROOM)
+		o->sp.room.exits = NOTHING;
+
 	memset(o, 0, sizeof(struct object));
 
 	NAME(i) = 0;
 	o->location = NOTHING;
 	o->contents = NOTHING;
-	o->exits = NOTHING;
 	o->next = NOTHING;
 	o->properties = 0;
 	o->first_observer = NULL;
@@ -236,13 +238,13 @@ db_write_object(FILE * f, dbref i)
 	switch (Typeof(i)) {
 	case TYPE_THING:
 		putref(f, THING_HOME(i));
-		putref(f, o->exits);
+		/* putref(f, o->exits); */
 		putref(f, OWNER(i));
 		break;
 
 	case TYPE_ROOM:
 		putref(f, o->sp.room.dropto);
-		putref(f, o->exits);
+		putref(f, o->sp.room.exits);
 		putref(f, OWNER(i));
 		break;
 
@@ -256,8 +258,8 @@ db_write_object(FILE * f, dbref i)
 
 	case TYPE_PLAYER:
 		putref(f, PLAYER_HOME(i));
-		putref(f, o->exits);
-		putstring(f, PLAYER_PASSWORD(i));
+		/* putref(f, o->exits); */
+		/* putstring(f, PLAYER_PASSWORD(i)); */
 		break;
 	}
 
@@ -412,10 +414,6 @@ db_free_object(dbref i)
 
 	if (Typeof(i) == TYPE_EXIT && o->sp.exit.dest) {
 		free((void *) o->sp.exit.dest);
-	} else if (Typeof(i) == TYPE_PLAYER) {
-		if (PLAYER_PASSWORD(i)) {
-			free((void*)PLAYER_PASSWORD(i));
-		}
 	}
 	if (Typeof(i) == TYPE_THING) {
 		FREE_THING_SP(i);
@@ -534,7 +532,6 @@ db_read_object_foxen(FILE * f, struct object *o, dbref objno)
 {
 	int tmp, c, prop_flag = 0;
 	int j = 0;
-	const char *password;
 
 	db_clear_object(objno);
 
@@ -584,13 +581,13 @@ db_read_object_foxen(FILE * f, struct object *o, dbref objno)
 			ALLOC_THING_SP(objno);
 			home = prop_flag ? getref(f) : j;
 			THING_SET_HOME(objno, home);
-			o->exits = getref(f);
+			/* o->exits = getref(f); */
 			OWNER(objno) = getref(f);
 			break;
 		}
 	case TYPE_ROOM:
 		o->sp.room.dropto = prop_flag ? getref(f) : j;
-		o->exits = getref(f);
+		o->sp.room.exits = getref(f);
 		OWNER(objno) = getref(f);
 		return;
 	case TYPE_EXIT:
@@ -607,9 +604,7 @@ db_read_object_foxen(FILE * f, struct object *o, dbref objno)
 		/* PLAYER_SET_HOME(objno, (prop_flag ? getref(f) : j)); */
 		if (prop_flag)
 			getref(f);
-		o->exits = getref(f);
-		password = getstring(f);
-		PLAYER_SET_PASSWORD(objno, password);
+		/* o->exits = getref(f); */
 		PLAYER_SP(objno)->fd = -1;
 		PLAYER_SP(objno)->last_observed = NOTHING;
 		break;
@@ -682,13 +677,16 @@ object_copy(dbref player, dbref old)
         dbref nu = object_new();
 	struct object *newp = &db[nu];
 	NAME(nu) = alloc_string(NAME(old));
-	if (Typeof(old) == TYPE_THING) {
+	switch (Typeof(old)) {
+	case TYPE_THING:
 		ALLOC_THING_SP(nu);
 		THING_SET_HOME(nu, player);
 		/* SETVALUE(nu, 1); */
+		break;
+	case TYPE_ROOM:
+		newp->sp.room.exits = NOTHING;
 	}
 	newp->properties = copy_prop(old);
-	newp->exits = NOTHING;
 	newp->contents = NOTHING;
 	newp->next = NOTHING;
 	newp->location = NOTHING;

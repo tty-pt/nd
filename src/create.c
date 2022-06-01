@@ -171,7 +171,10 @@ do_clone(command_t *cmd)
 		OWNER(clonedthing) = OWNER(player);
 		SETVALUE(clonedthing, GETVALUE(thing));
 		/* FIXME: should we clone attached actions? */
-		db[clonedthing].exits = NOTHING;
+		switch (Typeof(thing)) {
+			case TYPE_ROOM:
+				db[clonedthing].sp.room.exits = NOTHING;
+		}
 		FLAGS(clonedthing) = FLAGS(thing);
 
 		/* copy all properties */
@@ -257,7 +260,6 @@ do_create(command_t *cmd)
 		db[thing].location = player;
 		OWNER(thing) = OWNER(player);
 		SETVALUE(thing, OBJECT_ENDOWMENT(cost));
-		db[thing].exits = NOTHING;
 		FLAGS(thing) = TYPE_THING;
 
 		/* endow the object */

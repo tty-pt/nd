@@ -150,14 +150,8 @@ core_command_t cmds[] = {
 		.name = "name",
 		.cb = &do_name,
 	}, {
-		.name = "newpassword",
-		.cb = &do_newpassword,
-	}, {
 		.name = "owned",
 		.cb = &do_owned,
-	}, {
-		.name = "password",
-		.cb = &do_password,
 	}, {
 		.name = "propset",
 		.cb = &do_propset,

@@ -143,14 +143,6 @@ must control the room where it is being opened.
 @owned [<player>].  Lists everything you own, or Wizards may specify a
 player argument.  This list includes exits, unlike @FIND.
 
-@PASSWORD
-@password <old>=<new>.  Change your password.
-
-@PCREATE	[*#~]
-@pcreate  <player>=<password>.  This  command is only   used under the
-compile option REGISTRATION.  Create a new player named  <player> with
-<password>.
-
 @PROG		[+P]
 @prog  <program>.  Create  a   new program, or enter  edit  mode on an
 existing one.  See @EDIT and Programmer's Reference.

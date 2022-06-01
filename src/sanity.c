@@ -23,7 +23,6 @@
 #define LOCATION(x) (db[x].location)
 
 #define CONTENTS(x) (db[x].contents)
-#define EXITS(x)    (db[x].exits)
 #define NEXTOBJ(x)  (db[x].next)
 
 #define unparse(x) ((char*)unparse_object(GOD, (x)))
@@ -142,12 +141,15 @@ find_orphan_objects(dbref player)
 	FLAGS(GLOBAL_ENVIRONMENT) |= SANEBIT;
 
 	for (i = 0; i < db_top; i++) {
-		if (EXITS(i) != NOTHING) {
-			if (FLAGS(EXITS(i)) & SANEBIT) {
-				violate(player, EXITS(i),
-						"is referred to by more than one object's Next, Contents, or Exits field");
-			} else {
-				FLAGS(EXITS(i)) |= SANEBIT;
+		switch (Typeof(i)) {
+		case TYPE_ROOM:
+			if (db[i].sp.room.exits != NOTHING) {
+				if (FLAGS(db[i].sp.room.exits) & SANEBIT) {
+					violate(player, db[i].sp.room.exits,
+							"is referred to by more than one object's Next, Contents, or Exits field");
+				} else {
+					FLAGS(db[i].sp.room.exits) |= SANEBIT;
+				}
 			}
 		}
 		if (CONTENTS(i) != NOTHING) {
@@ -303,8 +305,8 @@ check_exits_list(dbref player, dbref obj)
 	dbref i;
 	int limit;
 
-	if (TYPEOF(obj) != TYPE_EXIT && TYPEOF(obj) != TYPE_GARBAGE) {
-		for (i = EXITS(obj), limit = db_top;
+	if (TYPEOF(obj) == TYPE_ROOM) {
+		for (i = db[obj].sp.room.exits, limit = db_top;
 			 valid_obj(i) &&
 			 --limit && LOCATION(i) == obj && TYPEOF(i) == TYPE_EXIT; i = NEXTOBJ(i)) ;
 		if (i != NOTHING) {
@@ -322,16 +324,6 @@ check_exits_list(dbref player, dbref obj)
 					violate(player, obj,
 							"has an exit in its exits lists that thinks it is located elsewhere");
 				}
-			}
-		}
-	} else {
-		if (EXITS(obj) != NOTHING) {
-			if (TYPEOF(obj) == TYPE_EXIT) {
-				violate(player, obj, "is an exit/action whose exits list isn't #-1");
-			} else if (TYPEOF(obj) == TYPE_GARBAGE) {
-				violate(player, obj, "is a garbage object whose exits list isn't #-1");
-			} else {
-				violate(player, obj, "is a program whose exits list isn't #-1");
 			}
 		}
 	}
@@ -462,9 +454,10 @@ cut_all_chains(dbref obj)
 		SanFixed(obj, "Cleared contents of %s");
 		CONTENTS(obj) = NOTHING;
 	}
-	if (EXITS(obj) != NOTHING) {
+
+	if (Typeof(obj) == TYPE_ROOM && db[obj].sp.room.exits != NOTHING) {
 		SanFixed(obj, "Cleared exits of %s");
-		EXITS(obj) = NOTHING;
+		db[obj].sp.room.exits = NOTHING;
 	}
 }
 
@@ -531,7 +524,8 @@ cut_bad_exits(dbref obj)
 {
 	dbref loop, prev;
 
-	loop = EXITS(obj);
+	CBUG(!(TYPEOF(obj) == TYPE_ROOM));
+	loop = db[obj].sp.room.exits;
 	prev = NOTHING;
 	while (loop != NOTHING) {
 		if (!valid_obj(loop) || FLAGS(loop) & SANEBIT ||
@@ -550,7 +544,7 @@ cut_bad_exits(dbref obj)
 			if (prev != NOTHING)
 				db[prev].next = NOTHING;
 			else
-				EXITS(obj) = NOTHING;
+				db[obj].sp.room.exits = NOTHING;
 			return;
 		}
 		FLAGS(loop) |= SANEBIT;
@@ -571,7 +565,8 @@ hacksaw_bad_chains(void)
 			cut_all_chains(loop);
 		} else {
 			cut_bad_contents(loop);
-			cut_bad_exits(loop);
+			if (TYPEOF(loop) == TYPE_ROOM)
+				cut_bad_exits(loop);
 		}
 	}
 }
@@ -600,7 +595,7 @@ create_lostandfound(dbref * player, dbref * room)
 	*room = object_new();
 	NAME(*room) = alloc_string("lost+found");
 	LOCATION(*room) = GLOBAL_ENVIRONMENT;
-	db[*room].exits = NOTHING;
+	db[*room].sp.room.exits = NOTHING;
 	db[*room].sp.room.dropto = NOTHING;
 	FLAGS(*room) = TYPE_ROOM | SANEBIT;
 	PUSH(*room, db[GLOBAL_ENVIRONMENT].contents);
@@ -622,11 +617,8 @@ create_lostandfound(dbref * player, dbref * room)
 		OWNER(*player) = *player;
 		ALLOC_PLAYER_SP(*player);
 		PLAYER_SET_HOME(*player, *room);
-		EXITS(*player) = NOTHING;
 		SETVALUE(*player, START_PENNIES);
 		rpass = rand_password();
-		PLAYER_SET_PASSWORD(*player, NULL);
-		set_password(*player, rpass);
 		PUSH(*player, db[*room].contents);
 		add_player(*player);
 		warn("Using %s (with password %s) to resolve "
@@ -777,11 +769,7 @@ find_misplaced_objects(void)
 					}
 					LOCATION(loop) = room;
 				}
-				if (TYPEOF(loop) == TYPE_EXIT) {
-					PUSH(loop, EXITS(LOCATION(loop)));
-				} else {
-					PUSH(loop, CONTENTS(LOCATION(loop)));
-				}
+				PUSH(loop, CONTENTS(LOCATION(loop)));
 				FLAGS(loop) |= SANEBIT;
 				SanFixed2(loop, LOCATION(loop), "Set location of %s to %s");
 			}
@@ -831,8 +819,8 @@ adopt_orphans(void)
 				SanFixed2(loop, LOCATION(loop), "Orphaned object %s added to contents of %s");
 				break;
 			case TYPE_EXIT:
-				db[loop].next = db[LOCATION(loop)].exits;
-				db[LOCATION(loop)].exits = loop;
+				db[loop].next = db[LOCATION(loop)].sp.room.exits;
+				db[LOCATION(loop)].sp.room.exits = loop;
 				SanFixed2(loop, LOCATION(loop), "Orphaned exit %s added to exits of %s");
 				break;
 			case TYPE_GARBAGE:
@@ -968,8 +956,8 @@ sanechange(dbref player, const char *command)
 		SanPrint(player, "## Setting #%d's next field to %s", d, unparse(v));
 
 	} else if (!strcmp(field, "exits")) {
-		strlcpy(buf2, unparse(EXITS(d)), sizeof(buf2));
-		EXITS(d) = v;
+		strlcpy(buf2, unparse(db[d].sp.room.exits), sizeof(buf2));
+		db[d].sp.room.exits = v;
 		SanPrint(player, "## Setting #%d's Exits list start to %s", d, unparse(v));
 
 	} else if (!strcmp(field, "contents")) {

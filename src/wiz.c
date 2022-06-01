@@ -503,10 +503,6 @@ do_toad(command_t *cmd) {
 				THING_SET_HOME(stuff, PLAYER_START);
 			}
 		}
-		if (PLAYER_PASSWORD(victim)) {
-			free((void *) PLAYER_PASSWORD(victim));
-			PLAYER_SET_PASSWORD(victim, 0);
-		}
 
 		/* notify people */
 		notify(victim, "You have been turned into a toad.");
@@ -528,47 +524,6 @@ do_toad(command_t *cmd) {
 		FLAGS(victim) = (FLAGS(victim) & ~TYPE_MASK) | TYPE_THING;
 		OWNER(victim) = player;	/* you get it */
 		SETVALUE(victim, 1);	/* don't let him keep his immense wealth */
-	}
-}
-
-void
-do_newpassword(command_t *cmd)
-{
-	dbref player = cmd->player;
-	const char *name = cmd->argv[1];
-	const char *password = cmd->argv[2];
-	dbref victim;
-	char buf[BUFFER_LEN];
-
-	if (!Wizard(player) || Typeof(player) != TYPE_PLAYER) {
-		notify(player, "Only a Wizard player can newpassword someone.");
-		return;
-	} else if ((victim = lookup_player(name)) == NOTHING) {
-		notify(player, "No such player.");
-	} else if (*password != '\0' && !ok_password(password)) {
-		/* Wiz can set null passwords, but not bad passwords */
-		notify(player, "Bad password");
-
-#ifdef GOD_PRIV
-	} else if (God(victim)) {
-		notify(player, "You can't change God's password!");
-		return;
-	} else {
-		if (TrueWizard(victim) && !God(player)) {
-			notify(player, "Only God can change a wizard's password.");
-			return;
-		}
-#else							/* GOD_PRIV */
-	} else {
-#endif							/* GOD_PRIV */
-
-		/* it's ok, do it */
-		set_password(victim, password);
-		notify(player, "Password changed.");
-		snprintf(buf, sizeof(buf), "Your password has been changed by %s.", NAME(player));
-		notify(victim, buf);
-		warn("NEWPASS'ED: %s(%d) by %s(%d)", NAME(victim), victim,
-				   NAME(player), player);
 	}
 }
 

@@ -227,8 +227,6 @@ size_object(dbref i, int load)
 
 	if (Typeof(i) == TYPE_EXIT && db[i].sp.exit.dest) {
 		byts += sizeof(dbref) * db[i].sp.exit.ndest;
-	} else if (Typeof(i) == TYPE_PLAYER && PLAYER_PASSWORD(i)) {
-		byts += strlen(PLAYER_PASSWORD(i)) + 1;
 	}
 	return byts;
 }
@@ -329,9 +327,9 @@ do_examine(command_t *cmd)
 	switch (Typeof(thing)) {
 	case TYPE_ROOM:
 		/* tell him about exits */
-		if (db[thing].exits != NOTHING) {
+		if (db[thing].sp.room.exits != NOTHING) {
 			notify(player, "Exits:");
-			DOLIST(exit, db[thing].exits) {
+			DOLIST(exit, db[thing].sp.room.exits) {
 				notify(player, unparse_object(player, exit));
 			}
 		} else {
@@ -356,15 +354,7 @@ do_examine(command_t *cmd)
 			snprintf(buf, sizeof(buf), "Location: %s", unparse_object(player, db[thing].location));
 			notify(player, buf);
 		}
-		/* print thing's actions, if any */
-		if (db[thing].exits != NOTHING) {
-			notify(player, "Actions/exits:");
-			DOLIST(exit, db[thing].exits) {
-				notify(player, unparse_object(player, exit));
-			}
-		} else {
-			notify(player, "No actions attached.");
-		}
+		notify(player, "No actions attached.");
 		break;
 	case TYPE_PLAYER:
 
@@ -379,15 +369,7 @@ do_examine(command_t *cmd)
 			snprintf(buf, sizeof(buf), "Location: %s", unparse_object(player, db[thing].location));
 			notify(player, buf);
 		}
-		/* print player's actions, if any */
-		if (db[thing].exits != NOTHING) {
-			notify(player, "Actions/exits:");
-			DOLIST(exit, db[thing].exits) {
-				notify(player, unparse_object(player, exit));
-			}
-		} else {
-			notify(player, "No actions attached.");
-		}
+		notify(player, "No actions attached.");
 		break;
 	case TYPE_EXIT:
 		if (db[thing].location != NOTHING) {
@@ -857,12 +839,12 @@ do_contents(command_t *cmd)
 	switch (Typeof(thing)) {
 	case TYPE_EXIT:
 	case TYPE_GARBAGE:
+	case TYPE_THING:
+	case TYPE_PLAYER:
 		i = NOTHING;
 		break;
 	case TYPE_ROOM:
-	case TYPE_THING:
-	case TYPE_PLAYER:
-		i = db[thing].exits;
+		i = db[thing].sp.room.exits;
 		break;
 	}
 	DOLIST(i, i) {

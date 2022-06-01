@@ -45,7 +45,6 @@ do_name(command_t *cmd)
 	const char *name = cmd->argv[1];
 	char *newname = cmd->argv[2];
 	dbref thing;
-	char *password;
 
 	if ((thing = match_controlled(player, name)) != NOTHING) {
 		/* check for bad name */
@@ -54,48 +53,14 @@ do_name(command_t *cmd)
 			return;
 		}
 		/* check for renaming a player */
-		if (Typeof(thing) == TYPE_PLAYER) {
-			/* split off password */
-			for (password = newname; *password && !isspace(*password); password++) ;
-			/* eat whitespace */
-			if (*password) {
-				*password++ = '\0';	/* terminate name */
-				while (*password && isspace(*password))
-					password++;
-			}
-			/* check for null password */
-			if (!*password) {
-				notify(player, "You must specify a password to change a player name.");
-				notify(player, "E.g.: name player = newname password");
-				return;
-			} else if (!check_password(thing, password)) {
-				notify(player, "Incorrect password.");
-				return;
-			} else if (strcmp(newname, NAME(thing))
-					   && !ok_player_name(newname)) {
-				notify(player, "You can't give a player that name.");
-				return;
-			}
-			/* everything ok, notify */
-			warn("NAME CHANGE: %s(#%d) to %s", NAME(thing), thing, newname);
-			delete_player(thing);
-			if (NAME(thing)) {
-				free((void *) NAME(thing));
-			}
-			NAME(thing) = alloc_string(newname);
-			add_player(thing);
-			notify(player, "Name set.");
+		if ((Typeof(thing) == TYPE_THING && !OK_ASCII_THING(newname)) ||
+				(Typeof(thing) != TYPE_THING && !OK_ASCII_OTHER(newname)) ) {
+			notify(player, "Invalid 8-bit name.");
 			return;
-		} else {
-			if ((Typeof(thing) == TYPE_THING && !OK_ASCII_THING(newname)) ||
-			    (Typeof(thing) != TYPE_THING && !OK_ASCII_OTHER(newname)) ) {
-				notify(player, "Invalid 8-bit name.");
-				return;
-			}
-			if (!ok_name(newname)) {
-				notify(player, "That is not a reasonable name.");
-				return;
-			}
+		}
+		if (!ok_name(newname)) {
+			notify(player, "That is not a reasonable name.");
+			return;
 		}
 
 		/* everything ok, change the name */

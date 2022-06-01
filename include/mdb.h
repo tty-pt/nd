@@ -278,7 +278,6 @@ struct boolexp {
 
 struct player_specific {
 	dbref home;
-	const char *password;
 	int fd;
 	dbref last_observed;
         dbref dialog_target;
@@ -298,11 +297,9 @@ struct player_specific {
 #define FREE_PLAYER_SP(x)       { dbref foo = x; free(PLAYER_SP(foo)); PLAYER_SP(foo) = NULL; }
 
 #define PLAYER_HOME(x)		(PLAYER_SP(x)->home)
-#define PLAYER_PASSWORD(x)	(PLAYER_SP(x)->password)
 #define PLAYER_FD(x)		PLAYER_SP(x)->fd
 
 #define PLAYER_SET_HOME(x,y)		(PLAYER_SP(x)->home = y)
-#define PLAYER_SET_PASSWORD(x,y)	(PLAYER_SP(x)->password = y)
 
 /* union of type-specific fields */
 
@@ -310,8 +307,9 @@ union specific {				/* I've been railroaded! */
 	struct {					/* ROOM-specific fields */
 		dbref dropto;
 		/* unsigned flags; */
-		unsigned char exits;
+		/* unsigned char exits; */
 		unsigned char doors;
+		dbref exits;
 	} room;
 	struct {					/* EXIT-specific fields */
 		int ndest;
@@ -335,7 +333,6 @@ struct object {
 	dbref location;				/* pointer to container */
 	dbref owner;
 	dbref contents;
-	dbref exits;
 	dbref next;					/* pointer to next in contents/exits chain */
 	struct plist *properties;
 	struct mob *mob;

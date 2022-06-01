@@ -146,7 +146,7 @@ dbref
 ematch_exit_at(dbref player, dbref loc, const char *name)
 {
 	CBUG(Typeof(loc) != TYPE_ROOM);
-	return ematch_exit(player, db[loc].exits, name);
+	return ematch_exit(player, db[loc].sp.room.exits, name);
 }
 
 dbref
