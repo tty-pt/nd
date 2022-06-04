@@ -8,7 +8,6 @@ HAVEN       ||  X        |  X         |  X         |  HIDE      | HARDUID
 JUMP_OK     ||  X        |  ?         |  X         |   X        |  ?          
 LINK_OK     ||  X        |  X         |  X         |   X        |  X
 QUELL       ||  x        |  x         |  X         |   x        |  X        
-STICKY      ||  X        | SILENT     | SILENT     |   X        | SETUID     
 VEHICLE     ||  X        |  X         |  x         |   X        | VIEWABLE      
 WIZARD      ||  x        |  x         |  X         |   x        |  X         
 XFORCIBLE   ||           | XPRESS     |  X         |   X        |            

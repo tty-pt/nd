@@ -94,10 +94,6 @@
 #define GETTMP(x)	get_property_value(x, MESGPROP_TMP)
 #define SETTMP(x, y)	set_property_value(x, MESGPROP_TMP, y)
 
-#define MESGPROP_FLOOR	"_/floor"
-#define GETFLOOR(x)	(get_property_value(x, MESGPROP_FLOOR) - 1)
-#define SETFLOOR(x, y)	set_property_value(x, MESGPROP_FLOOR, y + 1)
-
 #define MESGPROP_LVL	"_/lvl"
 #define GETLVL(x)	1 + get_property_value(x, MESGPROP_LVL)
 #define SETLVL(x, y)	set_property_value(x, MESGPROP_LVL, y - 1)
@@ -185,7 +181,7 @@ enum at { ARMOR_LIGHT, ARMOR_MEDIUM, ARMOR_HEAVY, };
 #define TYPE_ROOM           0x0
 #define TYPE_THING          0x1
 #define TYPE_EXIT           0x2
-#define TYPE_PLAYER         0x3
+#define TYPE_ENTITY         0x3
 #define NOTYPE1				0x5 /* Room for expansion */
 #define TYPE_GARBAGE        0x6
 #define NOTYPE              0x7	/* no particular type */
@@ -199,8 +195,7 @@ enum at { ARMOR_LIGHT, ARMOR_MEDIUM, ARMOR_HEAVY, };
 /* #define DEBUG DARK */	/* Used to print debugging information on
 				 * on MUF programs */
 
-#define STICKY            0x100	/* this object goes home when dropped */
-#define SILENT STICKY
+#define RESERVED          0x100	/* this object goes home when dropped */
 #define BUILDER           0x200	/* this player can use construction commands */
 #define BOUND BUILDER
 #define CHOWN_OK          0x400	/* this object can be @chowned, or
@@ -276,30 +271,30 @@ struct boolexp {
 #define AMBIGUOUS ((dbref) -2)	/* multiple possibilities, for matchers */
 #define HOME ((dbref) -3)		/* virtual room, represents mover's home */
 
-struct player_specific {
+enum entity_flags {
+	EF_PLAYER = 1,
+	EF_AGGRO = 2,
+	EF_SITTING = 4,
+};
+
+struct entity {
 	dbref home;
 	int fd;
 	dbref last_observed;
         dbref dialog_target;
         const char *dialog;
+
+	struct debuf debufs[8];
+	struct spell spells[8];
+	effect_t e[7];
+	dbref target;
+	struct wts wts;
+	unsigned respawn_in, flags; // TODO merge these two
+	unsigned short hp, mp, hunger, thirst;
+	unsigned char debuf_mask, combo, select, klock;
 };
 
-#define THING_SP(x)		(db[x].sp.player.sp)
-#define ALLOC_THING_SP(x)       { PLAYER_SP(x) = (struct player_specific *)malloc(sizeof(struct player_specific)); }
-#define FREE_THING_SP(x)        { dbref foo = x; free(PLAYER_SP(foo)); PLAYER_SP(foo) = NULL; }
-
-#define THING_HOME(x)		(PLAYER_SP(x)->home)
-
-#define THING_SET_HOME(x,y)	(PLAYER_SP(x)->home = y)
-
-#define PLAYER_SP(x)		(db[x].sp.player.sp)
-#define ALLOC_PLAYER_SP(x)      { PLAYER_SP(x) = (struct player_specific *)malloc(sizeof(struct player_specific)); bzero(PLAYER_SP(x),sizeof(struct player_specific));}
-#define FREE_PLAYER_SP(x)       { dbref foo = x; free(PLAYER_SP(foo)); PLAYER_SP(foo) = NULL; }
-
-#define PLAYER_HOME(x)		(PLAYER_SP(x)->home)
-#define PLAYER_FD(x)		PLAYER_SP(x)->fd
-
-#define PLAYER_SET_HOME(x,y)		(PLAYER_SP(x)->home = y)
+#define ENTITY(x)		(&db[x].sp.entity)
 
 /* union of type-specific fields */
 
@@ -310,14 +305,13 @@ union specific {				/* I've been railroaded! */
 		/* unsigned char exits; */
 		unsigned char doors;
 		dbref exits;
+		unsigned char floor;
 	} room;
 	struct {					/* EXIT-specific fields */
 		int ndest;
 		dbref *dest;
 	} exit;
-	struct {					/* PLAYER-specific fields */
-		struct player_specific *sp;
-	} player;
+	struct entity entity;
 };
 
 /* timestamps record */
@@ -381,7 +375,6 @@ extern int db_obs_remove(dbref observable, dbref observer);
 extern void db_free(void);
 
 void objects_update(long long unsigned tick);
-void objects_init();
 dbref getparent(dbref obj);
 
 #define DOLIST(var, first) \

@@ -517,7 +517,6 @@ main(int argc, char **argv)
 		warn("Couldn't load " STD_DB "!\n");
 		return 2;
 	}
-        objects_init();
 
 	int ret = map_init();
 	if (ret) {
@@ -583,10 +582,10 @@ notify(dbref player, const char *msg)
 	char *ptr1;
 	const char *ptr2;
 
-        if (Typeof(player) != TYPE_PLAYER)
+        if (Typeof(player) != TYPE_ENTITY)
                 return 0;
 
-	fd = PLAYER_FD(player);
+	fd = ENTITY(player)->fd;
 	if (fd <= 0)
 		return 0;
 
@@ -730,12 +729,14 @@ do_auth(command_t *cmd)
 	fscanf(fp, "%s", buf);
 	fclose(fp);
 
+	warn("lookup_player '%s'\n", buf);
+
 	player = lookup_player(buf);
 
 	if (player == NOTHING) {
 		player = create_player(buf);
-		mob_put(player);
-	} else if (PLAYER_FD(player) > 0) {
+		birth(player);
+	} else if (ENTITY(player)->fd > 0) {
                 descr_inband(fd, "That player is already connected.\r\n");
                 web_auth_fail(fd, 2);
                 return;
@@ -744,7 +745,7 @@ do_auth(command_t *cmd)
 	d->flags |= DF_CONNECTED;
 	d->player = cmd->player = player;
 	CBUG(d->fd != fd);
-	PLAYER_FD(player) = fd;
+	ENTITY(player)->fd = fd;
 	spit_file(player, MOTD_FILE);
         web_stats(player);
         web_bars(player);
@@ -791,10 +792,10 @@ command_process(command_t *cmd)
 	command_debug(cmd, "command_process");
 
 	// set current descriptor (needed for death)
-	if (GETLID(player) < 0)
-		mob_put(player);
-	struct mob *mob = MOB(player);
-	mob->descr = descr;
+	/* if (GETLID(player) < 0) */
+	/* 	mob_put(player); */
+	struct entity *mob = ENTITY(player);
+	mob->fd = descr;
 
 	pos_t pos;
 	map_where(pos, getloc(player));
@@ -925,11 +926,11 @@ descr_close(descr_t *d)
 	if (d->flags & DF_CONNECTED) {
 		warn("%s(%d) disconnects on fd %d\n",
 		     NAME(d->player), d->player, d->fd);
-		dbref last_observed = PLAYER_SP(d->player)->last_observed;
+		dbref last_observed = ENTITY(d->player)->last_observed;
 		if (last_observed != NOTHING)
 			db_obs_remove(last_observed, d->player);
 
-		PLAYER_SP(d->player)->fd = -1;
+		ENTITY(d->player)->fd = -1;
 		d->flags = 0;
 		d->player = NOTHING;
 	} else
@@ -1073,7 +1074,7 @@ wall_wizards(const char *msg)
 int
 boot_off(dbref player)
 {
-	int fd = PLAYER_SP(player)->fd;
+	int fd = ENTITY(player)->fd;
 
 	if (fd > 0) {
 		descr_close(&descr_map[fd]);

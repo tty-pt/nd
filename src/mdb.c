@@ -236,8 +236,12 @@ db_write_object(FILE * f, dbref i)
 
 
 	switch (Typeof(i)) {
+	case TYPE_ENTITY:
+		putref(f, ENTITY(i)->home);
+		putref(f, ENTITY(i)->flags);
+		break;
+
 	case TYPE_THING:
-		putref(f, THING_HOME(i));
 		/* putref(f, o->exits); */
 		putref(f, OWNER(i));
 		break;
@@ -245,6 +249,7 @@ db_write_object(FILE * f, dbref i)
 	case TYPE_ROOM:
 		putref(f, o->sp.room.dropto);
 		putref(f, o->sp.room.exits);
+		putref(f, o->sp.room.floor);
 		putref(f, OWNER(i));
 		break;
 
@@ -254,12 +259,6 @@ db_write_object(FILE * f, dbref i)
 			putref(f, (o->sp.exit.dest)[j]);
 		}
 		putref(f, OWNER(i));
-		break;
-
-	case TYPE_PLAYER:
-		putref(f, PLAYER_HOME(i));
-		/* putref(f, o->exits); */
-		/* putstring(f, PLAYER_PASSWORD(i)); */
 		break;
 	}
 
@@ -414,12 +413,6 @@ db_free_object(dbref i)
 
 	if (Typeof(i) == TYPE_EXIT && o->sp.exit.dest) {
 		free((void *) o->sp.exit.dest);
-	}
-	if (Typeof(i) == TYPE_THING) {
-		FREE_THING_SP(i);
-	}
-	if (Typeof(i) == TYPE_PLAYER) {
-		FREE_PLAYER_SP(i);
 	}
 	if (Typeof(i) != TYPE_ROOM) {
 		struct observer_node *obs, *aux;
@@ -576,18 +569,13 @@ db_read_object_foxen(FILE * f, struct object *o, dbref objno)
 
 	switch (FLAGS(objno) & TYPE_MASK) {
 	case TYPE_THING:{
-			dbref home;
-
-			ALLOC_THING_SP(objno);
-			home = prop_flag ? getref(f) : j;
-			THING_SET_HOME(objno, home);
-			/* o->exits = getref(f); */
 			OWNER(objno) = getref(f);
 			break;
 		}
 	case TYPE_ROOM:
 		o->sp.room.dropto = prop_flag ? getref(f) : j;
 		o->sp.room.exits = getref(f);
+		o->sp.room.floor = getref(f);
 		OWNER(objno) = getref(f);
 		return;
 	case TYPE_EXIT:
@@ -599,14 +587,15 @@ db_read_object_foxen(FILE * f, struct object *o, dbref objno)
 		}
 		OWNER(objno) = getref(f);
 		return;
-	case TYPE_PLAYER:
-		ALLOC_PLAYER_SP(objno);
-		/* PLAYER_SET_HOME(objno, (prop_flag ? getref(f) : j)); */
-		if (prop_flag)
-			getref(f);
-		/* o->exits = getref(f); */
-		PLAYER_SP(objno)->fd = -1;
-		PLAYER_SP(objno)->last_observed = NOTHING;
+	case TYPE_ENTITY:
+		ENTITY(objno)->home = prop_flag ? getref(f) : j;
+		ENTITY(objno)->fd = -1;
+		ENTITY(objno)->last_observed = NOTHING;
+		ENTITY(objno)->flags = getref(f);
+		OWNER(objno) = objno;
+		if (ENTITY(objno)->flags & EF_PLAYER)
+			add_player(objno);
+		birth(objno);
 		break;
 	case TYPE_GARBAGE:
 		return;
@@ -639,10 +628,6 @@ db_read(FILE * f)
 			/* read it in */
 			o = &db[thisref];
 			db_read_object_foxen(f, o, thisref);
-			if (Typeof(thisref) == TYPE_PLAYER) {
-				OWNER(thisref) = thisref;
-				add_player(thisref);
-			}
 			break;
 		case LOOKUP_TOKEN:
 			special = getstring(f);
@@ -679,8 +664,6 @@ object_copy(dbref player, dbref old)
 	NAME(nu) = alloc_string(NAME(old));
 	switch (Typeof(old)) {
 	case TYPE_THING:
-		ALLOC_THING_SP(nu);
-		THING_SET_HOME(nu, player);
 		/* SETVALUE(nu, 1); */
 		break;
 	case TYPE_ROOM:
@@ -697,24 +680,8 @@ object_copy(dbref player, dbref old)
 
 static void
 object_update(dbref what, long long unsigned tick) {
-	if (MOB(what))
-		mob_update(what, tick);
-}
-
-static void
-room0_update(long long unsigned tick)
-{
-	dbref thing;
-	DOLIST(thing, db[0].contents) {
-		if (Typeof(thing) == TYPE_PLAYER) {
-			if (!God(thing)) {
-				struct cmd_dir cd;
-				cd.rep = STARTING_POSITION;
-				cd.dir = '\0';
-				geo_teleport(thing, cd);
-			}
-		}
-	}
+	if (Typeof(what) == TYPE_ENTITY)
+		entity_update(what, tick);
 }
 
 void
@@ -724,21 +691,4 @@ objects_update(long long unsigned tick)
 	dbref i;
 	for (i = db_top; i-- > 0;)
 		object_update(i, tick);
-
-	room0_update(tick);
-}
-
-static inline void
-object_init(dbref what) {
-	if (GETLID(what) >= 0)
-		mob_put(what);
-}
-
-void
-objects_init()
-{
-	
-	dbref i;
-	for (i = db_top; i-- > 0;)
-		object_init(i);
 }

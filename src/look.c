@@ -18,6 +18,7 @@
 #include "dbsearch.h"
 #include "externs.h"
 #include "web.h"
+#include "view.h"
 
 #define EXEC_SIGNAL '@'			/* Symbol which tells us what we're looking at
 					 * is an execution order and not a message.    */
@@ -29,8 +30,8 @@ print_owner(dbref player, dbref thing)
 	char buf[BUFFER_LEN];
 
 	switch (Typeof(thing)) {
-	case TYPE_PLAYER:
-		snprintf(buf, sizeof(buf), "%s is a player.", NAME(thing));
+	case TYPE_ENTITY:
+		snprintf(buf, sizeof(buf), "%s is an entity.", NAME(thing));
 		break;
 	case TYPE_ROOM:
 	case TYPE_THING:
@@ -78,7 +79,7 @@ look_simple(dbref player, dbref thing)
 	char const *art_str = GETMESG(thing, MESGPROP_ART);
 
 	if (art_str)
-		art(PLAYER_FD(player), art_str);
+		art(ENTITY(player)->fd, art_str);
 
 	if (GETDESC(thing)) {
 		notify(player, GETDESC(thing));
@@ -128,9 +129,7 @@ do_look_at(command_t *cmd)
 	dbref thing;
 
 	if (*name == '\0' || !strcmp(name, "here")) {
-		if ((thing = getloc(player)) != NOTHING) {
-			look_room(player, thing);
-		}
+		thing = getloc(player);
 	} else if (
 			(thing = ematch_absolute(name)) == NOTHING
 			&& (thing = ematch_here(player, name)) == NOTHING
@@ -146,8 +145,9 @@ do_look_at(command_t *cmd)
 	switch (Typeof(thing)) {
 	case TYPE_ROOM:
 		look_room(player, thing);
+		view(player);
 		break;
-	case TYPE_PLAYER:
+	case TYPE_ENTITY:
 		if (web_look(player, thing, GETDESC(thing))) {
 			look_simple(player, thing);
 			look_contents(player, thing, "Carrying:");
@@ -265,28 +265,32 @@ do_examine(command_t *cmd)
 	}
 	switch (Typeof(thing)) {
 	case TYPE_ROOM:
-		snprintf(buf, sizeof(buf), "%.*s  Owner: %s  Parent: ",
+		snprintf(buf, sizeof(buf), "%.*s (#%d) Owner: %s  Parent: ",
 				(int) (BUFFER_LEN - strlen(NAME(OWNER(thing))) - 35),
 				unparse_object(player, thing),
+				thing,
 				NAME(OWNER(thing)));
 		strlcat(buf, unparse_object(player, db[thing].location), sizeof(buf));
 		break;
 	case TYPE_THING:
-		snprintf(buf, sizeof(buf), "%.*s  Owner: %s  Value: %d",
+		snprintf(buf, sizeof(buf), "%.*s (#%d) Owner: %s  Value: %d",
 				(int) (BUFFER_LEN - strlen(NAME(OWNER(thing))) - 35),
 				unparse_object(player, thing),
+				thing,
 				NAME(OWNER(thing)), GETVALUE(thing));
 		break;
-	case TYPE_PLAYER:
-		snprintf(buf, sizeof(buf), "%.*s  %s: %d  ", 
+	case TYPE_ENTITY:
+		snprintf(buf, sizeof(buf), "%.*s (#%d) %s: %d  ", 
 				(int) (BUFFER_LEN - strlen(CPENNIES) - 35),
 				unparse_object(player, thing),
+				thing,
 				CPENNIES, GETVALUE(thing));
 		break;
 	case TYPE_EXIT:
-		snprintf(buf, sizeof(buf), "%.*s  Owner: %s",
+		snprintf(buf, sizeof(buf), "%.*s (#%d) Owner: %s",
 				(int) (BUFFER_LEN - strlen(NAME(OWNER(thing))) - 35),
 				unparse_object(player, thing),
+				thing,
 				NAME(OWNER(thing)));
 		break;
 	case TYPE_GARBAGE:
@@ -344,28 +348,21 @@ do_examine(command_t *cmd)
 		}
 		break;
 	case TYPE_THING:
-		/* print home */
-		snprintf(buf, sizeof(buf), "Home: %s", unparse_object(player, THING_HOME(thing)));	/* home */
-		notify(player, buf);
 		/* print location if player can link to it */
-		if (db[thing].location != NOTHING && (controls(player, db[thing].location)
-													|| can_link_to(player, NOTYPE,
-																   db[thing].location))) {
+		if (db[thing].location != NOTHING && controls(player, db[thing].location)) {
 			snprintf(buf, sizeof(buf), "Location: %s", unparse_object(player, db[thing].location));
 			notify(player, buf);
 		}
 		notify(player, "No actions attached.");
 		break;
-	case TYPE_PLAYER:
+	case TYPE_ENTITY:
 
 		/* print home */
-		snprintf(buf, sizeof(buf), "Home: %s", unparse_object(player, PLAYER_HOME(thing)));	/* home */
+		snprintf(buf, sizeof(buf), "Home: %s", unparse_object(player, ENTITY(thing)->home));	/* home */
 		notify(player, buf);
 
 		/* print location if player can link to it */
-		if (db[thing].location != NOTHING && (controls(player, db[thing].location)
-													|| can_link_to(player, NOTYPE,
-																   db[thing].location))) {
+		if (db[thing].location != NOTHING && controls(player, db[thing].location)) {
 			snprintf(buf, sizeof(buf), "Location: %s", unparse_object(player, db[thing].location));
 			notify(player, buf);
 		}
@@ -527,7 +524,7 @@ init_checkflags(dbref player, const char *flags, struct flgchkdat *check)
 				check->isnotplayer = 1;
 			} else {
 				check->fortype = 1;
-				check->istype = TYPE_PLAYER;
+				check->istype = TYPE_ENTITY;
 			}
 			break;
 		case '~':
@@ -608,12 +605,6 @@ init_checkflags(dbref player, const char *flags, struct flgchkdat *check)
 			else
 				check->setflags |= QUELL;
 			break;
-		case 'S':
-			if (mode)
-				check->clearflags |= STICKY;
-			else
-				check->setflags |= STICKY;
-			break;
 		case 'W':
 			if (mode)
 				check->clearflags |= WIZARD;
@@ -644,7 +635,7 @@ checkflags(dbref what, struct flgchkdat check)
 		return (0);
 	if (check.isnotthing && (Typeof(what) == TYPE_THING))
 		return (0);
-	if (check.isnotplayer && (Typeof(what) == TYPE_PLAYER))
+	if (check.isnotplayer && (Typeof(what) == TYPE_ENTITY))
 		return (0);
 
 	if (FLAGS(what) & check.clearflags)
@@ -662,7 +653,7 @@ checkflags(dbref what, struct flgchkdat check)
 			if ((!db[what].sp.exit.ndest) != (!check.islinked))
 				return (0);
 			break;
-		case TYPE_PLAYER:
+		case TYPE_ENTITY:
 		case TYPE_THING:
 			if (!check.islinked)
 				return (0);
@@ -712,11 +703,8 @@ display_objinfo(dbref player, dbref obj, int output_type)
 			snprintf(buf, sizeof(buf), "%-38.512s  %.512s", buf2,
 					unparse_object(player, db[obj].sp.exit.dest[0]));
 			break;
-		case TYPE_PLAYER:
-			snprintf(buf, sizeof(buf), "%-38.512s  %.512s", buf2, unparse_object(player, PLAYER_HOME(obj)));
-			break;
-		case TYPE_THING:
-			snprintf(buf, sizeof(buf), "%-38.512s  %.512s", buf2, unparse_object(player, THING_HOME(obj)));
+		case TYPE_ENTITY:
+			snprintf(buf, sizeof(buf), "%-38.512s  %.512s", buf2, unparse_object(player, ENTITY(obj)->home));
 			break;
 		default:
 			snprintf(buf, sizeof(buf), "%-38.512s  %.512s", buf2, "N/A");
@@ -840,7 +828,7 @@ do_contents(command_t *cmd)
 	case TYPE_EXIT:
 	case TYPE_GARBAGE:
 	case TYPE_THING:
-	case TYPE_PLAYER:
+	case TYPE_ENTITY:
 		i = NOTHING;
 		break;
 	case TYPE_ROOM:
@@ -884,10 +872,10 @@ do_sweep(command_t *cmd)
 	ref = db[thing].contents;
 	for (; ref != NOTHING; ref = db[ref].next) {
 		switch (Typeof(ref)) {
-		case TYPE_PLAYER:
+		case TYPE_ENTITY:
 			if (!Dark(thing)) {
 				snprintf(buf, sizeof(buf), "  %s is a %splayer.",
-						unparse_object(player, ref), PLAYER_SP(ref)->fd > 0 ? "" : "sleeping ");
+						unparse_object(player, ref), ENTITY(ref)->fd > 0 ? "" : "sleeping ");
 				notify(player, buf);
 			}
 			break;

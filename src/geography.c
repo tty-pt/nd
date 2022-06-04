@@ -59,7 +59,7 @@ geo_update()
 		return;
 
 	for (i = 0; i < db_top; i++)
-		if (Typeof(i) == TYPE_PLAYER)
+		if (Typeof(i) == TYPE_ENTITY)
 			notify(i, msg);
 }
 
@@ -302,8 +302,8 @@ geo_room_at(dbref player, pos_t pos)
 		return there;
 
 	SETTREE(there, bio->pd.n);
-	SETFLOOR(there, bio->bio_idx);
-	mobs_add(there, bio->bio_idx, bio->pd.n);
+	db[there].sp.room.floor = bio->bio_idx;
+	entities_add(there, bio->bio_idx, bio->pd.n);
 	others_add(there, bio->bio_idx, pos);
 	plants_add(player, there,
 			&bio->pd, bio->ty,
@@ -389,7 +389,7 @@ geo_clean(dbref player, dbref here)
 
 	tmp = db[here].contents;
 	DOLIST(tmp, tmp)
-		if (Typeof(tmp) == TYPE_PLAYER) {
+		if (Typeof(tmp) == TYPE_ENTITY && (ENTITY(tmp)->flags & EF_PLAYER)) {
 			/* CBUG(tmp == cmd->player); */
 			return here;
 		}
@@ -656,7 +656,7 @@ tell_pos(dbref player, struct cmd_dir cd) {
 	dbref who = cd.rep == 1 ? player : (dbref) cd.rep;
 	int ret = 1;
 
-	if (Typeof(who) != TYPE_PLAYER) {
+	if (Typeof(who) != TYPE_ENTITY) {
 		notify(player, "Invalid object type.");
 		return 0;
 	}
@@ -677,7 +677,7 @@ geo_teleport(dbref player, struct cmd_dir cd)
 	if (cd.dir == '?') {
 		// X6? teleport to chivas
 		dbref who = (dbref) cd.rep;
-		if (Typeof(who) == TYPE_PLAYER) {
+		if (Typeof(who) == TYPE_ENTITY) {
 			map_where(pos, getloc(who));
 			ret = 1;
 		}

@@ -9,10 +9,9 @@
 
 enum vtf {
 	VTF_SHOP = 1,
-	VTF_NPC = 2,
+	VTF_ENTITY = 2,
 	VTF_POND = 4,
-	VTF_PLAYER = 8,
-	VTF_MAX = 4,
+	VTF_MAX = 4
 };
 
 typedef struct {

@@ -45,24 +45,17 @@ moveto(dbref what, dbref where)
 
 	if (parent_loop_check(what, where)) {
 		switch (Typeof(what)) {
-		case TYPE_PLAYER:
-			where = PLAYER_HOME(what);
+		case TYPE_ENTITY:
+			where = ENTITY(what)->home;
 			break;
 		case TYPE_THING:
-			where = THING_HOME(what);
-			if (parent_loop_check(what, where)) {
-				where = PLAYER_HOME(OWNER(what));
-				if (parent_loop_check(what, where))
-					where = (dbref) PLAYER_START;
-			}
-			break;
 		case TYPE_ROOM:
 			where = GLOBAL_ENVIRONMENT;
 			break;
 		}
 	}
 
-        if (Typeof(what) == TYPE_PLAYER)
+        if (Typeof(what) == TYPE_ENTITY)
                 dialog_stop(what);
         if (GETLID(what) > 0 && GETSAT(what) != NOTHING) {
                 stand(what);
@@ -81,7 +74,6 @@ send_contents(dbref loc, dbref dest)
 {
 	dbref first;
 	dbref rest;
-	dbref where;
 
 	first = db[loc].contents;
 	db[loc].contents = NOTHING;
@@ -95,8 +87,7 @@ send_contents(dbref loc, dbref dest)
 		if (Typeof(first) != TYPE_THING) {
 			moveto(first, loc);
 		} else {
-			where = FLAGS(first) & STICKY ? HOME : dest;
-			moveto(first, parent_loop_check(first, where) ? loc : where);
+			moveto(first, parent_loop_check(first, dest) ? loc : dest);
 		}
 		first = rest;
 	}
@@ -167,12 +158,10 @@ parent_loop_check(dbref source, dbref dest)
 
   if (dest == HOME) {
 	  switch(Typeof(source)) {
-		  case TYPE_PLAYER:
-			  dest = PLAYER_HOME(source);
+		  case TYPE_ENTITY:
+			  dest = ENTITY(source)->home;
 			  break;
 		  case TYPE_THING:
-			  dest = THING_HOME(source);
-			  break;
 		  case TYPE_ROOM:
 			  dest = GLOBAL_ENVIRONMENT;
 			  break;
@@ -275,8 +264,8 @@ do_get(command_t *cmd)
 		thing = ematch_at(player, cont, obj);
 		if (thing == NOTHING)
 			return;
-		if (Typeof(cont) == TYPE_PLAYER) {
-			notify(player, "You can't steal things from players.");
+		if (Typeof(cont) == TYPE_ENTITY) {
+			notify(player, "You can't steal from the living.");
 			return;
 		}
 		if (!test_lock_false_default(player, cont, "_/clk")) {
@@ -288,16 +277,13 @@ do_get(command_t *cmd)
 		notify(player, "You already have that!");
 		return;
 	}
-	if (Typeof(cont) == TYPE_PLAYER) {
-		notify(player, "You can't steal stuff from players.");
-		return;
-	}
 	if (parent_loop_check(thing, player)) {
 		notify(player, "You can't pick yourself up by your bootstraps!");
 		return;
 	}
 	switch (Typeof(thing)) {
 	case TYPE_THING:
+	case TYPE_ENTITY:
 		if (obj && *obj) {
 			cando = could_doit(player, thing);
 			if (!cando)
@@ -356,9 +342,9 @@ do_drop(command_t *cmd)
 	}
         
 	switch (Typeof(thing)) {
+	case TYPE_ENTITY:
 	case TYPE_THING:
-
-		if (Typeof(cont) != TYPE_ROOM && Typeof(cont) != TYPE_PLAYER &&
+		if (Typeof(cont) != TYPE_ROOM && Typeof(cont) != TYPE_ENTITY &&
 			Typeof(cont) != TYPE_THING) {
 			notify(player, "You can't put anything in that.");
 			break;
@@ -372,21 +358,18 @@ do_drop(command_t *cmd)
 			notify(player, "You can't put something inside of itself.");
 			break;
 		}
-		if (Typeof(cont) == TYPE_ROOM && (FLAGS(thing) & STICKY) &&
-			Typeof(thing) == TYPE_THING) {
-                        moveto(thing, THING_HOME(thing));
-		} else {
-			int immediate_dropto = (Typeof(cont) == TYPE_ROOM &&
-									db[cont].sp.room.dropto != NOTHING
 
-									&& !(FLAGS(cont) & STICKY));
+		int immediate_dropto = (Typeof(cont) == TYPE_ROOM &&
+				db[cont].sp.room.dropto != NOTHING
 
-			moveto(thing, immediate_dropto ? db[cont].sp.room.dropto : cont);
-		}
+				);
+
+		moveto(thing, immediate_dropto ? db[cont].sp.room.dropto : cont);
+
 		if (Typeof(cont) == TYPE_THING) {
 			notify(player, "Put away.");
 			return;
-		} else if (Typeof(cont) == TYPE_PLAYER) {
+		} else if (Typeof(cont) == TYPE_ENTITY) {
 			notifyf(cont, "%s hands you %s", NAME(player), NAME(thing));
 			notifyf(player, "You hand %s to %s", NAME(thing), NAME(cont));
 			return;
@@ -470,10 +453,11 @@ do_recycle(command_t *cmd)
 				return;
 			}
 			break;
-		case TYPE_PLAYER:
-			notify(player, "You can't recycle a player!");
-			return;
-			/* NOTREACHED */
+		case TYPE_ENTITY:
+			if (ENTITY(thing)->flags & EF_PLAYER) {
+				notify(player, "You can't recycle a player!");
+				return;
+			}
 			break;
 		case TYPE_GARBAGE:
 			notify(player, "That's already garbage!");
@@ -512,7 +496,7 @@ recycle(dbref player, dbref thing)
 		if (GETTMP(thing))
 			for (first = db[thing].contents; first != NOTHING; first = rest) {
 				rest = db[first].next;
-				if (Typeof(first) != TYPE_PLAYER)
+				if (Typeof(first) != TYPE_ENTITY)
 					recycle(player, first);
 			}
 		notify_except(db[thing].contents, NOTHING,
@@ -550,20 +534,6 @@ recycle(dbref player, dbref thing)
 				OWNER(rest) = GOD;
 			break;
 		case TYPE_THING:
-			if (THING_HOME(rest) == thing) {
-			  dbref loc;
-
-			  if (PLAYER_HOME(OWNER(rest)) == thing)
-			    PLAYER_SET_HOME(OWNER(rest), PLAYER_START);
-			  loc = PLAYER_HOME(OWNER(rest));
-			  if (parent_loop_check(rest, loc)) {
-			    loc = OWNER(rest);
-			    if (parent_loop_check(rest, loc)) {
-			      loc = (dbref) 0;
-			    }
-			  }
-			  THING_SET_HOME(rest, loc);
-			}
 			if (OWNER(rest) == thing)
 				OWNER(rest) = GOD;
 			break;
@@ -583,9 +553,9 @@ recycle(dbref player, dbref thing)
 			if (OWNER(rest) == thing)
 				OWNER(rest) = GOD;
 			break;
-		case TYPE_PLAYER:
-			if (PLAYER_HOME(rest) == thing)
-				PLAYER_SET_HOME(rest, PLAYER_START);
+		case TYPE_ENTITY:
+			if (ENTITY(rest)->home == thing)
+				ENTITY(rest)->home = PLAYER_START;
 			break;
 		}
 		if (db[rest].contents == thing)
@@ -596,7 +566,7 @@ recycle(dbref player, dbref thing)
 
 	looplimit = db_top;
 	while ((looplimit-- > 0) && ((first = db[thing].contents) != NOTHING)) {
-		if (Typeof(first) == TYPE_PLAYER) {
+		if (Typeof(first) == TYPE_ENTITY && (ENTITY(first)->flags & EF_PLAYER)) {
 			enter_room(first, HOME, db[thing].location);
 			/* If the room is set to drag players back, there'll be no
 			 * reasoning with it.  DRAG the player out.

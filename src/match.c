@@ -74,7 +74,7 @@ static dbref
 ematch_list(dbref player, dbref first, const char *name)
 {
 	dbref absolute;
-	struct mob *mob = MOB(player);
+	struct entity *mob = ENTITY(player);
 	unsigned nth = mob->select;
 	mob->select = 0;
 

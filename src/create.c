@@ -166,7 +166,6 @@ do_clone(command_t *cmd)
 
 		/* initialize everything */
 		NAME(clonedthing) = alloc_string(NAME(thing));
-		ALLOC_THING_SP(clonedthing);
 		db[clonedthing].location = player;
 		OWNER(clonedthing) = OWNER(player);
 		SETVALUE(clonedthing, GETVALUE(thing));
@@ -174,6 +173,11 @@ do_clone(command_t *cmd)
 		switch (Typeof(thing)) {
 			case TYPE_ROOM:
 				db[clonedthing].sp.room.exits = NOTHING;
+				break;
+			case TYPE_ENTITY:
+				/* Home, sweet home */
+				ENTITY(clonedthing)->home = ENTITY(thing)->home;
+
 		}
 		FLAGS(clonedthing) = FLAGS(thing);
 
@@ -185,9 +189,6 @@ do_clone(command_t *cmd)
 			SETVALUE(thing, MAX_OBJECT_ENDOWMENT);
 		}
 		
-		/* Home, sweet home */
-		THING_SET_HOME(clonedthing, THING_HOME(thing));
-
 		/* link it in */
 		PUSH(clonedthing, db[player].contents);
 
@@ -209,7 +210,6 @@ do_create(command_t *cmd)
 	dbref player = cmd->player;
 	char *name = cmd->argv[1];
 	char *acost = cmd->argv[2];
-	dbref loc;
 	dbref thing;
 	int cost;
 
@@ -256,7 +256,6 @@ do_create(command_t *cmd)
 
 		/* initialize everything */
 		NAME(thing) = alloc_string(name);
-		ALLOC_THING_SP(thing);
 		db[thing].location = player;
 		OWNER(thing) = OWNER(player);
 		SETVALUE(thing, OBJECT_ENDOWMENT(cost));
@@ -265,12 +264,6 @@ do_create(command_t *cmd)
 		/* endow the object */
 		if (GETVALUE(thing) > MAX_OBJECT_ENDOWMENT) {
 			SETVALUE(thing, MAX_OBJECT_ENDOWMENT);
-		}
-		if ((loc = db[player].location) != NOTHING && controls(player, loc)) {
-			THING_SET_HOME(thing, loc);	/* home */
-		} else {
-			THING_SET_HOME(thing, player);	/* home */
-			/* set thing's home to player instead */
 		}
 
 		/* link it in */

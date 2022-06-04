@@ -12,12 +12,9 @@
 
 
 /* FIXME use ref as index */
-#define MOB(who) (db[who].mob)
+#define ENTITY_SKELETON(mob_id) (&mob_skeleton_map[mob_id])
 
-#define MOB_SKELETON(mob_id) (&mob_skeleton_map[mob_id])
-
-#define MOB_EV(mob, w) mob->e[AF_ ## w].value
-#define MOB_EM(mob, w) mob->e[AF_ ## w].mask
+#define EFFECT(mob, w) mob->e[AF_ ## w]
 
 #define BODYPART_ID(_c) ch_bodypart_map[(int) _c]
 /* #define BODYPART(_c) bodypart_map[BODYPART_ID(_c)] */
@@ -80,31 +77,11 @@ enum mob_type {
 	MOB_MAX,
 };
 
-enum mob_flags {
-	MF_DEFAULT,
-	MF_NULL,
-	MF_AGGRO,
-	MF_SITTING,
-};
-
-/* instance of mob */
-struct mob {
-	struct debuf debufs[8];
-	struct spell spells[8];
-	effect_t e[7];
-	dbref target;
-	struct wts wts;
-	int descr;
-	unsigned respawn_in, flags; // TODO merge these two
-	unsigned short hp, mp, hunger, thirst;
-	unsigned char debuf_mask, combo, select, klock;
-};
-
-void mobs_add(dbref where, enum biome, long long pdn);
-struct mob *mob_put(dbref where);
+void entities_add(dbref where, enum biome, long long pdn);
+struct entity *birth(dbref where);
 void mobs_aggro(dbref player);
 struct object_skeleton const *mob_obj_random();
-void mob_update(dbref who, long long unsigned tick);
+void entity_update(dbref who, long long unsigned tick);
 void mob_add_stats(struct object_skeleton *mob, dbref nu);
 
 #endif

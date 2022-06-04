@@ -25,7 +25,7 @@ int
 web_geo_view(dbref player, char *buf)
 {
 	McpMesg msg;
-	McpFrame *mfr = web_frame(PLAYER_FD(player));
+	McpFrame *mfr = web_frame(ENTITY(player)->fd);
 	if (!mfr)
                 return 1;
         mcp_mesg_init(&msg, MCP_WEB_PKG, "view");
@@ -57,7 +57,7 @@ web_look(dbref player, dbref loc, char const *description)
         char buf2[BUFSIZ];
         dbref thing, can_see_loc;
 	McpMesg msg;
-	McpFrame *mfr = web_frame(PLAYER_FD(player));
+	McpFrame *mfr = web_frame(ENTITY(player)->fd);
 	if (!mfr)
                 return 1;
 
@@ -65,7 +65,7 @@ web_look(dbref player, dbref loc, char const *description)
         snprintf(buf2, sizeof(buf2), "%d", loc);
         mcp_mesg_arg_append(&msg, "dbref", buf2);
 
-	dbref last_observed = PLAYER_SP(player)->last_observed;
+	dbref last_observed = ENTITY(player)->last_observed;
 	if (last_observed != NOTHING)
 		db_obs_remove(last_observed, player);
 
@@ -77,7 +77,7 @@ web_look(dbref player, dbref loc, char const *description)
 		if (GETSHOP(loc))
 			mcp_mesg_arg_append(&msg, "shop", "1");
 
-		PLAYER_SP(player)->last_observed = loc;
+		ENTITY(player)->last_observed = loc;
 		db_obs_add(loc, player);
 	}
 
@@ -91,7 +91,7 @@ web_look(dbref player, dbref loc, char const *description)
         if (Typeof(loc) == TYPE_EXIT)
                 return 0;
 
-        if (loc != player && Typeof(loc) == TYPE_PLAYER && !Wizard(player))
+        if (loc != player && Typeof(loc) == TYPE_ENTITY && !Wizard(player))
                 return 0;
 
 	can_see_loc = (!Dark(loc) || controls(player, loc));
@@ -127,10 +127,10 @@ void web_room_mcp(dbref room, void *msg) {
 	     tmp > 0;
 	     tmp = db[tmp].next)
 	{
-		if (Typeof(tmp) != TYPE_PLAYER)
+		if (Typeof(tmp) != TYPE_ENTITY)
 			continue;
 
-		McpFrame *mfr = web_frame(PLAYER_FD(OWNER(tmp)));
+		McpFrame *mfr = web_frame(ENTITY(OWNER(tmp))->fd);
 
 		if (!mfr)
 			continue;
@@ -147,10 +147,10 @@ void web_obs_mcp(dbref thing, void *msg) {
 	{
 		dbref tmp = node->who;
 
-		if (Typeof(tmp) != TYPE_PLAYER)
+		if (Typeof(tmp) != TYPE_ENTITY)
 			continue;
 
-		McpFrame *mfr = web_frame(PLAYER_FD(OWNER(tmp)));
+		McpFrame *mfr = web_frame(ENTITY(OWNER(tmp))->fd);
 
 		if (!mfr)
 			continue;
@@ -253,8 +253,8 @@ web_auth_success(int descr, dbref player) {
 int
 web_stats(dbref player) {
 	McpMesg msg;
-	McpFrame *mfr = web_frame(PLAYER_FD(player));
-	struct mob *mob = MOB(player);
+	McpFrame *mfr = web_frame(ENTITY(player)->fd);
+	struct entity *mob = ENTITY(player);
 	char buf[BUFSIZ];
 	if (!mfr)
                 return 1;
@@ -270,15 +270,15 @@ web_stats(dbref player) {
         mcp_mesg_arg_append(&msg, "int", buf);
 	snprintf(buf, sizeof(buf), "%d", GETSTAT(player, WIZ));
         mcp_mesg_arg_append(&msg, "wiz", buf);
-	snprintf(buf, sizeof(buf), "%d", MOB_EV(mob, DODGE));
+	snprintf(buf, sizeof(buf), "%d", EFFECT(mob, DODGE).value);
         mcp_mesg_arg_append(&msg, "dodge", buf);
-	snprintf(buf, sizeof(buf), "%d", MOB_EV(mob, DMG));
+	snprintf(buf, sizeof(buf), "%d", EFFECT(mob, DMG).value);
         mcp_mesg_arg_append(&msg, "dmg", buf);
-	snprintf(buf, sizeof(buf), "%d", MOB_EV(mob, MDMG));
+	snprintf(buf, sizeof(buf), "%d", EFFECT(mob, MDMG).value);
         mcp_mesg_arg_append(&msg, "mdmg", buf);
-	snprintf(buf, sizeof(buf), "%d", MOB_EV(mob, DEF));
+	snprintf(buf, sizeof(buf), "%d", EFFECT(mob, DEF).value);
         mcp_mesg_arg_append(&msg, "def", buf);
-	snprintf(buf, sizeof(buf), "%d", MOB_EV(mob, MDEF));
+	snprintf(buf, sizeof(buf), "%d", EFFECT(mob, MDEF).value);
         mcp_mesg_arg_append(&msg, "mdef", buf);
         mcp_frame_output_mesg(mfr, &msg);
         mcp_mesg_clear(&msg);
@@ -288,8 +288,8 @@ web_stats(dbref player) {
 int
 web_bars(dbref player) {
 	McpMesg msg;
-	McpFrame *mfr = web_frame(PLAYER_FD(player));
-	struct mob *mob = MOB(player);
+	McpFrame *mfr = web_frame(ENTITY(player)->fd);
+	struct entity *mob = ENTITY(player);
 	char buf[BUFSIZ];
 	if (!mfr)
                 return 1;
@@ -315,7 +315,7 @@ web_dialog_start(dbref player, dbref npc, const char *dialog)
 	const char *text;
 	int i, n;
 	McpMesg msg;
-	McpFrame *mfr = web_frame(PLAYER_FD(player));
+	McpFrame *mfr = web_frame(ENTITY(player)->fd);
 
 	if (!mfr)
                 return 1;
@@ -353,7 +353,7 @@ web_dialog_stop(dbref player)
 {
         char buf[BUFSIZ];
 	McpMesg msg;
-	McpFrame *mfr = web_frame(PLAYER_FD(player));
+	McpFrame *mfr = web_frame(ENTITY(player)->fd);
 
 	if (!mfr)
                 return 1;
@@ -371,7 +371,7 @@ web_equipment_item(dbref player, enum eq eql)
 {
         char buf[BUFSIZ];
 	McpMesg msg;
-	McpFrame *mfr = web_frame(PLAYER_FD(player));
+	McpFrame *mfr = web_frame(ENTITY(player)->fd);
         dbref eq = GETEQ(player, eql);
         if (!eq)
                 return;
@@ -394,7 +394,7 @@ web_equipment(dbref player)
 {
         char buf[BUFSIZ];
 	McpMesg msg;
-	McpFrame *mfr = web_frame(PLAYER_FD(player));
+	McpFrame *mfr = web_frame(ENTITY(player)->fd);
 
 	if (!mfr)
                 return 1;

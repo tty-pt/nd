@@ -23,63 +23,6 @@ OkObj(dbref obj)
 	return(!(obj < 0 || obj >= db_top || Typeof(obj) == TYPE_GARBAGE));
 }
 
-
-int
-can_link_to(dbref who, object_flag_type what_type, dbref where)
-{
-		/* Can always link to HOME */
-	if (where == HOME)
-		return 1;
-		/* Can't link to an invalid dbref */
-	if (where < 0 || where >= db_top)
-		return 0;
-	switch (what_type) {
-	case TYPE_EXIT:
-		/* If the target is LINK_OK, then any exit may be linked
-		 * there.  Otherwise, only someone who controls the
-		 * target may link there. */
-		return (controls(who, where) || (FLAGS(where) & LINK_OK));
-		/* NOTREACHED */
-		break;
-	case TYPE_PLAYER:
-		/* Players may only be linked to rooms, that are either
-		 * controlled by the player or set either L or A. */
-		return (Typeof(where) == TYPE_ROOM && (controls(who, where)
-											   || Linkable(where)));
-		/* NOTREACHED */
-		break;
-	case TYPE_ROOM:
-		/* Rooms may be linked to rooms or things (this sets their
-		 * dropto location).  Target must be controlled, or be L or A. */
-		return ((Typeof(where) == TYPE_ROOM || Typeof(where) == TYPE_THING)
-				&& (controls(who, where) || Linkable(where)));
-		/* NOTREACHED */
-		break;
-	case TYPE_THING:
-		/* Things may be linked to rooms, players, or other things (this
-		 * sets the thing's home).  Target must be controlled, or be L or A. */
-		return (
-				(Typeof(where) == TYPE_ROOM || Typeof(where) == TYPE_PLAYER ||
-				 Typeof(where) == TYPE_THING) && 
-				 (controls(who, where) || Linkable(where)));
-		/* NOTREACHED */
-		break;
-	case NOTYPE:
-		/* Why is this here? -winged */
-		return (controls(who, where) || (FLAGS(where) & LINK_OK) ||
-				(Typeof(where) != TYPE_THING && (FLAGS(where) & ABODE)));
-		/* NOTREACHED */
-		break;
-	default:
-		/* Programs can't be linked anywhere */
-		return 0;
-		/* NOTREACHED */
-		break;
-	}
-	/* NOTREACHED */
-	return 0;
-}
-
 /* This checks to see if what can be linked to something else by who. */
 int
 can_link(dbref who, dbref what)
@@ -104,7 +47,7 @@ can_link(dbref who, dbref what)
 int
 could_doit(dbref player, dbref thing)
 {
-	dbref source, dest;
+	dbref dest;
 
 	if (Typeof(thing) == TYPE_EXIT) {
 		/* If exit is unlinked, can't do it.
@@ -116,36 +59,10 @@ could_doit(dbref player, dbref thing)
 				return 0;
 		}
 
-		source = db[player].location;
 		dest = *(db[thing].sp.exit.dest);
 
 		if (dest < 0 && e_exit_is(thing))
 			goto geo;
-
-		else if (Typeof(dest) == TYPE_PLAYER) {
-			/* Check for additional restrictions related to player dests */
-			dbref destplayer = dest;
-
-			dest = db[dest].location;
-			/* If the dest player isn't JUMP_OK, or if the dest player's loc
-			 * is set BOUND, can't do it. */
-			if (!(FLAGS(destplayer) & JUMP_OK) || (FLAGS(dest) & BUILDER)) {
-				return 0;
-			}
-		}
-
-		/* for actions */
-		if ((db[thing].location != NOTHING) &&
-			(Typeof(db[thing].location) != TYPE_ROOM)) {
-
-			/* If this is an exit on a Thing or a Player... */
-
-			/* If the destination is a room or player, and the current
-			 * location is set BOUND (note: if the player is in a vehicle
-			 * set BUILDER this will also return failure) */
-			if ((Typeof(dest) == TYPE_ROOM || Typeof(dest) == TYPE_PLAYER) &&
-				(FLAGS(source) & BUILDER)) return 0;
-		}
 	}
 
 	goto out;
@@ -192,12 +109,12 @@ can_doit(dbref player, dbref thing, const char *default_fail_msg)
 		return 0;
 	}
 
-	if (!MOB(player)) {
-		notify(player, "You are not a mob.");
+	if (Typeof(player) != TYPE_ENTITY) {
+		notify(player, "You are not an entity.");
 		return 0;
 	}
 
-	if (MOB(player)->klock) {
+	if (ENTITY(player)->klock) {
 		notify(player, "You can not do that right now.");
 		return 0;
 	}
@@ -247,10 +164,10 @@ can_see(dbref player, dbref thing, int can_see_loc)
 
 	if (can_see_loc) {
 		return (!Dark(thing) ||
-			(controls(player, thing) && !(FLAGS(player) & STICKY)));
+			controls(player, thing));
 	} else {
 		/* can't see loc */
-		return (controls(player, thing) && !(FLAGS(player) & STICKY));
+		return controls(player, thing);
 	}
 }
 
@@ -266,7 +183,7 @@ controls(dbref who, dbref what)
 		return 0;
 
 	/* Zombies and puppets use the permissions of their owner */
-	if (Typeof(who) != TYPE_PLAYER)
+	if (Typeof(who) != TYPE_ENTITY)
 		who = OWNER(who);
 
 	/* Wizard controls everything */
@@ -316,7 +233,7 @@ restricted(dbref player, dbref thing, object_flag_type flag)
 		/* Dark can be set on a Program or Room by anyone. */
 		return !Wizard(OWNER(player))
 			&& (/* Setting a player dark requires a wizard. */
-			    Typeof(thing) == TYPE_PLAYER
+			    Typeof(thing) == TYPE_ENTITY
 
 			    /* If exit darking is restricted, it requires a wizard. */
 			    || (!EXIT_DARKING && Typeof(thing) == TYPE_EXIT)
@@ -327,7 +244,7 @@ restricted(dbref player, dbref thing, object_flag_type flag)
 #ifdef GOD_PRIV
 		/* Only God (or God's stuff) can quell or unquell another wizard. */
 		return (God(OWNER(player)) || (TrueWizard(thing) && (thing != player) &&
-					Typeof(thing) == TYPE_PLAYER));
+					Typeof(thing) == TYPE_ENTITY));
 #else
 		/* You cannot quell or unquell another wizard. */
 		return (TrueWizard(thing) && (thing != player) && (Typeof(thing) == TYPE_PLAYER));
@@ -351,7 +268,7 @@ restricted(dbref player, dbref thing, object_flag_type flag)
 #ifdef GOD_PRIV
 			/* ...but only God can make a player a Wizard, or re-mort
 			 * one. */
-			return ((Typeof(thing) == TYPE_PLAYER) && !God(player));
+			return ((Typeof(thing) == TYPE_ENTITY) && !God(player));
 #else							/* !GOD_PRIV */
 			/* We don't want someone setting themselves !W, to prevent
 			 * a case where there are no wizards at all */

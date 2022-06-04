@@ -8,7 +8,7 @@
 #define ELEMENT(idx) (&element_map[idx])
 
 #define ELEMENT_NEXT(ref, type) \
-	element_next(ref, MOB_EM(MOB(ref), type))
+	element_next(ref, EFFECT(ENTITY(ref), type).mask)
 
 typedef struct {
 	char *color;
@@ -28,8 +28,6 @@ enum element element_next(dbref ref, register unsigned char a);
 #define SPELL_G(v) G(v)
 #define SPELL_DMG(p, sp) SPELL_G(GETSTAT(p, INT)) + HS(sp)
 #define SPELL_COST(dmg, y, no_bdmg) (no_bdmg ? 0 : dmg) + dmg / (1 << y)
-
-#define EFFECT(ref, idx) (&MOB(ref)->e[idx])
 
 enum spell_affects {
 	// these are changed by bufs

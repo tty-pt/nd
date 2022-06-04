@@ -152,7 +152,7 @@ struct wts buf_wts[] = {
 enum element
 element_next(dbref ref, register unsigned char a)
 {
-	return a ? MOB(ref)->debufs[__builtin_ffs(a) - 1]._sp->element
+	return a ? ENTITY(ref)->debufs[__builtin_ffs(a) - 1]._sp->element
 		: ELM_PHYSICAL;
 }
 
@@ -196,9 +196,9 @@ spells_init(struct spell sps[8], dbref player)
 void
 debuf_end(dbref who, unsigned i)
 {
-	struct mob *mob = MOB(who);
+	struct entity *mob = ENTITY(who);
 	struct debuf *d = &mob->debufs[i];
-	effect_t *e = EFFECT(who, DEBUF_TYPE(d->_sp));
+	effect_t *e = &mob->e[DEBUF_TYPE(d->_sp)];
 	i = 1 << i;
 
 	mob->debuf_mask ^= i;
@@ -243,7 +243,7 @@ debuf_notify(dbref who, struct debuf *d, short val)
 int
 debufs_process(dbref who)
 {
-	struct mob *mob = MOB(who);
+	struct entity *mob = ENTITY(who);
 	register unsigned mask, i, aux;
 	short hpi = 0, dmg;
 	struct debuf *d, *hd;
@@ -261,7 +261,7 @@ debufs_process(dbref who)
 		// wtf is this special code?
 		else if (DEBUF_TYPE(d->_sp) == AF_HP) {
 			dmg = kill_dmg(d->_sp->element, d->val,
-				      MOB_EV(mob, MDEF),
+				      EFFECT(mob, MDEF).value,
 				      ELEMENT_NEXT(who, MDEF));
 			hd = d;
 
@@ -280,7 +280,7 @@ debufs_process(dbref who)
 void
 debufs_end(dbref who)
 {
-	struct mob *mob = MOB(who);
+	struct entity *mob = ENTITY(who);
 	register unsigned mask, i, aux;
 
 	for (mask = mob->debuf_mask, i = 0;
@@ -294,11 +294,11 @@ static inline int
 debuf_start(dbref who, struct spell *sp, short val)
 {
 	struct spell_skeleton *_sp = sp->_sp;
-	struct mob *mob;
+	struct entity *mob;
 	struct debuf *d;
 	int i;
 
-	mob = MOB(who);
+	mob = ENTITY(who);
 	if (mob->debuf_mask) {
 		i = __builtin_ffs(~mob->debuf_mask);
 		if (!i)
@@ -315,7 +315,7 @@ debuf_start(dbref who, struct spell *sp, short val)
 	i = 1 << i;
 	mob->debuf_mask |= i;
 
-	effect_t *e = EFFECT(who, DEBUF_TYPE(_sp));
+	effect_t *e = &mob->e[DEBUF_TYPE(_sp)];
 	e->mask |= i;
 	e->value += d->val;
 
@@ -327,10 +327,11 @@ debuf_start(dbref who, struct spell *sp, short val)
 int
 spell_cast(dbref attacker, dbref target, unsigned slot)
 {
-	struct mob *att = MOB(attacker);
-	struct mob *tar = MOB(target);
+	struct entity *att = ENTITY(attacker);
+	struct entity *tar = ENTITY(target);
 	struct spell sp = att->spells[slot];
 	struct spell_skeleton *_sp = sp._sp;
+	warn("spell_cast %u\n", slot);
 
 	unsigned mana = att->mp;
 	char a[BUFSIZ]; // FIXME way too big?
@@ -350,7 +351,7 @@ spell_cast(dbref attacker, dbref target, unsigned slot)
 	att->mp = mana > 0 ? mana : 0;
 
 	short val = kill_dmg(_sp->element, sp.val,
-			MOB_EV(tar, MDEF),
+			EFFECT(tar, MDEF).value,
 			ELEMENT_NEXT(target, MDEF));
 
 	if (_sp->flags & AF_NEG) {
@@ -375,7 +376,7 @@ spell_cast(dbref attacker, dbref target, unsigned slot)
 int
 spells_cast(dbref attacker, dbref target)
 {
-	struct mob *att = MOB(attacker);
+	struct entity *att = ENTITY(attacker);
 	register unsigned i, d, combo = att->combo;
 	unsigned enough_mp = 1;
 
@@ -396,7 +397,7 @@ spells_cast(dbref attacker, dbref target)
 int
 cspell_heal(dbref attacker, dbref target, short amt)
 {
-	struct mob *tar = MOB(target);
+	struct entity *tar = ENTITY(target);
 	short hp = tar->hp;
 	int ret = 0;
 	hp += amt;
@@ -417,9 +418,9 @@ cspell_heal(dbref attacker, dbref target, short amt)
 	}
 	tar->hp = hp;
 	
-	if (Typeof(target) == TYPE_PLAYER)
+	if (Typeof(target) == TYPE_ENTITY)
 		web_bars(target);
-	if (attacker > 0 && Typeof(attacker) == TYPE_PLAYER)
+	if (attacker > 0 && Typeof(attacker) == TYPE_ENTITY)
 		web_bars(attacker);
 	return ret;
 }

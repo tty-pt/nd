@@ -271,19 +271,15 @@ controls_link(dbref who, dbref what)
 			return 0;
 		}
 
-	case TYPE_PLAYER:
+	case TYPE_ENTITY:
 		{
-			if (controls(who, PLAYER_HOME(what)))
+			if (controls(who, ENTITY(what)->home))
 				return 1;
 			return 0;
 		}
 
 	case TYPE_THING:
-		{
-			if (controls(who, THING_HOME(what)))
-				return 1;
-			return 0;
-		}
+		return 0;
 
 	default:
 		return 0;
@@ -354,8 +350,8 @@ do_chown(command_t *cmd)
 		}
 		OWNER(thing) = OWNER(owner);
 		break;
-	case TYPE_PLAYER:
-		notify(player, "Players always own themselves.");
+	case TYPE_ENTITY:
+		notify(player, "Entities always own themselves.");
 		return;
 	case TYPE_EXIT:
 		OWNER(thing) = OWNER(owner);
@@ -482,9 +478,6 @@ do_set(command_t *cmd)
 		f = KILL_OK;
 	} else if ((string_prefix("DARK", p)) || (string_prefix("DEBUG", p))) {
 		f = DARK;
-	} else if ((string_prefix("STICKY", p)) || (string_prefix("SETUID", p)) ||
-			   (string_prefix("SILENT", p))) {
-		f = STICKY;
 	} else if (string_prefix("QUELL", p)) {
 		f = QUELL;
 	} else if (string_prefix("BUILDER", p) || string_prefix("BOUND", p)) {
@@ -662,8 +655,6 @@ set_flags_from_tunestr(dbref obj, const char* tunestr)
 			f = LINK_OK;
 		} else if (pcc == 'Q') {
 			f = QUELL;
-		} else if (pcc == 'S') {
-			f = STICKY;
 		} else if (pcc == 'W') {
 			/* f = WIZARD;     This is very bad to auto-set. */
 		}

@@ -36,8 +36,6 @@ unparse_flags(dbref thing)
 
 		if (FLAGS(thing) & DARK)
 			*p++ = 'D';
-		if (FLAGS(thing) & STICKY)
-			*p++ = 'S';
 		if (FLAGS(thing) & QUELL)
 			*p++ = 'Q';
 		if (FLAGS(thing) & BUILDER)
@@ -89,24 +87,20 @@ icon(dbref what)
         case TYPE_ROOM:
                 ret.icon = ANSI_FG_YELLOW "-";
                 break;
-        case TYPE_PLAYER:
+        case TYPE_ENTITY:
                 ret.actions |= ACT_KILL;
-                ret.icon = ANSI_BOLD ANSI_FG_BLUE "#";
-                break;
-        case TYPE_THING:
-                ret.actions |= ACT_GET;
+		ret.icon = ANSI_BOLD ANSI_FG_YELLOW "!";
+		if (dialog_exists(what)) {
+			ret.actions |= ACT_TALK;
+		}
                 if (GETSHOP(what)) {
                         ret.actions |= ACT_SHOP;
                         ret.icon = ANSI_BOLD ANSI_FG_GREEN "$";
-                        break;
-                } else if (GETLID(what) >= 0) {
-                        ret.actions |= ACT_KILL;
-                        ret.icon = ANSI_BOLD ANSI_FG_YELLOW "!";
-                        if (dialog_exists(what)) {
-                                ret.actions |= ACT_TALK;
-                        }
-                        break;
-                } else if (GETDRINK(what) >= 0) {
+		}
+                break;
+        case TYPE_THING:
+                ret.actions |= ACT_GET;
+                if (GETDRINK(what) >= 0) {
                         ret.actions |= ACT_DRINK | ACT_FILL;
                         ret.icon = ANSI_BOLD ANSI_FG_BLUE "~";
                         break;
@@ -135,7 +129,7 @@ unparse_object(dbref player, dbref loc)
 {
 	static char buf[BUFFER_LEN];
         size_t buf_l = 0;
-	if (player != NOTHING && Typeof(player) != TYPE_PLAYER)
+	if (player != NOTHING && Typeof(player) != TYPE_ENTITY)
 		player = OWNER(player);
 
 	switch (loc) {
@@ -156,10 +150,8 @@ unparse_object(dbref player, dbref loc)
 
                 BUFF("%s", NAME(loc));
 
-		if ((player == NOTHING) || (!(FLAGS(player) & STICKY) &&
-			(can_link_to(player, NOTYPE, loc) ||
-			 ((Typeof(loc) != TYPE_PLAYER) &&
-			  (controls_link(player, loc) || (FLAGS(loc) & CHOWN_OK))))))
+		if ((player == NOTHING) || (((Typeof(loc) != TYPE_ENTITY) &&
+			  (controls_link(player, loc) || (FLAGS(loc) & CHOWN_OK)))))
 
                         BUFF("(#%d%s)", loc, unparse_flags(loc));
 

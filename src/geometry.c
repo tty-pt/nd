@@ -149,11 +149,10 @@ object_add(struct object_skeleton o, dbref where)
 	SETART(nu, alloc_string(o.art));
         SETAVATAR(nu, o.avatar);
 	SETDESC(nu, alloc_string(o.description));
-	ALLOC_THING_SP(nu);
 	db[nu].location = where;
 	OWNER(nu) = 1;
 	FLAGS(nu) = TYPE_THING;
-	THING_SET_HOME(nu, where);
+	/* THING_SET_HOME(nu, where); */
 	PUSH(nu, db[where].contents);
 
 	switch (o.type) {
@@ -162,11 +161,12 @@ object_add(struct object_skeleton o, dbref where)
 		SETMSV(nu, o.sp.equipment.msv);
 		SETRARE(nu, rarity_get());
 
-		struct mob *mob = MOB(where);
+		CBUG(Typeof(where) != TYPE_ENTITY);
 
-		if (mob && !equip(where, nu))
-                        ;
-			/* SETEQ(where, o.sp.equipment.eqw, nu); */
+		struct entity *mob = ENTITY(where);
+
+		if (mob->fd > 0 && equip(where, nu))
+			;
 
 		break;
 	case S_TYPE_FOOD:
@@ -175,12 +175,13 @@ object_add(struct object_skeleton o, dbref where)
 	case S_TYPE_DRINK:
 		SETDRINK(nu, o.sp.drink);
 		break;
-	case S_TYPE_MOB:
-		/* SETMID(nu, mid); */
-		SETAGGRO(nu, o.sp.mob.flags & MF_AGGRO);
+	case S_TYPE_ENTITY:
+		FLAGS(nu) = TYPE_ENTITY;
+		// TODO use only struct entity
+		SETAGGRO(nu, o.sp.mob.flags & EF_AGGRO);
 		SETWTS(nu, o.sp.mob.wt);
 		mob_add_stats(&o, nu);
-		mob = mob_put(nu);
+		mob = birth(nu);
 		object_drop(nu, o.sp.mob.drop);
 		break;
 	case S_TYPE_PLANT:

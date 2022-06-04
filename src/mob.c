@@ -5,6 +5,7 @@
 #include "item.h"
 #include "geography.h"
 #include "kill.h"
+#include "defaults.h"
 
 #include "props.h"
 #include "externs.h"
@@ -78,7 +79,7 @@ struct object_skeleton mob_skeleton_map[] = {
 		.description = "",
 		.art = "",
 		.avatar = "",
-		.type = S_TYPE_MOB,
+		.type = S_TYPE_ENTITY,
 		.sp = {
 			.mob = {
 				.wt = BITE,
@@ -93,7 +94,7 @@ struct object_skeleton mob_skeleton_map[] = {
 		.description = "",
 		.art = "",
 		.avatar = "",
-		.type = S_TYPE_MOB,
+		.type = S_TYPE_ENTITY,
 		.sp = {
 			.mob = {
 				.wt = BITE,
@@ -108,7 +109,7 @@ struct object_skeleton mob_skeleton_map[] = {
 		.description = "",
 		.art = "",
 		.avatar = "",
-		.type = S_TYPE_MOB,
+		.type = S_TYPE_ENTITY,
 		.sp = {
 			.mob = {
 				.wt = BITE,
@@ -123,7 +124,7 @@ struct object_skeleton mob_skeleton_map[] = {
 		.description = "",
 		.art = "",
 		.avatar = "",
-		.type = S_TYPE_MOB,
+		.type = S_TYPE_ENTITY,
 		.sp = {
 			.mob = {
 				.wt = BITE,
@@ -138,7 +139,7 @@ struct object_skeleton mob_skeleton_map[] = {
 		.description = "",
 		.art = "",
 		.avatar = "",
-		.type = S_TYPE_MOB,
+		.type = S_TYPE_ENTITY,
 		.sp = {
 			.mob = {
 				.wt = BITE,
@@ -153,7 +154,7 @@ struct object_skeleton mob_skeleton_map[] = {
 		.description = "",
 		.art = "",
 		.avatar = "",
-		.type = S_TYPE_MOB,
+		.type = S_TYPE_ENTITY,
 		.sp = {
 			.mob = {
 				.wt = BITE,
@@ -162,7 +163,7 @@ struct object_skeleton mob_skeleton_map[] = {
 				.y = 13,
 				.lvl = 40,
 				.lvl_v = 0x1f,
-				.flags = MF_AGGRO,
+				.flags = EF_AGGRO,
 			}
 		},
 	},
@@ -171,14 +172,14 @@ struct object_skeleton mob_skeleton_map[] = {
 		.description = "",
 		.art = "",
 		.avatar = "",
-		.type = S_TYPE_MOB,
+		.type = S_TYPE_ENTITY,
 		.sp = {
 			.mob = {
 				.wt = BITE,
 				.type = ELM_ICE,
 				.biomes = (1<<BIOME_WATER),
 				.y = 14,
-				.flags = MF_AGGRO,
+				.flags = EF_AGGRO,
 			}
 		},
 	},
@@ -187,14 +188,14 @@ struct object_skeleton mob_skeleton_map[] = {
 		.description = "",
 		.art = "",
 		.avatar = "",
-		.type = S_TYPE_MOB,
+		.type = S_TYPE_ENTITY,
 		.sp = {
 			.mob = {
 				.wt = BITE,
 				.type = ELM_ICE,
 				.biomes = (1<<BIOME_WATER),
 				.y = 14,
-				.flags = MF_AGGRO,
+				.flags = EF_AGGRO,
 			}
 		},
 	},
@@ -203,7 +204,7 @@ struct object_skeleton mob_skeleton_map[] = {
 		.description = "",
 		.art = "",
 		.avatar = "",
-		.type = S_TYPE_MOB,
+		.type = S_TYPE_ENTITY,
 		.sp = {
 			.mob = {
 				.wt = PECK,
@@ -215,7 +216,7 @@ struct object_skeleton mob_skeleton_map[] = {
 					| (1 << BIOME_TUNDRA4)
 					| (1 << BIOME_COLD_DESERT),
 				.y = 14,
-				.flags = MF_AGGRO,
+				.flags = EF_AGGRO,
 			}
 		},
 
@@ -225,14 +226,14 @@ struct object_skeleton mob_skeleton_map[] = {
 		.description = "",
 		.art = "",
 		.avatar = "",
-		.type = S_TYPE_MOB,
+		.type = S_TYPE_ENTITY,
 		.sp = {
 			.mob = {
 				.wt = PECK,
 				.type = ELM_AIR,
 				.biomes = (1 << BIOME_TEMPERATE_RAINFOREST),
 				.y = 4,
-				.flags = MF_AGGRO,
+				.flags = EF_AGGRO,
 			}
 		},
 	},
@@ -241,7 +242,7 @@ struct object_skeleton mob_skeleton_map[] = {
 		.art = "bandit.jpg",
 		.description = "A shady person under some robes",
 		.avatar = "bandit_avatar.jpg",
-		.type = S_TYPE_MOB,
+		.type = S_TYPE_ENTITY,
 		.sp = {
 			.mob = {
 				.drop = {
@@ -255,14 +256,15 @@ struct object_skeleton mob_skeleton_map[] = {
 				.stat = FIGHTER,
 				.lvl = 5,
 				.lvl_v = 0x7,
-				.flags = MF_AGGRO,
-				.biomes = (1 << BIOME_SHRUBLAND)
-					| (1 << BIOME_CONIFEROUS_FOREST)
-					| (1 << BIOME_BOREAL_FOREST)
-					| (1 << BIOME_TEMPERATE_GRASSLAND)
-					| (1 << BIOME_WOODLAND)
-					| (1 << BIOME_TEMPERATE_SEASONAL_FOREST)
-					| (1 << BIOME_TEMPERATE_RAINFOREST),
+				.flags = EF_AGGRO,
+				.biomes = 0,
+				/* .biomes = (1 << BIOME_SHRUBLAND) */
+				/* 	| (1 << BIOME_CONIFEROUS_FOREST) */
+				/* 	| (1 << BIOME_BOREAL_FOREST) */
+				/* 	| (1 << BIOME_TEMPERATE_GRASSLAND) */
+				/* 	| (1 << BIOME_WOODLAND) */
+				/* 	| (1 << BIOME_TEMPERATE_SEASONAL_FOREST) */
+				/* 	| (1 << BIOME_TEMPERATE_RAINFOREST), */
 			}
 		},
 	},
@@ -271,7 +273,7 @@ struct object_skeleton mob_skeleton_map[] = {
 		.art = "swallow.png",
 		.description = "",
 		.avatar = "swallow_avatar.png",
-		.type = S_TYPE_MOB,
+		.type = S_TYPE_ENTITY,
 		.sp = { .mob = {
 			.wt = PECK,
 			.type = ELM_AIR,
@@ -288,14 +290,14 @@ struct object_skeleton mob_skeleton_map[] = {
 	/* [MOB_SKELETON] = { */
 	/* 	.name = "skeleton", */
 	/* 	.description = "Bones that almost shine with a white polish that never seems to dull.", */
-	/* 	.type = S_TYPE_MOB, */
+	/* 	.type = S_TYPE_ENTITY, */
 	/* 	.sp = { .mob = { */
 	/* 		.drop = { NULL }, */
 	/* 		.y = 2, */
 	/* 		.stat = FIGHTER, */
 	/* 		.lvl = 40, */
 	/* 		.lvl_v = 0xf, */
-	/* 		.flags = MF_AGGRO, */
+	/* 		.flags = EF_AGGRO, */
 	/* 		.type = ELM_DARK, */
 	/* 	} }, */
 	/* }, */
@@ -304,7 +306,7 @@ struct object_skeleton mob_skeleton_map[] = {
 		.description = "Undead that came into Being when a Vampire Slew a Mortal.",
 		.art = "",
 		.avatar = "",
-		.type = S_TYPE_MOB,
+		.type = S_TYPE_ENTITY,
 		.sp = { .mob = {
 			.drop = { NULL },
 			.y = 6,
@@ -312,7 +314,7 @@ struct object_skeleton mob_skeleton_map[] = {
 			.lvl = 80,
 			.lvl_v = 0x1f,
 			.type = ELM_VAMP,
-			.flags = MF_AGGRO,
+			.flags = EF_AGGRO,
 		} },
 	},
 	[MOB_WOODPECKER] = {
@@ -320,7 +322,7 @@ struct object_skeleton mob_skeleton_map[] = {
 		.art = "woodpecker.jpg",
 		.description = "",
 		.avatar = "woodpecker_avatar.jpg",
-		.type = S_TYPE_MOB,
+		.type = S_TYPE_ENTITY,
 		.sp = { .mob = {
 			.wt = PECK,
 			.type = ELM_AIR,
@@ -339,7 +341,7 @@ struct object_skeleton mob_skeleton_map[] = {
 		.art = "sparrow.jpg",
 		.description = "",
 		.avatar = "sparrow_avatar.jpg",
-		.type = S_TYPE_MOB,
+		.type = S_TYPE_ENTITY,
 		.sp = { .mob = {
 			.wt = PECK, .type = ELM_AIR,
 			.y = 3,
@@ -373,7 +375,7 @@ struct object_skeleton mob_skeleton_map[] = {
 	/* }, */
 	/* [MOB_FIREBIRD] = { */
 	/* 	BIRD(firebird, ""), .y = 14, */
-	/* 	.type = ELM_FIRE, .flags = MF_AGGRO, */
+	/* 	.type = ELM_FIRE, .flags = EF_AGGRO, */
 	/* } */
 };
 
@@ -405,31 +407,18 @@ bird_is(struct mob_skeleton *mob)
 	return mob->wt == PECK;
 }
 
-struct mob *
-mob_put(dbref who)
+struct entity *
+birth(dbref who)
 {
-	register struct mob *mob;
-        struct object *o;
-
-        /* CBUG(GETLID(who) >= 0); */
-
-        mob = (struct mob *) malloc(sizeof(struct mob));
-
-        CBUG(!mob);
-
-	o = &db[who];
-        o->mob = mob;
-
-	memset(mob, 0, sizeof(struct mob));
+	struct entity *mob = ENTITY(who);
 	mob->wts = phys_wts[GETWTS(who)];
 	mob->hunger = mob->thirst = 0;
-	mob->flags = 0;
 	mob->combo = GETCOMBO(who);
 	mob->hp = HP_MAX(who);
 	mob->mp = MP_MAX(who);
 
-	MOB_EV(mob, DMG) = DMG_BASE(who);
-	MOB_EV(mob, DODGE) = DODGE_BASE(who);
+	EFFECT(mob, DMG).value = DMG_BASE(who);
+	EFFECT(mob, DODGE).value = DODGE_BASE(who);
 
 	spells_init(mob->spells, who);
 
@@ -448,8 +437,8 @@ mob_put(dbref who)
 
 static inline dbref
 mob_add(enum mob_type mid, dbref where, enum biome biome, long long pdn) {
-	struct object_skeleton *obj_skel = MOB_SKELETON(mid);
-	CBUG(obj_skel->type != S_TYPE_MOB);
+	struct object_skeleton *obj_skel = ENTITY_SKELETON(mid);
+	CBUG(obj_skel->type != S_TYPE_ENTITY);
 	struct mob_skeleton *mob_skel = &obj_skel->sp.mob;
 	dbref nu;
 
@@ -466,7 +455,7 @@ mob_add(enum mob_type mid, dbref where, enum biome biome, long long pdn) {
 }
 
 void
-mobs_add(dbref w, enum biome biome, long long pdn) {
+entities_add(dbref w, enum biome biome, long long pdn) {
 	/* int o = MOFS_ICE; */
 	int o = 1;
 	unsigned mid,
@@ -484,13 +473,13 @@ mob_obj_random()
 	int idx = random() % MOFS_END;
 	if (idx == 0 || idx == 5 || idx == 8 || idx == 9)
 		return NULL;
-	return MOB_SKELETON(idx);
+	return ENTITY_SKELETON(idx);
 }
 
 void
 mobs_aggro(dbref player)
 {
-        struct mob *me = MOB(player);
+        struct entity *me = ENTITY(player);
 	dbref tmp;
 	int klock = 0;
 
@@ -499,7 +488,7 @@ mobs_aggro(dbref player)
 	DOLIST(tmp, db[getloc(player)].contents) {
 		int lid = GETLID(tmp);
 		if (lid >= 0 && GETAGGRO(tmp)) {
-			struct mob *mob = MOB(tmp);
+			struct entity *mob = ENTITY(tmp);
 			mob->target = player;
 			klock++;
 		}
@@ -513,7 +502,7 @@ do_eat(command_t *cmd)
 {
 	dbref player = cmd->player;
 	const char *what = cmd->argv[1];
-	struct mob *p = MOB(player);
+	struct entity *p = ENTITY(player);
 	dbref item = ematch_mine(player, what);
 	int food;
 
@@ -535,15 +524,21 @@ do_eat(command_t *cmd)
 static void
 respawn(dbref who)
 {
-	if (who < 0 || Typeof(who) != TYPE_THING)
-		return;
-	dbref where = THING_HOME(who);
-	moveto(who, where);
-        struct mob *mob = MOB(who);
-        mob->hp = HP_MAX(who);
-        mob->mp = MP_MAX(who);
+	struct entity *mob = ENTITY(who);
+	dbref where;
+	if (mob->flags & EF_PLAYER) {
+		struct cmd_dir cd;
+		cd.rep = STARTING_POSITION;
+		cd.dir = '\0';
+		geo_teleport(who, cd);
+		where = getloc(who);
+	} else {
+		where = mob->home;
+		moveto(who, where);
+	}
+
 	notify_except_fmt(db[where].contents, who,
-			  "%s appears.", NAME(who));
+			  "%s arrives.", NAME(who));
 }
 
 static inline int
@@ -574,9 +569,9 @@ huth_notify(dbref who, unsigned v, unsigned char y, char const *m[4])
 }
 
 void
-mob_update(dbref who, long long unsigned tick)
+entity_update(dbref who, long long unsigned tick)
 {
-        struct mob *n = MOB(who);
+        struct entity *n = ENTITY(who);
 	static char const *thirst_msg[] = {
 		"You are thirsty.",
 		"You are very thirsty.",
@@ -598,7 +593,7 @@ mob_update(dbref who, long long unsigned tick)
 		return;
 	}
 
-        if (Typeof(who) != TYPE_PLAYER) {
+        if (Typeof(who) != TYPE_ENTITY) {
                 if (GETSAT(who) == NOTHING) {
                         if (n->hp != HP_MAX(who)
                             && n->target == NOTHING)
@@ -620,6 +615,9 @@ mob_update(dbref who, long long unsigned tick)
 
         CBUG(Typeof(who) == TYPE_GARBAGE);
 
+	if (getloc(who) == 0)
+		return;
+
         /* if mob dies, return */
 	if (huth_notify(who, n->thirst += THIRST_INC, THIRST_Y, thirst_msg)
                 || huth_notify(who, n->hunger += HUNGER_INC, HUNGER_Y, hunger_msg)
@@ -627,5 +625,4 @@ mob_update(dbref who, long long unsigned tick)
                         return;
 
 	kill_update(who);
-
 }

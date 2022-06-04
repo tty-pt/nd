@@ -25,17 +25,13 @@ vtf_t vtf_map[] = {
 		.pre = ANSI_BOLD ANSI_FG_GREEN,
 		.emp = '$',
 	},
-	[VTF_NPC] = {
+	[VTF_ENTITY] = {
 		.pre = ANSI_BOLD ANSI_FG_YELLOW,
 		.emp = '!',
 	},
 	[VTF_POND] = {
 		.pre = ANSI_BOLD ANSI_FG_BLUE,
 		.emp = '~',
-	},
-	[VTF_PLAYER] = {
-		.pre = ANSI_BOLD ANSI_FG_BLUE,
-		.emp = '#',
 	},
 };
 
@@ -98,7 +94,8 @@ dr_room(char *buf, view_tile_t *t, const char *bg)
 
 static inline unsigned
 floor_get(dbref what) {
-	unsigned floor = GETFLOOR(what);
+	CBUG(Typeof(what) != TYPE_ROOM);
+	unsigned char floor = db[what].sp.room.floor;
 	if (floor > BIOME_VOLCANIC)
 		return BIOME_VOLCANIC;
 	else
@@ -331,16 +328,13 @@ view_build_flags(dbref loc) {
 	ucoord_t flags = 0;
 
 	DOLIST(tmp, tmp) switch (Typeof(tmp)) {
-		case TYPE_PLAYER:
-			flags |= VTF_PLAYER;
+		case TYPE_ENTITY:
+			flags |= VTF_ENTITY;
 			break;
 
 		case TYPE_THING:
 			if (GETSHOP(tmp))
 				flags |= VTF_SHOP;
-
-			else if (GETLID(tmp) >= 0)
-				flags |= VTF_NPC;
 
 			else if (GETDRINK(tmp) >= 0)
 				flags |= VTF_POND;

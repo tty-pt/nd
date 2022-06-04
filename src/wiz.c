@@ -59,20 +59,12 @@ do_teleport(command_t *cmd) {
 	switch (destination) {
 	case HOME:
 		switch (Typeof(victim)) {
-		case TYPE_PLAYER:
-			destination = PLAYER_HOME(victim);
+		case TYPE_ENTITY:
+			destination = ENTITY(victim)->home;
 			if (parent_loop_check(victim, destination))
-				destination = PLAYER_HOME(OWNER(victim));
+				destination = ENTITY(OWNER(victim))->home;
 			break;
 		case TYPE_THING:
-			destination = THING_HOME(victim);
-			if (parent_loop_check(victim, destination)) {
-			  destination = PLAYER_HOME(OWNER(victim));
-			  if (parent_loop_check(victim, destination)) {
-			    destination = (dbref) 0;
-			  }
-			}
-			break;
 		case TYPE_ROOM:
 			destination = GLOBAL_ENVIRONMENT;
 			break;
@@ -83,7 +75,7 @@ do_teleport(command_t *cmd) {
 		}
 	default:
 		switch (Typeof(victim)) {
-		case TYPE_PLAYER:
+		case TYPE_ENTITY:
 			if (!controls(player, victim) ||
 				!controls(player, destination) ||
 				!controls(player, getloc(victim)) ||
@@ -108,45 +100,26 @@ do_teleport(command_t *cmd) {
 				break;
 			}
 			if (Typeof(destination) != TYPE_ROOM
-				&& Typeof(destination) != TYPE_PLAYER && Typeof(destination) != TYPE_THING) {
+				&& Typeof(destination) != TYPE_ENTITY && Typeof(destination) != TYPE_THING) {
 				notify(player, "Bad destination.");
 				break;
 			}
-			if (!((controls(player, destination) ||
-				   can_link_to(player, NOTYPE, destination)) &&
+			if (!(controls(player, destination) &&
 				  (controls(player, victim) || controls(player, db[victim].location)))) {
 				notify(player, "Permission denied. (must control dest and be able to link to it, or control dest's loc)");
 				break;
 			}
 			/* check for non-sticky dropto */
 			if (Typeof(destination) == TYPE_ROOM
-				&& db[destination].sp.room.dropto != NOTHING
-				&& !(FLAGS(destination) & STICKY))
+				&& db[destination].sp.room.dropto != NOTHING)
 						destination = db[destination].sp.room.dropto;
 			moveto(victim, destination);
 			notify(player, "Teleported.");
 			break;
-		case TYPE_ROOM:
-			if (Typeof(destination) != TYPE_ROOM) {
-				notify(player, "Bad destination.");
-				break;
-			}
-			if (!controls(player, victim)
-				|| !can_link_to(player, NOTYPE, destination)
-				|| victim == GLOBAL_ENVIRONMENT) {
-				notify(player, "Permission denied. (Can't move #0, dest must be linkable, and must control victim)");
-				break;
-			}
-			if (parent_loop_check(victim, destination)) {
-				notify(player, "Parent would create a loop.");
-				break;
-			}
-			moveto(victim, destination);
-			notify(player, "Parent set.");
-			break;
 		case TYPE_GARBAGE:
 			notify(player, "That object is in a place where magic cannot reach it.");
 			break;
+		case TYPE_ROOM:
 		default:
 			notify(player, "You can't teleport that.");
 			break;
@@ -223,7 +196,7 @@ do_unbless(command_t *cmd) {
 	char buf[BUFFER_LEN];
 	int cnt;
 
-	if (!Wizard(player) || Typeof(player) != TYPE_PLAYER) {
+	if (!Wizard(player) || Typeof(player) != TYPE_ENTITY) {
 		notify(player, "Only Wizard players may use this command.");
 		return;
 	}
@@ -260,7 +233,7 @@ do_bless(command_t *cmd) {
 	char buf[BUFFER_LEN];
 	int cnt;
 
-	if (!Wizard(player) || Typeof(player) != TYPE_PLAYER) {
+	if (!Wizard(player) || Typeof(player) != TYPE_ENTITY) {
 		notify(player, "Only Wizard players may use this command.");
 		return;
 	}
@@ -343,7 +316,7 @@ do_stats(command_t *cmd) {
 						total++, things++;
 					break;
 
-				case TYPE_PLAYER:
+				case TYPE_ENTITY:
 					if (i == owner)
 						total++, players++;
 					break;
@@ -365,7 +338,7 @@ do_stats(command_t *cmd) {
 					total++;
 					things++;
 					break;
-				case TYPE_PLAYER:
+				case TYPE_ENTITY:
 					total++;
 					players++;
 					break;
@@ -399,7 +372,7 @@ do_boot(command_t *cmd) {
 	dbref victim;
 	char buf[BUFFER_LEN];
 
-	if (!Wizard(player) || Typeof(player) != TYPE_PLAYER) {
+	if (!Wizard(player) || Typeof(player) != TYPE_ENTITY) {
 		notify(player, "Only a Wizard player can boot someone off.");
 		return;
 	}
@@ -407,8 +380,8 @@ do_boot(command_t *cmd) {
 		notify(player, "That player does not exist.");
 		return;
 	}
-	if (Typeof(victim) != TYPE_PLAYER) {
-		notify(player, "You can only boot players!");
+	if (Typeof(victim) != TYPE_ENTITY) {
+		notify(player, "You can only boot entities!");
 	}
 #ifdef GOD_PRIV
 	else if (God(victim)) {
@@ -442,8 +415,8 @@ do_toad(command_t *cmd) {
 	dbref stuff;
 	char buf[BUFFER_LEN];
 
-	if (!Wizard(player) || Typeof(player) != TYPE_PLAYER) {
-		notify(player, "Only a Wizard player can turn a person into a toad.");
+	if (!Wizard(player) || Typeof(player) != TYPE_ENTITY) {
+		notify(player, "Only a Wizard player can turn an entity into a toad.");
 		return;
 	}
 	if ((victim = lookup_player(name)) == NOTHING) {
@@ -476,8 +449,8 @@ do_toad(command_t *cmd) {
 		}
 	}
 
-	if (Typeof(victim) != TYPE_PLAYER) {
-		notify(player, "You can only turn players into toads!");
+	if (Typeof(victim) != TYPE_ENTITY) {
+		notify(player, "You can only turn entities into toads!");
 #ifdef GOD_PRIV
 	} else if (!(God(player)) && (TrueWizard(victim))) {
 #else
@@ -498,10 +471,6 @@ do_toad(command_t *cmd) {
 					break;
 				}
 			}
-			if (Typeof(stuff) == TYPE_THING && THING_HOME(stuff) == victim) {
-				/* FIXME: Set a tunable "lost and found" area! */
-				THING_SET_HOME(stuff, PLAYER_START);
-			}
 		}
 
 		/* notify people */
@@ -516,10 +485,6 @@ do_toad(command_t *cmd) {
 		NAME(victim) = alloc_string(buf);
 
 		boot_player_off(victim); /* Disconnect the toad */
-
-		FREE_PLAYER_SP(victim);
-		ALLOC_THING_SP(victim);
-		THING_SET_HOME(victim, PLAYER_HOME(player));
 
 		FLAGS(victim) = (FLAGS(victim) & ~TYPE_MASK) | TYPE_THING;
 		OWNER(victim) = player;	/* you get it */

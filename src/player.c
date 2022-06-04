@@ -56,16 +56,16 @@ create_player(const char *name)
 	/* initialize everything */
 	NAME(player) = alloc_string(name);
 	db[player].location = PLAYER_START;	/* home */
-	FLAGS(player) = TYPE_PLAYER;
+	FLAGS(player) = TYPE_ENTITY;
 	OWNER(player) = player;
-	ALLOC_PLAYER_SP(player);
-	PLAYER_SET_HOME(player, PLAYER_START);
+	ENTITY(player)->home = PLAYER_START;
 
 	SETVALUE(player, START_PENNIES);
 
 	/* link him to PLAYER_START */
 	PUSH(player, db[PLAYER_START].contents);
 	add_player(player);
+	ENTITY(player)->flags = EF_PLAYER;
 
 	FLAGS(player) |= CHOWN_OK;
 
@@ -110,7 +110,7 @@ delete_player(dbref who)
 				("## WARNING: Playername hashtable is inconsistent.  Rebuilding it.  Don't panic.");
 		clear_players();
 		for (i = 0; i < db_top; i++) {
-			if (Typeof(i) == TYPE_PLAYER) {
+			if (Typeof(i) == TYPE_ENTITY) {
 				found = lookup_player(NAME(i));
 				if (found != NOTHING) {
 					ren = (i == who) ? found : i;
@@ -175,14 +175,14 @@ dialog_start(dbref player, dbref npc, const char *dialog) {
 
 void
 dialog_stop(dbref player) {
-        const char *dialog = PLAYER_SP(player)->dialog;
+        const char *dialog = ENTITY(player)->dialog;
 
         if (dialog) {
                 free((void *) dialog);
-                PLAYER_SP(player)->dialog = NULL;
+                ENTITY(player)->dialog = NULL;
         }
 
-        PLAYER_SP(player)->dialog_target = NOTHING;
+        ENTITY(player)->dialog_target = NOTHING;
         web_dialog_stop(player);
 }
 
@@ -208,10 +208,10 @@ do_talk(command_t *cmd) {
         else
                 dialog = pdialog;
 
-        PLAYER_SP(player)->dialog_target = npc;
-        if (PLAYER_SP(player)->dialog)
-                free((void *) PLAYER_SP(player)->dialog);
-        PLAYER_SP(player)->dialog = alloc_string(dialog);
+        ENTITY(player)->dialog_target = npc;
+        if (ENTITY(player)->dialog)
+                free((void *) ENTITY(player)->dialog);
+        ENTITY(player)->dialog = alloc_string(dialog);
 
         if (web_dialog_start(player, npc, dialog))
                 dialog_start(player, npc, dialog);
@@ -240,8 +240,8 @@ void
 do_answer(command_t *cmd) {
         const char buf[BUFSIZ];
         dbref player = cmd->player;
-        dbref npc = PLAYER_SP(player)->dialog_target;
-        const char *dialog = PLAYER_SP(player)->dialog;
+        dbref npc = ENTITY(player)->dialog_target;
+        const char *dialog = ENTITY(player)->dialog;
         if (npc <= 0 || !dialog) {
                 notify(player, "You are not in a conversation\n");
                 return;
@@ -254,13 +254,13 @@ do_answer(command_t *cmd) {
 
         snprintf((char *) buf, sizeof(buf), "_/dialog/%s/%d/next", dialog, answer);
         dialog = GETMESG(npc, buf);
-        free((void *) PLAYER_SP(player)->dialog);
+        free((void *) ENTITY(player)->dialog);
         if (!dialog) {
-                PLAYER_SP(player)->dialog = NULL;
+                ENTITY(player)->dialog = NULL;
                 web_dialog_stop(player);
                 return;
         }
-        PLAYER_SP(player)->dialog = alloc_string(dialog);
+        ENTITY(player)->dialog = alloc_string(dialog);
 
         if (web_dialog_start(player, npc, dialog))
                 dialog_start(player, npc, dialog);

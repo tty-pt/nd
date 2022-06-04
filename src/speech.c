@@ -59,11 +59,11 @@ do_wall(command_t *cmd)
 	dbref i;
 	char buf[BUFFER_LEN];
 
-	if (Wizard(player) && Typeof(player) == TYPE_PLAYER) {
+	if (Wizard(player) && Typeof(player) == TYPE_ENTITY) {
 		warn("WALL from %s(%d): %s", NAME(player), player, message);
 		snprintf(buf, sizeof(buf), "%s shouts, \"%s\"", NAME(player), message);
 		for (i = 0; i < db_top; i++) {
-			if (Typeof(i) == TYPE_PLAYER) {
+			if (Typeof(i) == TYPE_ENTITY) {
 				notify(i, buf);
 			}
 		}
@@ -121,7 +121,7 @@ void
 notify_except(dbref first, dbref exception, const char *msg, dbref who)
 {
 	DOLIST(first, first) {
-		if (Typeof(first) == TYPE_PLAYER && first != exception)
+		if (Typeof(first) == TYPE_ENTITY && first != exception)
 			notify(first, msg);
 	}
 }

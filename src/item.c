@@ -21,7 +21,7 @@
 int
 equip_affect(dbref who, dbref eq)
 {
-	struct mob *p = MOB(who);
+	struct entity *p = ENTITY(who);
 	register int msv = GETMSV(eq),
 		 eqw = GETEQW(eq),
 		 eql = EQL(eqw),
@@ -32,7 +32,7 @@ equip_affect(dbref who, dbref eq)
 	case RHAND:
 		if (GETSTAT(who, STR) < msv)
 			return 1;
-		MOB_EV(p, DMG) += DMG_WEAPON(eq);
+		EFFECT(p, DMG).value += DMG_WEAPON(eq);
 		p->wts = WTS_WEAPON(eq);
 		break;
 
@@ -59,9 +59,9 @@ equip_affect(dbref who, dbref eq)
 				return 1;
 		}
 		aux = DEF_ARMOR(eq, aux);
-		MOB_EV(p, DEF) += aux;
-		int pd = MOB_EV(p, DODGE) - DODGE_ARMOR(aux);
-		MOB_EV(p, DODGE) = pd > 0 ? pd : 0;
+		EFFECT(p, DEF).value += aux;
+		int pd = EFFECT(p, DODGE).value - DODGE_ARMOR(aux);
+		EFFECT(p, DODGE).value = pd > 0 ? pd : 0;
 	}
 
 	return 0;
@@ -80,7 +80,7 @@ equip(dbref who, dbref eq)
 	db[eq].flags |= DARK;
 
 	notifyf(who, "You equip %s.", NAME(eq));
-        if (Typeof(who) == TYPE_PLAYER) {
+        if (Typeof(who) == TYPE_ENTITY) {
                 web_stats(who);
                 web_content_out(who, eq);
                 web_equipment(who);
@@ -94,7 +94,7 @@ do_select(command_t *cmd)
 	dbref player = cmd->player;
 	const char *n_s = cmd->argv[1];
 	unsigned n = strtoul(n_s, NULL, 0);
-	struct mob *mob = MOB(player);
+	struct entity *mob = ENTITY(player);
 	mob->select = n;
 	notifyf(player, "You select %u.", n);
 }
@@ -120,7 +120,7 @@ do_equip(command_t *cmd)
 dbref
 unequip(dbref who, unsigned eql)
 {
-	struct mob *mob = MOB(who);
+	struct entity *mob = ENTITY(who);
 	dbref eq = GETEQ(who, eql);
 	unsigned eqt, aux;
 
@@ -133,7 +133,7 @@ unequip(dbref who, unsigned eql)
 
 	switch (eql) {
 	case RHAND:
-		MOB_EV(mob, DMG) -= DMG_WEAPON(eq);
+		EFFECT(mob, DMG).value -= DMG_WEAPON(eq);
 		mob->wts = phys_wts[GETWTS(who)];
 		break;
 	case PANTS:
@@ -145,13 +145,13 @@ unequip(dbref who, unsigned eql)
 		case ARMOR_MEDIUM: aux += 1; break;
 		}
 		aux = DEF_ARMOR(eq, aux);
-		MOB_EV(mob, DEF) -= aux;
-		MOB_EV(mob, DODGE) += DODGE_ARMOR(aux);
+		EFFECT(mob, DEF).value -= aux;
+		EFFECT(mob, DODGE).value += DODGE_ARMOR(aux);
 	}
 
 	SETEQ(who, eql, 0);
 	db[eq].flags &= ~DARK;
-        if (Typeof(who) == TYPE_PLAYER) {
+        if (Typeof(who) == TYPE_ENTITY) {
                 web_content_in(who, eq);
                 web_stats(who);
                 web_equipment(who);

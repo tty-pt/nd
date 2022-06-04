@@ -37,8 +37,8 @@ do_give(command_t *cmd)
 	}
 
 	if (!Wizard(OWNER(player))) {
-		if (Typeof(who) != TYPE_PLAYER) {
-			notify(player, "You can only give to other players.");
+		if (Typeof(who) != TYPE_ENTITY) {
+			notify(player, "You can only give to other entities.");
 			return;
 		} else if (GETVALUE(who) + amount > MAX_PENNIES) {
 			notifyf(player, "That player doesn't need that many %s!", PENNIES);
@@ -51,7 +51,7 @@ do_give(command_t *cmd)
 		return;
 	}
 
-	if (Typeof(who) != TYPE_PLAYER) {
+	if (Typeof(who) != TYPE_ENTITY) {
 		notifyf(player, "You can't give %s to that!", PENNIES);
 		return;
 	}

@@ -91,7 +91,7 @@ enum object_skeleton_type {
         S_TYPE_FOOD,
         S_TYPE_DRINK,
         S_TYPE_EQUIPMENT,
-        S_TYPE_MOB,
+        S_TYPE_ENTITY,
 	S_TYPE_PLANT,
 	S_TYPE_BIOME,
 };

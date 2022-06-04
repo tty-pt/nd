@@ -22,11 +22,11 @@ drink(dbref who, dbref source)
 {
 	static const size_t affects_ofs[] = {
 		0,
-		offsetof(struct mob, hp),
-		offsetof(struct mob, mp),
+		offsetof(struct entity, hp),
+		offsetof(struct entity, mp),
 	};
 
-	struct mob *mob = MOB(who);
+	struct entity *mob = ENTITY(who);
 	drink_t *drink = DRINK_SOURCE(source);
 	unsigned n = GETCONSUN(source);
 	unsigned const value = 2;

@@ -131,7 +131,6 @@ extern void dialog_stop(dbref player);
 
 /* From predicates.c */
 extern int OkObj(dbref obj);
-extern int can_link_to(dbref who, object_flag_type what_type, dbref where);
 extern int can_link(dbref who, dbref what);
 extern int could_doit(dbref player, dbref thing);
 extern int can_doit(dbref player, dbref thing, const char *default_fail_msg);

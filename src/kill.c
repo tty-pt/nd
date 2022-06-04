@@ -64,13 +64,13 @@ kill_dmg(enum element dmg_type, short dmg,
 
 // returns 1 if target dodges
 static inline int
-dodge_get(struct mob *att)
+dodge_get(struct entity *att)
 {
 	dbref target = att->target;
-	struct mob *tar = MOB(target);
+	struct entity *tar = ENTITY(target);
 	int d = RAND_MAX / 4;
-	short ad = MOB_EV(att, DODGE),
-	      dd = MOB_EV(tar, DODGE);
+	short ad = EFFECT(att, DODGE).value,
+	      dd = EFFECT(tar, DODGE).value;
 
 	if (ad > dd)
 		d += 3 * d / (ad - dd);
@@ -92,10 +92,10 @@ xp_get(unsigned x, unsigned y)
 int
 kill_dodge(dbref attacker, struct wts wts)
 {
-	struct mob *att = MOB(attacker);
+	struct entity *att = ENTITY(attacker);
 	dbref target = att->target;
-	struct mob *tar = MOB(target);
-	if (!MOB_EV(tar, MOV) && dodge_get(att)) {
+	struct entity *tar = ENTITY(target);
+	if (!EFFECT(tar, MOV).value && dodge_get(att)) {
 		notify_wts_to(target, attacker, "dodge", "dodges", "'s %s", wts.a);
 		return 1;
 	} else
@@ -123,17 +123,6 @@ notify_attack(dbref att, dbref tar, struct wts wts, short val, char const *color
 	buf[i] = '\0';
 
 	notify_wts_to(att, tar, wts.a, wts.b, "%s", buf);
-}
-
-static inline void
-living_dead(dbref who)
-{
-	struct mob *mob = MOB(who);
-	mob->target = NOTHING;
-	mob->hp = HP_MAX(who);
-	mob->mp = MP_MAX(who);
-	mob->thirst = mob->hunger = 0;
-	debufs_end(who);
 }
 
 static inline dbref
@@ -192,58 +181,56 @@ xp_award(dbref attacker, dbref target)
 void
 kill_target(dbref attacker, dbref target)
 {
-	struct mob *att = attacker > 0 ? MOB(attacker) : NULL;
-	struct mob *tar = MOB(target);
+	struct entity *att = attacker > 0 ? ENTITY(attacker) : NULL;
+	struct entity *tar = ENTITY(target);
 
 	notify_wts(target, "die", "dies", "");
 
-	if (attacker > 0 && Typeof(attacker) == TYPE_PLAYER)
+	body(attacker, target);
+
+	if (attacker > 0) {
+		CBUG(Typeof(attacker) != TYPE_ENTITY)
 		xp_award(attacker, target);
-
-	if (Typeof(target) == TYPE_PLAYER) {
-		dbref loc = getloc(target);
-		moveto(target, PLAYER_HOME(target));
-		geo_clean(target, loc);
-		tar->klock = 0;
-                look_around(target);
-                view(target);
-	} else {
-		if (tar->target && GETAGGRO(target)) {
-			dbref target_target = tar->target;
-			struct mob *tar_tar = MOB(target_target);
-			tar_tar->klock --;
-		}
-
-		if (GETTMP(getloc(target))) {
-			if (att) {
-				body(attacker, target);
-				att->target = NOTHING;
-			}
-			recycle(attacker, target);
-			return;
-		}
-
-		moveto(target, (dbref) 0);
-		tar->respawn_in = 30;
-		tar->hp = HP_MAX(target);
-		tar->mp = MP_MAX(target);
+		att->target = NOTHING;
 	}
 
-	living_dead(target);
+	CBUG(Typeof(target) != TYPE_ENTITY);
 
-	if (att)
-		att->target = NOTHING;
+	if (tar->target && GETAGGRO(target)) {
+		dbref target_target = tar->target;
+		struct entity *tar_tar = ENTITY(target_target);
+		tar_tar->klock --;
+	}
+
+	dbref loc = getloc(target);
+
+	if (GETTMP(loc) && !(tar->flags & EF_PLAYER)) {
+		recycle(attacker, target);
+		geo_clean(target, loc);
+		return;
+	}
+
+	tar->klock = 0;
+	tar->target = NOTHING;
+	tar->hp = 1;
+	tar->mp = 1;
+	tar->thirst = tar->hunger = 0;
+
+	debufs_end(target);
+	moveto(target, (dbref) 0);
+	geo_clean(target, loc);
+	look_around(target);
 }
 
 static inline void
 attack(dbref attacker)
 {
-	struct mob *att = MOB(attacker),
-		   *tar;
+	struct entity *att = ENTITY(attacker),
+		      *tar;
 
 	register unsigned char mask;
 
-	mask = MOB_EM(att, MOV);
+	mask = EFFECT(att, MOV).mask;
 
 	if (mask) {
 		register unsigned i = __builtin_ffs(mask) - 1;
@@ -256,13 +243,13 @@ attack(dbref attacker)
 	if (target <= 0)
 		return;
 
-	tar = MOB(target);
+	tar = ENTITY(target);
 
 	if (!spells_cast(attacker, target) && !kill_dodge(attacker, att->wts)) {
 		enum element at = ELEMENT_NEXT(attacker, MDMG);
 		enum element dt = ELEMENT_NEXT(target, MDEF);
-		short aval = -kill_dmg(ELM_PHYSICAL, MOB_EV(att, DMG), MOB_EV(tar, DEF) + MOB_EV(tar, MDEF), dt);
-		short bval = -kill_dmg(at, MOB_EV(att, MDMG), MOB_EV(tar, MDEF), dt);
+		short aval = -kill_dmg(ELM_PHYSICAL, EFFECT(att, DMG).value, EFFECT(tar, DEF).value + EFFECT(tar, MDEF).value, dt);
+		short bval = -kill_dmg(at, EFFECT(att, MDMG).value, EFFECT(tar, MDEF).value, dt);
 		char const *color = ELEMENT(at)->color;
 		notify_attack(attacker, target, att->wts, aval, color, bval);
 		cspell_heal(attacker, target, aval + bval);
@@ -272,35 +259,38 @@ attack(dbref attacker)
 void
 do_kill(command_t *cmd)
 {
-	int descr = cmd->fd;
 	dbref player = cmd->player;
 	const char *what = cmd->argv[1];
 	dbref here = getloc(player);
 	dbref target = strcmp(what, "me")
 		? ematch_near(player, what)
 		: player;
-	struct mob *att, *tar;
 
-        att = GETLID(player) ? MOB(player) : mob_put(player);
+	if (here == 0) {
+		notify(player, "You may not kill in room 0");
+		return;
+	}
+
+	CBUG(Typeof(player) != TYPE_ENTITY);
+	struct entity *att = ENTITY(player), *tar;
 
 	if (FLAGS(here) & HAVEN
 	    || target == NOTHING
 	    || player == target
-	    || !(tar = MOB(target)))
+	    || !(tar = ENTITY(target)))
 	{
 		notify(player, "You can't target that.");
 		return;
 	}
 
 	att->target = target;
-	att->descr = descr;
 	/* notify(player, "You form a combat pose."); */
 }
 
 void
 kill_update(dbref attacker)
 {
-	struct mob *att = MOB(attacker);
+	struct entity *att = ENTITY(attacker);
 	dbref target = att->target;
 
 	if (target <= 0
@@ -310,7 +300,7 @@ kill_update(dbref attacker)
 		return;
 	}
 
-	struct mob *tar = MOB(target);
+	struct entity *tar = ENTITY(target);
 
 	if (tar->target <= 0)
 		tar->target = attacker;
@@ -324,16 +314,16 @@ do_status(command_t *cmd)
 {
 	dbref player = cmd->player;
 	// TODO optimize MOB_EV / MOB_EM
-	struct mob *mob = MOB(player);
+	struct entity *mob = ENTITY(player);
 	notifyf(player, "hp %u/%u\tmp %u/%u\tstuck 0x%x\n"
 		"dodge %d\tcombo 0x%x \tdebuf_mask 0x%x\n"
 		"damage %d\tmdamage %d\tmdmg_mask 0x%x\n"
 		"defense %d\tmdefense %d\tmdef_mask 0x%x\n"
 		"klock   %u\thunger %u\tthirst %u",
-		mob->hp, HP_MAX(player), mob->mp, MP_MAX(player), MOB_EM(mob, MOV),
-		MOB_EV(mob, DODGE), mob->combo, mob->debuf_mask,
-		MOB_EV(mob, DMG), MOB_EV(mob, MDMG), MOB_EM(mob, MDMG),
-		MOB_EV(mob, DEF), MOB_EV(mob, MDEF), MOB_EM(mob, MDEF),
+		mob->hp, HP_MAX(player), mob->mp, MP_MAX(player), EFFECT(mob, MOV).mask,
+		EFFECT(mob, DODGE).value, mob->combo, mob->debuf_mask,
+		EFFECT(mob, DMG).value, EFFECT(mob, MDMG).value, EFFECT(mob, MDMG).mask,
+		EFFECT(mob, DEF).value, EFFECT(mob, MDEF).value, EFFECT(mob, MDEF).mask,
 		mob->klock, mob->hunger, mob->thirst);
 }
 
@@ -343,7 +333,7 @@ do_heal(command_t *cmd)
 	dbref player = cmd->player;
 	const char *name = cmd->argv[1];
 	dbref target;
-	struct mob *tar;
+	struct entity *tar;
 
 	if (strcmp(name, "me")) {
 		target = ematch_near(player, name);
@@ -358,7 +348,7 @@ do_heal(command_t *cmd)
                 return;
         }
 
-        tar = MOB(target);
+        tar = ENTITY(target);
 	tar->hp = HP_MAX(target);
 	tar->mp = MP_MAX(target);
 	tar->hunger = tar->thirst = 0;
@@ -381,7 +371,7 @@ do_advitam(command_t *cmd)
 		return;
 	}
 
-	mob_put(target);
+	birth(target);
 	notifyf(player, "You infuse %s with life.", NAME(target));
 }
 
@@ -404,7 +394,7 @@ do_train(command_t *cmd) {
 	dbref player = cmd->player;
 	const char *attrib = cmd->argv[1];
 	const char *amount_s = cmd->argv[2];
-	struct mob *mob = MOB(player);
+	struct entity *mob = ENTITY(player);
 	int attr;
 
 	switch (attrib[0]) {
@@ -431,10 +421,10 @@ do_train(command_t *cmd) {
 
 	switch (attr) {
 	case STR:
-		MOB_EV(mob, DMG) += DMG_G(c + amount) - DMG_G(c);
+		EFFECT(mob, DMG).value += DMG_G(c + amount) - DMG_G(c);
 		break;
 	case DEX:
-		MOB_EV(mob, DODGE) += DODGE_G(c + amount) - DODGE_G(c);
+		EFFECT(mob, DODGE).value += DODGE_G(c + amount) - DODGE_G(c);
 		break;
 	}
 
@@ -450,14 +440,18 @@ kill_v(dbref player, char const *opcs)
 	if (isdigit(*opcs)) {
 		unsigned combo = strtol(opcs, &end, 0);
 		SETCOMBO(player, combo);
-		MOB(player)->combo = combo;
+		ENTITY(player)->combo = combo;
 		notifyf(player, "Set combo to 0x%x.", combo);
 		return end - opcs;
 	} else if (*opcs == 'c' && isdigit(opcs[1])) {
-		struct mob *p = MOB(player);
+		struct entity *p = ENTITY(player);
 		unsigned slot = strtol(opcs + 1, &end, 0);
                 dbref target = p->target == NOTHING ? player : p->target;
-		spell_cast(player, target, slot);
+		if (getloc(player) == 0) {
+			notify(player, "You may not cast spells in room 0");
+		} else {
+			spell_cast(player, target, slot);
+		}
 		return end - opcs;
 	} else
 		return 0;
@@ -492,7 +486,7 @@ sit(dbref player, const char *name)
 
 	SETSEATN(seat, cur + 1);
 	SETSAT(player, seat);
-	MOB(player)->flags |= MF_SITTING;
+	ENTITY(player)->flags |= EF_SITTING;
 
 	notify_wts(player, "sit", "sits", " on %s", NAME(seat));
 }
@@ -517,7 +511,7 @@ do_stand_silent(dbref player)
 		SETSEATN(chair, GETSEATN(chair) - 1);
 
 	USETSAT(player);
-	MOB(player)->flags ^= MF_SITTING;
+	ENTITY(player)->flags ^= EF_SITTING;
 	notify_wts(player, "stand", "stands", " up");
 	return 0;
 }
