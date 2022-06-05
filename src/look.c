@@ -360,6 +360,7 @@ do_examine(command_t *cmd)
 		/* print home */
 		snprintf(buf, sizeof(buf), "Home: %s", unparse_object(player, ENTITY(thing)->home));	/* home */
 		notify(player, buf);
+		notifyf(player, "hp: %d/%d entity flags: %d", ENTITY(thing)->hp, HP_MAX(thing), ENTITY(thing)->flags);
 
 		/* print location if player can link to it */
 		if (db[thing].location != NOTHING && controls(player, db[thing].location)) {

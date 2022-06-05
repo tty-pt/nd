@@ -460,14 +460,17 @@ kill_v(dbref player, char const *opcs)
 void
 sit(dbref player, const char *name)
 {
-	if (GETSAT(player) != NOTHING) {
+	if (ENTITY(player)->flags & EF_SITTING) {
 		notify(player, "You are already sitting.");
 		return;
 	}
 
 	if (!*name) {
 		notify_wts(player, "sit", "sits", " on the ground");
-		SETSAT(player, 0);
+		ENTITY(player)->flags |= EF_SITTING;
+		ENTITY(player)->sat = -1;
+
+		/* warn("%d sits on the ground\n", player); */
 		return;
 	}
 
@@ -485,8 +488,8 @@ sit(dbref player, const char *name)
 	}
 
 	SETSEATN(seat, cur + 1);
-	SETSAT(player, seat);
 	ENTITY(player)->flags |= EF_SITTING;
+	ENTITY(player)->sat = seat;
 
 	notify_wts(player, "sit", "sits", " on %s", NAME(seat));
 }
@@ -502,15 +505,16 @@ do_sit(command_t *cmd)
 int
 do_stand_silent(dbref player)
 {
-	dbref chair = GETSAT(player);
-
-	if (chair == NOTHING)
+	if (!(ENTITY(player)->flags & EF_SITTING))
 		return 1;
 
-	if (chair > 0)
-		SETSEATN(chair, GETSEATN(chair) - 1);
+	dbref chair = ENTITY(player)->sat;
 
-	USETSAT(player);
+	if (chair > 0) {
+		SETSEATN(chair, GETSEATN(chair) - 1);
+		ENTITY(player)->sat = -1;
+	}
+
 	ENTITY(player)->flags ^= EF_SITTING;
 	notify_wts(player, "stand", "stands", " up");
 	return 0;

@@ -143,7 +143,6 @@ rarity_get() {
 dbref
 object_add(struct object_skeleton o, dbref where)
 {
-	CBUG(where < 0);
 	dbref nu = object_new();
 	NAME(nu) = alloc_string(o.name);
 	SETART(nu, alloc_string(o.art));
@@ -152,8 +151,8 @@ object_add(struct object_skeleton o, dbref where)
 	db[nu].location = where;
 	OWNER(nu) = 1;
 	FLAGS(nu) = TYPE_THING;
-	/* THING_SET_HOME(nu, where); */
-	PUSH(nu, db[where].contents);
+	if (where >= 0)
+		PUSH(nu, db[where].contents);
 
 	switch (o.type) {
 	case S_TYPE_EQUIPMENT:
@@ -183,6 +182,7 @@ object_add(struct object_skeleton o, dbref where)
 		mob_add_stats(&o, nu);
 		mob = birth(nu);
 		object_drop(nu, o.sp.mob.drop);
+		mob->home = where;
 		break;
 	case S_TYPE_PLANT:
 		object_drop(nu, o.sp.plant.drop);
@@ -196,7 +196,9 @@ object_add(struct object_skeleton o, dbref where)
 		break;
 	}
 
-        web_content_in(where, nu);
+	if (o.type != S_TYPE_BIOME)
+		web_content_in(where, nu);
+
 	return nu;
 }
 

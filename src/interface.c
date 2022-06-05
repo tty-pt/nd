@@ -81,7 +81,6 @@ enum descr_flags {
 #define CMD_HASH_SIZE 512
 
 static hash_tab cmds_hashed[CMD_HASH_SIZE];
-long long unsigned tick = 0;
 
 #ifdef CONFIG_SECURE
 SSL_CTX *sslctx;
@@ -292,6 +291,8 @@ core_command_t cmds[] = {
 	},
 };
 
+time_t start, now, tick;
+
 fd_set readfds, activefds, writefds;
 
 int shutdown_flag = 0;
@@ -445,6 +446,10 @@ init_game()
         }
 
 	return 0;
+}
+
+time_t get_tick() {
+	return now - start;
 }
 
 int
@@ -987,6 +992,12 @@ make_socket(int port)
 	return sockfd;
 }
 
+time_t get_now() {
+	time_t now;
+	time(&now);
+	return now;
+}
+
 int
 shovechars()
 {
@@ -1007,13 +1018,15 @@ shovechars()
 	if ((optflags & OPT_DETACH) && daemon(1, 1) != 0)
 		_exit(0);
 
+	start = get_now();
 	/* And here, we do the actual player-interaction loop */
 
 	while (shutdown_flag == 0) {
 		/* process_commands(); */
-		objects_update(tick);
+		now = get_now();
+                tick = now - start;
+		objects_update();
 		geo_update();
-                tick ++;
 
 		untouchprops_incremental(1);
 

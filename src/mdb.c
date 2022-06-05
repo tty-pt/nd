@@ -676,16 +676,16 @@ object_copy(dbref player, dbref old)
 }
 
 static void
-object_update(dbref what, long long unsigned tick) {
+object_update(dbref what) {
 	if (Typeof(what) == TYPE_ENTITY)
-		entity_update(what, tick);
+		entity_update(what);
 }
 
 void
-objects_update(long long unsigned tick)
+objects_update()
 {
 	
 	dbref i;
 	for (i = db_top; i-- > 0;)
-		object_update(i, tick);
+		object_update(i);
 }

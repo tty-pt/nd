@@ -416,6 +416,7 @@ birth(dbref who)
 	mob->combo = GETCOMBO(who);
 	mob->hp = HP_MAX(who);
 	mob->mp = MP_MAX(who);
+	mob->target = -1;
 
 	EFFECT(mob, DMG).value = DMG_BASE(who);
 	EFFECT(mob, DODGE).value = DODGE_BASE(who);
@@ -521,6 +522,9 @@ respawn(dbref who)
 {
 	struct entity *mob = ENTITY(who);
 	dbref where;
+
+	notify_except_fmt(db[getloc(who)].contents, who,
+			  "%s disappears.", NAME(who));
 	if (mob->flags & EF_PLAYER) {
 		struct cmd_dir cd;
 		cd.rep = STARTING_POSITION;
@@ -529,11 +533,12 @@ respawn(dbref who)
 		where = getloc(who);
 	} else {
 		where = mob->home;
+		/* warn("respawning %d to %d\n", who, where); */
 		moveto(who, where);
 	}
 
 	notify_except_fmt(db[where].contents, who,
-			  "%s arrives.", NAME(who));
+			  "%s appears.", NAME(who));
 }
 
 static inline int
@@ -564,8 +569,10 @@ huth_notify(dbref who, unsigned v, unsigned char y, char const *m[4])
 }
 
 void
-entity_update(dbref who, long long unsigned tick)
+entity_update(dbref who)
 {
+	CBUG(Typeof(who) != TYPE_ENTITY);
+
         struct entity *n = ENTITY(who);
 	static char const *thirst_msg[] = {
 		"You are thirsty.",
@@ -581,23 +588,30 @@ entity_update(dbref who, long long unsigned tick)
 		"You are starving to death."
 	};
 
-	if (n->respawn_in > 0) {
-		if (!--n->respawn_in)
-			respawn(who);
+	if (!(n->flags & EF_PLAYER)) {
+		/* warn("%d hp %d/%d\n", who, n->hp, HP_MAX(who)); */
+		if (n->hp == HP_MAX(who)) {
+			/* warn("%d's hp is maximum\n", who); */
 
-		return;
+			if ((n->flags & EF_SITTING)) {
+				/* warn("%d is sitting so they shall stand\n", who); */
+				stand(who);
+			}
+
+			if (getloc(who) == 0) {
+				/* warn("%d is located at 0, so they shall respawn\n", who); */
+				respawn(who);
+			}
+		} else {
+			/* warn("%d's hp is not maximum\n", who); */
+			if (n->target <= 0 && !(n->flags & EF_SITTING)) {
+				/* warn("%d is not sitting so they shall sit\n", who); */
+				sit(who, "");
+			}
+		}
 	}
 
-        if (Typeof(who) != TYPE_ENTITY) {
-                if (GETSAT(who) == NOTHING) {
-                        if (n->hp != HP_MAX(who)
-                            && n->target == NOTHING)
-                                sit(who, "");
-                } else if (n->hp == HP_MAX(who))
-                        stand(who);
-        }
-
-	if (tick % 16 == 0 && GETSAT(who) != NOTHING) {
+	if (get_tick() % 16 == 0 && (n->flags & EF_SITTING)) {
 		int div = 10;
 		int max, cur;
 		cspell_heal(NOTHING, who, HP_MAX(who) / div);

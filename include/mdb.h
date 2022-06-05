@@ -94,11 +94,6 @@
 #define GETLVL(x)	1 + get_property_value(x, MESGPROP_LVL)
 #define SETLVL(x, y)	set_property_value(x, MESGPROP_LVL, y - 1)
 
-#define MESGPROP_SAT	"_/sat"
-#define GETSAT(x)	get_property_dbref(x, MESGPROP_SAT)
-#define SETSAT(x,y)	set_property_dbref(x, MESGPROP_SAT, y)
-#define USETSAT(x)	remove_property(x, MESGPROP_SAT)
-
 #define SETHASH(w, x, y, z)	set_property_hash(w, x, y, z)
 #define GETHASH(w, x, y)	get_property_hash(w, x, y)
 
@@ -283,7 +278,7 @@ struct entity {
 	struct debuf debufs[8];
 	struct spell spells[8];
 	effect_t e[7];
-	dbref target;
+	dbref target, sat;
 	struct wts wts;
 	unsigned respawn_in, flags; // TODO merge these two
 	unsigned short hp, mp, hunger, thirst;
@@ -369,7 +364,8 @@ extern int db_obs_remove(dbref observable, dbref observer);
 
 extern void db_free(void);
 
-void objects_update(long long unsigned tick);
+time_t get_tick();
+void objects_update();
 dbref getparent(dbref obj);
 
 #define DOLIST(var, first) \

@@ -111,7 +111,7 @@ struct object_skeleton biomes[] = {
 	[BIOME_TEMPERATE_GRASSLAND] = {
 		.name = "temperate grassland",
                 .description = "",
-                .art = "",
+                .art = "temperate_grassland.png",
                 .avatar = "",
                 .type = S_TYPE_BIOME,
                 .sp = { .biome = {
@@ -152,7 +152,7 @@ struct object_skeleton biomes[] = {
 	[BIOME_DESERT] = {
 		.name = "desert",
                 .description = "",
-                .art = "desert.jpeg",
+                .art = "desert.png",
                 .avatar = "",
                 .type = S_TYPE_BIOME,
                 .sp = { .biome = {
@@ -182,7 +182,7 @@ struct object_skeleton biomes[] = {
 	[BIOME_TROPICAL_RAINFOREST] = {
 		.name = "tropical rainforest",
                 .description = "",
-                .art = "",
+                .art = "tropical_rainforest.png",
                 .avatar = "",
                 .type = S_TYPE_BIOME,
                 .sp = { .biome = {

@@ -290,7 +290,7 @@ geo_room_at(dbref player, pos_t pos)
 	struct bio *bio;
 	dbref there;
 	bio = noise_point(pos);
-        there = object_add(biomes[bio->bio_idx], 0);
+        there = object_add(biomes[bio->bio_idx], -1);
 	map_put(pos, there, DB_NOOVERWRITE);
 	db[there].sp.room.exits = NOTHING;
 	db[there].sp.room.dropto = NOTHING;

@@ -151,6 +151,7 @@ find_orphan_objects(dbref player)
 					FLAGS(db[i].sp.room.exits) |= SANEBIT;
 				}
 			}
+			FLAGS(i) |= SANEBIT;
 		}
 		if (CONTENTS(i) != NOTHING) {
 			if (FLAGS(CONTENTS(i)) & SANEBIT) {
@@ -336,7 +337,7 @@ check_object(dbref player, dbref obj)
 		 * check location 
 		 */
 		if (!valid_obj(LOCATION(obj)) &&
-			!(obj == GLOBAL_ENVIRONMENT && LOCATION(obj) == NOTHING)) {
+			!((obj == GLOBAL_ENVIRONMENT || Typeof(obj) == TYPE_ROOM) && LOCATION(obj) == NOTHING)) {
 			violate(player, obj, "has an invalid object as it's location");
 		}
 	}

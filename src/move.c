@@ -57,7 +57,7 @@ moveto(dbref what, dbref where)
 
         if (Typeof(what) == TYPE_ENTITY) {
                 dialog_stop(what);
-		if (GETSAT(what) != NOTHING)
+		if ((ENTITY(what)->flags & EF_SITTING))
 			stand(what);
 	}
 
