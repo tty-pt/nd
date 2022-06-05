@@ -40,10 +40,6 @@
 #define GETVALUE(x)	get_property_value(x, MESGPROP_VALUE)
 #define SETVALUE(x,y)	add_prop_nofetch(x, MESGPROP_VALUE, NULL, y)
 
-#define MESGPROP_LID	"_/lid"
-#define SETLID(x,y)	set_property_value(x, MESGPROP_LID, y + 1)
-#define GETLID(x)	(get_property_value(x, MESGPROP_LID) - 1)
-
 #define MESGPROP_AGGRO	"_/aggro"
 #define SETAGGRO(x, y)	set_property_value(x, MESGPROP_AGGRO, y)
 #define GETAGGRO(x)	get_property_value(x, MESGPROP_AGGRO)
@@ -329,7 +325,6 @@ struct object {
 	dbref contents;
 	dbref next;					/* pointer to next in contents/exits chain */
 	struct plist *properties;
-	struct mob *mob;
 
 	object_flag_type flags;
 

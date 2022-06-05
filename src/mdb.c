@@ -139,7 +139,6 @@ db_clear_object(dbref i)
 	o->next = NOTHING;
 	o->properties = 0;
 	o->first_observer = NULL;
-	o->mob = NULL;
 
 	/* flags you must initialize yourself */
 	/* type-specific fields you must also initialize */
@@ -421,8 +420,6 @@ db_free_object(dbref i)
 			free(obs);
 		}
 	}
-	if (o->mob)
-		free(o->mob);
 }
 
 void

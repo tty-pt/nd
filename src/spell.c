@@ -331,7 +331,6 @@ spell_cast(dbref attacker, dbref target, unsigned slot)
 	struct entity *tar = ENTITY(target);
 	struct spell sp = att->spells[slot];
 	struct spell_skeleton *_sp = sp._sp;
-	warn("spell_cast %u\n", slot);
 
 	unsigned mana = att->mp;
 	char a[BUFSIZ]; // FIXME way too big?
@@ -401,8 +400,6 @@ cspell_heal(dbref attacker, dbref target, short amt)
 	short hp = tar->hp;
 	int ret = 0;
 	hp += amt;
-
-	/* warn("cspell_heal %d %d %hd\n", attacker, target, amt); */
 
 	if (!amt)
 		return ret;

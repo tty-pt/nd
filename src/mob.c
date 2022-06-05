@@ -422,8 +422,6 @@ birth(dbref who)
 
 	spells_init(mob->spells, who);
 
-	SETLID(who, 1);
-
 	int i;
 
 	for (i = 0; i < EQ_MAX; i++) {
@@ -483,13 +481,10 @@ mobs_aggro(dbref player)
 	dbref tmp;
 	int klock = 0;
 
-        CBUG(GETLID(player) < 0);
-
 	DOLIST(tmp, db[getloc(player)].contents) {
-		int lid = GETLID(tmp);
-		if (lid >= 0 && GETAGGRO(tmp)) {
-			struct entity *mob = ENTITY(tmp);
-			mob->target = player;
+		if (Typeof(tmp) == TYPE_ENTITY && (ENTITY(tmp)->flags & EF_AGGRO)) {
+			// TODO use struct
+			ENTITY(tmp)->target = player;
 			klock++;
 		}
 	}

@@ -272,12 +272,12 @@ do_kill(command_t *cmd)
 	}
 
 	CBUG(Typeof(player) != TYPE_ENTITY);
-	struct entity *att = ENTITY(player), *tar;
+	struct entity *att = ENTITY(player);
 
 	if (FLAGS(here) & HAVEN
 	    || target == NOTHING
 	    || player == target
-	    || !(tar = ENTITY(target)))
+	    || Typeof(target) != TYPE_ENTITY)
 	{
 		notify(player, "You can't target that.");
 		return;
@@ -343,7 +343,7 @@ do_heal(command_t *cmd)
 
 	if (!(FLAGS(player) & WIZARD)
 	    || target < 0
-	    || GETLID(target) < 0) {
+	    || Typeof(target) != TYPE_ENTITY) {
                 notify(player, "You can't do that.");
                 return;
         }

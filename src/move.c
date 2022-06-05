@@ -55,11 +55,11 @@ moveto(dbref what, dbref where)
 		}
 	}
 
-        if (Typeof(what) == TYPE_ENTITY)
+        if (Typeof(what) == TYPE_ENTITY) {
                 dialog_stop(what);
-        if (GETLID(what) > 0 && GETSAT(what) != NOTHING) {
-                stand(what);
-        }
+		if (GETSAT(what) != NOTHING)
+			stand(what);
+	}
 
 	/* now put what in where */
 	PUSH(what, db[where].contents);
@@ -290,7 +290,7 @@ do_get(command_t *cmd)
 				notify(player, "You can't get that.");
 		} else {
 			if (OWNER(thing) != player
-					&& (GETLID(thing) >= 0 || GETPLID(thing) >= 0))
+					&& (Typeof(thing) == TYPE_ENTITY || GETPLID(thing) >= 0))
 			{
 				notify(player, "You can't pick that up.");
 				break;
