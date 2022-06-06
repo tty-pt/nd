@@ -70,7 +70,7 @@ enum bodypart ch_bodypart_map[] = {
 
 #include "drop.c"
 
-struct object_skeleton mob_skeleton_map[] = {
+struct object_skeleton entity_skeleton_map[] = {
 	[MOB_HUMAN] = {
 		.name = "human",
 	},
@@ -81,7 +81,7 @@ struct object_skeleton mob_skeleton_map[] = {
 		.avatar = "",
 		.type = S_TYPE_ENTITY,
 		.sp = {
-			.mob = {
+			.entity = {
 				.wt = BITE,
 				.type = ELM_ICE,
 				.biomes = (1<<BIOME_WATER),
@@ -96,7 +96,7 @@ struct object_skeleton mob_skeleton_map[] = {
 		.avatar = "",
 		.type = S_TYPE_ENTITY,
 		.sp = {
-			.mob = {
+			.entity = {
 				.wt = BITE,
 				.type = ELM_ICE,
 				.biomes = (1<<BIOME_WATER),
@@ -111,7 +111,7 @@ struct object_skeleton mob_skeleton_map[] = {
 		.avatar = "",
 		.type = S_TYPE_ENTITY,
 		.sp = {
-			.mob = {
+			.entity = {
 				.wt = BITE,
 				.type = ELM_ICE,
 				.biomes = (1<<BIOME_WATER),
@@ -126,7 +126,7 @@ struct object_skeleton mob_skeleton_map[] = {
 		.avatar = "",
 		.type = S_TYPE_ENTITY,
 		.sp = {
-			.mob = {
+			.entity = {
 				.wt = BITE,
 				.type = ELM_ICE,
 				.biomes = (1<<BIOME_WATER),
@@ -141,7 +141,7 @@ struct object_skeleton mob_skeleton_map[] = {
 		.avatar = "",
 		.type = S_TYPE_ENTITY,
 		.sp = {
-			.mob = {
+			.entity = {
 				.wt = BITE,
 				.type = ELM_ICE,
 				.biomes = (1<<BIOME_WATER),
@@ -156,7 +156,7 @@ struct object_skeleton mob_skeleton_map[] = {
 		.avatar = "",
 		.type = S_TYPE_ENTITY,
 		.sp = {
-			.mob = {
+			.entity = {
 				.wt = BITE,
 				.type = ELM_ICE,
 				.biomes = (1<<BIOME_WATER),
@@ -174,7 +174,7 @@ struct object_skeleton mob_skeleton_map[] = {
 		.avatar = "",
 		.type = S_TYPE_ENTITY,
 		.sp = {
-			.mob = {
+			.entity = {
 				.wt = BITE,
 				.type = ELM_ICE,
 				.biomes = (1<<BIOME_WATER),
@@ -190,7 +190,7 @@ struct object_skeleton mob_skeleton_map[] = {
 		.avatar = "",
 		.type = S_TYPE_ENTITY,
 		.sp = {
-			.mob = {
+			.entity = {
 				.wt = BITE,
 				.type = ELM_ICE,
 				.biomes = (1<<BIOME_WATER),
@@ -206,7 +206,7 @@ struct object_skeleton mob_skeleton_map[] = {
 		.avatar = "",
 		.type = S_TYPE_ENTITY,
 		.sp = {
-			.mob = {
+			.entity = {
 				.wt = PECK,
 				.type = ELM_AIR,
 				.biomes = (1 << BIOME_PERMANENT_ICE)
@@ -228,7 +228,7 @@ struct object_skeleton mob_skeleton_map[] = {
 		.avatar = "",
 		.type = S_TYPE_ENTITY,
 		.sp = {
-			.mob = {
+			.entity = {
 				.wt = PECK,
 				.type = ELM_AIR,
 				.biomes = (1 << BIOME_TEMPERATE_RAINFOREST),
@@ -244,7 +244,7 @@ struct object_skeleton mob_skeleton_map[] = {
 		.avatar = "bandit_avatar.jpg",
 		.type = S_TYPE_ENTITY,
 		.sp = {
-			.mob = {
+			.entity = {
 				.drop = {
 					&dagger_drop,
 					ARMORSET_LIST(padded),
@@ -274,7 +274,7 @@ struct object_skeleton mob_skeleton_map[] = {
 		.description = "",
 		.avatar = "swallow_avatar.png",
 		.type = S_TYPE_ENTITY,
-		.sp = { .mob = {
+		.sp = { .entity = {
 			.wt = PECK,
 			.type = ELM_AIR,
 			.y = 4,
@@ -291,7 +291,7 @@ struct object_skeleton mob_skeleton_map[] = {
 	/* 	.name = "skeleton", */
 	/* 	.description = "Bones that almost shine with a white polish that never seems to dull.", */
 	/* 	.type = S_TYPE_ENTITY, */
-	/* 	.sp = { .mob = { */
+	/* 	.sp = { .entity = { */
 	/* 		.drop = { NULL }, */
 	/* 		.y = 2, */
 	/* 		.stat = FIGHTER, */
@@ -307,7 +307,7 @@ struct object_skeleton mob_skeleton_map[] = {
 		.art = "",
 		.avatar = "",
 		.type = S_TYPE_ENTITY,
-		.sp = { .mob = {
+		.sp = { .entity = {
 			.drop = { NULL },
 			.y = 6,
 			.stat = FIGHTER,
@@ -323,7 +323,7 @@ struct object_skeleton mob_skeleton_map[] = {
 		.description = "",
 		.avatar = "woodpecker_avatar.jpg",
 		.type = S_TYPE_ENTITY,
-		.sp = { .mob = {
+		.sp = { .entity = {
 			.wt = PECK,
 			.type = ELM_AIR,
 			.y = 2,
@@ -342,7 +342,7 @@ struct object_skeleton mob_skeleton_map[] = {
 		.description = "",
 		.avatar = "sparrow_avatar.jpg",
 		.type = S_TYPE_ENTITY,
-		.sp = { .mob = {
+		.sp = { .entity = {
 			.wt = PECK, .type = ELM_AIR,
 			.y = 3,
 			.biomes = (1 << BIOME_SHRUBLAND)
@@ -382,9 +382,9 @@ struct object_skeleton mob_skeleton_map[] = {
 void
 mob_add_stats(struct object_skeleton *mob, dbref nu)
 {
-	unsigned char stat = mob->sp.mob.stat;
-	int lvl = mob->sp.mob.lvl, spend, i, sp,
-	    v = mob->sp.mob.lvl_v ? mob->sp.mob.lvl_v : 0xf;
+	unsigned char stat = mob->sp.entity.stat;
+	int lvl = mob->sp.entity.lvl, spend, i, sp,
+	    v = mob->sp.entity.lvl_v ? mob->sp.entity.lvl_v : 0xf;
 
 	lvl += random() & v;
 
@@ -402,7 +402,7 @@ mob_add_stats(struct object_skeleton *mob, dbref nu)
 }
 
 static inline int
-bird_is(struct mob_skeleton *mob)
+bird_is(struct entity_skeleton *mob)
 {
 	return mob->wt == PECK;
 }
@@ -438,7 +438,7 @@ static inline dbref
 mob_add(enum mob_type mid, dbref where, enum biome biome, long long pdn) {
 	struct object_skeleton *obj_skel = ENTITY_SKELETON(mid);
 	CBUG(obj_skel->type != S_TYPE_ENTITY);
-	struct mob_skeleton *mob_skel = &obj_skel->sp.mob;
+	struct entity_skeleton *mob_skel = &obj_skel->sp.entity;
 	dbref nu;
 
 	if ((bird_is(mob_skel) && !pdn)
@@ -458,7 +458,7 @@ entities_add(dbref w, enum biome biome, long long pdn) {
 	/* int o = MOFS_ICE; */
 	int o = 1;
 	unsigned mid,
-		 n = (sizeof(mob_skeleton_map) / sizeof(struct object_skeleton)) - 1;
+		 n = (sizeof(entity_skeleton_map) / sizeof(struct object_skeleton)) - 1;
 	CBUG(w <= 0);
 
 	for (mid = o; mid < o + n; mid++) {

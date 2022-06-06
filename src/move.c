@@ -493,10 +493,10 @@ recycle(dbref player, dbref thing)
 				recycle(player, first);
 			}
 		}
-		if (GETTMP(thing))
+		if (ROOM(thing)->flags & RF_TEMP)
 			for (first = db[thing].contents; first != NOTHING; first = rest) {
 				rest = db[first].next;
-				if (Typeof(first) != TYPE_ENTITY)
+				if (Typeof(first) != TYPE_ENTITY || !(ENTITY(first)->flags & EF_PLAYER))
 					recycle(player, first);
 			}
 		notify_except(db[thing].contents, NOTHING,
@@ -506,8 +506,7 @@ recycle(dbref player, dbref thing)
 	case TYPE_THING:
 		if (!Wizard(OWNER(thing)))
 			SETVALUE(OWNER(thing), GETVALUE(OWNER(thing)) + GETVALUE(thing));
-		if (GETTMP(getloc(thing))) {
-			SETTMP(thing, 1);
+		if (ROOM(getloc(thing))->flags & RF_TEMP) {
 			for (first = db[thing].contents; first != NOTHING; first = rest) {
 				rest = db[first].next;
 				recycle(player, first);

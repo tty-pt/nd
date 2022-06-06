@@ -247,6 +247,7 @@ db_write_object(FILE * f, dbref i)
 
 	case TYPE_ROOM:
 		putref(f, o->sp.room.dropto);
+		putref(f, o->sp.room.flags);
 		putref(f, o->sp.room.exits);
 		putref(f, o->sp.room.floor);
 		putref(f, OWNER(i));
@@ -570,9 +571,10 @@ db_read_object_foxen(FILE * f, struct object *o, dbref objno)
 			break;
 		}
 	case TYPE_ROOM:
-		o->sp.room.dropto = prop_flag ? getref(f) : j;
-		o->sp.room.exits = getref(f);
-		o->sp.room.floor = getref(f);
+		ROOM(objno)->dropto = prop_flag ? getref(f) : j;
+		ROOM(objno)->flags = getref(f);
+		ROOM(objno)->exits = getref(f);
+		ROOM(objno)->floor = getref(f);
 		OWNER(objno) = getref(f);
 		return;
 	case TYPE_EXIT:

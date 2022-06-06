@@ -40,10 +40,6 @@
 #define GETVALUE(x)	get_property_value(x, MESGPROP_VALUE)
 #define SETVALUE(x,y)	add_prop_nofetch(x, MESGPROP_VALUE, NULL, y)
 
-#define MESGPROP_AGGRO	"_/aggro"
-#define SETAGGRO(x, y)	set_property_value(x, MESGPROP_AGGRO, y)
-#define GETAGGRO(x)	get_property_value(x, MESGPROP_AGGRO)
-
 #define MESGPROP_WTS	"_/wts"
 #define SETWTS(x,y)	set_property_value(x, MESGPROP_WTS, y)
 #define GETWTS(x)	get_property_value(x, MESGPROP_WTS)
@@ -74,10 +70,6 @@
 #define GETCONSUN(x)	get_property_value(x, MESGPROP_CONSUN)
 #define SETCONSUN(x, y)	set_property_value(x, MESGPROP_CONSUN, y)
 
-#define MESGPROP_TREE	"_/tree"
-#define GETTREE(x)	get_property_value(x, MESGPROP_TREE)
-#define SETTREE(x, y)	set_property_value(x, MESGPROP_TREE, y)
-
 #define MESGPROP_PLID	"_/plid"
 #define GETPLID(x)	(get_property_value(x, MESGPROP_PLID) - 1)
 #define SETPLID(x, y)	set_property_value(x, MESGPROP_PLID, y + 1)
@@ -85,10 +77,6 @@
 #define MESGPROP_DOOR	"_/door"
 #define GETDOOR(x)	get_property_value(x, MESGPROP_DOOR)
 #define SETDOOR(x, y)	set_property_value(x, MESGPROP_DOOR, y)
-
-#define MESGPROP_TMP	"_/tmp"
-#define GETTMP(x)	get_property_value(x, MESGPROP_TMP)
-#define SETTMP(x, y)	set_property_value(x, MESGPROP_TMP, y)
 
 #define MESGPROP_LVL	"_/lvl"
 #define GETLVL(x)	1 + get_property_value(x, MESGPROP_LVL)
@@ -286,13 +274,18 @@ struct entity {
 };
 
 #define ENTITY(x)		(&db[x].sp.entity)
+#define ROOM(x)			(&db[x].sp.room)
+
+enum room_flags {
+	RF_TEMP = 1,
+};
 
 /* union of type-specific fields */
 
 union specific {				/* I've been railroaded! */
 	struct {					/* ROOM-specific fields */
 		dbref dropto;
-		/* unsigned flags; */
+		unsigned flags;
 		/* unsigned char exits; */
 		unsigned char doors;
 		dbref exits;
@@ -324,6 +317,7 @@ struct object {
 	object_flag_type flags;
 
 	union specific sp;
+	/* struct object_skeleton *skel; */
 };
 
 /* Possible data types that may be stored in a hash table */

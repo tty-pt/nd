@@ -12,7 +12,7 @@
 
 
 /* FIXME use ref as index */
-#define ENTITY_SKELETON(mob_id) (&mob_skeleton_map[mob_id])
+#define ENTITY_SKELETON(mob_id) (&entity_skeleton_map[mob_id])
 
 #define EFFECT(mob, w) mob->e[AF_ ## w]
 

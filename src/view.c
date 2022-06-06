@@ -360,7 +360,7 @@ view_build_tile(dbref player,
 		view_build_exit_z(player, t, loc, E_DOWN);
 		t->flags = view_build_flags(loc);
 		t->bio_idx = floor_get(loc);
-		if (GETTMP(loc))
+		if (ROOM(loc)->flags & RF_TEMP)
 			t->room = -1;
 	} else {
 		view_build_exit_s(player, t, loc, p, E_EAST);

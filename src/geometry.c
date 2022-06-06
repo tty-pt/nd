@@ -177,11 +177,11 @@ object_add(struct object_skeleton o, dbref where)
 	case S_TYPE_ENTITY:
 		FLAGS(nu) = TYPE_ENTITY;
 		// TODO use only struct entity
-		SETAGGRO(nu, o.sp.mob.flags & EF_AGGRO);
-		SETWTS(nu, o.sp.mob.wt);
+		SETWTS(nu, o.sp.entity.wt);
 		mob_add_stats(&o, nu);
+		ENTITY(nu)->flags = o.sp.entity.flags;
 		mob = birth(nu);
-		object_drop(nu, o.sp.mob.drop);
+		object_drop(nu, o.sp.entity.drop);
 		mob->home = where;
 		break;
 	case S_TYPE_PLANT:
@@ -189,9 +189,9 @@ object_add(struct object_skeleton o, dbref where)
 		break;
         case S_TYPE_BIOME:
                 FLAGS(nu) = TYPE_ROOM;
-                db[nu].sp.room.exits = NOTHING;
-                db[nu].sp.room.dropto = NOTHING;
-                SETTMP(nu, 1);
+		ROOM(nu)->exits = NOTHING;
+		ROOM(nu)->dropto = NOTHING;
+		ROOM(nu)->flags = RF_TEMP;
 	case S_TYPE_OTHER:
 		break;
 	}

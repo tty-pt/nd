@@ -112,7 +112,7 @@ struct drop {
 	unsigned char y, yield, yield_v;
 };
 
-struct mob_skeleton {
+struct entity_skeleton {
 	struct drop *drop[32];
 	unsigned char y, stat, lvl, lvl_v, wt, flags;
 	enum element type;
@@ -141,7 +141,7 @@ struct object_skeleton {
                 struct {
                         unsigned short eqw, msv;
                 } equipment;
-                struct mob_skeleton mob;
+                struct entity_skeleton entity;
 		struct plant_skeleton plant;
                 struct {
                         const char *bg;

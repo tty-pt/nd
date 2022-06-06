@@ -166,7 +166,7 @@ wall_around(dbref player, dbref exit)
 
 int
 geo_claim(dbref player, dbref room) {
-	if (!GETTMP(room)) {
+	if (!(ROOM(room)->flags & RF_TEMP)) {
 		if (OWNER(room) != player) {
 			notify(player, "You don't own this room");
 			return 1;
@@ -178,7 +178,8 @@ geo_claim(dbref player, dbref room) {
 	if (fee_noname(player))
 		return 1;
 
-	SETTMP(room, 0);
+	ROOM(room)->flags ^= RF_TEMP;
+	CBUG(ROOM(room)->flags & RF_TEMP);
 	OWNER(room) = player;
 	room = db[room].contents;
 
@@ -200,7 +201,7 @@ exits_fix(dbref player, dbref there, dbref exit)
 		      oexit = e_exit_where(player, there, e),
 		      othere = geo_there(there, e);
 
-		if (othere < 0 || GETTMP(othere)) {
+		if (othere < 0 || (ROOM(othere)->flags & RF_TEMP)) {
 			if (oexit < 0)
 				continue;
 			e_exit_dest_set(oexit, NOTHING);
@@ -301,7 +302,6 @@ geo_room_at(dbref player, pos_t pos)
 	if (pos[2] != 0)
 		return there;
 
-	SETTREE(there, bio->pd.n);
 	db[there].sp.room.floor = bio->bio_idx;
 	entities_add(there, bio->bio_idx, bio->pd.n);
 	others_add(there, bio->bio_idx, pos);
@@ -384,7 +384,7 @@ geo_clean(dbref player, dbref here)
 {
 	dbref tmp;
 
-	if (!GETTMP(here))
+	if (!(ROOM(here)->flags & RF_TEMP))
 		return here;
 
 	tmp = db[here].contents;
@@ -480,7 +480,7 @@ uncarve(dbref player, enum exit e)
 	int ht, cd = e_ground(here, e);
 
 	if (cd) {
-		ht = GETTMP(here);
+		ht = ROOM(here)->flags & RF_TEMP;
 		e_move(player, e);
 		there = getloc(player);
 
@@ -500,12 +500,13 @@ uncarve(dbref player, enum exit e)
 		s0 = "at";
 	}
 
-	if (GETTMP(there) || OWNER(there) != player) {
+	if ((ROOM(there)->flags & RF_TEMP) || OWNER(there) != player) {
 		notifyf(player, "You don't own th%s room.", s0);
 		return;
 	}
 
-	SETTMP(there, 1);
+	ROOM(there)->flags ^= RF_TEMP;
+	CBUG(!(ROOM(there)->flags & RF_TEMP));
 	exits_infer(player, there);
 	if (cd) {
 		exit = e_exit_here(player, e_simm(e));
@@ -525,12 +526,12 @@ unwall(dbref player, enum exit e)
 	      here = getloc(player);
 
 	a = OWNER(here) == player;
-	b = GETTMP(here);
+	b = ROOM(here)->flags & RF_TEMP;
 	there = geo_there(here, e);
 
 	if (there > 0) {
 		c = OWNER(there) == player;
-		d = GETTMP(there);
+		d = ROOM(there)->flags & RF_TEMP;
 	} else {
 		c = 0;
 		d = 1;
@@ -573,14 +574,14 @@ gexit_claim(dbref player, dbref exit, dbref exit_there)
 	const char dir = NAME(exit)[0];
 
 	a = here > 0 && OWNER(here) == player && OWNER(exit) == player;
-	c = GETTMP(there);
+	c = ROOM(there)->flags & RF_TEMP;
 	b = !c && OWNER(there) == player && OWNER(exit_there) == player;
 	d = e_ground(getloc(player), dir);
 
 	if ( a && (b || c))
 		return 0;
 
-	if (here < 0 || GETTMP(here)) {
+	if (here < 0 || (ROOM(here)->flags & RF_TEMP)) {
 		if (b)
 			return 0;
 		if (d || c)

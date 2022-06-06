@@ -196,7 +196,7 @@ kill_target(dbref attacker, dbref target)
 
 	CBUG(Typeof(target) != TYPE_ENTITY);
 
-	if (tar->target && GETAGGRO(target)) {
+	if (tar->target && (ENTITY(target)->flags & EF_AGGRO)) {
 		dbref target_target = tar->target;
 		struct entity *tar_tar = ENTITY(target_target);
 		tar_tar->klock --;
@@ -204,7 +204,7 @@ kill_target(dbref attacker, dbref target)
 
 	dbref loc = getloc(target);
 
-	if (GETTMP(loc) && !(tar->flags & EF_PLAYER)) {
+	if ((ROOM(loc)->flags & RF_TEMP) && !(tar->flags & EF_PLAYER)) {
 		recycle(attacker, target);
 		geo_clean(target, loc);
 		return;
