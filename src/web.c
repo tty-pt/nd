@@ -260,15 +260,15 @@ web_stats(dbref player) {
                 return 1;
 
         mcp_mesg_init(&msg, MCP_WEB_PKG, "stats");
-	snprintf(buf, sizeof(buf), "%d", GETSTAT(player, STR));
+	snprintf(buf, sizeof(buf), "%d", ATTR(player, ATTR_STR));
         mcp_mesg_arg_append(&msg, "str", buf);
-	snprintf(buf, sizeof(buf), "%d", GETSTAT(player, CON));
+	snprintf(buf, sizeof(buf), "%d", ATTR(player, ATTR_CON));
         mcp_mesg_arg_append(&msg, "con", buf);
-	snprintf(buf, sizeof(buf), "%d", GETSTAT(player, DEX));
+	snprintf(buf, sizeof(buf), "%d", ATTR(player, ATTR_DEX));
         mcp_mesg_arg_append(&msg, "dex", buf);
-	snprintf(buf, sizeof(buf), "%d", GETSTAT(player, INT));
+	snprintf(buf, sizeof(buf), "%d", ATTR(player, ATTR_INT));
         mcp_mesg_arg_append(&msg, "int", buf);
-	snprintf(buf, sizeof(buf), "%d", GETSTAT(player, WIZ));
+	snprintf(buf, sizeof(buf), "%d", ATTR(player, ATTR_WIZ));
         mcp_mesg_arg_append(&msg, "wiz", buf);
 	snprintf(buf, sizeof(buf), "%d", EFFECT(mob, DODGE).value);
         mcp_mesg_arg_append(&msg, "dodge", buf);

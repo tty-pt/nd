@@ -26,7 +26,7 @@ enum element element_next(dbref ref, register unsigned char a);
 
 #define SPELL_SKELETON(idx) (&spell_skeleton_map[idx])
 #define SPELL_G(v) G(v)
-#define SPELL_DMG(p, sp) SPELL_G(GETSTAT(p, INT)) + HS(sp)
+#define SPELL_DMG(p, sp) SPELL_G(ATTR(p, ATTR_INT)) + HS(sp)
 #define SPELL_COST(dmg, y, no_bdmg) (no_bdmg ? 0 : dmg) + dmg / (1 << y)
 
 enum spell_affects {

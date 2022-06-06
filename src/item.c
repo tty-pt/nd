@@ -30,7 +30,7 @@ equip_affect(dbref who, dbref eq)
 
 	switch (eql) {
 	case RHAND:
-		if (GETSTAT(who, STR) < msv)
+		if (ATTR(who, ATTR_STR) < msv)
 			return 1;
 		EFFECT(p, DMG).value += DMG_WEAPON(eq);
 		p->wts = WTS_WEAPON(eq);
@@ -43,19 +43,19 @@ equip_affect(dbref who, dbref eq)
 
 		switch (eqt) {
 		case ARMOR_LIGHT:
-			if (GETSTAT(who, DEX) < msv)
+			if (ATTR(who, ATTR_DEX) < msv)
 				return 1;
 			aux += 2;
 			break;
 		case ARMOR_MEDIUM:
 			msv /= 2;
-			if (GETSTAT(who, STR) < msv
-			    || GETSTAT(who, DEX) < msv)
+			if (ATTR(who, ATTR_STR) < msv
+			    || ATTR(who, ATTR_DEX) < msv)
 				return 1;
 			aux += 1;
 			break;
 		case ARMOR_HEAVY:
-			if (GETSTAT(who, STR) < msv)
+			if (ATTR(who, ATTR_STR) < msv)
 				return 1;
 		}
 		aux = DEF_ARMOR(eq, aux);

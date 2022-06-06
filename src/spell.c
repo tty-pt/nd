@@ -173,7 +173,7 @@ spells_init(struct spell sps[8], dbref player)
 {
 	char const *str = GETCURSPELLS(player);
 	unsigned i = 0;
-	unsigned intelligence = GETSTAT(player, INT);
+	unsigned intelligence = ATTR(player, ATTR_INT);
 	memset(sps, 0, sizeof(struct spell) * 8);
 
 	if (str && *str != '\0')

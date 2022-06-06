@@ -12,13 +12,6 @@
 #include "mob.h"
 #include "web.h"
 
-#define MESGPROP_CXP	"_/cxp"
-#define GETCXP(x)	get_property_value(x, MESGPROP_CXP)
-#define SETCXP(x, y)	set_property_value(x, MESGPROP_CXP, y)
-
-#define GETSPEND(x)	get_property_value(x, MESGPROP_STAT "/spend")
-#define SETSPEND(x, y)	set_property_value(x, MESGPROP_STAT "/spend", y)
-
 #define MESGPROP_SEATM	"_seat_m"
 #define GETSEATM(x)	get_property_value(x, MESGPROP_SEATM)
 /* #define SETSEATM(x,y)	set_property_value(x, MESGPROP_SEATM, y) */
@@ -158,23 +151,23 @@ body(dbref player, dbref mob)
 static inline void
 _xp_award(dbref who, unsigned const xp)
 {
-	unsigned cxp = GETCXP(who);
+	unsigned cxp = ENTITY(who)->cxp;
 	notifyf(who, "You gain %u xp!", xp);
 	cxp += xp;
 	while (cxp >= 1000) {
 		notify(who, "You level up!");
 		cxp -= 1000;
-		SETLVL(who, GETLVL(who) + 1);
-		SETSPEND(who, GETSPEND(who) + 2);
+		ENTITY(who)->lvl += 1;
+		ENTITY(who)->spend += 2;
 	}
-	SETCXP(who, cxp);
+	ENTITY(who)->cxp = cxp;
 }
 
 static inline void
 xp_award(dbref attacker, dbref target)
 {
-	unsigned x = GETLVL(attacker);
-	unsigned y = GETLVL(target);
+	unsigned x = ENTITY(attacker)->lvl;
+	unsigned y = ENTITY(target)->lvl;
 	_xp_award(attacker, xp_get(x, y));
 }
 
@@ -220,6 +213,7 @@ kill_target(dbref attacker, dbref target)
 	moveto(target, (dbref) 0);
 	geo_clean(target, loc);
 	look_around(target);
+	web_bars(target);
 }
 
 static inline void
@@ -398,17 +392,17 @@ do_train(command_t *cmd) {
 	int attr;
 
 	switch (attrib[0]) {
-	case 's': attr = STR; break;
-	case 'c': attr = CON; break;
-	case 'd': attr = DEX; break;
-	case 'i': attr = INT; break;
-	case 'w': attr = WIZ; break;
+	case 's': attr = ATTR_STR; break;
+	case 'c': attr = ATTR_CON; break;
+	case 'd': attr = ATTR_DEX; break;
+	case 'i': attr = ATTR_INT; break;
+	case 'w': attr = ATTR_WIZ; break;
 	default:
 		  notify(player, "Invalid attribute.");
 		  return;
 	}
 
-	int avail = GETSPEND(player);
+	int avail = ENTITY(player)->spend;
 	int amount = *amount_s ? atoi(amount_s) : 1;
 
 	if (amount > avail) {
@@ -416,19 +410,19 @@ do_train(command_t *cmd) {
 		  return;
 	}
 
-	int c = GETSTAT(player, attr);
-	SETSTAT(player, attr, c + amount);
+	unsigned c = ATTR(player, attr);
+	ATTR(player, attr) += amount;
 
 	switch (attr) {
-	case STR:
+	case ATTR_STR:
 		EFFECT(mob, DMG).value += DMG_G(c + amount) - DMG_G(c);
 		break;
-	case DEX:
+	case ATTR_DEX:
 		EFFECT(mob, DODGE).value += DODGE_G(c + amount) - DODGE_G(c);
 		break;
 	}
 
-	SETSPEND(player, avail - amount);
+	ENTITY(player)->spend = avail - amount;
 	notifyf(player, "Your %s increases %d time(s).", attrib, amount);
         web_stats(player);
 }

@@ -238,6 +238,11 @@ db_write_object(FILE * f, dbref i)
 	case TYPE_ENTITY:
 		putref(f, ENTITY(i)->home);
 		putref(f, ENTITY(i)->flags);
+		putref(f, ENTITY(i)->lvl);
+		putref(f, ENTITY(i)->cxp);
+		putref(f, ENTITY(i)->spend);
+		for (j = 0; j < ATTR_MAX; j++)
+			putref(f, ATTR(i, j));
 		break;
 
 	case TYPE_THING:
@@ -591,6 +596,11 @@ db_read_object_foxen(FILE * f, struct object *o, dbref objno)
 		ENTITY(objno)->fd = -1;
 		ENTITY(objno)->last_observed = NOTHING;
 		ENTITY(objno)->flags = getref(f);
+		ENTITY(objno)->lvl = getref(f);
+		ENTITY(objno)->cxp = getref(f);
+		ENTITY(objno)->spend = getref(f);
+		for (j = 0; j < ATTR_MAX; j++)
+			ATTR(objno, j) = getref(f);
 		OWNER(objno) = objno;
 		if (ENTITY(objno)->flags & EF_PLAYER)
 			add_player(objno);

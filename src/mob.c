@@ -18,8 +18,8 @@
 #define THIRST_INC	(1 << (DAYTICK_Y - THIRST_Y))
 
 
-#define F(x) (1<<(x - 1)) // "folds" value FIXME - 1
-#define FIGHTER F(STR) | F(CON) | F(DEX)
+#define F(x) (1<<x) // "folds" value FIXME - 1
+#define FIGHTER F(ATTR_STR) | F(ATTR_CON) | F(ATTR_DEX)
 #define MOB_DEFINE(s, de) { #s, #s, de }
 #define BIRD(s, d) .o = { #s, "bird/" #s, d }, \
 	.wt = PECK, .type = ELM_AIR
@@ -392,13 +392,13 @@ mob_add_stats(struct object_skeleton *mob, dbref nu)
 		stat = 0x1f;
 
 	spend = 1 + lvl;
-	for (i = 0; i < STAT_MAX; i++)
+	for (i = 0; i < ATTR_MAX; i++)
 		if (stat & (1<<i)) {
 			sp = random() % spend;
-			SETSTAT(nu, i + 1, sp);
+			ATTR(nu, i) = sp;
 		}
 
-	SETLVL(nu, lvl);
+	ENTITY(nu)->lvl = lvl;
 }
 
 static inline int

@@ -14,14 +14,14 @@
 #define DMG_G(v) G(v)
 #define DODGE_G(v) G(v)
 
-#define DMG_BASE(p) DMG_G(GETSTAT(p, STR))
-#define DODGE_BASE(p) DODGE_G(GETSTAT(p, DEX))
+#define DMG_BASE(p) DMG_G(ATTR(p, ATTR_STR))
+#define DODGE_BASE(p) DODGE_G(ATTR(p, ATTR_DEX))
 
 #define HP_G(v) 10 * G(v)
-#define HP_MAX(p) HP_G(GETSTAT(p, CON))
+#define HP_MAX(p) HP_G(ATTR(p, ATTR_CON))
 
 #define MP_G(v) HP_G(v)
-#define MP_MAX(p) MP_G(GETSTAT(p, WIZ))
+#define MP_MAX(p) MP_G(ATTR(p, ATTR_WIZ))
 
 static inline unsigned
 xsqrtx(unsigned x)

@@ -78,23 +78,8 @@
 #define GETDOOR(x)	get_property_value(x, MESGPROP_DOOR)
 #define SETDOOR(x, y)	set_property_value(x, MESGPROP_DOOR, y)
 
-#define MESGPROP_LVL	"_/lvl"
-#define GETLVL(x)	1 + get_property_value(x, MESGPROP_LVL)
-#define SETLVL(x, y)	set_property_value(x, MESGPROP_LVL, y - 1)
-
 #define SETHASH(w, x, y, z)	set_property_hash(w, x, y, z)
 #define GETHASH(w, x, y)	get_property_hash(w, x, y)
-
-/* stat props {{{ */
-
-enum st { NOSTAT, STR, CON, DEX, INT, WIZ };
-#define STAT_MAX 5
-
-#define MESGPROP_STAT	"_/st"
-#define GETSTAT(x, y)	(1 + GETHASH(x, MESGPROP_STAT, y))
-#define SETSTAT(x, y, z) SETHASH(x, MESGPROP_STAT, y, z - 1)
-
-/* }}} */
 
 /* equipment props {{{ */
 
@@ -256,6 +241,15 @@ enum entity_flags {
 	EF_SITTING = 4,
 };
 
+enum attribute {
+	ATTR_STR,
+	ATTR_CON,
+	ATTR_DEX,
+	ATTR_INT,
+	ATTR_WIZ,
+	ATTR_MAX
+};
+
 struct entity {
 	dbref home;
 	int fd;
@@ -271,10 +265,13 @@ struct entity {
 	unsigned respawn_in, flags; // TODO merge these two
 	unsigned short hp, mp, hunger, thirst;
 	unsigned char debuf_mask, combo, select, klock;
+	unsigned lvl, spend, cxp;
+	unsigned attributes[ATTR_MAX];
 };
 
 #define ENTITY(x)		(&db[x].sp.entity)
 #define ROOM(x)			(&db[x].sp.room)
+#define ATTR(x, y)		db[x].sp.entity.attributes[y]
 
 enum room_flags {
 	RF_TEMP = 1,
@@ -317,7 +314,7 @@ struct object {
 	object_flag_type flags;
 
 	union specific sp;
-	/* struct object_skeleton *skel; */
+	/* int skid; */
 };
 
 /* Possible data types that may be stored in a hash table */
