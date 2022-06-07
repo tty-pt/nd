@@ -425,8 +425,8 @@ birth(dbref who)
 
 	int i;
 
-	for (i = 0; i < EQ_MAX; i++) {
-		register dbref eq = GETEQ(who, i);
+	for (i = 0; i < ES_MAX; i++) {
+		register dbref eq = EQUIP(who, i);
 		if (eq > 0)
 			CBUG(equip_affect(who, eq));
 	}
@@ -502,12 +502,12 @@ do_eat(command_t *cmd)
 	dbref item = ematch_mine(player, what);
 	int food;
 
-	if (item < 0
-	    || (food = GETFOOD(item)) < 0) {
+	if (item < 0 || Typeof(item) != TYPE_FOOD) {
 		notify(player, "You can't eat that.");
 		return;
 	}
 
+	food = db[item].sp.food;
 	// TODO food should have some water content
 	food = p->hunger - (1 << (16 - food));
 	if (food < 0)

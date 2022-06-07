@@ -48,6 +48,9 @@ moveto(dbref what, dbref where)
 		case TYPE_ENTITY:
 			where = ENTITY(what)->home;
 			break;
+		case TYPE_FOOD:
+		case TYPE_DRINK:
+		case TYPE_EQUIPMENT:
 		case TYPE_THING:
 		case TYPE_ROOM:
 			where = GLOBAL_ENVIRONMENT;
@@ -84,7 +87,7 @@ send_contents(dbref loc, dbref dest)
 
 	while (first != NOTHING) {
 		rest = db[first].next;
-		if (Typeof(first) != TYPE_THING) {
+		if (!is_item(first)) {
 			moveto(first, loc);
 		} else {
 			moveto(first, parent_loop_check(first, dest) ? loc : dest);
@@ -149,6 +152,7 @@ location_loop_check(dbref source, dbref dest)
   return 1;
 }
 
+// TODO why is this here?
 int
 parent_loop_check(dbref source, dbref dest)
 {   
@@ -163,6 +167,9 @@ parent_loop_check(dbref source, dbref dest)
 			  break;
 		  case TYPE_THING:
 		  case TYPE_ROOM:
+		  case TYPE_FOOD:
+		  case TYPE_DRINK:
+		  case TYPE_EQUIPMENT:
 			  dest = GLOBAL_ENVIRONMENT;
 			  break;
 		  default:
@@ -180,9 +187,6 @@ parent_loop_check(dbref source, dbref dest)
   pstack[1] = dest;
 
   while (level < MAX_PARENT_DEPTH) {
-    /* if (Typeof(dest) == TYPE_THING) {
-         dest = THING_HOME(dest);
-       } */
     dest = getparent(dest);
     if (dest == NOTHING) {
       return 0;
@@ -282,6 +286,9 @@ do_get(command_t *cmd)
 		return;
 	}
 	switch (Typeof(thing)) {
+	case TYPE_FOOD:
+	case TYPE_DRINK:
+	case TYPE_EQUIPMENT:
 	case TYPE_THING:
 	case TYPE_ENTITY:
 		if (obj && *obj) {
@@ -342,10 +349,13 @@ do_drop(command_t *cmd)
 	}
         
 	switch (Typeof(thing)) {
+	case TYPE_FOOD:
+	case TYPE_DRINK:
+	case TYPE_EQUIPMENT:
 	case TYPE_ENTITY:
 	case TYPE_THING:
 		if (Typeof(cont) != TYPE_ROOM && Typeof(cont) != TYPE_ENTITY &&
-			Typeof(cont) != TYPE_THING) {
+			!is_item(cont)) {
 			notify(player, "You can't put anything in that.");
 			break;
 		}
@@ -366,7 +376,7 @@ do_drop(command_t *cmd)
 
 		moveto(thing, immediate_dropto ? db[cont].sp.room.dropto : cont);
 
-		if (Typeof(cont) == TYPE_THING) {
+		if (is_item(cont)) {
 			notify(player, "Put away.");
 			return;
 		} else if (Typeof(cont) == TYPE_ENTITY) {
@@ -432,6 +442,9 @@ do_recycle(command_t *cmd)
 				return;
 			}
 			break;
+		case TYPE_FOOD:
+		case TYPE_DRINK:
+		case TYPE_EQUIPMENT:
 		case TYPE_THING:
 			if (OWNER(thing) != OWNER(player)) {
 				notify(player, "Permission denied. (You can't recycle a thing you don't control)");
@@ -503,6 +516,9 @@ recycle(dbref player, dbref thing)
 					  "You feel a wrenching sensation...", player);
 		map_delete(thing);
 		break;
+	case TYPE_FOOD:
+	case TYPE_DRINK:
+	case TYPE_EQUIPMENT:
 	case TYPE_THING:
 		if (!Wizard(OWNER(thing)))
 			SETVALUE(OWNER(thing), GETVALUE(OWNER(thing)) + GETVALUE(thing));
@@ -532,6 +548,9 @@ recycle(dbref player, dbref thing)
 			if (OWNER(rest) == thing)
 				OWNER(rest) = GOD;
 			break;
+		case TYPE_FOOD:
+		case TYPE_DRINK:
+		case TYPE_EQUIPMENT:
 		case TYPE_THING:
 			if (OWNER(rest) == thing)
 				OWNER(rest) = GOD;

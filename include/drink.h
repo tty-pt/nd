@@ -2,7 +2,7 @@
 #define DRINK_H
 
 #define DRINK(id) (&drink_map[id])
-#define DRINK_SOURCE(ref) (DRINK(GETDRINK(ref)))
+#define DRINK_SOURCE(ref) (DRINK(db[ref].sp.drink))
 
 enum drink_affects {
 	DA_NONE,

@@ -74,7 +74,7 @@ web_look(dbref player, dbref loc, char const *description)
                 snprintf(buf, sizeof(buf), "%d", gexits(player, loc));
                 mcp_mesg_arg_append(&msg, "exits", buf);
         } else {
-		if (GETSHOP(loc))
+		if (Typeof(loc) == TYPE_ENTITY && (ENTITY(loc)->flags & EF_SHOP))
 			mcp_mesg_arg_append(&msg, "shop", "1");
 
 		ENTITY(player)->last_observed = loc;
@@ -367,12 +367,12 @@ web_dialog_stop(dbref player)
 }
 
 static inline void
-web_equipment_item(dbref player, enum eq eql)
+web_equipment_item(dbref player, enum equipment_slot eql)
 {
         char buf[BUFSIZ];
 	McpMesg msg;
 	McpFrame *mfr = web_frame(ENTITY(player)->fd);
-        dbref eq = GETEQ(player, eql);
+        dbref eq = EQUIP(player, eql);
         if (!eq)
                 return;
         CBUG(!mfr);
@@ -405,14 +405,14 @@ web_equipment(dbref player)
 	mcp_frame_output_mesg(mfr, &msg);
 	mcp_mesg_clear(&msg);
 
-        web_equipment_item(player, HEAD);
-        web_equipment_item(player, NECK);
-        web_equipment_item(player, CHEST);
-        web_equipment_item(player, BACK);
-        web_equipment_item(player, RHAND);
-        web_equipment_item(player, LFINGER);
-        web_equipment_item(player, RFINGER);
-        web_equipment_item(player, PANTS);
+        web_equipment_item(player, ES_HEAD);
+        web_equipment_item(player, ES_NECK);
+        web_equipment_item(player, ES_CHEST);
+        web_equipment_item(player, ES_BACK);
+        web_equipment_item(player, ES_RHAND);
+        web_equipment_item(player, ES_LFINGER);
+        web_equipment_item(player, ES_RFINGER);
+        web_equipment_item(player, ES_PANTS);
 
 	return 0;
 }

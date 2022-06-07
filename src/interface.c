@@ -172,9 +172,6 @@ core_command_t cmds[] = {
 
 		/* do_showextver(player); */
 	}, {
-		.name = "stats",
-		.cb = &do_stats,
-	}, {
 		.name = "sweep",
 		.cb = &do_sweep,
 	}, {

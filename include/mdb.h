@@ -54,14 +54,6 @@
 #define GETINF(x)	get_property_value(x, MESGPROP_INF)
 #define USETINF(x)	remove_property(x, MESGPROP_INF)
 
-#define MESGPROP_FOOD	"_/food"
-#define GETFOOD(x)	(get_property_value(x, MESGPROP_FOOD) - 1)
-#define SETFOOD(x,y)	set_property_value(x, MESGPROP_FOOD, y + 1)
-
-#define MESGPROP_DRINK	"_/drink"
-#define GETDRINK(x)	(get_property_value(x, MESGPROP_DRINK) - 1)
-#define SETDRINK(x, y)	set_property_value(x, MESGPROP_DRINK, y + 1)
-
 #define MESGPROP_CONSUM	"_/consu_m"
 #define GETCONSUM(x)	get_property_value(x, MESGPROP_CONSUM)
 #define SETCONSUM(x, y)	set_property_value(x, MESGPROP_CONSUM, y)
@@ -85,35 +77,25 @@
 
 // what is equipped (player)
 
-enum eq { NOEQ, HEAD, NECK, CHEST, BACK, RHAND, LFINGER, RFINGER, PANTS };
+enum equipment_slot {
+	ES_HEAD,
+	ES_NECK,
+	ES_CHEST,
+	ES_BACK,
+	ES_RHAND,
+	ES_LFINGER,
+	ES_RFINGER,
+	ES_PANTS,
+	ES_MAX
+};
+
 enum wt { PUNCH, PECK, SLASH, BITE, STRIKE, };
 enum at { ARMOR_LIGHT, ARMOR_MEDIUM, ARMOR_HEAVY, };
 /* enum at { NAKED, CLOTH, LEATHER, }; */
 
-#define EQ_MAX		9
 #define EQT(x)		(x>>6)
 #define EQ(i, t)	(i | (t<<6))
 #define EQL(x)		(x & 15)
-
-#define MESGPROP_EQ	"_/eq"
-#define GETEQ(x, y)	((dbref) GETHASH(x, MESGPROP_EQ, y))
-#define SETEQ(x, y, z)	SETHASH(x, MESGPROP_EQ, EQL(y), z)
-
-// where to equip / type of equip (item)
-#define GETEQW(x)	get_property_value(x, MESGPROP_EQ)
-#define SETEQW(x, y)	set_property_value(x, MESGPROP_EQ, y)
-#define GETEQT(x)	EQT(GETEQW(x))
-#define GETEQL(x)	EQL(GETEQW(x))
-
-// mininum stat value (item)
-#define MESGPROP_MSV	"_/msv"
-#define GETMSV(x)	get_property_value(x, MESGPROP_MSV)
-#define SETMSV(x, y)	set_property_value(x, MESGPROP_MSV, y)
-
-// rarity (item)
-#define MESGPROP_RARE	"_/rare"
-#define GETRARE(x)	get_property_value(x, MESGPROP_RARE)
-#define SETRARE(x, y)	set_property_value(x, MESGPROP_RARE, y)
 
 /* }}} */
 
@@ -131,9 +113,6 @@ enum at { ARMOR_LIGHT, ARMOR_MEDIUM, ARMOR_HEAVY, };
 #define GETSPELLS(x, a)  get_property_mark(x, MESGPROP_SPELLS, a)
 #define SETSPELLS(x, a, v)  set_property_mark(x, MESGPROP_SPELLS, a, v)
 
-#define MESGPROP_SHOP	"_/shop"
-#define GETSHOP(x)	get_property_value(x, MESGPROP_SHOP)
-
 #define MESGPROP_ART	"@/art"
 #define GETART(x)	envpropstr(x, MESGPROP_ART)
 #define SETART(x, y)	SETMESG(x, MESGPROP_ART, y)
@@ -146,10 +125,12 @@ enum at { ARMOR_LIGHT, ARMOR_MEDIUM, ARMOR_HEAVY, };
 #define TYPE_THING          0x1
 #define TYPE_EXIT           0x2
 #define TYPE_ENTITY         0x3
-#define NOTYPE1				0x5 /* Room for expansion */
+#define TYPE_EQUIPMENT         0x4
+#define TYPE_FOOD         0x5
 #define TYPE_GARBAGE        0x6
-#define NOTYPE              0x7	/* no particular type */
-#define TYPE_MASK           0x7	/* room for expansion */
+#define TYPE_DRINK         0x7
+#define TYPE_MASK           0xf	/* room for expansion */
+#define is_item(x) (Typeof(x) == TYPE_THING || Typeof(x) == TYPE_FOOD || Typeof(x) == TYPE_DRINK || Typeof(x) == TYPE_EQUIPMENT)
 
 #define WIZARD             0x10	/* gets automatic control */
 #define LINK_OK            0x20	/* anybody can link to this */
@@ -206,11 +187,6 @@ typedef long object_flag_type;
 
 #define Builder(x) ((FLAGS(x) & (WIZARD|BUILDER)) != 0)
 
-#define Linkable(x) ((x) == HOME || \
-                     (((Typeof(x) == TYPE_ROOM || Typeof(x) == TYPE_THING) ? \
-                      (FLAGS(x) & ABODE) : (FLAGS(x) & LINK_OK)) != 0))
-
-
 /* Boolean expressions, for locks */
 typedef char boolexp_type;
 
@@ -239,6 +215,7 @@ enum entity_flags {
 	EF_PLAYER = 1,
 	EF_AGGRO = 2,
 	EF_SITTING = 4,
+	EF_SHOP = 8,
 };
 
 enum attribute {
@@ -267,11 +244,14 @@ struct entity {
 	unsigned char debuf_mask, combo, select, klock;
 	unsigned lvl, spend, cxp;
 	unsigned attributes[ATTR_MAX];
+	unsigned equipment[ES_MAX];
 };
 
 #define ENTITY(x)		(&db[x].sp.entity)
 #define ROOM(x)			(&db[x].sp.room)
 #define ATTR(x, y)		db[x].sp.entity.attributes[y]
+#define EQUIPMENT(x)		(&db[x].sp.equipment)
+#define EQUIP(x, y)		ENTITY(x)->equipment[y]
 
 enum room_flags {
 	RF_TEMP = 1,
@@ -293,6 +273,13 @@ union specific {				/* I've been railroaded! */
 		dbref *dest;
 	} exit;
 	struct entity entity;
+	struct {
+		unsigned eqw;
+		unsigned msv;
+		unsigned rare;
+	} equipment;
+	unsigned food;
+	unsigned drink;
 };
 
 /* timestamps record */

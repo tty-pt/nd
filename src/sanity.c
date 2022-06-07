@@ -87,6 +87,9 @@ valid_obj(dbref obj)
 	case TYPE_ROOM:
 	case TYPE_EXIT:
 	case TYPE_ENTITY:
+	case TYPE_FOOD:
+	case TYPE_DRINK:
+	case TYPE_EQUIPMENT:
 	case TYPE_THING:
 		return 1;
 		break;
@@ -193,8 +196,8 @@ check_room(dbref player, dbref obj)
 
 	if (!valid_ref(i) && i != HOME) {
 		violate(player, obj, "has its dropto set to an invalid object");
-	} else if (i >= 0 && TYPEOF(i) != TYPE_THING && TYPEOF(i) != TYPE_ROOM) {
-		violate(player, obj, "has its dropto set to a non-room, non-thing object");
+	} else if (i >= 0 && !is_item(i) && TYPEOF(i) != TYPE_ROOM) {
+		violate(player, obj, "has its dropto set to a non-room, non-item object");
 	}
 }
 
@@ -357,6 +360,9 @@ check_object(dbref player, dbref obj)
 	case TYPE_ROOM:
 		check_room(player, obj);
 		break;
+	case TYPE_FOOD:
+	case TYPE_DRINK:
+	case TYPE_EQUIPMENT:
 	case TYPE_THING:
 		break;
 	case TYPE_ENTITY:
@@ -543,7 +549,7 @@ hacksaw_bad_chains(void)
 
 	cut_bad_recyclable();
 	for (loop = 0; loop < db_top; loop++) {
-		if (TYPEOF(loop) != TYPE_ROOM && TYPEOF(loop) != TYPE_THING &&
+		if (TYPEOF(loop) != TYPE_ROOM && !is_item(loop) &&
 			TYPEOF(loop) != TYPE_ENTITY) {
 			cut_all_chains(loop);
 		} else {
@@ -619,7 +625,7 @@ fix_room(dbref obj)
 	if (!valid_ref(i) && i != HOME) {
 		SanFixed(obj, "Removing invalid drop-to from %s");
 		db[obj].sp.room.dropto = NOTHING;
-	} else if (i >= 0 && TYPEOF(i) != TYPE_THING && TYPEOF(i) != TYPE_ROOM) {
+	} else if (i >= 0 && !is_item(i) && TYPEOF(i) != TYPE_ROOM) {
 		SanFixed2(obj, i, "Removing drop-to on %s to %s");
 		db[obj].sp.room.dropto = NOTHING;
 	}
@@ -670,7 +676,7 @@ find_misplaced_objects(void)
 
 	for (loop = 0; loop < db_top; loop++) {
 		if (TYPEOF(loop) != TYPE_ROOM &&
-			TYPEOF(loop) != TYPE_THING &&
+			!is_item(loop) &&
 			TYPEOF(loop) != TYPE_ENTITY &&
 			TYPEOF(loop) != TYPE_EXIT &&
 			TYPEOF(loop) != TYPE_GARBAGE) {
@@ -755,6 +761,9 @@ find_misplaced_objects(void)
 		case TYPE_ROOM:
 			fix_room(loop);
 			break;
+		case TYPE_FOOD:
+		case TYPE_DRINK:
+		case TYPE_EQUIPMENT:
 		case TYPE_THING:
 			break;
 		case TYPE_ENTITY:
@@ -779,6 +788,9 @@ adopt_orphans(void)
 		if (!(FLAGS(loop) & SANEBIT)) {
 			switch (TYPEOF(loop)) {
 			case TYPE_ROOM:
+			case TYPE_FOOD:
+			case TYPE_DRINK:
+			case TYPE_EQUIPMENT:
 			case TYPE_THING:
 			case TYPE_ENTITY:
 				db[loop].next = db[LOCATION(loop)].contents;

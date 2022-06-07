@@ -64,6 +64,9 @@ do_teleport(command_t *cmd) {
 			if (parent_loop_check(victim, destination))
 				destination = ENTITY(OWNER(victim))->home;
 			break;
+		case TYPE_FOOD:
+		case TYPE_DRINK:
+		case TYPE_EQUIPMENT:
 		case TYPE_THING:
 		case TYPE_ROOM:
 			destination = GLOBAL_ENVIRONMENT;
@@ -79,7 +82,7 @@ do_teleport(command_t *cmd) {
 			if (!controls(player, victim) ||
 				!controls(player, destination) ||
 				!controls(player, getloc(victim)) ||
-				(Typeof(destination) == TYPE_THING && !controls(player, getloc(destination)))) {
+				(is_item(destination) && !controls(player, getloc(destination)))) {
 				notify(player, "Permission denied. (must control victim, dest, victim's loc, and dest's loc)");
 				break;
 			}
@@ -94,13 +97,17 @@ do_teleport(command_t *cmd) {
 			notify(victim, "You feel a wrenching sensation...");
 			enter_room(victim, destination, db[victim].location);
 			break;
+		case TYPE_FOOD:
+		case TYPE_DRINK:
+		case TYPE_EQUIPMENT:
 		case TYPE_THING:
 			if (parent_loop_check(victim, destination)) {
 				notify(player, "You can't make a container contain itself!");
 				break;
 			}
 			if (Typeof(destination) != TYPE_ROOM
-				&& Typeof(destination) != TYPE_ENTITY && Typeof(destination) != TYPE_THING) {
+				&& Typeof(destination) != TYPE_ENTITY
+				&& !is_item(destination)) {
 				notify(player, "Bad destination.");
 				break;
 			}
@@ -268,104 +275,6 @@ do_bless(command_t *cmd) {
 }
 
 void
-do_stats(command_t *cmd) {
-	dbref player = cmd->player;
-	const char *name = cmd->argv[1];
-	int rooms;
-	int exits;
-	int things;
-	int players;
-	int garbage = 0;
-	int total;
-	dbref i;
-	dbref owner=NOTHING;
-	char buf[BUFFER_LEN];
-
-	if (!Wizard(OWNER(player)) && (!name || !*name)) {
-		snprintf(buf, sizeof(buf), "The universe contains %d objects.", db_top);
-		notify(player, buf);
-	} else {
-		total = rooms = exits = things = players = 0;
-		if (name != NULL && *name != '\0') {
-			owner = lookup_player(name);
-			if (owner == NOTHING) {
-				notify(player, "I can't find that player.");
-				return;
-			}
-			if (!Wizard(OWNER(player)) && (OWNER(player) != owner)) {
-				notify(player, "Permission denied. (you must be a wizard to get someone else's stats)");
-				return;
-			}
-			for (i = 0; i < db_top; i++) {
-
-
-				/* count objects marked as changed. */
-				switch (Typeof(i)) {
-				case TYPE_ROOM:
-					if (OWNER(i) == owner)
-						total++, rooms++;
-					break;
-
-				case TYPE_EXIT:
-					if (OWNER(i) == owner)
-						total++, exits++;
-					break;
-
-				case TYPE_THING:
-					if (OWNER(i) == owner)
-						total++, things++;
-					break;
-
-				case TYPE_ENTITY:
-					if (i == owner)
-						total++, players++;
-					break;
-
-				}
-			}
-		} else {
-			for (i = 0; i < db_top; i++) {
-				switch (Typeof(i)) {
-				case TYPE_ROOM:
-					total++;
-					rooms++;
-					break;
-				case TYPE_EXIT:
-					total++;
-					exits++;
-					break;
-				case TYPE_THING:
-					total++;
-					things++;
-					break;
-				case TYPE_ENTITY:
-					total++;
-					players++;
-					break;
-				case TYPE_GARBAGE:
-					total++;
-					garbage++;
-					break;
-				}
-			}
-		}
-
-		notifyf(player, "%7d room%s        %7d exit%s        %7d thing%s",
-			rooms, (rooms == 1) ? " " : "s",
-			exits, (exits == 1) ? " " : "s", things, (things == 1) ? " " : "s");
-
-		notifyf(player, "%7d player%s      %7d garbage",
-			   players, (players == 1) ? " " : "s", garbage);
-
-		notifyf(player,
-			"%7d total object%s",
-			total, (total == 1) ? " " : "s");
-
-	}
-}
-
-
-void
 do_boot(command_t *cmd) {
 	dbref player = cmd->player;
 	const char *name = cmd->argv[1];
@@ -465,6 +374,9 @@ do_toad(command_t *cmd) {
 			if (OWNER(stuff) == victim) {
 				switch (Typeof(stuff)) {
 				case TYPE_ROOM:
+				case TYPE_FOOD:
+				case TYPE_DRINK:
+				case TYPE_EQUIPMENT:
 				case TYPE_THING:
 				case TYPE_EXIT:
 					OWNER(stuff) = recipient;

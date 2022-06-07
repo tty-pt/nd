@@ -12,7 +12,7 @@
 #include "web.h"
 
 #define DMG_WEAPON(x) IE(x, DMG_G)
-#define WTS_WEAPON(eq) phys_wts[GETEQT(eq)]
+#define WTS_WEAPON(eq) phys_wts[EQT(EQUIPMENT(eq)->eqw)]
 
 #define DEF_G(v) G(v)
 #define DEF_ARMOR(x, aux) (IE(x, DEF_G) >> aux)
@@ -22,24 +22,24 @@ int
 equip_affect(dbref who, dbref eq)
 {
 	struct entity *p = ENTITY(who);
-	register int msv = GETMSV(eq),
-		 eqw = GETEQW(eq),
+	register int msv = EQUIPMENT(eq)->msv,
+		 eqw = EQUIPMENT(eq)->eqw,
 		 eql = EQL(eqw),
 		 eqt = EQT(eqw);
 	unsigned aux = 0;
 
 	switch (eql) {
-	case RHAND:
+	case ES_RHAND:
 		if (ATTR(who, ATTR_STR) < msv)
 			return 1;
 		EFFECT(p, DMG).value += DMG_WEAPON(eq);
 		p->wts = WTS_WEAPON(eq);
 		break;
 
-	case HEAD:
-	case PANTS:
+	case ES_HEAD:
+	case ES_PANTS:
 		aux = 1;
-	case CHEST:
+	case ES_CHEST:
 
 		switch (eqt) {
 		case ARMOR_LIGHT:
@@ -70,21 +70,20 @@ equip_affect(dbref who, dbref eq)
 int
 equip(dbref who, dbref eq)
 {
-	unsigned eql = GETEQL(eq);
+	CBUG(Typeof(who) != TYPE_ENTITY);
+	unsigned eql = EQL(EQUIPMENT(eq)->eqw);
 
-	if (!eql || GETEQ(who, eql)
+	if (!eql || EQUIP(who, eql) > 0
 	    || equip_affect(who, eq))
 		return 1;
 
-	SETEQ(who, eql, eq);
+	EQUIP(who, eql) = eq;
 	db[eq].flags |= DARK;
 
 	notifyf(who, "You equip %s.", NAME(eq));
-        if (Typeof(who) == TYPE_ENTITY) {
-                web_stats(who);
-                web_content_out(who, eq);
-                web_equipment(who);
-        }
+	web_stats(who);
+	web_content_out(who, eq);
+	web_equipment(who);
 	return 0;
 }
 
@@ -120,26 +119,27 @@ do_equip(command_t *cmd)
 dbref
 unequip(dbref who, unsigned eql)
 {
+	CBUG(Typeof(who) != TYPE_ENTITY);
 	struct entity *mob = ENTITY(who);
-	dbref eq = GETEQ(who, eql);
+	dbref eq = EQUIP(who, eql);
 	unsigned eqt, aux;
 
 	if (!eq)
 		return NOTHING;
 
-	eqt = EQT(GETEQW(eq));
+	eqt = EQT(EQUIPMENT(eq)->eqw);
 	aux = 0;
 	assert(mob);
 
 	switch (eql) {
-	case RHAND:
+	case ES_RHAND:
 		EFFECT(mob, DMG).value -= DMG_WEAPON(eq);
 		mob->wts = phys_wts[GETWTS(who)];
 		break;
-	case PANTS:
-	case HEAD:
+	case ES_PANTS:
+	case ES_HEAD:
 		aux = 1;
-	case CHEST:
+	case ES_CHEST:
 		switch (eqt) {
 		case ARMOR_LIGHT: aux += 2; break;
 		case ARMOR_MEDIUM: aux += 1; break;
@@ -149,13 +149,11 @@ unequip(dbref who, unsigned eql)
 		EFFECT(mob, DODGE).value += DODGE_ARMOR(aux);
 	}
 
-	SETEQ(who, eql, 0);
+	EQUIP(who, eql) = NOTHING;
 	db[eq].flags &= ~DARK;
-        if (Typeof(who) == TYPE_ENTITY) {
-                web_content_in(who, eq);
-                web_stats(who);
-                web_equipment(who);
-        }
+	web_content_in(who, eq);
+	web_stats(who);
+	web_equipment(who);
 	return eq;
 }
 

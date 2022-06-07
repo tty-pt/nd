@@ -34,6 +34,9 @@ print_owner(dbref player, dbref thing)
 		snprintf(buf, sizeof(buf), "%s is an entity.", NAME(thing));
 		break;
 	case TYPE_ROOM:
+	case TYPE_FOOD:
+	case TYPE_DRINK:
+	case TYPE_EQUIPMENT:
 	case TYPE_THING:
 	case TYPE_EXIT:
 		snprintf(buf, sizeof(buf), "Owner: %s", NAME(OWNER(thing)));
@@ -153,6 +156,9 @@ do_look_at(command_t *cmd)
 			look_contents(player, thing, "Carrying:");
 		}
 		break;
+	case TYPE_FOOD:
+	case TYPE_DRINK:
+	case TYPE_EQUIPMENT:
 	case TYPE_THING:
 		if (web_look(player, thing, GETDESC(thing))) {
 			look_simple(player, thing);
@@ -272,6 +278,9 @@ do_examine(command_t *cmd)
 				NAME(OWNER(thing)));
 		strlcat(buf, unparse_object(player, db[thing].location), sizeof(buf));
 		break;
+	case TYPE_FOOD:
+	case TYPE_DRINK:
+	case TYPE_EQUIPMENT:
 	case TYPE_THING:
 		snprintf(buf, sizeof(buf), "%.*s (#%d) Owner: %s  Value: %d",
 				(int) (BUFFER_LEN - strlen(NAME(OWNER(thing))) - 35),
@@ -301,20 +310,6 @@ do_examine(command_t *cmd)
 
 	if (GETDESC(thing))
 		notify(player, GETDESC(thing));
-	snprintf(buf, sizeof(buf), "Key: %s", unparse_boolexp(player, GETLOCK(thing), 1));
-	notify(player, buf);
-
-	snprintf(buf, sizeof(buf), "Chown_OK Key: %s",
-			unparse_boolexp(player, get_property_lock(thing, "_/chlk"), 1));
-	notify(player, buf);
-
-	snprintf(buf, sizeof(buf), "Container Key: %s",
-			unparse_boolexp(player, get_property_lock(thing, "_/clk"), 1));
-	notify(player, buf);
-
-	snprintf(buf, sizeof(buf), "Force Key: %s",
-			unparse_boolexp(player, get_property_lock(thing, "@/flk"), 1));
-	notify(player, buf);
 
 	notify(player, "[ Use 'examine <object>=/' to list root properties. ]");
 
@@ -347,13 +342,15 @@ do_examine(command_t *cmd)
 			notify(player, buf);
 		}
 		break;
+	case TYPE_EQUIPMENT:
+		notifyf(player, "equipment eqw %u msv %u.", EQUIPMENT(thing)->eqw, EQUIPMENT(thing)->msv);
+		break;
 	case TYPE_THING:
 		/* print location if player can link to it */
 		if (db[thing].location != NOTHING && controls(player, db[thing].location)) {
 			snprintf(buf, sizeof(buf), "Location: %s", unparse_object(player, db[thing].location));
 			notify(player, buf);
 		}
-		notify(player, "No actions attached.");
 		break;
 	case TYPE_ENTITY:
 
@@ -367,7 +364,6 @@ do_examine(command_t *cmd)
 			snprintf(buf, sizeof(buf), "Location: %s", unparse_object(player, db[thing].location));
 			notify(player, buf);
 		}
-		notify(player, "No actions attached.");
 		break;
 	case TYPE_EXIT:
 		if (db[thing].location != NOTHING) {
@@ -430,250 +426,6 @@ do_inventory(command_t *cmd)
 	do_score(cmd);
 }
 
-int
-init_checkflags(dbref player, const char *flags, struct flgchkdat *check)
-{
-	char buf[BUFFER_LEN];
-	char *cptr;
-	int output_type = 0;
-	int mode = 0;
-
-	strlcpy(buf, flags, sizeof(buf));
-	for (cptr = buf; *cptr && (*cptr != '='); cptr++) ;
-	if (*cptr == '=')
-		*(cptr++) = '\0';
-	flags = buf;
-	while (*cptr && isspace(*cptr))
-		cptr++;
-
-	if (!*cptr) {
-		output_type = 0;
-	} else if (string_prefix("owners", cptr)) {
-		output_type = 1;
-	} else if (string_prefix("locations", cptr)) {
-		output_type = 3;
-	} else if (string_prefix("links", cptr)) {
-		output_type = 2;
-	} else if (string_prefix("count", cptr)) {
-		output_type = 4;
-	} else if (string_prefix("size", cptr)) {
-		output_type = 5;
-	} else {
-		output_type = 0;
-	}
-
-	check->fortype = 0;
-	check->istype = 0;
-	check->isnotroom = 0;
-	check->isnotexit = 0;
-	check->isnotthing = 0;
-	check->isnotplayer = 0;
-	check->isnotprog = 0;
-	check->setflags = 0;
-	check->clearflags = 0;
-
-	check->forlevel = 0;
-	check->islevel = 0;
-	check->isnotzero = 0;
-	check->isnotone = 0;
-	check->isnottwo = 0;
-	check->isnotthree = 0;
-
-	check->forlink = 0;
-	check->islinked = 0;
-	check->forold = 0;
-	check->isold = 0;
-
-	check->loadedsize = 0;
-	check->issize = 0;
-	check->size = 0;
-
-	while (*flags) {
-		switch (toupper(*flags)) {
-		case '!':
-			if (mode)
-				mode = 0;
-			else
-				mode = 2;
-			break;
-		case 'R':
-			if (mode) {
-				check->isnotroom = 1;
-			} else {
-				check->fortype = 1;
-				check->istype = TYPE_ROOM;
-			}
-			break;
-		case 'T':
-			if (mode) {
-				check->isnotthing = 1;
-			} else {
-				check->fortype = 1;
-				check->istype = TYPE_THING;
-			}
-			break;
-		case 'E':
-			if (mode) {
-				check->isnotexit = 1;
-			} else {
-				check->fortype = 1;
-				check->istype = TYPE_EXIT;
-			}
-			break;
-		case 'P':
-			if (mode) {
-				check->isnotplayer = 1;
-			} else {
-				check->fortype = 1;
-				check->istype = TYPE_ENTITY;
-			}
-			break;
-		case '~':
-		case '^':
-			check->loadedsize = (Wizard(player) && *flags == '^');
-			check->size = atoi(flags + 1);
-			check->issize = !mode;
-			while (isdigit(flags[1]))
-				flags++;
-			break;
-		case 'U':
-			check->forlink = 1;
-			if (mode) {
-				check->islinked = 1;
-			} else {
-				check->islinked = 0;
-			}
-			break;
-		case '@':
-			check->forold = 1;
-			if (mode) {
-				check->isold = 0;
-			} else {
-				check->isold = 1;
-			}
-			break;
-		case 'A':
-			if (mode)
-				check->clearflags |= ABODE;
-			else
-				check->setflags |= ABODE;
-			break;
-		case 'B':
-			if (mode)
-				check->clearflags |= BUILDER;
-			else
-				check->setflags |= BUILDER;
-			break;
-		case 'C':
-			if (mode)
-				check->clearflags |= CHOWN_OK;
-			else
-				check->setflags |= CHOWN_OK;
-			break;
-		case 'D':
-			if (mode)
-				check->clearflags |= DARK;
-			else
-				check->setflags |= DARK;
-			break;
-		case 'H':
-			if (mode)
-				check->clearflags |= HAVEN;
-			else
-				check->setflags |= HAVEN;
-			break;
-		case 'J':
-			if (mode)
-				check->clearflags |= JUMP_OK;
-			else
-				check->setflags |= JUMP_OK;
-			break;
-		case 'K':
-			if (mode)
-				check->clearflags |= KILL_OK;
-			else
-				check->setflags |= KILL_OK;
-			break;
-		case 'L':
-			if (mode)
-				check->clearflags |= LINK_OK;
-			else
-				check->setflags |= LINK_OK;
-			break;
-		case 'Q':
-			if (mode)
-				check->clearflags |= QUELL;
-			else
-				check->setflags |= QUELL;
-			break;
-		case 'W':
-			if (mode)
-				check->clearflags |= WIZARD;
-			else
-				check->setflags |= WIZARD;
-			break;
-		case ' ':
-			if (mode)
-				mode = 2;
-			break;
-		}
-		if (mode)
-			mode--;
-		flags++;
-	}
-	return output_type;
-}
-
-
-int
-checkflags(dbref what, struct flgchkdat check)
-{
-	if (check.fortype && (Typeof(what) != check.istype))
-		return (0);
-	if (check.isnotroom && (Typeof(what) == TYPE_ROOM))
-		return (0);
-	if (check.isnotexit && (Typeof(what) == TYPE_EXIT))
-		return (0);
-	if (check.isnotthing && (Typeof(what) == TYPE_THING))
-		return (0);
-	if (check.isnotplayer && (Typeof(what) == TYPE_ENTITY))
-		return (0);
-
-	if (FLAGS(what) & check.clearflags)
-		return (0);
-	if ((~FLAGS(what)) & check.setflags)
-		return (0);
-
-	if (check.forlink) {
-		switch (Typeof(what)) {
-		case TYPE_ROOM:
-			if ((db[what].sp.room.dropto == NOTHING) != (!check.islinked))
-				return (0);
-			break;
-		case TYPE_EXIT:
-			if ((!db[what].sp.exit.ndest) != (!check.islinked))
-				return (0);
-			break;
-		case TYPE_ENTITY:
-		case TYPE_THING:
-			if (!check.islinked)
-				return (0);
-			break;
-		default:
-			if (check.islinked)
-				return (0);
-		}
-	}
-	if (check.size) {
-		if ((size_object(what, check.loadedsize) < check.size)
-			!= (!check.issize)) {
-			return 0;
-		}
-	}
-	return (1);
-}
-
-
 void
 display_objinfo(dbref player, dbref obj, int output_type)
 {
@@ -735,12 +487,9 @@ do_find(command_t *cmd)
 {
 	dbref player = cmd->player;
 	const char *name = cmd->argv[1];
-	const char *flags = cmd->argv[2];
 	dbref i;
-	struct flgchkdat check;
 	char buf[BUFFER_LEN + 2];
 	int total = 0;
-	int output_type = init_checkflags(player, flags, &check);
 
 	strlcpy(buf, "*", sizeof(buf));
 	strlcat(buf, name, sizeof(buf));
@@ -751,8 +500,8 @@ do_find(command_t *cmd)
 	} else {
 		for (i = 0; i < db_top; i++) {
 			if ((Wizard(OWNER(player)) || OWNER(i) == OWNER(player)) &&
-				checkflags(i, check) && NAME(i) && (!*name || equalstr(buf, (char *) NAME(i)))) {
-				display_objinfo(player, i, output_type);
+				NAME(i) && (!*name || equalstr(buf, (char *) NAME(i)))) {
+				display_objinfo(player, i, 0);
 				total++;
 			}
 		}
@@ -767,11 +516,8 @@ do_owned(command_t *cmd)
 {
 	dbref player = cmd->player;
 	const char *name = cmd->argv[1];
-	const char *flags = cmd->argv[2];
 	dbref victim, i;
-	struct flgchkdat check;
 	int total = 0;
-	int output_type = init_checkflags(player, flags, &check);
 
 	if (!payfor(player, LOOKUP_COST)) {
 		notifyf(player, "You don't have enough %s.", PENNIES);
@@ -786,8 +532,8 @@ do_owned(command_t *cmd)
 		victim = player;
 
 	for (i = 0; i < db_top; i++) {
-		if ((OWNER(i) == OWNER(victim)) && checkflags(i, check)) {
-			display_objinfo(player, i, output_type);
+		if (OWNER(i) == OWNER(victim)) {
+			display_objinfo(player, i, 0);
 			total++;
 		}
 	}
@@ -800,12 +546,9 @@ do_contents(command_t *cmd)
 {
 	dbref player = cmd->player;
 	const char *name = cmd->argv[1];
-	const char *flags = cmd->argv[2];
 	dbref i;
 	dbref thing;
-	struct flgchkdat check;
 	int total = 0;
-	int output_type = init_checkflags(player, flags, &check);
 
 	if (*name == '\0') {
 		thing = getloc(player);
@@ -818,16 +561,16 @@ do_contents(command_t *cmd)
 		notify(player, "Permission denied. (You can't get the contents of something you don't control)");
 		return;
 	}
-	init_checkflags(player, flags, &check);
 	DOLIST(i, db[thing].contents) {
-		if (checkflags(i, check)) {
-			display_objinfo(player, i, output_type);
-			total++;
-		}
+		display_objinfo(player, i, 0);
+		total++;
 	}
 	switch (Typeof(thing)) {
 	case TYPE_EXIT:
 	case TYPE_GARBAGE:
+	case TYPE_FOOD:
+	case TYPE_DRINK:
+	case TYPE_EQUIPMENT:
 	case TYPE_THING:
 	case TYPE_ENTITY:
 		i = NOTHING;
@@ -837,10 +580,8 @@ do_contents(command_t *cmd)
 		break;
 	}
 	DOLIST(i, i) {
-		if (checkflags(i, check)) {
-			display_objinfo(player, i, output_type);
-			total++;
-		}
+		display_objinfo(player, i, 0);
+		total++;
 	}
 	notify(player, "***End of List***");
 	notifyf(player, "%d objects found.", total);

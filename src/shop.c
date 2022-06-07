@@ -15,7 +15,7 @@ vendor_find(dbref where)
 	dbref tmp = db[where].contents;
 
 	while (tmp > 0) {
-		if (Typeof(tmp) == TYPE_THING && GETSHOP(tmp))
+		if (Typeof(tmp) == TYPE_ENTITY && (ENTITY(tmp)->flags & EF_SHOP))
 			return tmp;
 
 		tmp = db[tmp].next;

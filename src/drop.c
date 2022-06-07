@@ -6,7 +6,7 @@
 		.avatar = #s "_armor_helmet_avatar.png", \
 		.type = S_TYPE_EQUIPMENT, \
 		.sp = { .equipment = { \
-			.eqw = EQ(HEAD, _type), \
+			.eqw = EQ(ES_HEAD, _type), \
 			.msv = min_stat, \
 		} } \
 	}; \
@@ -20,7 +20,7 @@
 		.avatar = #s "_armor_chest_avatar.png", \
 		.type = S_TYPE_EQUIPMENT, \
 		.sp = { .equipment = { \
-			.eqw = EQ(CHEST, _type), \
+			.eqw = EQ(ES_CHEST, _type), \
 			.msv = min_stat, \
 		} } \
 	}; \
@@ -34,7 +34,7 @@
 		.avatar = #s "_armor_greaves_avatar.png", \
 		.type = S_TYPE_EQUIPMENT, \
 		.sp = { .equipment = { \
-			.eqw = EQ(PANTS, _type), \
+			.eqw = EQ(ES_PANTS, _type), \
 			.msv = min_stat, \
 		} } \
 	}; \
@@ -63,7 +63,7 @@ struct object_skeleton dagger = {
 	.avatar = "dagger_avatar.png",
 	.type = S_TYPE_EQUIPMENT,
 	.sp = { .equipment = {
-		.eqw = EQ(RHAND, SLASH),
+		.eqw = EQ(ES_RHAND, SLASH),
 		.msv = 5
 	} }
 };

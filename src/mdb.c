@@ -54,7 +54,7 @@ getparent(dbref obj)
 		obj = getparent_logic(obj);
 	} while (obj != (oldptr = ptr = getparent_logic(ptr)) &&
 		 obj != (ptr = getparent_logic(ptr)) &&
-		 obj != NOTHING && Typeof(obj) == TYPE_THING);
+		 obj != NOTHING && is_item(obj));
 	if (obj != NOTHING && (obj == oldptr || obj == ptr)) {
 		obj = GLOBAL_ENVIRONMENT;
 	}
@@ -245,8 +245,17 @@ db_write_object(FILE * f, dbref i)
 			putref(f, ATTR(i, j));
 		break;
 
+	case TYPE_FOOD:
+		putref(f, db[i].sp.food);
+		break;
+	case TYPE_DRINK:
+		putref(f, db[i].sp.drink);
+		break;
+	case TYPE_EQUIPMENT:
+		putref(f, EQUIPMENT(i)->eqw);
+		putref(f, EQUIPMENT(i)->msv);
+		break;
 	case TYPE_THING:
-		/* putref(f, o->exits); */
 		putref(f, OWNER(i));
 		break;
 
@@ -571,6 +580,16 @@ db_read_object_foxen(FILE * f, struct object *o, dbref objno)
 	}
 
 	switch (FLAGS(objno) & TYPE_MASK) {
+	case TYPE_FOOD:
+		db[objno].sp.food = getref(f);
+		return;
+	case TYPE_DRINK:
+		db[objno].sp.drink = getref(f);
+		return;
+	case TYPE_EQUIPMENT:
+		EQUIPMENT(objno)->eqw = getref(f);
+		EQUIPMENT(objno)->msv = getref(f);
+		return;
 	case TYPE_THING:{
 			OWNER(objno) = getref(f);
 			break;
@@ -672,6 +691,9 @@ object_copy(dbref player, dbref old)
 	struct object *newp = &db[nu];
 	NAME(nu) = alloc_string(NAME(old));
 	switch (Typeof(old)) {
+	case TYPE_FOOD:
+	case TYPE_DRINK:
+	case TYPE_EQUIPMENT:
 	case TYPE_THING:
 		/* SETVALUE(nu, 1); */
 		break;

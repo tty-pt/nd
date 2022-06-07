@@ -108,7 +108,7 @@ do_fill(command_t *cmd)
 		return;
 	}
 
-	int dr = GETDRINK(source);
+	int dr = db[source].sp.drink;
 
 	if (dr < 0) {
 		notify(player, "Invalid source.");
@@ -116,7 +116,7 @@ do_fill(command_t *cmd)
 	}
 
 	SETCONSUN(vial, m);
-	SETDRINK(vial, dr);
+	db[vial].sp.drink = dr;
 
 	notify_wts(player, "fill", "fills", " %s with %s from %s",
 		   NAME(vial), DRINK(dr)->name, NAME(source));

@@ -225,10 +225,6 @@ int
 restricted(dbref player, dbref thing, object_flag_type flag)
 {
 	switch (flag) {
-	case ABODE:
-		return 0;
-		/* NOTREACHED */
-		break;
 	case DARK:
 		/* Dark can be set on a Program or Room by anyone. */
 		return !Wizard(OWNER(player))
@@ -239,7 +235,7 @@ restricted(dbref player, dbref thing, object_flag_type flag)
 			    || (!EXIT_DARKING && Typeof(thing) == TYPE_EXIT)
 
 			    /* If thing darking is restricted, it requires a wizard. */
-			    || (!THING_DARKING && Typeof(thing) == TYPE_THING));
+			    || (!THING_DARKING && is_item(thing)));
 	case QUELL:
 #ifdef GOD_PRIV
 		/* Only God (or God's stuff) can quell or unquell another wizard. */

@@ -278,9 +278,6 @@ controls_link(dbref who, dbref what)
 			return 0;
 		}
 
-	case TYPE_THING:
-		return 0;
-
 	default:
 		return 0;
 	}
@@ -343,6 +340,9 @@ do_chown(command_t *cmd)
 		}
 		OWNER(thing) = OWNER(owner);
 		break;
+	case TYPE_FOOD:
+	case TYPE_DRINK:
+	case TYPE_EQUIPMENT:
 	case TYPE_THING:
 		if (!Wizard(OWNER(player)) && db[thing].location != player) {
 			notify(player, "You aren't carrying that.");
@@ -486,10 +486,9 @@ do_set(command_t *cmd)
 		f = CHOWN_OK;
 	} else if (string_prefix("JUMP_OK", p)) {
 		f = JUMP_OK;
-	} else if (string_prefix("HAVEN", p) || string_prefix("HARDUID", p)) {
+	} else if (string_prefix("HAVEN", p)) {
 		f = HAVEN;
-	} else if ((string_prefix("ABODE", p)) ||
-			   (string_prefix("AUTOSTART", p)) || (string_prefix("ABATE", p))) {
+	} else if ((string_prefix("ABODE", p))) {
 		f = ABODE;
 	} else {
 		notify(player, "I don't recognize that flag.");

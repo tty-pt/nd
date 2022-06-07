@@ -95,6 +95,7 @@ copy_props(dbref player, dbref source, dbref destination, const char *dir)
  * do_clone
  *
  * Use this to clone an object.
+ * TODO improve/remove this. use skeletons to copy objects?
  */
 void
 do_clone(command_t *cmd)

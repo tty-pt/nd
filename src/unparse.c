@@ -14,45 +14,6 @@
 #include "item.h"
 #include "plant.h"
 
-const char *
-unparse_flags(dbref thing)
-{
-	static char buf[BUFFER_LEN];
-	char *p;
-	const char *type_codes = "R-EPFG";
-
-	p = buf;
-	if (Typeof(thing) != TYPE_THING)
-		*p++ = type_codes[Typeof(thing)];
-	if (FLAGS(thing) & ~TYPE_MASK) {
-		/* print flags */
-		if (FLAGS(thing) & WIZARD)
-			*p++ = 'W';
-		if (FLAGS(thing) & LINK_OK)
-			*p++ = 'L';
-
-		if (FLAGS(thing) & KILL_OK)
-			*p++ = 'K';
-
-		if (FLAGS(thing) & DARK)
-			*p++ = 'D';
-		if (FLAGS(thing) & QUELL)
-			*p++ = 'Q';
-		if (FLAGS(thing) & BUILDER)
-			*p++ = 'B';
-		if (FLAGS(thing) & CHOWN_OK)
-			*p++ = 'C';
-		if (FLAGS(thing) & JUMP_OK)
-			*p++ = 'J';
-		if (FLAGS(thing) & HAVEN)
-			*p++ = 'H';
-		if (FLAGS(thing) & ABODE)
-			*p++ = 'A';
-	}
-	*p = '\0';
-	return buf;
-}
-
 static const char *rarity_str[] = {
 	ANSI_BOLD ANSI_FG_BLACK "Poor" ANSI_RESET,
 	"",
@@ -93,18 +54,20 @@ icon(dbref what)
 		if (dialog_exists(what)) {
 			ret.actions |= ACT_TALK;
 		}
-                if (GETSHOP(what)) {
+		if (ENTITY(what)->flags & EF_SHOP) {
                         ret.actions |= ACT_SHOP;
                         ret.icon = ANSI_BOLD ANSI_FG_GREEN "$";
 		}
                 break;
+	case TYPE_DRINK:
+		ret.actions |= ACT_DRINK | ACT_FILL;
+		ret.icon = ANSI_BOLD ANSI_FG_BLUE "~";
+		break;
+	case TYPE_FOOD:
+	case TYPE_EQUIPMENT:
         case TYPE_THING:
                 ret.actions |= ACT_GET;
-                if (GETDRINK(what) >= 0) {
-                        ret.actions |= ACT_DRINK | ACT_FILL;
-                        ret.icon = ANSI_BOLD ANSI_FG_BLUE "~";
-                        break;
-                } else if ((aux = GETPLID(what)) >= 0) {
+                if ((aux = GETPLID(what)) >= 0) {
 			struct object_skeleton *obj_skel = PLANT_SKELETON(aux);
                         struct plant_skeleton *pl = &obj_skel->sp.plant;
 
@@ -141,8 +104,8 @@ unparse_object(dbref player, dbref loc)
 		if (loc < 0 || loc >= db_top)
 			return "*INVALID*";
 
-		if (GETEQW(loc)) {
-			unsigned n = GETRARE(loc);
+		if (Typeof(loc) == TYPE_EQUIPMENT && EQUIPMENT(loc)->eqw) {
+			unsigned n = EQUIPMENT(loc)->rare;
 
 			if (n != 1)
                                 BUFF("(%s) ", rarity_str[n]);
@@ -150,10 +113,9 @@ unparse_object(dbref player, dbref loc)
 
                 BUFF("%s", NAME(loc));
 
-		if ((player == NOTHING) || (((Typeof(loc) != TYPE_ENTITY) &&
-			  (controls_link(player, loc) || (FLAGS(loc) & CHOWN_OK)))))
+		if (player == NOTHING || controls_link(player, loc) || FLAGS(loc) & CHOWN_OK)
 
-                        BUFF("(#%d%s)", loc, unparse_flags(loc));
+                        BUFF("(#%d)", loc);
 
                 buf[buf_l] = '\0';
 		return buf;

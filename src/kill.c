@@ -132,7 +132,7 @@ body(dbref player, dbref mob)
 	for (; (tmp = db[mob].contents) != NOTHING; ) {
 		if (Typeof(tmp) == TYPE_GARBAGE)
 			continue;
-		unequip(mob, GETEQL(tmp));
+		unequip(mob, EQL(EQUIPMENT(tmp)->eqw));
 		moveto(tmp, dead_mob);
 		n++;
 	}

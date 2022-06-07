@@ -156,9 +156,10 @@ object_add(struct object_skeleton o, dbref where)
 
 	switch (o.type) {
 	case S_TYPE_EQUIPMENT:
-		SETEQW(nu, o.sp.equipment.eqw);
-		SETMSV(nu, o.sp.equipment.msv);
-		SETRARE(nu, rarity_get());
+		FLAGS(nu) = TYPE_EQUIPMENT;
+		EQUIPMENT(nu)->eqw = o.sp.equipment.eqw;
+		EQUIPMENT(nu)->msv = o.sp.equipment.msv;
+		EQUIPMENT(nu)->rare = rarity_get();
 
 		CBUG(Typeof(where) != TYPE_ENTITY);
 
@@ -169,10 +170,12 @@ object_add(struct object_skeleton o, dbref where)
 
 		break;
 	case S_TYPE_FOOD:
-		SETFOOD(nu, o.sp.food);
+		FLAGS(nu) = TYPE_FOOD;
+		db[nu].sp.food = o.sp.food;
 		break;
 	case S_TYPE_DRINK:
-		SETDRINK(nu, o.sp.drink);
+		FLAGS(nu) = TYPE_DRINK;
+		db[nu].sp.drink = o.sp.drink;
 		break;
 	case S_TYPE_ENTITY:
 		FLAGS(nu) = TYPE_ENTITY;

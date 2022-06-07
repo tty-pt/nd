@@ -330,15 +330,14 @@ view_build_flags(dbref loc) {
 	DOLIST(tmp, tmp) switch (Typeof(tmp)) {
 		case TYPE_ENTITY:
 			flags |= VTF_ENTITY;
-			break;
 
-		case TYPE_THING:
-			if (GETSHOP(tmp))
+			if (ENTITY(tmp)->flags & EF_SHOP)
 				flags |= VTF_SHOP;
 
-			else if (GETDRINK(tmp) >= 0)
-				flags |= VTF_POND;
+			break;
 
+		case TYPE_DRINK:
+			flags |= VTF_POND;
 			break;
 	}
 
