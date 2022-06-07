@@ -5,74 +5,47 @@
 
 #include "externs.h"
 
-drink_t drink_map[] = {
-	[DRINK_WATER] = {
-		"water", DA_NONE,
-	},
-	[DRINK_MILK] = {
-		"milk", DA_HP,
-	},
-	[DRINK_AYUHASCA] = {
-		"ayuhasca", DA_MP,
-	},
-};
-
-static inline int
-drink(dbref who, dbref source)
-{
-	static const size_t affects_ofs[] = {
-		0,
-		offsetof(struct entity, hp),
-		offsetof(struct entity, mp),
-	};
-
-	struct entity *mob = ENTITY(who);
-	drink_t *drink = DRINK_SOURCE(source);
-	unsigned n = GETCONSUN(source);
-	unsigned const value = 2;
-	int aux;
-
-	if (!n) {
-		notifyf(who, "%s is empty.", NAME(source));
-		return 1;
-	}
-
-	* (unsigned *) (((char *) mob) + affects_ofs[drink->da]) += 1 << value;
-	aux = mob->thirst - (1 << (16 - value));
-	if (aux < 0)
-		aux = 0;
-	mob->thirst = aux;
-
-	SETCONSUN(source, n - 1);
-	notify_wts(who, "drink", "drinks", " %s", drink->name);
-	return 0;
-}
+#define DRINK_VALUE(x) (1 << 14)
+#define FOOD_VALUE(x) (1 << (16 - CONSUM(x)->food))
 
 void
-do_drink(command_t *cmd)
+do_consume(command_t *cmd)
 {
 	dbref player = cmd->player;
 	const char *name = cmd->argv[1];
 	dbref vial;
+	int aux;
 
-
-	if (!*name) {
-		notify(player, "Drink what?");
+	if (!*name || (vial = ematch_mine(player, name)) == NOTHING) {
+		notify(player, "Consume what?");
 		return;
 	}
 
-	vial = ematch_mine(player, name);
-
-	if (vial == NOTHING) {
-		notify(player, "Drink what?");
+	if (Typeof(vial) != TYPE_CONSUMABLE) {
+		notify(player, "You can not consume that.");
 		return;
 	}
 
-	drink(player, vial);
-	/* if (drink(player, vial)) { */
-	/* 	notify(player, "You can't drink from that."); */
-	/* 	return; */
-	/* } */
+	if (!CONSUM(vial)->quantity) {
+		notifyf(player, "%s is empty.", NAME(vial));
+		return;
+	}
+
+	if (CONSUM(vial)->drink) {
+		aux = ENTITY(player)->thirst - DRINK_VALUE(vial);
+		ENTITY(player)->thirst = aux < 0 ? 0 : aux;
+	}
+
+	if (CONSUM(vial)->food) {
+		aux = ENTITY(player)->hunger - FOOD_VALUE(vial);
+		ENTITY(player)->hunger = aux < 0 ? 0 : aux;
+	}
+
+	CONSUM(vial)->quantity--;
+	notify_wts(player, "consume", "consumes", " %s", NAME(vial));
+
+	if (!CONSUM(vial)->quantity && !CONSUM(vial)->capacity)
+		recycle(player, vial);
 }
 
 void
@@ -82,21 +55,19 @@ do_fill(command_t *cmd)
 	const char *vial_s = cmd->argv[1];
 	const char *source_s = cmd->argv[2];
 	dbref vial = ematch_mine(player, vial_s);
-	unsigned m, n;
+	unsigned m;
 
 	if (vial == NOTHING) {
 		notify(player, "Fill what?");
 		return;
 	}
 
-	m = GETCONSUM(vial);
-	if (!m) {
-		notifyf(player, "You can't fill %s.", NAME(vial));
+	if (Typeof(vial) != TYPE_CONSUMABLE || !(m = CONSUM(vial)->capacity)) {
+		notify(player, "You can not fill that up.");
 		return;
 	}
 
-	n = GETCONSUN(vial);
-	if (n) {
+	if (CONSUM(vial)->quantity) {
 		notifyf(player, "%s is not empty.", NAME(vial));
 		return;
 	}
@@ -108,17 +79,11 @@ do_fill(command_t *cmd)
 		return;
 	}
 
-	int dr = db[source].sp.drink;
+	CONSUM(vial)->quantity = m;
+	CONSUM(vial)->drink = CONSUM(source)->drink;
+	CONSUM(vial)->food = CONSUM(source)->food;
 
-	if (dr < 0) {
-		notify(player, "Invalid source.");
-		return;
-	}
-
-	SETCONSUN(vial, m);
-	db[vial].sp.drink = dr;
-
-	notify_wts(player, "fill", "fills", " %s with %s from %s",
-		   NAME(vial), DRINK(dr)->name, NAME(source));
+	notify_wts(player, "fill", "fills", " %s from %s",
+		   NAME(vial), NAME(source));
 }
 

@@ -54,14 +54,6 @@
 #define GETINF(x)	get_property_value(x, MESGPROP_INF)
 #define USETINF(x)	remove_property(x, MESGPROP_INF)
 
-#define MESGPROP_CONSUM	"_/consu_m"
-#define GETCONSUM(x)	get_property_value(x, MESGPROP_CONSUM)
-#define SETCONSUM(x, y)	set_property_value(x, MESGPROP_CONSUM, y)
-
-#define MESGPROP_CONSUN	"_/consu_n"
-#define GETCONSUN(x)	get_property_value(x, MESGPROP_CONSUN)
-#define SETCONSUN(x, y)	set_property_value(x, MESGPROP_CONSUN, y)
-
 #define MESGPROP_PLID	"_/plid"
 #define GETPLID(x)	(get_property_value(x, MESGPROP_PLID) - 1)
 #define SETPLID(x, y)	set_property_value(x, MESGPROP_PLID, y + 1)
@@ -91,7 +83,6 @@ enum equipment_slot {
 
 enum wt { PUNCH, PECK, SLASH, BITE, STRIKE, };
 enum at { ARMOR_LIGHT, ARMOR_MEDIUM, ARMOR_HEAVY, };
-/* enum at { NAKED, CLOTH, LEATHER, }; */
 
 #define EQT(x)		(x>>6)
 #define EQ(i, t)	(i | (t<<6))
@@ -126,11 +117,10 @@ enum at { ARMOR_LIGHT, ARMOR_MEDIUM, ARMOR_HEAVY, };
 #define TYPE_EXIT           0x2
 #define TYPE_ENTITY         0x3
 #define TYPE_EQUIPMENT         0x4
-#define TYPE_FOOD         0x5
+#define TYPE_CONSUMABLE     0x5
 #define TYPE_GARBAGE        0x6
-#define TYPE_DRINK         0x7
 #define TYPE_MASK           0xf	/* room for expansion */
-#define is_item(x) (Typeof(x) == TYPE_THING || Typeof(x) == TYPE_FOOD || Typeof(x) == TYPE_DRINK || Typeof(x) == TYPE_EQUIPMENT)
+#define is_item(x) (Typeof(x) == TYPE_THING || Typeof(x) == TYPE_CONSUMABLE || Typeof(x) == TYPE_EQUIPMENT)
 
 #define WIZARD             0x10	/* gets automatic control */
 #define LINK_OK            0x20	/* anybody can link to this */
@@ -252,6 +242,7 @@ struct entity {
 #define ATTR(x, y)		db[x].sp.entity.attributes[y]
 #define EQUIPMENT(x)		(&db[x].sp.equipment)
 #define EQUIP(x, y)		ENTITY(x)->equipment[y]
+#define CONSUM(x)		(&db[x].sp.consumable)
 
 enum room_flags {
 	RF_TEMP = 1,
@@ -278,8 +269,12 @@ union specific {				/* I've been railroaded! */
 		unsigned msv;
 		unsigned rare;
 	} equipment;
-	unsigned food;
-	unsigned drink;
+	struct {
+		unsigned food;
+		unsigned drink;
+		unsigned quantity;
+		unsigned capacity;
+	} consumable;
 };
 
 /* timestamps record */

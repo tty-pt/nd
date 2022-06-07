@@ -64,8 +64,7 @@ do_teleport(command_t *cmd) {
 			if (parent_loop_check(victim, destination))
 				destination = ENTITY(OWNER(victim))->home;
 			break;
-		case TYPE_FOOD:
-		case TYPE_DRINK:
+		case TYPE_CONSUMABLE:
 		case TYPE_EQUIPMENT:
 		case TYPE_THING:
 		case TYPE_ROOM:
@@ -97,8 +96,7 @@ do_teleport(command_t *cmd) {
 			notify(victim, "You feel a wrenching sensation...");
 			enter_room(victim, destination, db[victim].location);
 			break;
-		case TYPE_FOOD:
-		case TYPE_DRINK:
+		case TYPE_CONSUMABLE:
 		case TYPE_EQUIPMENT:
 		case TYPE_THING:
 			if (parent_loop_check(victim, destination)) {
@@ -374,8 +372,7 @@ do_toad(command_t *cmd) {
 			if (OWNER(stuff) == victim) {
 				switch (Typeof(stuff)) {
 				case TYPE_ROOM:
-				case TYPE_FOOD:
-				case TYPE_DRINK:
+				case TYPE_CONSUMABLE:
 				case TYPE_EQUIPMENT:
 				case TYPE_THING:
 				case TYPE_EXIT:

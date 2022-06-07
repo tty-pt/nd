@@ -48,8 +48,7 @@ moveto(dbref what, dbref where)
 		case TYPE_ENTITY:
 			where = ENTITY(what)->home;
 			break;
-		case TYPE_FOOD:
-		case TYPE_DRINK:
+		case TYPE_CONSUMABLE:
 		case TYPE_EQUIPMENT:
 		case TYPE_THING:
 		case TYPE_ROOM:
@@ -167,8 +166,7 @@ parent_loop_check(dbref source, dbref dest)
 			  break;
 		  case TYPE_THING:
 		  case TYPE_ROOM:
-		  case TYPE_FOOD:
-		  case TYPE_DRINK:
+		  case TYPE_CONSUMABLE:
 		  case TYPE_EQUIPMENT:
 			  dest = GLOBAL_ENVIRONMENT;
 			  break;
@@ -286,8 +284,7 @@ do_get(command_t *cmd)
 		return;
 	}
 	switch (Typeof(thing)) {
-	case TYPE_FOOD:
-	case TYPE_DRINK:
+	case TYPE_CONSUMABLE:
 	case TYPE_EQUIPMENT:
 	case TYPE_THING:
 	case TYPE_ENTITY:
@@ -349,8 +346,7 @@ do_drop(command_t *cmd)
 	}
         
 	switch (Typeof(thing)) {
-	case TYPE_FOOD:
-	case TYPE_DRINK:
+	case TYPE_CONSUMABLE:
 	case TYPE_EQUIPMENT:
 	case TYPE_ENTITY:
 	case TYPE_THING:
@@ -442,8 +438,7 @@ do_recycle(command_t *cmd)
 				return;
 			}
 			break;
-		case TYPE_FOOD:
-		case TYPE_DRINK:
+		case TYPE_CONSUMABLE:
 		case TYPE_EQUIPMENT:
 		case TYPE_THING:
 			if (OWNER(thing) != OWNER(player)) {
@@ -516,8 +511,7 @@ recycle(dbref player, dbref thing)
 					  "You feel a wrenching sensation...", player);
 		map_delete(thing);
 		break;
-	case TYPE_FOOD:
-	case TYPE_DRINK:
+	case TYPE_CONSUMABLE:
 	case TYPE_EQUIPMENT:
 	case TYPE_THING:
 		if (!Wizard(OWNER(thing)))
@@ -548,8 +542,7 @@ recycle(dbref player, dbref thing)
 			if (OWNER(rest) == thing)
 				OWNER(rest) = GOD;
 			break;
-		case TYPE_FOOD:
-		case TYPE_DRINK:
+		case TYPE_CONSUMABLE:
 		case TYPE_EQUIPMENT:
 		case TYPE_THING:
 			if (OWNER(rest) == thing)

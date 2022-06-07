@@ -336,7 +336,7 @@ view_build_flags(dbref loc) {
 
 			break;
 
-		case TYPE_DRINK:
+		case TYPE_CONSUMABLE:
 			flags |= VTF_POND;
 			break;
 	}

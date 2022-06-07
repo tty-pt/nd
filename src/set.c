@@ -340,8 +340,7 @@ do_chown(command_t *cmd)
 		}
 		OWNER(thing) = OWNER(owner);
 		break;
-	case TYPE_FOOD:
-	case TYPE_DRINK:
+	case TYPE_CONSUMABLE:
 	case TYPE_EQUIPMENT:
 	case TYPE_THING:
 		if (!Wizard(OWNER(player)) && db[thing].location != player) {

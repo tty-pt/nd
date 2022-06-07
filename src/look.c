@@ -34,8 +34,7 @@ print_owner(dbref player, dbref thing)
 		snprintf(buf, sizeof(buf), "%s is an entity.", NAME(thing));
 		break;
 	case TYPE_ROOM:
-	case TYPE_FOOD:
-	case TYPE_DRINK:
+	case TYPE_CONSUMABLE:
 	case TYPE_EQUIPMENT:
 	case TYPE_THING:
 	case TYPE_EXIT:
@@ -156,8 +155,7 @@ do_look_at(command_t *cmd)
 			look_contents(player, thing, "Carrying:");
 		}
 		break;
-	case TYPE_FOOD:
-	case TYPE_DRINK:
+	case TYPE_CONSUMABLE:
 	case TYPE_EQUIPMENT:
 	case TYPE_THING:
 		if (web_look(player, thing, GETDESC(thing))) {
@@ -278,8 +276,7 @@ do_examine(command_t *cmd)
 				NAME(OWNER(thing)));
 		strlcat(buf, unparse_object(player, db[thing].location), sizeof(buf));
 		break;
-	case TYPE_FOOD:
-	case TYPE_DRINK:
+	case TYPE_CONSUMABLE:
 	case TYPE_EQUIPMENT:
 	case TYPE_THING:
 		snprintf(buf, sizeof(buf), "%.*s (#%d) Owner: %s  Value: %d",
@@ -568,8 +565,7 @@ do_contents(command_t *cmd)
 	switch (Typeof(thing)) {
 	case TYPE_EXIT:
 	case TYPE_GARBAGE:
-	case TYPE_FOOD:
-	case TYPE_DRINK:
+	case TYPE_CONSUMABLE:
 	case TYPE_EQUIPMENT:
 	case TYPE_THING:
 	case TYPE_ENTITY:

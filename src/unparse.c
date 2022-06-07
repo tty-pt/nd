@@ -27,7 +27,7 @@ enum actions {
         ACT_LOOK = 1,
         ACT_KILL = 2,
         ACT_SHOP = 4,
-        ACT_DRINK = 8,
+        ACT_CONSUME = 8,
         ACT_OPEN = 16,
         ACT_CHOP = 32,
         ACT_FILL = 64,
@@ -59,11 +59,15 @@ icon(dbref what)
                         ret.icon = ANSI_BOLD ANSI_FG_GREEN "$";
 		}
                 break;
-	case TYPE_DRINK:
-		ret.actions |= ACT_DRINK | ACT_FILL;
-		ret.icon = ANSI_BOLD ANSI_FG_BLUE "~";
+	case TYPE_CONSUMABLE:
+		if (CONSUM(what)->drink) {
+			ret.actions |= ACT_FILL;
+			ret.icon = ANSI_BOLD ANSI_FG_BLUE "~";
+		} else {
+			ret.icon = ANSI_BOLD ANSI_FG_RED "o";
+		}
+		ret.actions |= ACT_CONSUME;
 		break;
-	case TYPE_FOOD:
 	case TYPE_EQUIPMENT:
         case TYPE_THING:
                 ret.actions |= ACT_GET;

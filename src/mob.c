@@ -493,30 +493,6 @@ mobs_aggro(dbref player)
 	me->klock += klock;
 }
 
-void
-do_eat(command_t *cmd)
-{
-	dbref player = cmd->player;
-	const char *what = cmd->argv[1];
-	struct entity *p = ENTITY(player);
-	dbref item = ematch_mine(player, what);
-	int food;
-
-	if (item < 0 || Typeof(item) != TYPE_FOOD) {
-		notify(player, "You can't eat that.");
-		return;
-	}
-
-	food = db[item].sp.food;
-	// TODO food should have some water content
-	food = p->hunger - (1 << (16 - food));
-	if (food < 0)
-		food = 0;
-	p->hunger = food;
-	notify_wts(player, "eat", "eats", " %s", NAME(item));
-        recycle(player, item);
-}
-
 static void
 respawn(dbref who)
 {

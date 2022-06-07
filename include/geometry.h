@@ -88,8 +88,7 @@ typedef struct {
 
 enum object_skeleton_type {
         S_TYPE_OTHER,
-        S_TYPE_FOOD,
-        S_TYPE_DRINK,
+        S_TYPE_CONSUMABLE,
         S_TYPE_EQUIPMENT,
         S_TYPE_ENTITY,
 	S_TYPE_PLANT,
@@ -136,8 +135,10 @@ struct object_skeleton {
         enum object_skeleton_type type;
 
         union {
-                unsigned short food;
-                unsigned short drink;
+		struct {
+			unsigned food;
+			unsigned drink;
+		} consumable;
                 struct {
                         unsigned short eqw, msv;
                 } equipment;

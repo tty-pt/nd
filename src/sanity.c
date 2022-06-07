@@ -87,8 +87,7 @@ valid_obj(dbref obj)
 	case TYPE_ROOM:
 	case TYPE_EXIT:
 	case TYPE_ENTITY:
-	case TYPE_FOOD:
-	case TYPE_DRINK:
+	case TYPE_CONSUMABLE:
 	case TYPE_EQUIPMENT:
 	case TYPE_THING:
 		return 1;
@@ -360,8 +359,7 @@ check_object(dbref player, dbref obj)
 	case TYPE_ROOM:
 		check_room(player, obj);
 		break;
-	case TYPE_FOOD:
-	case TYPE_DRINK:
+	case TYPE_CONSUMABLE:
 	case TYPE_EQUIPMENT:
 	case TYPE_THING:
 		break;
@@ -761,8 +759,7 @@ find_misplaced_objects(void)
 		case TYPE_ROOM:
 			fix_room(loop);
 			break;
-		case TYPE_FOOD:
-		case TYPE_DRINK:
+		case TYPE_CONSUMABLE:
 		case TYPE_EQUIPMENT:
 		case TYPE_THING:
 			break;
@@ -788,8 +785,7 @@ adopt_orphans(void)
 		if (!(FLAGS(loop) & SANEBIT)) {
 			switch (TYPEOF(loop)) {
 			case TYPE_ROOM:
-			case TYPE_FOOD:
-			case TYPE_DRINK:
+			case TYPE_CONSUMABLE:
 			case TYPE_EQUIPMENT:
 			case TYPE_THING:
 			case TYPE_ENTITY:

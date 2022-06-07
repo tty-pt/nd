@@ -1,26 +1,13 @@
 #ifndef DRINK_H
 #define DRINK_H
 
-#define DRINK(id) (&drink_map[id])
-#define DRINK_SOURCE(ref) (DRINK(db[ref].sp.drink))
-
-enum drink_affects {
-	DA_NONE,
-	DA_HP,
-	DA_MP,
-};
-
 enum drink {
+	DRINK_NOTHING,
 	DRINK_WATER,
-	DRINK_MILK,
-	DRINK_AYUHASCA,
 };
 
-typedef struct {
-	char *name;
-	enum drink_affects da;
-} drink_t;
-
-extern drink_t drink_map[];
+enum food {
+	FOOD_NOTHING,
+};
 
 #endif

@@ -87,8 +87,7 @@ extern void do_contents(command_t *);
 extern void do_select(command_t *);
 extern void do_equip(command_t *);
 extern void do_unequip(command_t *);
-extern void do_drink(command_t *);
-extern void do_eat(command_t *);
+extern void do_consume(command_t *);
 extern void do_fill(command_t *);
 
 /* from shop.c */
@@ -189,7 +188,6 @@ extern dbref remove_first(dbref first, dbref what);
 /* From wiz.c */
 extern void do_teleport(command_t *);
 extern void do_force(command_t *);
-extern void do_stats(command_t *);
 extern void do_toad(command_t *);
 extern void do_boot(command_t *);
 extern void do_pcreate(command_t *);

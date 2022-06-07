@@ -202,14 +202,11 @@ core_command_t cmds[] = {
 		.name = "buy",
 		.cb = &do_buy,
 	}, {
-		.name = "drink",
-		.cb = &do_drink,
-	}, {
 		.name = "drop",
 		.cb = &do_drop,
 	}, {
-		.name = "eat",
-		.cb = &do_eat,
+		.name = "consume",
+		.cb = &do_consume,
 	}, {
 		.name = "examine",
 		.cb = &do_examine,

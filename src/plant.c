@@ -10,8 +10,8 @@ struct object_skeleton carrot = {
         .art = "carrot.png",
         .description = "",
 	.avatar = "carrot_avatar.png",
-        .type = S_TYPE_FOOD,
-        .sp = { .food = 3 },
+        .type = S_TYPE_CONSUMABLE,
+        .sp = { .consumable = { .food = 3 } },
 };
 
 struct drop carrot_drop = {

@@ -169,13 +169,10 @@ object_add(struct object_skeleton o, dbref where)
 			;
 
 		break;
-	case S_TYPE_FOOD:
-		FLAGS(nu) = TYPE_FOOD;
-		db[nu].sp.food = o.sp.food;
-		break;
-	case S_TYPE_DRINK:
-		FLAGS(nu) = TYPE_DRINK;
-		db[nu].sp.drink = o.sp.drink;
+	case S_TYPE_CONSUMABLE:
+		FLAGS(nu) = TYPE_CONSUMABLE;
+		CONSUM(nu)->food = o.sp.consumable.food;
+		CONSUM(nu)->drink = o.sp.consumable.drink;
 		break;
 	case S_TYPE_ENTITY:
 		FLAGS(nu) = TYPE_ENTITY;
