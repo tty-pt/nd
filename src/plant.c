@@ -259,8 +259,8 @@ _plants_add(dbref player, dbref where,
                 dbref plant = object_add(*obj_skel, where);
                 struct boolexp *key = parse_boolexp(player, NAME(player), 0);
                 SETCONLOCK(plant, key);
-                SETPLID(plant, pd->id[i]);
-                SETSIZE(plant, n);
+		PLANT(plant)->plid = pd->id[i];
+		PLANT(plant)->size = n;
         }
 }
 

@@ -68,22 +68,22 @@ icon(dbref what)
 		}
 		ret.actions |= ACT_CONSUME;
 		break;
+	case TYPE_PLANT:
+		aux = PLANT(what)->plid;
+		struct object_skeleton *obj_skel = PLANT_SKELETON(aux);
+		struct plant_skeleton *pl = &obj_skel->sp.plant;
+
+		ret.actions |= ACT_CHOP;
+		snprintf(buf, sizeof(buf), "%s%c%s", pl->pre,
+				PLANT(what)->size > PLANT_HALF ? pl->big : pl->small,
+				pl->post); 
+
+		// use the icon immediately
+		ret.icon = buf;
+		break;
 	case TYPE_EQUIPMENT:
         case TYPE_THING:
                 ret.actions |= ACT_GET;
-                if ((aux = GETPLID(what)) >= 0) {
-			struct object_skeleton *obj_skel = PLANT_SKELETON(aux);
-                        struct plant_skeleton *pl = &obj_skel->sp.plant;
-
-                        ret.actions |= ACT_CHOP;
-                        snprintf(buf, sizeof(buf), "%s%c%s", pl->pre,
-                                 GETSIZE(what) > PLANT_HALF ? pl->big : pl->small,
-                                 pl->post); 
-
-                        // use the icon immediately
-                        ret.icon = buf;
-                        break;
-                }
                 break;
         }
         return ret;

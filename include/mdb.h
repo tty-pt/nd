@@ -44,19 +44,10 @@
 #define SETWTS(x,y)	set_property_value(x, MESGPROP_WTS, y)
 #define GETWTS(x)	get_property_value(x, MESGPROP_WTS)
 
-#define MESGPROP_SIZE	"_/size"
-#define SETSIZE(x,y)	set_property_value(x, MESGPROP_SIZE, y)
-#define GETSIZE(x)	get_property_value(x, MESGPROP_SIZE)
-#define USETSIZE(x)	remove_property(x, MESGPROP_SIZE)
-
 #define MESGPROP_INF	"_/inf"
 #define SETINF(x,y)	set_property_value(x, MESGPROP_INF, y)
 #define GETINF(x)	get_property_value(x, MESGPROP_INF)
 #define USETINF(x)	remove_property(x, MESGPROP_INF)
-
-#define MESGPROP_PLID	"_/plid"
-#define GETPLID(x)	(get_property_value(x, MESGPROP_PLID) - 1)
-#define SETPLID(x, y)	set_property_value(x, MESGPROP_PLID, y + 1)
 
 #define MESGPROP_DOOR	"_/door"
 #define GETDOOR(x)	get_property_value(x, MESGPROP_DOOR)
@@ -119,6 +110,7 @@ enum at { ARMOR_LIGHT, ARMOR_MEDIUM, ARMOR_HEAVY, };
 #define TYPE_EQUIPMENT         0x4
 #define TYPE_CONSUMABLE     0x5
 #define TYPE_GARBAGE        0x6
+#define TYPE_PLANT	    0x7
 #define TYPE_MASK           0xf	/* room for expansion */
 #define is_item(x) (Typeof(x) == TYPE_THING || Typeof(x) == TYPE_CONSUMABLE || Typeof(x) == TYPE_EQUIPMENT)
 
@@ -243,6 +235,7 @@ struct entity {
 #define EQUIPMENT(x)		(&db[x].sp.equipment)
 #define EQUIP(x, y)		ENTITY(x)->equipment[y]
 #define CONSUM(x)		(&db[x].sp.consumable)
+#define PLANT(x)		(&db[x].sp.plant)
 
 enum room_flags {
 	RF_TEMP = 1,
@@ -275,6 +268,10 @@ union specific {				/* I've been railroaded! */
 		unsigned quantity;
 		unsigned capacity;
 	} consumable;
+	struct {
+		unsigned plid;
+		unsigned size;
+	} plant;
 };
 
 /* timestamps record */

@@ -48,6 +48,7 @@ moveto(dbref what, dbref where)
 		case TYPE_ENTITY:
 			where = ENTITY(what)->home;
 			break;
+		case TYPE_PLANT:
 		case TYPE_CONSUMABLE:
 		case TYPE_EQUIPMENT:
 		case TYPE_THING:
@@ -166,6 +167,7 @@ parent_loop_check(dbref source, dbref dest)
 			  break;
 		  case TYPE_THING:
 		  case TYPE_ROOM:
+		  case TYPE_PLANT:
 		  case TYPE_CONSUMABLE:
 		  case TYPE_EQUIPMENT:
 			  dest = GLOBAL_ENVIRONMENT;
@@ -288,13 +290,14 @@ do_get(command_t *cmd)
 	case TYPE_EQUIPMENT:
 	case TYPE_THING:
 	case TYPE_ENTITY:
+	case TYPE_PLANT:
 		if (obj && *obj) {
 			cando = could_doit(player, thing);
 			if (!cando)
 				notify(player, "You can't get that.");
 		} else {
 			if (OWNER(thing) != player
-					&& (Typeof(thing) == TYPE_ENTITY || GETPLID(thing) >= 0))
+					&& (Typeof(thing) == TYPE_ENTITY || Typeof(thing) == TYPE_PLANT))
 			{
 				notify(player, "You can't pick that up.");
 				break;
@@ -438,6 +441,7 @@ do_recycle(command_t *cmd)
 				return;
 			}
 			break;
+		case TYPE_PLANT:
 		case TYPE_CONSUMABLE:
 		case TYPE_EQUIPMENT:
 		case TYPE_THING:
@@ -511,6 +515,7 @@ recycle(dbref player, dbref thing)
 					  "You feel a wrenching sensation...", player);
 		map_delete(thing);
 		break;
+	case TYPE_PLANT:
 	case TYPE_CONSUMABLE:
 	case TYPE_EQUIPMENT:
 	case TYPE_THING:
@@ -542,6 +547,7 @@ recycle(dbref player, dbref thing)
 			if (OWNER(rest) == thing)
 				OWNER(rest) = GOD;
 			break;
+		case TYPE_PLANT:
 		case TYPE_CONSUMABLE:
 		case TYPE_EQUIPMENT:
 		case TYPE_THING:

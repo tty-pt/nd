@@ -245,6 +245,11 @@ db_write_object(FILE * f, dbref i)
 			putref(f, ATTR(i, j));
 		break;
 
+	case TYPE_PLANT:
+		putref(f, PLANT(i)->plid);
+		putref(f, PLANT(i)->size);
+		break;
+
 	case TYPE_CONSUMABLE:
 		putref(f, CONSUM(i)->food);
 		putref(f, CONSUM(i)->drink);
@@ -578,18 +583,21 @@ db_read_object_foxen(FILE * f, struct object *o, dbref objno)
 	}
 
 	switch (FLAGS(objno) & TYPE_MASK) {
+	case TYPE_PLANT:
+		PLANT(objno)->plid = prop_flag ? getref(f) : j;
+		PLANT(objno)->size = getref(f);
+		return;
 	case TYPE_CONSUMABLE:
-		CONSUM(objno)->food = getref(f);
+		CONSUM(objno)->food = prop_flag ? getref(f) : j;
 		CONSUM(objno)->drink = getref(f);
 		return;
 	case TYPE_EQUIPMENT:
-		EQUIPMENT(objno)->eqw = getref(f);
+		EQUIPMENT(objno)->eqw = prop_flag ? getref(f) : j;
 		EQUIPMENT(objno)->msv = getref(f);
 		return;
-	case TYPE_THING:{
-			OWNER(objno) = getref(f);
-			break;
-		}
+	case TYPE_THING:
+		OWNER(objno) = prop_flag ? getref(f) : j;
+		return;
 	case TYPE_ROOM:
 		ROOM(objno)->dropto = prop_flag ? getref(f) : j;
 		ROOM(objno)->flags = getref(f);

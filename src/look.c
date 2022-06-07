@@ -276,6 +276,7 @@ do_examine(command_t *cmd)
 				NAME(OWNER(thing)));
 		strlcat(buf, unparse_object(player, db[thing].location), sizeof(buf));
 		break;
+	case TYPE_PLANT:
 	case TYPE_CONSUMABLE:
 	case TYPE_EQUIPMENT:
 	case TYPE_THING:
@@ -341,6 +342,9 @@ do_examine(command_t *cmd)
 		break;
 	case TYPE_EQUIPMENT:
 		notifyf(player, "equipment eqw %u msv %u.", EQUIPMENT(thing)->eqw, EQUIPMENT(thing)->msv);
+		break;
+	case TYPE_PLANT:
+		notifyf(player, "plant plid %u size %u.", PLANT(thing)->plid, PLANT(thing)->size);
 		break;
 	case TYPE_THING:
 		/* print location if player can link to it */

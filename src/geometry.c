@@ -185,7 +185,9 @@ object_add(struct object_skeleton o, dbref where)
 		mob->home = where;
 		break;
 	case S_TYPE_PLANT:
+		FLAGS(nu) = TYPE_PLANT;
 		object_drop(nu, o.sp.plant.drop);
+		OWNER(nu) = GOD;
 		break;
         case S_TYPE_BIOME:
                 FLAGS(nu) = TYPE_ROOM;
