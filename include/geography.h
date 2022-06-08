@@ -32,7 +32,7 @@ enum gexit_flags {
 };
 
 void geo_update(void);
-dbref geo_room(dbref player, dbref exit);
+dbref geo_room(dbref player, enum exit e);
 int geo_claim(dbref player, dbref room);
 int geo_v(dbref player, const char *);
 

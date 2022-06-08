@@ -95,60 +95,6 @@ ematch_list(dbref player, dbref first, const char *name)
 	return NOTHING;
 }
 
-static dbref
-ematch_exit(dbref player, dbref first, const char *name)
-{
-	dbref exit, absolute;
-	const char *exitname, *p;
-
-	if (first == NOTHING)
-		return NOTHING;
-
-	CBUG(getloc(player) == NOTHING);
-
-	absolute = ematch_absolute(name);
-	if (!controls(OWNER(player), absolute))
-		absolute = NOTHING;
-
-	DOLIST(exit, first) {
-		if (exit == absolute)
-			return exit;
-
-		exitname = NAME(exit);
-		while (*exitname) {		/* for all exit aliases */
-			for (p = name;	/* check out 1 alias */
-				 *p &&
-				 tolower(*p) == tolower(*exitname) &&
-				 *exitname != EXIT_DELIMITER;
-				 p++, exitname++);
-
-			/* did we get a match on this alias? */
-			if (*p == '\0') {
-				/* make sure there's nothing afterwards */
-				while (isspace(*exitname))
-					exitname++;
-				CBUG(getloc(exit) == NOTHING);
-				CBUG(Typeof(getloc(exit)) != TYPE_ROOM);
-				if (*exitname == '\0' || *exitname == EXIT_DELIMITER)
-					return exit;
-			}
-			/* we didn't get it, go on to next alias */
-			while (*exitname && *exitname++ != EXIT_DELIMITER) ;
-			while (isspace(*exitname))
-				exitname++;
-		}
-	}
-
-	return NOTHING;
-}
-
-dbref
-ematch_exit_at(dbref player, dbref loc, const char *name)
-{
-	CBUG(Typeof(loc) != TYPE_ROOM);
-	return ematch_exit(player, db[loc].sp.room.exits, name);
-}
-
 dbref
 ematch_at(dbref player, dbref where, const char *name) {
 	dbref what;

@@ -12,7 +12,6 @@
 extern dbref ematch_at(dbref player, dbref where, const char *name);
 extern dbref ematch_player(dbref player, const char *name);
 extern dbref ematch_absolute(const char *name);
-extern dbref ematch_exit_at(dbref player, dbref loc, const char *name);
 
 inline dbref
 ematch_me(dbref player, const char *str)

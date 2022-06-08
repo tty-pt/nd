@@ -37,7 +37,6 @@ print_owner(dbref player, dbref thing)
 	case TYPE_CONSUMABLE:
 	case TYPE_EQUIPMENT:
 	case TYPE_THING:
-	case TYPE_EXIT:
 		snprintf(buf, sizeof(buf), "Owner: %s", NAME(OWNER(thing)));
 		break;
 	case TYPE_GARBAGE:
@@ -229,9 +228,6 @@ size_object(dbref i, int load)
 	}
 	byts += size_properties(i, load);
 
-	if (Typeof(i) == TYPE_EXIT && db[i].sp.exit.dest) {
-		byts += sizeof(dbref) * db[i].sp.exit.ndest;
-	}
 	return byts;
 }
 
@@ -245,8 +241,7 @@ do_examine(command_t *cmd)
 	dbref thing;
 	char buf[BUFFER_LEN];
 	dbref content;
-	dbref exit;
-	int i, cnt;
+	int cnt;
 
 	if (*name == '\0') {
 		if ((thing = getloc(player)) == NOTHING)
@@ -256,7 +251,7 @@ do_examine(command_t *cmd)
 		return;
 	}
 
-	if (!can_link(player, thing)) {
+	if (!controls(player, thing)) {
 		print_owner(player, thing);
 		return;
 	}
@@ -293,13 +288,6 @@ do_examine(command_t *cmd)
 				thing,
 				CPENNIES, GETVALUE(thing));
 		break;
-	case TYPE_EXIT:
-		snprintf(buf, sizeof(buf), "%.*s (#%d) Owner: %s",
-				(int) (BUFFER_LEN - strlen(NAME(OWNER(thing))) - 35),
-				unparse_object(player, thing),
-				thing,
-				NAME(OWNER(thing)));
-		break;
 	case TYPE_GARBAGE:
 		strlcpy(buf, unparse_object(player, thing), sizeof(buf));
 		break;
@@ -323,15 +311,7 @@ do_examine(command_t *cmd)
 	}
 	switch (Typeof(thing)) {
 	case TYPE_ROOM:
-		/* tell him about exits */
-		if (db[thing].sp.room.exits != NOTHING) {
-			notify(player, "Exits:");
-			DOLIST(exit, db[thing].sp.room.exits) {
-				notify(player, unparse_object(player, exit));
-			}
-		} else {
-			notify(player, "No exits.");
-		}
+		notifyf(player, "Exits: %hhx Doors: %hhx", ROOM(thing)->exits, ROOM(thing)->doors);
 
 		/* print dropto if present */
 		if (db[thing].sp.room.dropto != NOTHING) {
@@ -364,29 +344,6 @@ do_examine(command_t *cmd)
 		if (db[thing].location != NOTHING && controls(player, db[thing].location)) {
 			snprintf(buf, sizeof(buf), "Location: %s", unparse_object(player, db[thing].location));
 			notify(player, buf);
-		}
-		break;
-	case TYPE_EXIT:
-		if (db[thing].location != NOTHING) {
-			snprintf(buf, sizeof(buf), "Source: %s", unparse_object(player, db[thing].location));
-			notify(player, buf);
-		}
-		/* print destinations */
-		if (db[thing].sp.exit.ndest == 0)
-			break;
-		for (i = 0; i < db[thing].sp.exit.ndest; i++) {
-			switch ((db[thing].sp.exit.dest)[i]) {
-			case NOTHING:
-				break;
-			case HOME:
-				notify(player, "Destination: *HOME*");
-				break;
-			default:
-				snprintf(buf, sizeof(buf), "Destination: %s",
-						unparse_object(player, (db[thing].sp.exit.dest)[i]));
-				notify(player, buf);
-				break;
-			}
 		}
 		break;
 	default:
@@ -444,18 +401,6 @@ display_objinfo(dbref player, dbref obj, int output_type)
 		case TYPE_ROOM:
 			snprintf(buf, sizeof(buf), "%-38.512s  %.512s", buf2,
 					unparse_object(player, db[obj].sp.room.dropto));
-			break;
-		case TYPE_EXIT:
-			if (db[obj].sp.exit.ndest == 0) {
-				snprintf(buf, sizeof(buf), "%-38.512s  %.512s", buf2, "*UNLINKED*");
-				break;
-			}
-			if (db[obj].sp.exit.ndest > 1) {
-				snprintf(buf, sizeof(buf), "%-38.512s  %.512s", buf2, "*METALINKED*");
-				break;
-			}
-			snprintf(buf, sizeof(buf), "%-38.512s  %.512s", buf2,
-					unparse_object(player, db[obj].sp.exit.dest[0]));
 			break;
 		case TYPE_ENTITY:
 			snprintf(buf, sizeof(buf), "%-38.512s  %.512s", buf2, unparse_object(player, ENTITY(obj)->home));
@@ -563,23 +508,6 @@ do_contents(command_t *cmd)
 		return;
 	}
 	DOLIST(i, db[thing].contents) {
-		display_objinfo(player, i, 0);
-		total++;
-	}
-	switch (Typeof(thing)) {
-	case TYPE_EXIT:
-	case TYPE_GARBAGE:
-	case TYPE_CONSUMABLE:
-	case TYPE_EQUIPMENT:
-	case TYPE_THING:
-	case TYPE_ENTITY:
-		i = NOTHING;
-		break;
-	case TYPE_ROOM:
-		i = db[thing].sp.room.exits;
-		break;
-	}
-	DOLIST(i, i) {
 		display_objinfo(player, i, 0);
 		total++;
 	}

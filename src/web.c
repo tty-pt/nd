@@ -71,7 +71,7 @@ web_look(dbref player, dbref loc, char const *description)
 
         if (Typeof(loc) == TYPE_ROOM) {
                 mcp_mesg_arg_append(&msg, "room", "1");
-                snprintf(buf, sizeof(buf), "%d", gexits(player, loc));
+                snprintf(buf, sizeof(buf), "%u", ROOM(loc)->exits);
                 mcp_mesg_arg_append(&msg, "exits", buf);
         } else {
 		if (Typeof(loc) == TYPE_ENTITY && (ENTITY(loc)->flags & EF_SHOP))
@@ -87,9 +87,6 @@ web_look(dbref player, dbref loc, char const *description)
         mcp_mesg_arg_append(&msg, "description", description);
         mcp_frame_output_mesg(mfr, &msg);
         mcp_mesg_clear(&msg);
-
-        if (Typeof(loc) == TYPE_EXIT)
-                return 0;
 
         if (loc != player && Typeof(loc) == TYPE_ENTITY && !Wizard(player))
                 return 0;

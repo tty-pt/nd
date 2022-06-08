@@ -94,7 +94,7 @@ do_teleport(command_t *cmd) {
 				break;
 			}
 			notify(victim, "You feel a wrenching sensation...");
-			enter_room(victim, destination, db[victim].location);
+			enter_room(victim, destination);
 			break;
 		case TYPE_CONSUMABLE:
 		case TYPE_EQUIPMENT:
@@ -359,9 +359,9 @@ do_toad(command_t *cmd) {
 	if (Typeof(victim) != TYPE_ENTITY) {
 		notify(player, "You can only turn entities into toads!");
 #ifdef GOD_PRIV
-	} else if (!(God(player)) && (TrueWizard(victim))) {
+	} else if (!(God(player)) && (Wizard(victim))) {
 #else
-	} else if (TrueWizard(victim)) {
+	} else if (Wizard(victim)) {
 #endif
 		notify(player, "You can't turn a Wizard into a toad.");
 	} else {
@@ -375,7 +375,6 @@ do_toad(command_t *cmd) {
 				case TYPE_CONSUMABLE:
 				case TYPE_EQUIPMENT:
 				case TYPE_THING:
-				case TYPE_EXIT:
 					OWNER(stuff) = recipient;
 					break;
 				}

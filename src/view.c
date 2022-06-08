@@ -274,25 +274,16 @@ view_draw(view_t view) {
 }
 
 static inline void
-view_build_exit(dbref player, view_tile_t *t, dbref loc, enum exit e) {
-	register dbref tmp
-		= e_exit_where(player, loc, e);
-
-	if (tmp > 0) {
+view_build_exit(view_tile_t *t, dbref loc, enum exit e) {
+	if (ROOM(loc)->exits & e) {
 		t->exits |= e;
-		if (GETDOOR(tmp))
-			t->doors |= e;
+		t->doors |= ROOM(loc)->doors & e;
 	}
 }
 
 static inline void
-view_build_exit_z(dbref player, view_tile_t *t, dbref loc, enum exit e) {
-	register dbref tmp
-		= e_exit_where(player, loc, e);
-
-	if (tmp > 0 && db[tmp].sp.exit.ndest
-			&& db[tmp].sp.exit.dest[0] >= 0)
-
+view_build_exit_z(view_tile_t *t, dbref loc, enum exit e) {
+	if (ROOM(loc)->exits & e)
 		t->exits |= e;
 }
 
@@ -312,10 +303,9 @@ view_build_exit_s(dbref player, view_tile_t *t,
 	/* 		tmp); */
 
 	if (tmp > 0) {
-		tmp = e_exit_where(player, tmp, e_simm(e));
-		if (tmp > 0) {
+		if (ROOM(tmp)->exits & e_simm(e)) {
 			t->exits |= e;
-			if (GETDOOR(tmp))
+			if (ROOM(tmp)->doors & e_simm(e))
 				t->doors |= e;
 		}
 	} else
@@ -351,12 +341,12 @@ view_build_tile(dbref player,
 {
 	t->room = loc;
 	if (loc > 0) {
-		view_build_exit(player, t, loc, E_EAST);
-		view_build_exit(player, t, loc, E_NORTH);
-		view_build_exit(player, t, loc, E_WEST);
-		view_build_exit(player, t, loc, E_SOUTH);
-		view_build_exit_z(player, t, loc, E_UP);
-		view_build_exit_z(player, t, loc, E_DOWN);
+		view_build_exit(t, loc, E_EAST);
+		view_build_exit(t, loc, E_NORTH);
+		view_build_exit(t, loc, E_WEST);
+		view_build_exit(t, loc, E_SOUTH);
+		view_build_exit_z(t, loc, E_UP);
+		view_build_exit_z(t, loc, E_DOWN);
 		t->flags = view_build_flags(loc);
 		t->bio_idx = floor_get(loc);
 		if (ROOM(loc)->flags & RF_TEMP)

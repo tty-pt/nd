@@ -210,7 +210,7 @@ parent_loop_check(dbref source, dbref dest)
 }
 
 void
-enter_room(dbref player, dbref loc, dbref exit)
+enter_room(dbref player, dbref loc)
 {
 	dbref old;
 	char buf[BUFFER_LEN];
@@ -459,12 +459,6 @@ do_recycle(command_t *cmd)
 				notify(OWNER(player), "Now don't you feel guilty?");
 			}
 			break;
-		case TYPE_EXIT:
-			if (OWNER(thing) != OWNER(player)) {
-				notify(player, "Permission denied. (You may not recycle an exit you don't own)");
-				return;
-			}
-			break;
 		case TYPE_ENTITY:
 			if (ENTITY(thing)->flags & EF_PLAYER) {
 				notify(player, "You can't recycle a player!");
@@ -496,15 +490,6 @@ recycle(dbref player, dbref thing)
 	case TYPE_ROOM:
 		if (!Wizard(OWNER(thing)))
 			SETVALUE(OWNER(thing), GETVALUE(OWNER(thing)) + ROOM_COST);
-		for (first = db[thing].sp.room.exits; first != NOTHING; first = rest) {
-			rest = db[first].next;
-			if (db[first].location == NOTHING
-			    || db[first].location == thing) {
-				if (e_exit_is(first))
-					gexit_snull(player, first);
-				recycle(player, first);
-			}
-		}
 		if (ROOM(thing)->flags & RF_TEMP)
 			for (first = db[thing].contents; first != NOTHING; first = rest) {
 				rest = db[first].next;
@@ -528,13 +513,6 @@ recycle(dbref player, dbref thing)
 			}
 		}
 		break;
-	case TYPE_EXIT:
-		if (!Wizard(OWNER(thing)))
-			SETVALUE(OWNER(thing), GETVALUE(OWNER(thing)) + EXIT_COST);
-		if (!Wizard(OWNER(thing)))
-			if (db[thing].sp.exit.ndest != 0)
-				SETVALUE(OWNER(thing), GETVALUE(OWNER(thing)) + LINK_COST);
-		break;
 	}
 
 	for (rest = 0; rest < db_top; rest++) {
@@ -542,8 +520,6 @@ recycle(dbref player, dbref thing)
 		case TYPE_ROOM:
 			if (db[rest].sp.room.dropto == thing)
 				db[rest].sp.room.dropto = NOTHING;
-			if (db[rest].sp.room.exits == thing)
-				db[rest].sp.room.exits = db[thing].next;
 			if (OWNER(rest) == thing)
 				OWNER(rest) = GOD;
 			break;
@@ -551,22 +527,6 @@ recycle(dbref player, dbref thing)
 		case TYPE_CONSUMABLE:
 		case TYPE_EQUIPMENT:
 		case TYPE_THING:
-			if (OWNER(rest) == thing)
-				OWNER(rest) = GOD;
-			break;
-		case TYPE_EXIT:
-			{
-				int i, j;
-
-				for (i = j = 0; i < db[rest].sp.exit.ndest; i++) {
-					if ((db[rest].sp.exit.dest)[i] != thing)
-						(db[rest].sp.exit.dest)[j++] = (db[rest].sp.exit.dest)[i];
-				}
-				if (j < db[rest].sp.exit.ndest) {
-					SETVALUE(OWNER(rest), GETVALUE(OWNER(rest)) + LINK_COST);
-					db[rest].sp.exit.ndest = j;
-				}
-			}
 			if (OWNER(rest) == thing)
 				OWNER(rest) = GOD;
 			break;
@@ -584,7 +544,7 @@ recycle(dbref player, dbref thing)
 	looplimit = db_top;
 	while ((looplimit-- > 0) && ((first = db[thing].contents) != NOTHING)) {
 		if (Typeof(first) == TYPE_ENTITY && (ENTITY(first)->flags & EF_PLAYER)) {
-			enter_room(first, HOME, db[thing].location);
+			enter_room(first, HOME);
 			/* If the room is set to drag players back, there'll be no
 			 * reasoning with it.  DRAG the player out.
 			 */

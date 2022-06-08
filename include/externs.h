@@ -109,7 +109,7 @@ int do_stand_silent(dbref player);
 
 /* From move.c */
 extern void moveto(dbref what, dbref where);
-extern void enter_room(dbref player, dbref loc, dbref exit);
+extern void enter_room(dbref player, dbref loc);
 extern int parent_loop_check(dbref source, dbref dest);
 extern void go_move(dbref player, const char *dir);
 extern void do_get(command_t *);
@@ -130,7 +130,6 @@ extern void dialog_stop(dbref player);
 
 /* From predicates.c */
 extern int OkObj(dbref obj);
-extern int can_link(dbref who, dbref what);
 extern int could_doit(dbref player, dbref thing);
 extern int can_doit(dbref player, dbref thing, const char *default_fail_msg);
 extern int can_see(dbref player, dbref thing, int can_see_location);

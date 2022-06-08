@@ -191,7 +191,7 @@ object_add(struct object_skeleton o, dbref where)
 		break;
         case S_TYPE_BIOME:
                 FLAGS(nu) = TYPE_ROOM;
-		ROOM(nu)->exits = NOTHING;
+		ROOM(nu)->exits = ROOM(nu)->doors = 0;
 		ROOM(nu)->dropto = NOTHING;
 		ROOM(nu)->flags = RF_TEMP;
 	case S_TYPE_OTHER:
@@ -226,17 +226,8 @@ object_drop(dbref where, struct drop **drop)
                 }
 }
 
-dbref
-e_exit_where(dbref player, dbref loc, enum exit e)
-{
-	return ematch_exit_at(player, loc, e_name(e));
-}
-
 int
-e_exit_can(dbref player, dbref exit) {
-	enum exit e = exit_e(exit);
-	CBUG(exit < 0);
-	CBUG(e_exit_dest(exit) >= 0);
+e_exit_can(dbref player, enum exit e) {
 	return e_ground(getloc(player), e);
 }
 
@@ -250,27 +241,6 @@ e_ground(dbref room, enum exit e)
 
 	map_where(pos, room);
 	return pos[2] == 0;
-}
-
-void
-e_exit_dest_set(dbref exit, dbref dest)
-{
-	union specific *sp = &db[exit].sp;
-#ifdef PRECOVERY
-	if (!sp->exit.ndest) {
-		sp->exit.dest = (dbref *)malloc(sizeof(dbref));
-		sp->exit.ndest = 1;
-	}
-#else
-	CBUG(!sp->exit.ndest);
-#endif
-	sp->exit.dest[0] = dest;
-}
-
-dbref
-e_exit_here(dbref player, enum exit e)
-{
-	return e_exit_where(player, getloc(player), e);
 }
 
 void
@@ -333,14 +303,4 @@ e_exit_is(dbref exit)
 { 
 	char const *fname = e_fname(exit_e(exit));
 	return *fname && !strncmp(NAME(exit), fname, 4);
-}
-
-dbref
-e_exit_dest(dbref exit)
-{
-	if (!db[exit].sp.exit.ndest)
-		return NOTHING;
-
-	else
-		return db[exit].sp.exit.dest[0];
 }

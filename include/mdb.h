@@ -103,14 +103,16 @@ enum at { ARMOR_LIGHT, ARMOR_MEDIUM, ARMOR_HEAVY, };
 #define GETAVATAR(x)	GETMESG(x, MESGPROP_AVATAR)
 #define SETAVATAR(x, y)	SETMESG(x, MESGPROP_AVATAR, y)
 
-#define TYPE_ROOM           0x0
-#define TYPE_THING          0x1
-#define TYPE_EXIT           0x2
-#define TYPE_ENTITY         0x3
-#define TYPE_EQUIPMENT         0x4
-#define TYPE_CONSUMABLE     0x5
-#define TYPE_GARBAGE        0x6
-#define TYPE_PLANT	    0x7
+enum type {
+	TYPE_ROOM,
+	TYPE_THING,
+	TYPE_PLANT,
+	TYPE_ENTITY,
+	TYPE_EQUIPMENT,
+	TYPE_CONSUMABLE,
+	TYPE_GARBAGE,
+};
+
 #define TYPE_MASK           0xf	/* room for expansion */
 #define is_item(x) (Typeof(x) == TYPE_THING || Typeof(x) == TYPE_CONSUMABLE || Typeof(x) == TYPE_EQUIPMENT)
 
@@ -127,7 +129,6 @@ enum at { ARMOR_LIGHT, ARMOR_MEDIUM, ARMOR_HEAVY, };
 #define BOUND BUILDER
 #define CHOWN_OK          0x400	/* this object can be @chowned, or
 									this player can see color */
-#define COLOR CHOWN_OK
 #define JUMP_OK           0x800	/* A room which can be jumped from, or
 								 * a player who can be jumped to */
 #define EXPANSION1		 0x1000 /* Expansion bit */
@@ -135,10 +136,7 @@ enum at { ARMOR_LIGHT, ARMOR_MEDIUM, ARMOR_HEAVY, };
 #define KILL_OK	         0x4000	/* Kill_OK bit.  Means you can be killed. */
 #define EXPANSION3		 0x8000 /* Expansion bit */
 #define HAVEN           0x10000	/* can't kill here */
-#define HIDE HAVEN
 #define ABODE           0x20000	/* can set home here */
-#define ABATE ABODE
-#define QUELL           0x80000	/* When set, wiz-perms are turned off */
 #define INTERACTIVE    0x200000	/* internal: denotes player is in editor, or
 								 * muf READ. */
 #define SAVED_DELTA    0x800000	/* internal: object last saved to delta file */
@@ -160,11 +158,7 @@ typedef long object_flag_type;
 
 #define DoNull(s) ((s) ? (s) : "")
 #define Typeof(x) (x == HOME ? TYPE_ROOM : (FLAGS(x) & TYPE_MASK))
-#define Wizard(x) ((FLAGS(x) & WIZARD) != 0 && (FLAGS(x) & QUELL) == 0)
-
-/* TrueWizard is only appropriate when you care about whether the person
-   or thing is, well, truely a wizard. Ie it ignores QUELL. */
-#define TrueWizard(x) ((FLAGS(x) & WIZARD) != 0)
+#define Wizard(x) ((FLAGS(x) & WIZARD) != 0)
 #define Dark(x) ((FLAGS(x) & DARK) != 0)
 
 #define Builder(x) ((FLAGS(x) & (WIZARD|BUILDER)) != 0)
@@ -243,19 +237,14 @@ enum room_flags {
 
 /* union of type-specific fields */
 
-union specific {				/* I've been railroaded! */
-	struct {					/* ROOM-specific fields */
+union specific {
+	struct {
 		dbref dropto;
 		unsigned flags;
-		/* unsigned char exits; */
+		unsigned char exits;
 		unsigned char doors;
-		dbref exits;
 		unsigned char floor;
 	} room;
-	struct {					/* EXIT-specific fields */
-		int ndest;
-		dbref *dest;
-	} exit;
 	struct entity entity;
 	struct {
 		unsigned eqw;

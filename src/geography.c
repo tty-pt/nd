@@ -91,33 +91,6 @@ geo_there(dbref where, enum exit e)
 
 /* }}} */
 
-/* exit {{{ */
-
-static dbref
-gexit(dbref loc, dbref loc2, enum exit e)
-{
-	dbref ref;
-
-	ref = object_new();
-
-	/* Initialize everything */
-	NAME(ref) = alloc_string(e_fname(e));
-	db[ref].location = loc;
-	OWNER(ref) = 1;
-	FLAGS(ref) = TYPE_EXIT;
-
-	/* link it in */
-	PUSH(ref, db[loc].sp.room.exits);
-
-	db[ref].sp.exit.ndest = 1;
-	db[ref].sp.exit.dest = (dbref *) malloc(sizeof(dbref));
-	e_exit_dest_set(ref, loc2);
-
-	return ref;
-}
-
-/* }}} */
-
 /* New room {{{ */
 
 // TODO fee -> use legacy system (and improve it)
@@ -150,17 +123,16 @@ fee_noname(dbref player) {
 }
 
 static inline void
-wall_around(dbref player, dbref exit)
+wall_around(dbref player, enum exit e)
 {
-	dbref here = getloc(exit);
+	dbref here = getloc(player);
 	const char *s;
-	for (s = e_other(exit_e(exit)); *s; s++) {
-		enum exit e = dir_e(*s);
-		dbref oexit = e_exit_where(player, here, e);
-		dbref there = geo_there(here, e);
+	for (s = e_other(e); *s; s++) {
+		enum exit e2 = dir_e(*s);
+		dbref there = geo_there(here, e2);
 
-		if (oexit >= 0 && there < 0)
-			recycle(player, oexit);
+		if ((ROOM(here)->exits & e2) && there < 0)
+			ROOM(here)->exits ^= e2;
 	}
 }
 
@@ -183,52 +155,33 @@ geo_claim(dbref player, dbref room) {
 	OWNER(room) = player;
 	room = db[room].contents;
 
-	DOLIST(room, room)
-		if (Typeof(room) == TYPE_EXIT && e_exit_is(room))
-			OWNER(room) = player;
-
 	return 0;
 }
 
 static inline void
-exits_fix(dbref player, dbref there, dbref exit)
+exits_fix(dbref player, dbref there, enum exit e)
 {
 	const char *s;
 
-	for (s = e_other(exit_e(exit)); *s; s++) {
-		enum exit e = dir_e(*s);
-		dbref othere_exit,
-		      oexit = e_exit_where(player, there, e),
-		      othere = geo_there(there, e);
+	for (s = e_other(e); *s; s++) {
+		enum exit e2 = dir_e(*s);
+		dbref othere = geo_there(there, e2);
 
 		if (othere < 0 || (ROOM(othere)->flags & RF_TEMP)) {
-			if (oexit < 0)
-				continue;
-			e_exit_dest_set(oexit, NOTHING);
 			continue;
 		}
 
-		othere_exit = e_exit_where(player, othere, e_simm(e));
-
-		if (oexit < 0) {
-			if (othere_exit < 0)
+		if (!(ROOM(there)->exits & e2)) {
+			if (!(ROOM(othere)->exits & e_simm(e2)))
 				continue;
 
-			gexit(there, othere, e);
-			e_exit_dest_set(othere_exit, there);
+			ROOM(there)->exits |= e2;
 			continue;
 		}
 
-		if (othere_exit < 0)
-			recycle(player, oexit);
-
-		else {
-			e_exit_dest_set(oexit, othere);
-			e_exit_dest_set(othere_exit, there);
-		}
+		if (!(ROOM(othere)->exits & e_simm(e2)))
+			ROOM(there)->exits &= ~e2;
 	}
-
-	e_exit_dest_set(exit, there);
 }
 
 static void
@@ -236,25 +189,24 @@ exits_infer(dbref player, dbref here)
 {
 	const char *s = "wsnedu";
 
+	warn("exits infer start %d %d\n", here, ROOM(here)->exits);
+
 	for (; *s; s++) {
 		enum exit e = dir_e(*s);
-		dbref oexit, exit_there, there = geo_there(here, e);
+		dbref there = geo_there(here, e);
 
 		if (there < 0) {
-                        if (*s != 'u' && *s != 'd')
-                                gexit(here, NOTHING, e);
+                        if (e != E_UP && e != E_DOWN)
+				ROOM(here)->exits |= e;
 			continue;
 		}
 
-		exit_there = e_exit_where(player, there, e_simm(e));
-		if (exit_there < 0)
-			continue;
-
-		oexit = gexit(here, there, e);
-		/* if (there > 0 && !GETTMP(there)) */
-		SETDOOR(oexit, GETDOOR(exit_there));
-		e_exit_dest_set(exit_there, here);
+		if (ROOM(there)->exits & e_simm(e)) {
+			ROOM(here)->exits |= e;
+			ROOM(here)->doors |= ROOM(there)->doors & e_simm(e);
+		}
 	}
+	warn("exits infer end %d %d\n", here, ROOM(here)->exits);
 }
 
 // TODO make more add functions similar and easy to insert here
@@ -293,7 +245,7 @@ geo_room_at(dbref player, pos_t pos)
 	bio = noise_point(pos);
         there = object_add(biomes[bio->bio_idx], -1);
 	map_put(pos, there, DB_NOOVERWRITE);
-	db[there].sp.room.exits = NOTHING;
+	ROOM(there)->exits = ROOM(there)->doors = 0;
 	db[there].sp.room.dropto = NOTHING;
 	/* FLAGS(there) = TYPE_ROOM | (FLAGS(cmd->player) & JUMP_OK); */
 	CBUG(there <= 0);
@@ -323,49 +275,29 @@ do_bio(command_t *cmd) {
 
 static void
 e_move(dbref player, enum exit e) {
-	const char dirs[] = { e_dir(e), '\0' };
-	dbref exit = ematch_exit_at(player, getloc(player), dirs);;
+	dbref loc = getloc(player), dest;
 
-	switch (exit) {
-	case NOTHING:
+	if (!(ROOM(loc)->exits & e)) {
 		notify(player, "You can't go that way.");
-		break;
-	default:
-		CBUG(!e_exit_is(exit));
+		return;
+	}
 
-		/* we got one */
-		/* check to see if we got through */
-		if (!can_doit(player, exit, "You can't go that way."))
-			break;
+	dest = geo_there(loc, e);
 
-		{
-			dbref dest;
-			union specific sp;
-			sp = db[exit].sp;
-
-			if (sp.exit.ndest && sp.exit.dest[0] != NOTHING)
-				dest = sp.exit.dest[0];
-			else
-				dest = geo_there(getloc(exit), exit_e(exit));
-
-			if (dest > 0)
-				enter_room(player, dest, exit);
-			else {
-				dest = geo_room(player, exit);
-				enter_room(player, dest, exit);
-			}
-		}
-		break;
+	if (dest > 0)
+		enter_room(player, dest);
+	else {
+		dest = geo_room(player, e);
+		enter_room(player, dest);
 	}
 }
 
 // exclusively called by trigger() and carve, in vertical situations
 dbref
-geo_room(dbref player, dbref exit)
+geo_room(dbref player, enum exit e)
 {
 	pos_t pos;
-	dbref here = getloc(exit), there;
-	enum exit e = exit_e(exit);
+	dbref here = getloc(player), there;
 
 	geo_pos(pos, here, e);
 	there = geo_room_at(player, pos);
@@ -398,38 +330,8 @@ geo_clean(dbref player, dbref here)
 	return NOTHING;
 }
 
-void /* called on recycle */
-gexit_snull(dbref player, dbref exit)
-{
-	enum exit e = exit_e(exit);
-	dbref oexit,
-	      room = getloc(exit),
-	      there = geo_there(room, e);
-
-	if (there < 0)
-		return;
-
-	oexit = e_exit_where(player, there, e_simm(e));
-	if (oexit >= 0)
-		e_exit_dest_set(oexit, NOTHING);
-}
-
 static void
 walk(dbref player, enum exit e) {
-#if 1
-	dbref exit = e_exit_here(player, e),
-	      there;
-
-	if (exit >= 0) {
-		there = e_exit_dest(exit);
-		if (there > 0) {
-			pos_t pos;
-			geo_pos(pos, getloc(player), e);
-			map_put(pos, there, 0);
-			exits_fix(player, there, exit);
-		}
-	}
-#endif
 	e_move(player, e);
 }
 
@@ -437,8 +339,7 @@ static void
 carve(dbref player, enum exit e)
 {
 	dbref there = NOTHING,
-	      here = getloc(player),
-	      exit = e_exit_here(player, e);
+	      here = getloc(player);
 	int wall = 0;
 
 	if (!e_ground(getloc(player), e)) {
@@ -448,14 +349,12 @@ carve(dbref player, enum exit e)
 			notify(player, "You can't pay for that room");
 			return;
 		}
-		exit = e_exit_here(player, e);
-		if (exit < 0)
-			exit = gexit(here, there, e);
+
+		ROOM(here)->exits |= e;
+
 		there = geo_there(here, e);
-		if (there < 0) {
-			there = geo_room(player, exit);
-			e_exit_dest_set(exit, there);
-		}
+		if (there < 0)
+			there = geo_room(player, e);
 		/* wall_around(cmd, exit); */
 		wall = 1;
 	}
@@ -465,18 +364,15 @@ carve(dbref player, enum exit e)
 	if (here == there)
 		return;
 	geo_claim(player, there);
-	if (wall) {
-		exit = e_exit_here(player, e_simm(e));
-		wall_around(player, exit);
-	}
+	if (wall)
+		wall_around(player, e_simm(e));
 }
 
 static void
 uncarve(dbref player, enum exit e)
 {
 	const char *s0 = "is";
-	dbref there, here = getloc(player),
-	      exit = e_exit_here(player, e);
+	dbref there, here = getloc(player);
 	int ht, cd = e_ground(here, e);
 
 	if (cd) {
@@ -487,12 +383,12 @@ uncarve(dbref player, enum exit e)
 		if (here == there)
 			return;
 	} else {
-                if (exit < 0) {
+		if (!(ROOM(here)->exits & e)) {
                         notifyf(player, "No exit there");
                         return;
                 }
 
-		there = e_exit_dest(exit);
+		there = geo_there(here, e);
 		if (there < 0) {
 			notify(player, "No room there");
 			return;
@@ -509,9 +405,8 @@ uncarve(dbref player, enum exit e)
 	CBUG(!(ROOM(there)->flags & RF_TEMP));
 	exits_infer(player, there);
 	if (cd) {
-		exit = e_exit_here(player, e_simm(e));
-		if (ht && GETDOOR(exit))
-			SETDOOR(exit, 0);
+		if (ht && (ROOM(there)->doors & e_simm(e)))
+			ROOM(there)->doors &= ~e_simm(e);
 	} else
 		geo_clean(player, there);
 
@@ -522,7 +417,7 @@ static void
 unwall(dbref player, enum exit e)
 {
 	int a, b, c, d;
-	dbref exit, there,
+	dbref there,
 	      here = getloc(player);
 
 	a = OWNER(here) == player;
@@ -543,15 +438,13 @@ unwall(dbref player, enum exit e)
 		return;
 	}
 
-	exit = e_exit_here(player, e);
-
-	if (exit >= 0) {
+	if (ROOM(here)->exits & e) {
 		notify(player, "There's an exit here already.");
 		return;
 	}
 
 	debug("will create exit here %d there %d dir %c\n", here, there, e_dir(e));
-	exit = gexit(here, there, e);
+	ROOM(here)->exits |= e;
 	e_move(player, e);
 
 	there = getloc(player);
@@ -561,24 +454,23 @@ unwall(dbref player, enum exit e)
         if (Typeof(here) != TYPE_ROOM)
                 here = NOTHING;
 
-	gexit(there, here, e_simm(e));
+	ROOM(there)->exits |= e_simm(e);
 	notify(player, "You tear down the wall.");
 }
 
 static inline int
-gexit_claim(dbref player, dbref exit, dbref exit_there)
+gexit_claim(dbref player, enum exit e)
 {
 	int a, b, c, d;
-	dbref here = getloc(exit),
-	      there = getloc(exit_there);
-	const char dir = NAME(exit)[0];
+	dbref here = geo_there(player, e),
+	      there = getloc(player);
 
-	a = here > 0 && OWNER(here) == player && OWNER(exit) == player;
+	a = here > 0 && OWNER(here) == player;
 	c = ROOM(there)->flags & RF_TEMP;
-	b = !c && OWNER(there) == player && OWNER(exit_there) == player;
-	d = e_ground(getloc(player), dir);
+	b = !c && OWNER(there) == player;
+	d = e_ground(getloc(player), e_dir(e));
 
-	if ( a && (b || c))
+	if (a && (b || c))
 		return 0;
 
 	if (here < 0 || (ROOM(here)->flags & RF_TEMP)) {
@@ -593,13 +485,11 @@ gexit_claim(dbref player, dbref exit, dbref exit_there)
 }
 
 static inline int
-gexit_claim_walk(dbref player, dbref *exit_r,
-		 dbref *exit_there_r, enum exit e)
+gexit_claim_walk(dbref player, enum exit e)
 {
-	dbref here = getloc(player),
-	      exit = e_exit_here(player, e), exit_there;
+	dbref here = getloc(player);
 
-	if (exit < 0) {
+	if (!(ROOM(here)->exits & e)) {
 		notify(player, "No exit here");
 		return 1;
 	}
@@ -609,45 +499,62 @@ gexit_claim_walk(dbref player, dbref *exit_r,
 	if (here == getloc(player))
 		return 1;
 
-	exit_there = e_exit_here(player, e_simm(e));
-	CBUG(exit_there < 0);
+	CBUG(!(ROOM(getloc(player))->exits & e_simm(e)));
 
-	*exit_r = exit;
-	*exit_there_r = exit_there;
-	return gexit_claim(player, exit, exit_there);
+	return gexit_claim(player, e_simm(e));
 }
 
 static void
 e_wall(dbref player, enum exit e)
 {
-	dbref exit, exit_there;
-	if (gexit_claim_walk(player, &exit, &exit_there, e))
+	if (gexit_claim_walk(player, e))
 		return;
-	recycle(player, exit_there);
-	if (Typeof(exit) != TYPE_GARBAGE)
-		recycle(player, exit);
+
+	dbref here = getloc(player);
+
+	ROOM(here)->exits &= ~e_simm(e);
+
+	dbref there = geo_there(here, e_simm(e));
+
+	if (there >= 0)
+		ROOM(there)->exits &= ~e;
+
 	notify(player, "You build a wall.");
 }
 
 static void
 door(dbref player, enum exit e)
 {
-	dbref exit, exit_there;
-	if (gexit_claim_walk(player, &exit, &exit_there, e))
+	if (gexit_claim_walk(player, e))
 		return;
-	SETDOOR(exit, 1);
-	SETDOOR(exit_there, 1);
+
+	dbref where = getloc(player);
+
+	ROOM(where)->doors |= e_simm(e);
+
+	where = geo_there(where, e_simm(e));
+
+	if (where >= 0)
+		ROOM(where)->doors |= e;
+
 	notify(player, "You place a door.");
 }
 
 static void
 undoor(dbref player, enum exit e)
 {
-	dbref exit, exit_there;
-	if (gexit_claim_walk(player, &exit, &exit_there, e))
+	if (gexit_claim_walk(player, e))
 		return;
-	SETDOOR(exit_there, 0);
-	SETDOOR(exit, 0);
+
+	dbref where = getloc(player);
+
+	ROOM(where)->doors &= ~e_simm(e);
+
+	where = geo_there(where, e_simm(e));
+
+	if (where >= 0)
+		ROOM(where)->doors &= ~e;
+
 	notify(player, "You remove a door.");
 }
 
@@ -689,7 +596,7 @@ geo_teleport(dbref player, struct cmd_dir cd)
 		there = geo_room_at(player, pos);
 	CBUG(there < 0);
 	notifyf(player, "Teleporting to 0x%llx.", cd.rep);
-	enter_room(player, there, NOTHING);
+	enter_room(player, there);
 	return ret;
 }
 
@@ -724,21 +631,19 @@ pull(dbref player, struct cmd_dir cd)
 {
 	pos_t pos;
 	enum exit e = cd.e;
-	dbref there, here = getloc(player),
-	      exit = e_exit_here(player, e),
-	      what = (dbref) cd.rep;
+	dbref there, here, what;
 
 	if (e == E_NULL)
 		return 0;
 
 	here = getloc(player),
-	exit = e_exit_here(player, e),
 	what = (dbref) cd.rep;
 
-	if (exit < 0 || what < 0
+	if (!(ROOM(here)->exits & e)
+	    || what < 0
 	    || Typeof(what) != TYPE_ROOM
 	    || OWNER(what) != player
-	    || ((there = e_exit_dest(exit)) > 0
+	    || ((there = geo_there(here, e)) > 0
 		&& geo_clean(player, there) == there))
 	{
 		notify(player, "You cannot do that.");
@@ -747,7 +652,7 @@ pull(dbref player, struct cmd_dir cd)
 
 	geo_pos(pos, here, e);
 	map_put(pos, what, 0);
-	exits_fix(player, what, exit);
+	exits_fix(player, what, e);
 	e_move(player, e);
 	return 1;
 }
@@ -830,8 +735,7 @@ int gexits(dbref player, dbref where) {
         int i, ret;
         register char *s;
         for (s = "wsnedu", ret = 0, i = 1; *s; s++, i <<= 1) {
-                dbref tmp = e_exit_where(player, where, dir_e(*s));
-                if (tmp < 0)
+		if (!(ROOM(where)->exits & dir_e(*s)))
                         continue;
                 ret |= i;
         }

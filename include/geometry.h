@@ -156,10 +156,8 @@ extern exit_t exit_map[];
 morton_t pos_morton(pos_t);
 void morton_pos(pos_t p, morton_t code);
 
-dbref e_exit_where(dbref player, dbref loc, enum exit e);
-int e_exit_can(dbref player, dbref exit);
+int e_exit_can(dbref player, enum exit e);
 int e_ground(dbref room, enum exit e);
-void e_exit_dest_set(dbref exit, dbref dest);
 
 dbref
 object_add(struct object_skeleton o, dbref where);
@@ -167,7 +165,6 @@ object_add(struct object_skeleton o, dbref where);
 void
 object_drop(dbref where, struct drop **drop);
 
-dbref e_exit_here(dbref player, enum exit e);
 void pos_move(pos_t d, pos_t o, enum exit e);
 enum exit dir_e(const char dir);
 const char e_dir(enum exit e);
@@ -176,9 +173,5 @@ const char * e_name(enum exit e);
 const char * e_fname(enum exit e);
 const char * e_other(enum exit e);
 morton_t point_rel_idx(point_t p, point_t s, smorton_t w);
-enum exit exit_e(dbref exit);
-int e_exit_is(dbref exit);
-dbref e_exit_dest(dbref exit);
-
 
 #endif

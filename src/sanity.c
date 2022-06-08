@@ -85,7 +85,6 @@ valid_obj(dbref obj)
 	}
 	switch (TYPEOF(obj)) {
 	case TYPE_ROOM:
-	case TYPE_EXIT:
 	case TYPE_ENTITY:
 	case TYPE_CONSUMABLE:
 	case TYPE_PLANT:
@@ -146,20 +145,12 @@ find_orphan_objects(dbref player)
 	for (i = 0; i < db_top; i++) {
 		switch (Typeof(i)) {
 		case TYPE_ROOM:
-			if (db[i].sp.room.exits != NOTHING) {
-				if (FLAGS(db[i].sp.room.exits) & SANEBIT) {
-					violate(player, db[i].sp.room.exits,
-							"is referred to by more than one object's Next, Contents, or Exits field");
-				} else {
-					FLAGS(db[i].sp.room.exits) |= SANEBIT;
-				}
-			}
 			FLAGS(i) |= SANEBIT;
 		}
 		if (CONTENTS(i) != NOTHING) {
 			if (FLAGS(CONTENTS(i)) & SANEBIT) {
 				violate(player, CONTENTS(i),
-						"is referred to by more than one object's Next, Contents, or Exits field");
+						"is referred to by more than one object's Next or Contents field");
 			} else {
 				FLAGS(CONTENTS(i)) |= SANEBIT;
 			}
@@ -167,7 +158,7 @@ find_orphan_objects(dbref player)
 		if (NEXTOBJ(i) != NOTHING) {
 			if (FLAGS(NEXTOBJ(i)) & SANEBIT) {
 				violate(player, NEXTOBJ(i),
-						"is referred to by more than one object's Next, Contents, or Exits field");
+						"is referred to by more than one object's Next or Contents field");
 			} else {
 				FLAGS(NEXTOBJ(i)) |= SANEBIT;
 			}
@@ -202,22 +193,6 @@ check_room(dbref player, dbref obj)
 }
 
 void
-check_exit(dbref player, dbref obj)
-{
-	int i;
-
-	if (db[obj].sp.exit.ndest < 0)
-		violate(player, obj, "has a negative link count.");
-	for (i = 0; i < db[obj].sp.exit.ndest; i++) {
-		if (!valid_ref((db[obj].sp.exit.dest)[i]) &&
-			(db[obj].sp.exit.dest)[i] != HOME) {
-			violate(player, obj, "has an invalid object as one of its link destinations");
-		}
-	}
-}
-
-
-void
 check_entity(dbref player, dbref obj)
 {
 	dbref i;
@@ -248,10 +223,10 @@ check_contents_list(dbref player, dbref obj)
 	dbref i;
 	int limit;
 
-	if (TYPEOF(obj) != TYPE_EXIT && TYPEOF(obj) != TYPE_GARBAGE) {
+	if (TYPEOF(obj) != TYPE_GARBAGE) {
 		for (i = CONTENTS(obj), limit = db_top;
 			 valid_obj(i) &&
-			 --limit && LOCATION(i) == obj && TYPEOF(i) != TYPE_EXIT; i = NEXTOBJ(i)) ;
+			 --limit && LOCATION(i) == obj; i = NEXTOBJ(i)) ;
 		if (i != NOTHING) {
 			if (!limit) {
 				check_next_chain(player, CONTENTS(obj));
@@ -261,10 +236,6 @@ check_contents_list(dbref player, dbref obj)
 				if (!valid_obj(i)) {
 					violate(player, obj, "has an invalid object in its contents list");
 				} else {
-					if (TYPEOF(i) == TYPE_EXIT) {
-						violate(player, obj,
-								"has an exit in its contents list (it shoudln't)");
-					}
 					if (LOCATION(i) != obj) {
 						violate(player, obj,
 								"has an object in its contents lists that thinks it is located elsewhere");
@@ -274,9 +245,7 @@ check_contents_list(dbref player, dbref obj)
 		}
 	} else {
 		if (CONTENTS(obj) != NOTHING) {
-			if (TYPEOF(obj) == TYPE_EXIT) {
-				violate(player, obj, "is an exit/action whose contents aren't #-1");
-			} else if (TYPEOF(obj) == TYPE_GARBAGE) {
+			if (TYPEOF(obj) == TYPE_GARBAGE) {
 				violate(player, obj, "is a garbage object whose contents aren't #-1");
 			} else {
 				violate(player, obj, "is a program whose contents aren't #-1");
@@ -284,38 +253,6 @@ check_contents_list(dbref player, dbref obj)
 		}
 	}
 }
-
-
-void
-check_exits_list(dbref player, dbref obj)
-{
-	dbref i;
-	int limit;
-
-	if (TYPEOF(obj) == TYPE_ROOM) {
-		for (i = db[obj].sp.room.exits, limit = db_top;
-			 valid_obj(i) &&
-			 --limit && LOCATION(i) == obj && TYPEOF(i) == TYPE_EXIT; i = NEXTOBJ(i)) ;
-		if (i != NOTHING) {
-			if (!limit) {
-				check_next_chain(player, CONTENTS(obj));
-				violate(player, obj,
-						"is the containing object, and has the loop in its exits chain");
-			} else if (!valid_obj(i)) {
-				violate(player, obj, "has an invalid object in it's exits list");
-			} else {
-				if (TYPEOF(i) != TYPE_EXIT) {
-					violate(player, obj, "has a non-exit in it's exits list");
-				}
-				if (LOCATION(i) != obj) {
-					violate(player, obj,
-							"has an exit in its exits lists that thinks it is located elsewhere");
-				}
-			}
-		}
-	}
-}
-
 
 void
 check_object(dbref player, dbref obj)
@@ -345,16 +282,13 @@ check_object(dbref player, dbref obj)
 		}
 	}
 
-	if (LOCATION(obj) != NOTHING &&
-		(TYPEOF(LOCATION(obj)) == TYPE_GARBAGE ||
-		 TYPEOF(LOCATION(obj)) == TYPE_EXIT))
+	if (LOCATION(obj) != NOTHING && TYPEOF(LOCATION(obj)) == TYPE_GARBAGE)
 		violate(player, obj, "thinks it is located in a non-container object");
 
 	if ((TYPEOF(obj) == TYPE_GARBAGE) && (LOCATION(obj) != NOTHING))
 		violate(player, obj, "is a garbage object with a location that isn't #-1");
 
 	check_contents_list(player, obj);
-	check_exits_list(player, obj);
 
 	switch (TYPEOF(obj)) {
 	case TYPE_ROOM:
@@ -367,9 +301,6 @@ check_object(dbref player, dbref obj)
 		break;
 	case TYPE_ENTITY:
 		check_entity(player, obj);
-		break;
-	case TYPE_EXIT:
-		check_exit(player, obj);
 		break;
 	case TYPE_GARBAGE:
 		check_garbage(player, obj);
@@ -443,11 +374,6 @@ cut_all_chains(dbref obj)
 		SanFixed(obj, "Cleared contents of %s");
 		CONTENTS(obj) = NOTHING;
 	}
-
-	if (Typeof(obj) == TYPE_ROOM && db[obj].sp.room.exits != NOTHING) {
-		SanFixed(obj, "Cleared exits of %s");
-		db[obj].sp.room.exits = NOTHING;
-	}
 }
 
 void
@@ -482,11 +408,9 @@ cut_bad_contents(dbref obj)
 	prev = NOTHING;
 	while (loop != NOTHING) {
 		if (!valid_obj(loop) || FLAGS(loop) & SANEBIT ||
-			TYPEOF(loop) == TYPE_EXIT || LOCATION(loop) != obj || loop == obj) {
+			LOCATION(loop) != obj || loop == obj) {
 			if (!valid_obj(loop)) {
 				SanFixed(obj, "Contents chain for %s cut at invalid dbref");
-			} else if (TYPEOF(loop) == TYPE_EXIT) {
-				SanFixed2(obj, loop, "Contents chain for %s cut at exit %s");
 			} else if (loop == obj) {
 				SanFixed(obj, "Contents chain for %s cut at self-reference");
 			} else if (LOCATION(loop) != obj) {
@@ -509,40 +433,6 @@ cut_bad_contents(dbref obj)
 }
 
 void
-cut_bad_exits(dbref obj)
-{
-	dbref loop, prev;
-
-	CBUG(!(TYPEOF(obj) == TYPE_ROOM));
-	loop = db[obj].sp.room.exits;
-	prev = NOTHING;
-	while (loop != NOTHING) {
-		if (!valid_obj(loop) || FLAGS(loop) & SANEBIT ||
-			TYPEOF(loop) != TYPE_EXIT || LOCATION(loop) != obj) {
-			if (!valid_obj(loop)) {
-				SanFixed(obj, "Exits chain for %s cut at invalid dbref");
-			} else if (TYPEOF(loop) != TYPE_EXIT) {
-				SanFixed2(obj, loop, "Exits chain for %s cut at non-exit %s");
-			} else if (LOCATION(loop) != obj) {
-				SanFixed2(obj, loop, "Exits chain for %s cut at misplaced exit %s");
-			} else if (FLAGS(loop) & SANEBIT) {
-				SanFixed2(obj, loop, "Exits chain for %s cut at already chained exit %s");
-			} else {
-				SanFixed2(obj, loop, "Exits chain for %s cut at %s");
-			}
-			if (prev != NOTHING)
-				db[prev].next = NOTHING;
-			else
-				db[obj].sp.room.exits = NOTHING;
-			return;
-		}
-		FLAGS(loop) |= SANEBIT;
-		prev = loop;
-		loop = db[loop].next;
-	}
-}
-
-void
 hacksaw_bad_chains(void)
 {
 	dbref loop;
@@ -554,8 +444,6 @@ hacksaw_bad_chains(void)
 			cut_all_chains(loop);
 		} else {
 			cut_bad_contents(loop);
-			if (TYPEOF(loop) == TYPE_ROOM)
-				cut_bad_exits(loop);
 		}
 	}
 }
@@ -584,7 +472,6 @@ create_lostandfound(dbref * player, dbref * room)
 	*room = object_new();
 	NAME(*room) = alloc_string("lost+found");
 	LOCATION(*room) = GLOBAL_ENVIRONMENT;
-	db[*room].sp.room.exits = NOTHING;
 	db[*room].sp.room.dropto = NOTHING;
 	FLAGS(*room) = TYPE_ROOM | SANEBIT;
 	PUSH(*room, db[GLOBAL_ENVIRONMENT].contents);
@@ -632,25 +519,6 @@ fix_room(dbref obj)
 }
 
 void
-fix_exit(dbref obj)
-{
-	int i, j;
-
-	for (i = 0; i < db[obj].sp.exit.ndest;) {
-		if (!valid_obj((db[obj].sp.exit.dest)[i]) &&
-			(db[obj].sp.exit.dest)[i] != HOME) {
-			SanFixed(obj, "Removing invalid destination from %s");
-			db[obj].sp.exit.ndest--;
-			for (j = i; j < db[obj].sp.exit.ndest; j++) {
-				(db[obj].sp.exit.dest)[i] = (db[obj].sp.exit.dest)[i + 1];
-			}
-		} else {
-			i++;
-		}
-	}
-}
-
-void
 fix_entity(dbref obj)
 {
 	dbref i;
@@ -678,7 +546,6 @@ find_misplaced_objects(void)
 		if (TYPEOF(loop) != TYPE_ROOM &&
 			!is_item(loop) &&
 			TYPEOF(loop) != TYPE_ENTITY &&
-			TYPEOF(loop) != TYPE_EXIT &&
 			TYPEOF(loop) != TYPE_GARBAGE) {
 			SanFixedRef(loop, "Object #%d is of unknown type");
 			sanity_violated = 1;
@@ -717,7 +584,6 @@ find_misplaced_objects(void)
 			}
 			if (loop != GLOBAL_ENVIRONMENT && (!valid_obj(LOCATION(loop)) ||
 											   TYPEOF(LOCATION(loop)) == TYPE_GARBAGE ||
-											   TYPEOF(LOCATION(loop)) == TYPE_EXIT ||
 											   (TYPEOF(loop) == TYPE_ENTITY &&
 												TYPEOF(LOCATION(loop)) == TYPE_ENTITY))) {
 				if (TYPEOF(loop) == TYPE_ENTITY) {
@@ -769,9 +635,6 @@ find_misplaced_objects(void)
 		case TYPE_ENTITY:
 			fix_entity(loop);
 			break;
-		case TYPE_EXIT:
-			fix_exit(loop);
-			break;
 		case TYPE_GARBAGE:
 			fix_garbage(loop);
 			break;
@@ -796,11 +659,6 @@ adopt_orphans(void)
 				db[loop].next = db[LOCATION(loop)].contents;
 				db[LOCATION(loop)].contents = loop;
 				SanFixed2(loop, LOCATION(loop), "Orphaned object %s added to contents of %s");
-				break;
-			case TYPE_EXIT:
-				db[loop].next = db[LOCATION(loop)].sp.room.exits;
-				db[LOCATION(loop)].sp.room.exits = loop;
-				SanFixed2(loop, LOCATION(loop), "Orphaned exit %s added to exits of %s");
 				break;
 			case TYPE_GARBAGE:
 				db[loop].next = recyclable;
@@ -934,11 +792,6 @@ sanechange(dbref player, const char *command)
 		NEXTOBJ(d) = v;
 		SanPrint(player, "## Setting #%d's next field to %s", d, unparse(v));
 
-	} else if (!strcmp(field, "exits")) {
-		strlcpy(buf2, unparse(db[d].sp.room.exits), sizeof(buf2));
-		db[d].sp.room.exits = v;
-		SanPrint(player, "## Setting #%d's Exits list start to %s", d, unparse(v));
-
 	} else if (!strcmp(field, "contents")) {
 		strlcpy(buf2, unparse(CONTENTS(d)), sizeof(buf2));
 		CONTENTS(d) = v;
@@ -976,8 +829,7 @@ sanechange(dbref player, const char *command)
 			SanPrint(player, "change command help:");
 			SanPrint(player, "c <dbref> <field> <object>");
 		}
-		SanPrint(player, "Fields are:     exits       Start of Exits list.");
-		SanPrint(player, "                contents    Start of Contents list.");
+		SanPrint(player, "Fields are:     contents    Start of Contents list.");
 		SanPrint(player, "                next        Next object in list.");
 		SanPrint(player, "                location    Object's Location.");
 		SanPrint(player, "                home        Object's Home.");

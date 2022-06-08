@@ -85,16 +85,12 @@
 
 /* clear out unused programs every so often */
 
-/* Define these to let players set TYPE_THING and TYPE_EXIT objects dark. */
-#define EXIT_DARKING 1
+/* Define these to let players set TYPE_THING objects dark. */
 #define THING_DARKING 1
 
 /* Define this to 1 if you want DARK players to not show up on the WHO list
  * for mortals, in addition to not showing them in the room contents. */
 #define WHO_HIDES_DARK 1
-
-/* Allow a player to use teleport-to-player destinations for exits */
-#define TELEPORT_TO_PLAYER 1
 
 /* Enable or diable the global 'HOME' command. */
 #define ALLOW_HOME 1

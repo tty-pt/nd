@@ -128,9 +128,6 @@ db_clear_object(dbref i)
 {
 	struct object *o = &db[i];
 
-	if (Typeof(i) == TYPE_ROOM)
-		o->sp.room.exits = NOTHING;
-
 	memset(o, 0, sizeof(struct object));
 
 	NAME(i) = 0;
@@ -267,14 +264,6 @@ db_write_object(FILE * f, dbref i)
 		putref(f, o->sp.room.flags);
 		putref(f, o->sp.room.exits);
 		putref(f, o->sp.room.floor);
-		putref(f, OWNER(i));
-		break;
-
-	case TYPE_EXIT:
-		putref(f, o->sp.exit.ndest);
-		for (j = 0; j < o->sp.exit.ndest; j++) {
-			putref(f, (o->sp.exit.dest)[j]);
-		}
 		putref(f, OWNER(i));
 		break;
 	}
@@ -428,9 +417,6 @@ db_free_object(dbref i)
 		delete_proplist(o->properties);
 	}
 
-	if (Typeof(i) == TYPE_EXIT && o->sp.exit.dest) {
-		free((void *) o->sp.exit.dest);
-	}
 	if (Typeof(i) != TYPE_ROOM) {
 		struct observer_node *obs, *aux;
 		for (obs = o->first_observer; obs; obs = aux) {
@@ -602,16 +588,8 @@ db_read_object_foxen(FILE * f, struct object *o, dbref objno)
 		ROOM(objno)->dropto = prop_flag ? getref(f) : j;
 		ROOM(objno)->flags = getref(f);
 		ROOM(objno)->exits = getref(f);
+		ROOM(objno)->doors = getref(f);
 		ROOM(objno)->floor = getref(f);
-		OWNER(objno) = getref(f);
-		return;
-	case TYPE_EXIT:
-		o->sp.exit.ndest = prop_flag ? getref(f) : j;
-		if (o->sp.exit.ndest > 0)	/* only allocate space for linked exits */
-			o->sp.exit.dest = (dbref *) malloc(sizeof(dbref) * (o->sp.exit.ndest));
-		for (j = 0; j < o->sp.exit.ndest; j++) {
-			(o->sp.exit.dest)[j] = getref(f);
-		}
 		OWNER(objno) = getref(f);
 		return;
 	case TYPE_ENTITY:
@@ -694,15 +672,6 @@ object_copy(dbref player, dbref old)
         dbref nu = object_new();
 	struct object *newp = &db[nu];
 	NAME(nu) = alloc_string(NAME(old));
-	switch (Typeof(old)) {
-	case TYPE_CONSUMABLE:
-	case TYPE_EQUIPMENT:
-	case TYPE_THING:
-		/* SETVALUE(nu, 1); */
-		break;
-	case TYPE_ROOM:
-		newp->sp.room.exits = NOTHING;
-	}
 	newp->properties = copy_prop(old);
 	newp->contents = NOTHING;
 	newp->next = NOTHING;

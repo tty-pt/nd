@@ -23,15 +23,6 @@ OkObj(dbref obj)
 	return(!(obj < 0 || obj >= db_top || Typeof(obj) == TYPE_GARBAGE));
 }
 
-/* This checks to see if what can be linked to something else by who. */
-int
-can_link(dbref who, dbref what)
-{
-	/* Anyone can link an exit that is currently unlinked. */
-	return (controls(who, what) || ((Typeof(what) == TYPE_EXIT)
-									&& db[what].sp.exit.ndest == 0));
-}
-
 /*
  * Revision 1.2 -- SECURE_TELEPORT
  * you can only jump with an action from rooms that you own
@@ -47,29 +38,7 @@ can_link(dbref who, dbref what)
 int
 could_doit(dbref player, dbref thing)
 {
-	dbref dest;
 
-	if (Typeof(thing) == TYPE_EXIT) {
-		/* If exit is unlinked, can't do it.
-		 * Unless its a geo exit */
-		if (db[thing].sp.exit.ndest == 0) {
-			if (e_exit_is(thing))
-				goto geo;
-			else
-				return 0;
-		}
-
-		dest = *(db[thing].sp.exit.dest);
-
-		if (dest < 0 && e_exit_is(thing))
-			goto geo;
-	}
-
-	goto out;
-geo:
-	if (!e_exit_can(player, thing))
-		return 0;
-out:
 		/* Check the @lock on the thing, as a final test. */
 	return (eval_boolexp(player, GETLOCK(thing), thing));
 }
@@ -100,10 +69,6 @@ test_lock_false_default(dbref player, dbref thing, const char *lockprop)
 int
 can_doit(dbref player, dbref thing, const char *default_fail_msg)
 {
-	char const *dwts = "door";
-	char dir = '\0';
-	int door = 0;
-
 	if (thing == NOTHING) {
 		notify(player, default_fail_msg);
 		return 0;
@@ -119,38 +84,15 @@ can_doit(dbref player, dbref thing, const char *default_fail_msg)
 		return 0;
 	}
 
-	if (Typeof(thing) == TYPE_EXIT) {
-		dir = NAME(thing)[0];
-
-		if (GETDOOR(thing)) {
-			if (dir == 'u' || dir == 'd') {
-				dwts = "hatch";
-				door = 2;
-			} else
-				door = 1;
-		}
-
-	}
-
 	if (!could_doit(player, thing)) {
-		/* can't do it */
-		if (door) {
-			notifyf(player, "That %s is locked.", dwts);
-		} else if (default_fail_msg) {
+		if (default_fail_msg) {
 			notify(player, default_fail_msg);
 		}
 		return 0;
 	} else {
 		do_stand_silent(player);
 
-		if (door)
-			notifyf(player, "You open the %s.", dwts);
-
 		/* can do it */
-		if (Typeof(thing) == TYPE_EXIT && e_exit_is(thing))
-			notifyf(player, "You go %s.", e_name(exit_e(thing)));
-		if (door)
-			notifyf(player, "You close the %s.", dwts);
 		return 1;
 	}
 }
@@ -158,8 +100,7 @@ can_doit(dbref player, dbref thing, const char *default_fail_msg)
 int
 can_see(dbref player, dbref thing, int can_see_loc)
 {
-	if (player == thing || Typeof(thing) == TYPE_EXIT ||
-			Typeof(thing) == TYPE_ROOM)
+	if (player == thing || Typeof(thing) == TYPE_ROOM)
 		return 0;
 
 	if (can_see_loc) {
@@ -197,26 +138,6 @@ controls(dbref who, dbref what)
 		return 1;
 	}
 
-	/* exits are also controlled by the owners of the source and destination */
-	/* ACTUALLY, THEY AREN'T.  IT OPENS A BAD MPI SECURITY HOLE. */
-	/* any MPI on an exit's @succ or @fail would be run in the context
-	 * of the owner, which would allow the owner of the src or dest to
-	 * write malicious code for the owner of the exit to run.  Allowing them
-	 * control would allow them to modify _ properties, thus enabling the
-	 * security hole. -winged */
-	/*
-	 * if (Typeof(what) == TYPE_EXIT) {
-	 *    int     i = db[what].sp.exit.ndest;
-	 *
-	 *    while (i > 0) {
-	 *        if (who == OWNER(db[what].sp.exit.dest[--i]))
-	 *            return 1;
-	 *    }
-	 *    if (who == OWNER(db[what].location))
-	 *        return 1;
-	 * }
-	 */
-
 	/* owners control their own stuff */
 	return (who == OWNER(what));
 }
@@ -231,22 +152,8 @@ restricted(dbref player, dbref thing, object_flag_type flag)
 			&& (/* Setting a player dark requires a wizard. */
 			    Typeof(thing) == TYPE_ENTITY
 
-			    /* If exit darking is restricted, it requires a wizard. */
-			    || (!EXIT_DARKING && Typeof(thing) == TYPE_EXIT)
-
 			    /* If thing darking is restricted, it requires a wizard. */
 			    || (!THING_DARKING && is_item(thing)));
-	case QUELL:
-#ifdef GOD_PRIV
-		/* Only God (or God's stuff) can quell or unquell another wizard. */
-		return (God(OWNER(player)) || (TrueWizard(thing) && (thing != player) &&
-					Typeof(thing) == TYPE_ENTITY));
-#else
-		/* You cannot quell or unquell another wizard. */
-		return (TrueWizard(thing) && (thing != player) && (Typeof(thing) == TYPE_PLAYER));
-#endif
-		/* NOTREACHED */
-		break;
 	case BUILDER:
 		/* Would someone tell me why setting a program SMUCKER|MUCKER doesn't
 		 * go through here? -winged */

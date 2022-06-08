@@ -205,11 +205,6 @@ do_lock(command_t *cmd)
 		return;
 	}
 
-	if (Typeof(thing) == TYPE_EXIT
-			&& e_exit_is(thing)
-			&& geo_claim(player, getloc(thing)))
-		return;
-
 	if (!controls(player, thing)) {
 		notify(player, "You can't lock that!");
 		return;
@@ -221,11 +216,6 @@ do_lock(command_t *cmd)
 			notify(player, "I don't understand that key.");
 		} else {
 			/* everything ok, do it */
-			if (Typeof(thing) == TYPE_EXIT
-			    && e_exit_is(thing)
-			    && geo_claim(player, getloc(thing)))
-				return;
-
 			SETLOCK(thing, key);
 			notify(player, "Locked.");
 		}
@@ -251,19 +241,6 @@ int
 controls_link(dbref who, dbref what)
 {
 	switch (Typeof(what)) {
-	case TYPE_EXIT:
-		{
-			int i = db[what].sp.exit.ndest;
-
-			while (i > 0) {
-				if (controls(who, db[what].sp.exit.dest[--i]))
-					return 1;
-			}
-			if (who == OWNER(db[what].location))
-				return 1;
-			return 0;
-		}
-
 	case TYPE_ROOM:
 		{
 			if (controls(who, db[what].sp.room.dropto))
@@ -322,13 +299,10 @@ do_chown(command_t *cmd)
 	}
 #endif /* GOD_PRIV */
 	if (!Wizard(OWNER(player))) {
-		if (Typeof(thing) != TYPE_EXIT ||
-			(db[thing].sp.exit.ndest && !controls_link(player, thing))) {
-			if (!(FLAGS(thing) & CHOWN_OK) ||
+		if (!(FLAGS(thing) & CHOWN_OK) ||
 				!test_lock(player, thing, "_/chlk")) {
-				notify(player, "You can't take possession of that.");
-				return;
-			}
+			notify(player, "You can't take possession of that.");
+			return;
 		}
 	}
 
@@ -352,9 +326,6 @@ do_chown(command_t *cmd)
 	case TYPE_ENTITY:
 		notify(player, "Entities always own themselves.");
 		return;
-	case TYPE_EXIT:
-		OWNER(thing) = OWNER(owner);
-		break;
 	case TYPE_GARBAGE:
 		notify(player, "No one wants to own garbage.");
 		return;
@@ -477,11 +448,9 @@ do_set(command_t *cmd)
 		f = KILL_OK;
 	} else if ((string_prefix("DARK", p)) || (string_prefix("DEBUG", p))) {
 		f = DARK;
-	} else if (string_prefix("QUELL", p)) {
-		f = QUELL;
 	} else if (string_prefix("BUILDER", p) || string_prefix("BOUND", p)) {
 		f = BUILDER;
-	} else if (string_prefix("CHOWN_OK", p) || string_prefix("COLOR", p)) {
+	} else if (string_prefix("CHOWN_OK", p)) {
 		f = CHOWN_OK;
 	} else if (string_prefix("JUMP_OK", p)) {
 		f = JUMP_OK;
@@ -651,8 +620,6 @@ set_flags_from_tunestr(dbref obj, const char* tunestr)
 			f = KILL_OK;
 		} else if (pcc == 'L') {
 			f = LINK_OK;
-		} else if (pcc == 'Q') {
-			f = QUELL;
 		} else if (pcc == 'W') {
 			/* f = WIZARD;     This is very bad to auto-set. */
 		}
