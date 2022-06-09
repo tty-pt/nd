@@ -169,7 +169,7 @@ blessprops_wildcard(dbref player, dbref thing, const char *dir, const char *wild
 		if (equalstr(wldcrd, propname)) {
 			snprintf(buf, sizeof(buf), "%s%c%s", dir, PROPDIR_DELIMITER, propname);
 			if (!Prop_System(buf) && ((!Prop_Hidden(buf) && !(PropFlags(propadr) & PROP_SYSPERMS))
-				|| Wizard(OWNER(player)))) {
+				|| (ENTITY(OWNER(player))->flags & EF_WIZARD))) {
 				if (!*ptr || recurse) {
 					cnt++;
 					if (blessp) {
@@ -201,7 +201,9 @@ do_unbless(command_t *cmd) {
 	char buf[BUFFER_LEN];
 	int cnt;
 
-	if (!Wizard(player) || Typeof(player) != TYPE_ENTITY) {
+	CBUG(Typeof(player) != TYPE_ENTITY);
+
+	if (!(ENTITY(player)->flags & EF_WIZARD)) {
 		notify(player, "Only Wizard players may use this command.");
 		return;
 	}
@@ -211,7 +213,7 @@ do_unbless(command_t *cmd) {
 		return;
 	}
 
-	if (!Wizard(OWNER(player))) {
+	if (!(ENTITY(OWNER(player))->flags & EF_WIZARD)) {
 		notify(player, "Permission denied. (You're not a wizard)");
 		return;
 	}
@@ -238,7 +240,9 @@ do_bless(command_t *cmd) {
 	char buf[BUFFER_LEN];
 	int cnt;
 
-	if (!Wizard(player) || Typeof(player) != TYPE_ENTITY) {
+	CBUG(Typeof(player) != TYPE_ENTITY);
+
+	if (!(ENTITY(player)->flags & EF_WIZARD)) {
 		notify(player, "Only Wizard players may use this command.");
 		return;
 	}
@@ -262,7 +266,7 @@ do_bless(command_t *cmd) {
 	}
 #endif
 
-	if (!Wizard(OWNER(player))) {
+	if (!(ENTITY(OWNER(player))->flags & EF_WIZARD)) {
 		notify(player, "Permission denied. (you're not a wizard)");
 		return;
 	}
@@ -279,7 +283,8 @@ do_boot(command_t *cmd) {
 	dbref victim;
 	char buf[BUFFER_LEN];
 
-	if (!Wizard(player) || Typeof(player) != TYPE_ENTITY) {
+	CBUG(Typeof(player) != TYPE_ENTITY);
+	if (!(ENTITY(player)->flags & EF_WIZARD)) {
 		notify(player, "Only a Wizard player can boot someone off.");
 		return;
 	}
@@ -322,7 +327,9 @@ do_toad(command_t *cmd) {
 	dbref stuff;
 	char buf[BUFFER_LEN];
 
-	if (!Wizard(player) || Typeof(player) != TYPE_ENTITY) {
+	CBUG(Typeof(player) != TYPE_ENTITY);
+
+	if (!(ENTITY(player)->flags & EF_WIZARD)) {
 		notify(player, "Only a Wizard player can turn an entity into a toad.");
 		return;
 	}
@@ -359,7 +366,7 @@ do_toad(command_t *cmd) {
 	if (Typeof(victim) != TYPE_ENTITY) {
 		notify(player, "You can only turn entities into toads!");
 #ifdef GOD_PRIV
-	} else if (!(God(player)) && (Wizard(victim))) {
+	} else if (!(God(player)) && (ENTITY(victim)->flags & EF_WIZARD)) {
 #else
 	} else if (Wizard(victim)) {
 #endif
@@ -409,7 +416,7 @@ do_usage(command_t *cmd) {
 	struct rusage usage;
 #endif
 
-	if (!Wizard(OWNER(player))) {
+	if (!(ENTITY(OWNER(player))->flags & EF_WIZARD)) {
 		notify(player, "Permission denied. (@usage is wizard-only)");
 		return;
 	}

@@ -21,8 +21,6 @@
 
 /* defines for possible data access mods. */
 #define MESGPROP_DESC		"_/de"
-#define MESGPROP_LOCK		"_/lok"
-#define MESGPROP_CONLOCK	"_/clk"
 #define MESGPROP_VALUE		"@/value"
 
 #define GETMESG(x,y)   (get_property_class(x, y))
@@ -99,36 +97,15 @@ enum type {
 #define TYPE_MASK           0xf	/* room for expansion */
 #define is_item(x) (Typeof(x) == TYPE_THING || Typeof(x) == TYPE_CONSUMABLE || Typeof(x) == TYPE_EQUIPMENT)
 
-#define WIZARD             0x10	/* gets automatic control */
-#define LINK_OK            0x20	/* anybody can link to this */
-#define DARK               0x40	/* contents of room are not printed */
+/* enum object_flags { */
+/* }; */
 
-/* This #define disabled to avoid accidentally triggerring debugging code */
-/* #define DEBUG DARK */	/* Used to print debugging information on
-				 * on MUF programs */
-
-#define RESERVED          0x100	/* this object goes home when dropped */
-#define BUILDER           0x200	/* this player can use construction commands */
-#define BOUND BUILDER
-#define CHOWN_OK          0x400	/* this object can be @chowned, or
-									this player can see color */
-#define JUMP_OK           0x800	/* A room which can be jumped from, or
-								 * a player who can be jumped to */
-#define EXPANSION1		 0x1000 /* Expansion bit */
-#define EXPANSION2		 0x2000 /* Expansion bit */
-#define KILL_OK	         0x4000	/* Kill_OK bit.  Means you can be killed. */
-#define EXPANSION3		 0x8000 /* Expansion bit */
-#define HAVEN           0x10000	/* can't kill here */
-#define ABODE           0x20000	/* can set home here */
-#define INTERACTIVE    0x200000	/* internal: denotes player is in editor, or
-								 * muf READ. */
 #define SAVED_DELTA    0x800000	/* internal: object last saved to delta file */
-#define READMODE     0x10000000	/* internal: when set, player is in a READ */
 #define SANEBIT      0x20000000	/* internal: used to check db sanity */
 
 
 /* what flags to NOT dump to disk. */
-#define DUMP_MASK    (INTERACTIVE | SAVED_DELTA | READMODE | SANEBIT)
+#define DUMP_MASK    (SAVED_DELTA | SANEBIT)
 
 
 typedef long object_flag_type;
@@ -141,10 +118,6 @@ typedef long object_flag_type;
 
 #define DoNull(s) ((s) ? (s) : "")
 #define Typeof(x) (x == HOME ? TYPE_ROOM : (FLAGS(x) & TYPE_MASK))
-#define Wizard(x) ((FLAGS(x) & WIZARD) != 0)
-#define Dark(x) ((FLAGS(x) & DARK) != 0)
-
-#define Builder(x) ((FLAGS(x) & (WIZARD|BUILDER)) != 0)
 
 /* special dbref's */
 #define NOTHING ((dbref) -1)	/* null dbref */
@@ -156,6 +129,8 @@ enum entity_flags {
 	EF_AGGRO = 2,
 	EF_SITTING = 4,
 	EF_SHOP = 8,
+	EF_WIZARD = 16,
+	EF_BUILDER = 32,
 };
 
 enum attribute {
@@ -198,6 +173,11 @@ struct entity {
 
 enum room_flags {
 	RF_TEMP = 1,
+	RF_HAVEN = 2,
+};
+
+enum equipment_flags {
+	EF_EQUIPPED = 1,
 };
 
 /* union of type-specific fields */
@@ -215,6 +195,7 @@ union specific {
 		unsigned eqw;
 		unsigned msv;
 		unsigned rare;
+		unsigned flags;
 	} equipment;
 	struct {
 		unsigned food;

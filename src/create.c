@@ -106,7 +106,7 @@ do_clone(command_t *cmd)
 
 	/* Perform sanity checks */
 
-	if (!Builder(player)) {
+	if (!(ENTITY(player)->flags & (EF_WIZARD | EF_BUILDER))) {
 		notify(player, "That command is restricted to authorized builders.");
 		return;
 	}
@@ -226,7 +226,7 @@ do_create(command_t *cmd)
 	for (; *rname && isspace(*rname); rname++) ;
 
 	cost = atoi(qname);
-	if (!Builder(player)) {
+	if (!(ENTITY(player)->flags & (EF_WIZARD | EF_BUILDER))) {
 		notify(player, "That command is restricted to authorized builders.");
 		return;
 	}

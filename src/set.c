@@ -141,12 +141,12 @@ do_chown(command_t *cmd)
 	} else {
 		owner = OWNER(player);
 	}
-	if (!Wizard(OWNER(player)) && OWNER(player) != owner) {
+	if (!(ENTITY(player)->flags & EF_WIZARD) && OWNER(player) != owner) {
 		notify(player, "Only wizards can transfer ownership to others.");
 		return;
 	}
 #ifdef GOD_PRIV
-	if (Wizard(OWNER(player)) && !God(player) && God(owner)) {
+	if ((ENTITY(OWNER(player))->flags & EF_WIZARD) && !God(player) && God(owner)) {
 		notify(player, "God doesn't need an offering or sacrifice.");
 		return;
 	}
@@ -154,7 +154,7 @@ do_chown(command_t *cmd)
 
 	switch (Typeof(thing)) {
 	case TYPE_ROOM:
-		if (!Wizard(OWNER(player)) && db[player].location != thing) {
+		if (!(ENTITY(OWNER(player))->flags & EF_WIZARD) && db[player].location != thing) {
 			notify(player, "You can only chown \"here\".");
 			return;
 		}
@@ -163,7 +163,7 @@ do_chown(command_t *cmd)
 	case TYPE_CONSUMABLE:
 	case TYPE_EQUIPMENT:
 	case TYPE_THING:
-		if (!Wizard(OWNER(player)) && db[thing].location != player) {
+		if (!(ENTITY(OWNER(player))->flags & EF_WIZARD) && db[thing].location != player) {
 			notify(player, "You aren't carrying that.");
 			return;
 		}
@@ -186,150 +186,6 @@ do_chown(command_t *cmd)
 	}
 }
 
-
-/* Note: Gender code taken out.  All gender references are now to be handled
-   by property lists...
-   Setting of flags and property code done here.  Note that the PROP_DELIMITER
-   identifies when you're setting a property.
-   A @set <thing>= :clear
-   will clear all properties.
-   A @set <thing>= type:
-   will remove that property.
-   A @set <thing>= propname:string
-   will add that string property or replace it.
-   A @set <thing>= propname:^value
-   will add that integer property or replace it.
- */
-
-void
-do_set(command_t *cmd)
-{
-	dbref player = cmd->player;
-	const char *name = cmd->argv[1];
-	const char *flag = cmd->argv[2];
-	dbref thing;
-	const char *p;
-	object_flag_type f;
-
-	/* find thing */
-	if ((thing = match_controlled(player, name)) == NOTHING)
-		return;
-#ifdef GOD_PRIV
-	/* Only God can set anything on any of his stuff */
-	if(!God(player) && God(OWNER(thing))) {
-		notify(player,"Only God may touch God's property.");
-		return;
-	}
-#endif
-
-	/* move p past NOT_TOKEN if present */
-	for (p = flag; *p && (*p == NOT_TOKEN || isspace(*p)); p++) ;
-
-	/* Now we check to see if it's a property reference */
-	/* if this gets changed, please also modify boolexp.c */
-	if (strchr(flag, PROP_DELIMITER)) {
-		/* copy the string so we can muck with it */
-		char *type = alloc_string(flag);	/* type */
-		char *pname = (char *) strchr(type, PROP_DELIMITER);	/* propname */
-		char *x;				/* to preserve string location so we can free it */
-		char *temp;
-		int ival = 0;
-
-		x = type;
-		while (isspace(*type) && (*type != PROP_DELIMITER))
-			type++;
-		if (*type == PROP_DELIMITER) {
-			/* clear all properties */
-			for (type++; isspace(*type); type++) ;
-			if (strcmp(type, "clear")) {
-				notify(player, "Use '@set <obj>=:clear' to clear all props on an object");
-				free((void *)x);
-				return;
-			}
-			remove_property_list(thing, Wizard(OWNER(player)));
-			notify(player, "All user-owned properties removed.");
-			free((void *) x);
-			return;
-		}
-		/* get rid of trailing spaces and slashes */
-		for (temp = pname - 1; temp >= type && isspace(*temp); temp--) ;
-		while (temp >= type && *temp == '/')
-			temp--;
-		*(++temp) = '\0';
-
-		pname++;				/* move to next character */
-		/* while (isspace(*pname) && *pname) pname++; */
-		if (*pname == '^' && number(pname + 1))
-			ival = atoi(++pname);
-
-		if (Prop_System(type) || (!Wizard(OWNER(player)) && (Prop_SeeOnly(type) || Prop_Hidden(type)))) {
-			notify(player, "Permission denied. (The property is hidden from you.)");
-			free((void *)x);
-			return;
-		}
-
-		if (!(*pname)) {
-			remove_property(thing, type);
-			notify(player, "Property removed.");
-		} else {
-			if (ival)
-				add_prop_nofetch(thing, type, NULL, ival);
-			else
-				add_prop_nofetch(thing, type, pname, 0);
-			notify(player, "Property set.");
-		}
-		free((void *) x);
-		return;
-	}
-	/* identify flag */
-	if (*p == '\0') {
-		notify(player, "You must specify a flag to set.");
-		return;
-	} else if (string_prefix("WIZARD", p)) {
-		f = WIZARD;
-	} else if (string_prefix("LINK_OK", p)) {
-		f = LINK_OK;
-
-	} else if (string_prefix("KILL_OK", p)) {
-		f = KILL_OK;
-	} else if ((string_prefix("DARK", p)) || (string_prefix("DEBUG", p))) {
-		f = DARK;
-	} else if (string_prefix("BUILDER", p) || string_prefix("BOUND", p)) {
-		f = BUILDER;
-	} else if (string_prefix("CHOWN_OK", p)) {
-		f = CHOWN_OK;
-	} else if (string_prefix("JUMP_OK", p)) {
-		f = JUMP_OK;
-	} else if (string_prefix("HAVEN", p)) {
-		f = HAVEN;
-	} else if ((string_prefix("ABODE", p))) {
-		f = ABODE;
-	} else {
-		notify(player, "I don't recognize that flag.");
-		return;
-	}
-
-	/* check for restricted flag */
-	if (restricted(player, thing, f)) {
-		notify(player, "Permission denied. (restricted flag)");
-		return;
-	}
-	/* check for stupid wizard */
-	if (f == WIZARD && *flag == NOT_TOKEN && thing == player) {
-		notify(player, "You cannot make yourself mortal.");
-		return;
-	}
-	/* else everything is ok, do the set */
-	if (*flag == NOT_TOKEN) {
-		/* reset the flag */
-		FLAGS(thing) &= ~f;
-		notify(player, "Flag reset.");
-	} else {
-		/* set the flag */
-		FLAGS(thing) |= f;
-		notify(player, "Flag set.");
-	}
-}
 
 void
 do_propset(command_t *cmd)
@@ -383,7 +239,7 @@ do_propset(command_t *cmd)
 		return;
 	}
 
-	if (Prop_System(pname) || (!Wizard(OWNER(player)) && (Prop_SeeOnly(pname) || Prop_Hidden(pname)))) {
+	if (Prop_System(pname) || (!(ENTITY(OWNER(player))->flags & EF_WIZARD) && (Prop_SeeOnly(pname) || Prop_Hidden(pname)))) {
 		notify(player, "Permission denied. (can't set a property that's restricted against you)");
 		return;
 	}
@@ -429,41 +285,6 @@ do_propset(command_t *cmd)
 	}
 	notify(player, "Property set.");
 }
-
-void
-set_flags_from_tunestr(dbref obj, const char* tunestr)
-{
-	const char *p = tunestr;
-	object_flag_type f = 0;
-
-	for (;;) {
-		char pcc = toupper(*p);
-		if (pcc == '\0' || pcc == '\n' || pcc == '\r') {
-			break;
-		} else if (pcc == 'A') {
-			f = ABODE;
-		} else if (pcc == 'B') {
-			f = BUILDER;
-		} else if (pcc == 'C') {
-			f = CHOWN_OK;
-		} else if (pcc == 'D') {
-			f = DARK;
-		} else if (pcc == 'H') {
-			f = HAVEN;
-		} else if (pcc == 'J') {
-			f = JUMP_OK;
-		} else if (pcc == 'K') {
-			f = KILL_OK;
-		} else if (pcc == 'L') {
-			f = LINK_OK;
-		} else if (pcc == 'W') {
-			/* f = WIZARD;     This is very bad to auto-set. */
-		}
-		FLAGS(obj) |= f;
-		p++;
-	}
-}
-
 
 static const char *set_c_version = "$RCSfile$ $Revision: 1.31 $";
 const char *get_set_c_version(void) { return set_c_version; }

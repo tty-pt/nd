@@ -131,7 +131,6 @@ extern void dialog_stop(dbref player);
 /* From predicates.c */
 extern int OkObj(dbref obj);
 extern int can_doit(dbref player, dbref thing, const char *default_fail_msg);
-extern int can_see(dbref player, dbref thing, int can_see_location);
 extern int controls(dbref who, dbref what);
 extern int controls_link(dbref who, dbref what);
 extern int restricted(dbref player, dbref thing, object_flag_type flag);
@@ -151,8 +150,6 @@ extern void do_describe(command_t *);
 extern void do_unlink(command_t *);
 extern void do_unlink_quiet(command_t *cmd, const char *name);
 extern void do_chown(command_t *);
-extern void do_set(command_t *);
-extern void set_flags_from_tunestr(dbref obj, const char* flags);
 
 /* From speech.c */
 #define ONOTIFYF(who, ...) notify_except_fmt(db[getloc(who)].contents, who, __VA_ARGS__)

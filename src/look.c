@@ -52,18 +52,14 @@ look_contents(dbref player, dbref loc, const char *contents_name)
         char buf[BUFSIZ];
         size_t buf_l = 0;
 	dbref thing;
-	dbref can_see_loc;
-
-	/* check to see if he can see the location */
-	can_see_loc = (!Dark(loc) || controls(player, loc));
 
 	/* check to see if there is anything there */
 	if (db[loc].contents > 0) {
                 DOLIST(thing, db[loc].contents) {
-                        if (can_see(player, thing, can_see_loc)) {
-                                buf_l += snprintf(&buf[buf_l], BUFSIZ - buf_l,
-                                         "\n%s", unparse_object(player, thing));
-                        }
+			if (thing == player)
+				continue;
+			buf_l += snprintf(&buf[buf_l], BUFSIZ - buf_l,
+					"\n%s", unparse_object(player, thing));
                 }
 	}
 
@@ -159,7 +155,7 @@ do_look_at(command_t *cmd)
 	case TYPE_THING:
 		if (web_look(player, thing, GETDESC(thing))) {
 			look_simple(player, thing);
-			if (!(FLAGS(thing) & HAVEN)) {
+			if (!(ROOM(thing)->flags & RF_HAVEN)) {
 				look_contents(player, thing, "Contains:");
 			}
 		}
@@ -200,7 +196,7 @@ listprops_wildcard(dbref player, dbref thing, const char *dir, const char *wild)
 		if (equalstr(wldcrd, propname)) {
 			snprintf(buf, sizeof(buf), "%s%c%s", dir, PROPDIR_DELIMITER, propname);
 			if (!Prop_System(buf) && ((!Prop_Hidden(buf) && !(PropFlags(propadr) & PROP_SYSPERMS))
-				|| Wizard(OWNER(player)))) {
+				|| ENTITY(OWNER(player))->flags & EF_WIZARD)) {
 				if (!*ptr || recurse) {
 					cnt++;
 					displayprop(player, thing, buf, buf2, sizeof(buf2));
@@ -445,7 +441,7 @@ do_find(command_t *cmd)
 		notifyf(player, "You don't have enough %s.", PENNIES);
 	} else {
 		for (i = 0; i < db_top; i++) {
-			if ((Wizard(OWNER(player)) || OWNER(i) == OWNER(player)) &&
+			if (((ENTITY(OWNER(player))->flags & EF_WIZARD) || OWNER(i) == OWNER(player)) &&
 				NAME(i) && (!*name || equalstr(buf, (char *) NAME(i)))) {
 				display_objinfo(player, i, 0);
 				total++;
@@ -469,7 +465,7 @@ do_owned(command_t *cmd)
 		notifyf(player, "You don't have enough %s.", PENNIES);
 		return;
 	}
-	if (Wizard(OWNER(player)) && *name) {
+	if ((ENTITY(OWNER(player))->flags & EF_WIZARD) && *name) {
 		if ((victim = lookup_player(name)) == NOTHING) {
 			notify(player, "I couldn't find that player.");
 			return;
@@ -543,11 +539,9 @@ do_sweep(command_t *cmd)
 	for (; ref != NOTHING; ref = db[ref].next) {
 		switch (Typeof(ref)) {
 		case TYPE_ENTITY:
-			if (!Dark(thing)) {
-				snprintf(buf, sizeof(buf), "  %s is a %splayer.",
-						unparse_object(player, ref), ENTITY(ref)->fd > 0 ? "" : "sleeping ");
-				notify(player, buf);
-			}
+			snprintf(buf, sizeof(buf), "  %s is a %splayer.",
+					unparse_object(player, ref), ENTITY(ref)->fd > 0 ? "" : "sleeping ");
+			notify(player, buf);
 			break;
 		}
 	}

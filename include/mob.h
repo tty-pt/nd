@@ -5,12 +5,6 @@
 #include "spell.h"
 #include "item.h"
 
-/* FIXME move to db.h? */
-#define MESGPROP_MID	"_/mid"
-#define SETMID(x, y)	set_property_value(x, MESGPROP_MID, y + 1)
-#define GETMID(x)	(get_property_value(x, MESGPROP_MID) - 1)
-
-
 /* FIXME use ref as index */
 #define ENTITY_SKELETON(mob_id) (&entity_skeleton_map[mob_id])
 

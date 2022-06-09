@@ -78,7 +78,7 @@ equip(dbref who, dbref eq)
 		return 1;
 
 	EQUIP(who, eql) = eq;
-	db[eq].flags |= DARK;
+	EQUIPMENT(eq)->flags |= EF_EQUIPPED;
 
 	notifyf(who, "You equip %s.", NAME(eq));
 	web_stats(who);
@@ -150,7 +150,7 @@ unequip(dbref who, unsigned eql)
 	}
 
 	EQUIP(who, eql) = NOTHING;
-	db[eq].flags &= ~DARK;
+	EQUIPMENT(eq)->flags &= ~EF_EQUIPPED;
 	web_content_in(who, eq);
 	web_stats(who);
 	web_equipment(who);

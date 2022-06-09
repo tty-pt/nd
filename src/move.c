@@ -259,7 +259,8 @@ do_get(command_t *cmd)
 
 	cont = thing;
 
-	if (getloc(thing) != getloc(player) && !Wizard(OWNER(player))) {
+	// is this needed?
+	if (getloc(thing) != getloc(player) && !(ENTITY(OWNER(player))->flags & EF_WIZARD)) {
 		notify(player, "That is too far away from you.");
 		return;
 	}
@@ -410,10 +411,7 @@ do_recycle(command_t *cmd)
 	}
 #endif
 	if (!controls(player, thing)) {
-		if(Wizard(OWNER(player)) && (Typeof(thing) == TYPE_GARBAGE))
-			notify(player, "That's already garbage!");
-		else
-			notify(player, "Permission denied. (You don't control what you want to recycle)");
+		notify(player, "You can not do that.");
 	} else {
 		switch (Typeof(thing)) {
 		case TYPE_ROOM:
@@ -477,7 +475,7 @@ recycle(dbref player, dbref thing)
 	depth++;
 	switch (Typeof(thing)) {
 	case TYPE_ROOM:
-		if (!Wizard(OWNER(thing)))
+		if (!(ENTITY(OWNER(thing))->flags & EF_WIZARD))
 			db[OWNER(thing)].value += ROOM_COST;
 		if (ROOM(thing)->flags & RF_TEMP)
 			for (first = db[thing].contents; first != NOTHING; first = rest) {
@@ -493,7 +491,7 @@ recycle(dbref player, dbref thing)
 	case TYPE_CONSUMABLE:
 	case TYPE_EQUIPMENT:
 	case TYPE_THING:
-		if (!Wizard(OWNER(thing)))
+		if (!(ENTITY(OWNER(thing))->flags & EF_WIZARD))
 			db[OWNER(thing)].value += db[thing].value;
 		if (ROOM(getloc(thing))->flags & RF_TEMP) {
 			for (first = db[thing].contents; first != NOTHING; first = rest) {

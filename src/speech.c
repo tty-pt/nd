@@ -59,17 +59,18 @@ do_wall(command_t *cmd)
 	dbref i;
 	char buf[BUFFER_LEN];
 
-	if (Wizard(player) && Typeof(player) == TYPE_ENTITY) {
-		warn("WALL from %s(%d): %s", NAME(player), player, message);
-		snprintf(buf, sizeof(buf), "%s shouts, \"%s\"", NAME(player), message);
-		for (i = 0; i < db_top; i++) {
-			if (Typeof(i) == TYPE_ENTITY) {
-				notify(i, buf);
-			}
-		}
-	} else {
+	CBUG(Typeof(player) != TYPE_ENTITY);
+
+	if (!(ENTITY(player)->flags & EF_WIZARD)) {
 		notify(player, "But what do you want to do with the wall?");
+		return;
 	}
+
+	warn("WALL from %s(%d): %s", NAME(player), player, message);
+	snprintf(buf, sizeof(buf), "%s shouts, \"%s\"", NAME(player), message);
+	for (i = 0; i < db_top; i++)
+		if (Typeof(i) == TYPE_ENTITY)
+			notify(i, buf);
 }
 
 static int
@@ -99,7 +100,7 @@ do_page(command_t *cmd)
 		notify(player, "I don't recognize that name.");
 		return;
 	}
-	if (FLAGS(target) & HAVEN) {
+	if (ROOM(target)->flags & RF_HAVEN) {
 		notify(player, "That player does not wish to be disturbed.");
 		return;
 	}

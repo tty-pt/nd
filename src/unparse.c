@@ -117,7 +117,7 @@ unparse_object(dbref player, dbref loc)
 
                 BUFF("%s", NAME(loc));
 
-		if (player == NOTHING || controls_link(player, loc) || FLAGS(loc) & CHOWN_OK)
+		if (player == NOTHING || controls_link(player, loc))
 
                         BUFF("(#%d)", loc);
 

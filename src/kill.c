@@ -258,16 +258,15 @@ do_kill(command_t *cmd)
 		? ematch_near(player, what)
 		: player;
 
-	if (here == 0) {
-		notify(player, "You may not kill in room 0");
+	if (here == 0 || (ROOM(here)->flags & RF_HAVEN)) {
+		notify(player, "You may not kill here");
 		return;
 	}
 
 	CBUG(Typeof(player) != TYPE_ENTITY);
 	struct entity *att = ENTITY(player);
 
-	if (FLAGS(here) & HAVEN
-	    || target == NOTHING
+	if (target == NOTHING
 	    || player == target
 	    || Typeof(target) != TYPE_ENTITY)
 	{
@@ -333,7 +332,7 @@ do_heal(command_t *cmd)
 	} else
 		target = player;
 
-	if (!(FLAGS(player) & WIZARD)
+	if (!(ENTITY(player)->flags & EF_WIZARD)
 	    || target < 0
 	    || Typeof(target) != TYPE_ENTITY) {
                 notify(player, "You can't do that.");
@@ -356,7 +355,7 @@ do_advitam(command_t *cmd)
 	const char *name = cmd->argv[1];
 	dbref target = ematch_near(player, name);
 
-	if (!(FLAGS(player) & WIZARD)
+	if (!(ENTITY(player)->flags & EF_WIZARD)
 	    || target == NOTHING
 	    || OWNER(target) != player) {
 		notify(player, "You can't do that.");
@@ -374,7 +373,7 @@ do_givexp(command_t *cmd, const char *name, const char *amount)
 	dbref target = ematch_near(player, name);
 	int amt = strtol(amount, NULL, 0);
 
-	if (!(FLAGS(player) & WIZARD)
+	if (!(ENTITY(player)->flags & EF_WIZARD)
 	    || target == NOTHING)
 		notify(player, "You can't do that.");
 	else

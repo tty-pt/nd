@@ -53,21 +53,6 @@ can_doit(dbref player, dbref thing, const char *default_fail_msg)
 }
 
 int
-can_see(dbref player, dbref thing, int can_see_loc)
-{
-	if (player == thing || Typeof(thing) == TYPE_ROOM)
-		return 0;
-
-	if (can_see_loc) {
-		return (!Dark(thing) ||
-			controls(player, thing));
-	} else {
-		/* can't see loc */
-		return controls(player, thing);
-	}
-}
-
-int
 controls(dbref who, dbref what)
 {
 	/* No one controls invalid objects */
@@ -83,7 +68,7 @@ controls(dbref who, dbref what)
 		who = OWNER(who);
 
 	/* Wizard controls everything */
-	if (Wizard(who)) {
+	if (ENTITY(who)->flags & EF_WIZARD) {
 #ifdef GOD_PRIV
 		if(God(OWNER(what)) && !God(who))
 			/* Only God controls God's objects */
@@ -97,54 +82,6 @@ controls(dbref who, dbref what)
 	return (who == OWNER(what));
 }
 
-int
-restricted(dbref player, dbref thing, object_flag_type flag)
-{
-	switch (flag) {
-	case DARK:
-		/* Dark can be set on a Program or Room by anyone. */
-		return !Wizard(OWNER(player))
-			&& (/* Setting a player dark requires a wizard. */
-			    Typeof(thing) == TYPE_ENTITY
-
-			    /* If thing darking is restricted, it requires a wizard. */
-			    || (!THING_DARKING && is_item(thing)));
-	case BUILDER:
-		/* Would someone tell me why setting a program SMUCKER|MUCKER doesn't
-		 * go through here? -winged */
-		/* Setting a program Bound causes any function called therein to be
-		 * put in preempt mode, regardless of the mode it had before.
-		 * Since this is just a convenience for atomic-functionwriters,
-		 * why is it limited to only a Wizard? -winged */
-		/* Setting a player Builder is limited to a Wizard. */
-		return (!Wizard(OWNER(player)));
-		/* NOTREACHED */
-		break;
-	case WIZARD:
-			/* To do anything with a Wizard flag requires a Wizard. */
-		if (Wizard(OWNER(player))) {
-#ifdef GOD_PRIV
-			/* ...but only God can make a player a Wizard, or re-mort
-			 * one. */
-			return ((Typeof(thing) == TYPE_ENTITY) && !God(player));
-#else							/* !GOD_PRIV */
-			/* We don't want someone setting themselves !W, to prevent
-			 * a case where there are no wizards at all */
-			return ((Typeof(thing) == TYPE_PLAYER && thing == OWNER(player)));
-#endif							/* GOD_PRIV */
-		} else
-			return 1;
-		/* NOTREACHED */
-		break;
-	default:
-			/* No other flags are restricted. */
-		return 0;
-		/* NOTREACHED */
-		break;
-	}
-	/* NOTREACHED */
-}
-
 /* Removes 'cost' value from 'who', and returns 1 if the act has been
  * paid for, else returns 0. */
 int
@@ -152,7 +89,7 @@ payfor(dbref who, int cost)
 {
 	who = OWNER(who);
 		/* Wizards don't have to pay for anything. */
-	if (Wizard(who)) {
+	if (ENTITY(who)->flags & EF_WIZARD) {
 		return 1;
 	} else if (db[who].value >= cost) {
 		db[who].value -= cost;

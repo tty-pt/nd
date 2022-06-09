@@ -243,7 +243,6 @@ geo_room_at(dbref player, pos_t pos)
 	bio = noise_point(pos);
         there = object_add(biomes[bio->bio_idx], NOTHING);
 	map_put(pos, there, DB_NOOVERWRITE);
-	/* FLAGS(there) = TYPE_ROOM | (FLAGS(cmd->player) & JUMP_OK); */
 	CBUG(there <= 0);
 	exits_infer(player, there);
 

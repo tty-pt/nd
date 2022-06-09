@@ -22,7 +22,7 @@ do_give(command_t *cmd)
 	int amount = atoi(cmd->argv[2]);
 	dbref who;
 
-	if (amount < 0 && !Wizard(OWNER(player))) {
+	if (amount < 0 && !(ENTITY(OWNER(player))->flags & EF_WIZARD)) {
 		notify(player, "Invalid amount.");
 		return;
 	}
@@ -36,7 +36,7 @@ do_give(command_t *cmd)
 		return;
 	}
 
-	if (!Wizard(OWNER(player))) {
+	if (!(ENTITY(OWNER(player))->flags & EF_WIZARD)) {
 		if (Typeof(who) != TYPE_ENTITY) {
 			notify(player, "You can only give to other entities.");
 			return;

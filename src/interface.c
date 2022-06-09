@@ -156,11 +156,6 @@ core_command_t cmds[] = {
 		/* .name = "command", */
 		/* .cb = &do_command, */
 		/* sanechange(player, full_command); /1* sanchange *1/ */
-	}, {
-		/* sanfix(player); */
-		.name = "set",
-		.cb = &do_set,
-
 		/* do_showextver(player); */
 	}, {
 		.name = "sweep",
@@ -1061,7 +1056,7 @@ wall_wizards(const char *msg)
 	strlcat(buf, "\r\n", sizeof(buf));
 
 	DESCR_ITER(d)
-		if (Wizard(d->player))
+		if (ENTITY(d->player)->flags & EF_WIZARD)
 			descr_inband(d->fd, buf);
 }
 

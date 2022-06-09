@@ -67,8 +67,6 @@ create_player(const char *name)
 	add_player(player);
 	ENTITY(player)->flags = EF_PLAYER;
 
-	FLAGS(player) |= CHOWN_OK;
-
 	return player;
 }
 

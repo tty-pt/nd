@@ -55,7 +55,7 @@ web_look(dbref player, dbref loc, char const *description)
 {
         char buf[BUFSIZ];
         char buf2[BUFSIZ];
-        dbref thing, can_see_loc;
+        dbref thing;
 	McpMesg msg;
 	McpFrame *mfr = web_frame(ENTITY(player)->fd);
 	if (!mfr)
@@ -88,30 +88,28 @@ web_look(dbref player, dbref loc, char const *description)
         mcp_frame_output_mesg(mfr, &msg);
         mcp_mesg_clear(&msg);
 
-        if (loc != player && Typeof(loc) == TYPE_ENTITY && !Wizard(player))
+        if (loc != player && Typeof(loc) == TYPE_ENTITY && !(ENTITY(player)->flags & EF_WIZARD))
                 return 0;
-
-	can_see_loc = (!Dark(loc) || controls(player, loc));
 
 	// use callbacks for mcp like this versus telnet
         DOLIST(thing, db[loc].contents) {
-                if (can_see(player, thing, can_see_loc)) {
-                        struct icon ico = icon(thing);
-                        mcp_mesg_init(&msg, MCP_WEB_PKG, "look-content");
-                        mcp_mesg_arg_append(&msg, "loc", buf2);
-                        snprintf(buf, sizeof(buf), "%d", thing);
-                        mcp_mesg_arg_append(&msg, "dbref", buf);
-                        mcp_mesg_arg_append(&msg, "name", NAME(thing));
-                        mcp_mesg_arg_append(&msg, "pname", unparse_object(player, thing));
-                        mcp_mesg_arg_append(&msg, "icon", ico.icon);
-                        snprintf(buf, sizeof(buf), "%d", db[thing].value);
-                        mcp_mesg_arg_append(&msg, "price", buf);
-                        snprintf(buf, sizeof(buf), "%d", ico.actions);
-                        mcp_mesg_arg_append(&msg, "avatar", GETAVATAR(thing));
-                        mcp_mesg_arg_append(&msg, "actions", buf);
-                        mcp_frame_output_mesg(mfr, &msg);
-                        mcp_mesg_clear(&msg);
-                }
+		if (thing == player)
+			continue;
+		struct icon ico = icon(thing);
+		mcp_mesg_init(&msg, MCP_WEB_PKG, "look-content");
+		mcp_mesg_arg_append(&msg, "loc", buf2);
+		snprintf(buf, sizeof(buf), "%d", thing);
+		mcp_mesg_arg_append(&msg, "dbref", buf);
+		mcp_mesg_arg_append(&msg, "name", NAME(thing));
+		mcp_mesg_arg_append(&msg, "pname", unparse_object(player, thing));
+		mcp_mesg_arg_append(&msg, "icon", ico.icon);
+		snprintf(buf, sizeof(buf), "%d", db[thing].value);
+		mcp_mesg_arg_append(&msg, "price", buf);
+		snprintf(buf, sizeof(buf), "%d", ico.actions);
+		mcp_mesg_arg_append(&msg, "avatar", GETAVATAR(thing));
+		mcp_mesg_arg_append(&msg, "actions", buf);
+		mcp_frame_output_mesg(mfr, &msg);
+		mcp_mesg_clear(&msg);
         }
 
         return 0;
