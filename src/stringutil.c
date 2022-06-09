@@ -15,58 +15,12 @@
 #include <string.h>
 #include "externs.h"
 
-const char *
-exit_prefix(register const char *string, register const char *prefix)
-{
-	const char *p;
-	const char *s = string;
-
-	while (*s) {
-		p = prefix;
-		string = s;
-		while (*s && *p && tolower(*s) == tolower(*p)) {
-			s++;
-			p++;
-		}
-		while (*s && isspace(*s))
-			s++;
-		if (!*p && (!*s || *s == EXIT_DELIMITER)) {
-			return string;
-		}
-		while (*s && (*s != EXIT_DELIMITER))
-			s++;
-		if (*s)
-			s++;
-		while (*s && isspace(*s))
-			s++;
-	}
-	return 0;
-}
-
 int
 string_prefix(register const char *string, register const char *prefix)
 {
 	while (*string && *prefix && tolower(*string) == tolower(*prefix))
 		string++, prefix++;
 	return *prefix == '\0';
-}
-
-/* accepts only nonempty matches starting at the beginning of a word */
-const char *
-string_match(register const char *src, register const char *sub)
-{
-	if (*sub != '\0') {
-		while (*src) {
-			if (string_prefix(src, sub))
-				return src;
-			/* else scan to beginning of next word */
-			while (*src && isalnum(*src))
-				src++;
-			while (*src && !isalnum(*src))
-				src++;
-		}
-	}
-	return 0;
 }
 
 char *

@@ -11,7 +11,6 @@
 #include "command.h"
 
 /* these symbols must be defined by the interface */
-extern int notify(dbref player, const char *msg);
 extern void wall_wizards(const char *msg);
 extern int boot_off(dbref player);
 extern void boot_player_off(dbref player);

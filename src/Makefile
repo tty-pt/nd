@@ -25,7 +25,7 @@ fbmuck-obj-y += create.o mdb.o \
 	predicates.o propdirs.o property.o \
 	props.o rob.o sanity.o set.o \
 	smatch.o speech.o stringutil.o \
-	unparse.o utils.o wiz.o \
+	unparse.o wiz.o \
 	copyright.o interface.o web.o
 
 exe-obj-y := ${fbmuck-obj-y} ${prochelp-obj-y}

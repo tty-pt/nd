@@ -91,6 +91,25 @@ icon(dbref what)
 
 #define BUFF(...) buf_l += snprintf(&buf[buf_l], BUFFER_LEN - buf_l, __VA_ARGS__)
 
+static inline int
+controls_link(dbref who, dbref what)
+{
+	switch (Typeof(what)) {
+	case TYPE_ROOM:
+		if (controls(who, db[what].sp.room.dropto))
+			return 1;
+		return 0;
+
+	case TYPE_ENTITY:
+		if (controls(who, ENTITY(what)->home))
+			return 1;
+		return 0;
+
+	default:
+		return 0;
+	}
+}
+
 const char *
 unparse_object(dbref player, dbref loc)
 {

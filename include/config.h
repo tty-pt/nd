@@ -98,12 +98,6 @@
    Where the system looks for its datafiles.
  ************************************************************************/
 
-#define SSL_CERT_FILE		"data/server.pem"
-#define SSL_KEY_FILE		"data/server.pem"
-
-#define WELC_FILE "data/welcome.txt"	/* For the opening screen      */
-#define MOTD_FILE "data/motd.txt"	/* For the message of the day  */
-
 #define HELP_FILE "data/muckhelp.txt"	/* For the 'help' command      */
 #define HELP_DIR  "data/help"	/* For 'help' subtopic files   */
 #define NEWS_FILE "data/news.txt"	/* For the 'news' command      */
@@ -113,19 +107,6 @@
 #define MPI_FILE  "data/mpihelp.txt"	/* For the 'mpi' command       */
 #define MPI_DIR   "data/mpihelp"	/* For 'mpi' subtopic files    */
 #define INFO_DIR  "data/info/"
-#define EDITOR_HELP_FILE "data/edit-help.txt"	/* editor help file   */
-
-#define WORDLIST_FILE "data/wordlist.txt"	/* File for compression dict. */
-
-#define MACRO_FILE  "muf/macros"
-
-/*
- * File to write the server pid to.  This is generally "netmuck.pid"
- * for historical reasons.
- */
-#define PID_FILE    "netmuck.pid"
-#define LOG_FILE     "fbmuck"     /* Log stdout to ... */
-#define LOG_ERR_FILE "fbmuck.err" /* Log stderr to ... */
 
 /************************************************************************
   System Dependency Defines. 

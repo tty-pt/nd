@@ -31,15 +31,12 @@ enum opts {
 extern short optflags;
 
 /* from timequeue.c */
-void do_newpassword(command_t *);
 void do_propset(command_t *);
 void do_sweep(command_t *);
-void do_pecho(command_t *);
 void do_pose(command_t *);
 void do_score(command_t *);
 void do_view(command_t *);
 void do_meme(command_t *);
-void send_contents(dbref player, dbref dest);
 
 /* from db.c */
 extern int number(const char *s);
@@ -129,16 +126,11 @@ extern int dialog_exists(dbref what);
 extern void dialog_stop(dbref player);
 
 /* From predicates.c */
-extern int OkObj(dbref obj);
 extern int can_doit(dbref player, dbref thing, const char *default_fail_msg);
 extern int controls(dbref who, dbref what);
-extern int controls_link(dbref who, dbref what);
-extern int restricted(dbref player, dbref thing, object_flag_type flag);
 extern int payfor(dbref who, int cost);
 extern int ok_ascii_any(const char *name);
 extern int ok_name(const char *name);
-int ok_password(const char *password);
-int ok_player_name(const char *name);
 
 /* From rob.c */
 extern void do_give(command_t *);
@@ -152,26 +144,16 @@ extern void do_unlink_quiet(command_t *cmd, const char *name);
 extern void do_chown(command_t *);
 
 /* From speech.c */
-#define ONOTIFYF(who, ...) notify_except_fmt(db[getloc(who)].contents, who, __VA_ARGS__)
 extern void do_wall(command_t *cmd);
 extern void do_say(command_t *cmd);
-extern void notify_except(dbref first, dbref exception, const char *msg, dbref who);
-extern void notify_except_fmt(dbref first, dbref exception, char *format, ...);
 extern void notify_wts(dbref who, char const *a, char const *b, char *format, ...);
 extern void notify_wts_to(dbref who, dbref tar, char const *a, char const *b, char *format, ...);
-void notify_except(dbref first, dbref exception, const char *msg, dbref who);
 
 /* From stringutil.c */
 extern int string_prefix(const char *string, const char *prefix);
-const char * exit_prefix(register const char *string, register const char *prefix);
-extern const char *string_match(const char *src, const char *sub);
 extern char *intostr(int i);
 extern int prepend_string(char** before, char* start, const char* what);
 extern int is_prop_prefix(const char* Property, const char* Prefix);
-
-/* From utils.c */
-extern int member(dbref thing, dbref list);
-extern dbref remove_first(dbref first, dbref what);
 
 /* From wiz.c */
 extern void do_teleport(command_t *);
@@ -196,9 +178,10 @@ extern const char *unparse_object(dbref player, dbref object);
 extern int equalstr(char *s, char *t);
 
 /* from interface.c */
-int mcpframe_to_user(McpFrame * ptr);
 int notify(dbref player, const char *msg);
 void notifyf(dbref player, char *format, ...);
+void onotifyf(dbref player, char *format, ...);
+void anotifyf(dbref room, char *format, ...);
 
 /* from property.c */
 char * displayprop(dbref player, dbref obj, const char *name, char *buf, size_t bufsiz);

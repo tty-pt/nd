@@ -90,29 +90,6 @@ do_describe(command_t *cmd)
 	}
 }
 
-int
-controls_link(dbref who, dbref what)
-{
-	switch (Typeof(what)) {
-	case TYPE_ROOM:
-		{
-			if (controls(who, db[what].sp.room.dropto))
-				return 1;
-			return 0;
-		}
-
-	case TYPE_ENTITY:
-		{
-			if (controls(who, ENTITY(what)->home))
-				return 1;
-			return 0;
-		}
-
-	default:
-		return 0;
-	}
-}
-
 void
 do_chown(command_t *cmd)
 {

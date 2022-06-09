@@ -257,11 +257,7 @@ extern dbref db_top;
 extern char *alloc_string(const char *);
 extern dbref object_new(void);		/* return a new object */
 
-extern struct boolexp *getboolexp(FILE *);	/* get a boolexp */
-extern void putboolexp(FILE *, struct boolexp *);	/* put a boolexp */
-
 extern dbref db_write(FILE * f);	/* write db to file, return # of objects */
-
 extern dbref db_read(FILE * f);	/* read db from file, return # of objects */
 extern void db_obs_add(dbref observable, dbref observer);
 extern int db_obs_remove(dbref observable, dbref observer);

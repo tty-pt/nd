@@ -17,12 +17,6 @@
 #include "geography.h"
 #include "mob.h"
 
-int
-OkObj(dbref obj)
-{
-	return(!(obj < 0 || obj >= db_top || Typeof(obj) == TYPE_GARBAGE));
-}
-
 /*
  * Revision 1.2 -- SECURE_TELEPORT
  * you can only jump with an action from rooms that you own
@@ -144,56 +138,6 @@ ok_name(const char *name)
 				!*RESERVED_NAMES ||
 				!equalstr((char*)RESERVED_NAMES, (char*)name)
 			));
-}
-
-int
-ok_player_name(const char *name)
-{
-	const char *scan;
-
-	if (!ok_name(name) || strlen(name) > PLAYER_NAME_LIMIT)
-		return 0;
-	
-
-	for (scan = name; *scan; scan++) {
-		if (!(isprint(*scan)
-			 && !isspace(*scan))
-			 && *scan != '('
-			 && *scan != ')'
-			 && *scan != '\''
-			 && *scan != ',') {	
-		    /* was isgraph(*scan) */
-			return 0;
-		}
-	}
-
-	/* Check the name isn't reserved */
-	if (*RESERVED_PLAYER_NAMES && equalstr((char*)RESERVED_PLAYER_NAMES, (char*)name))
-		return 0;
-
-	/* lookup name to avoid conflicts */
-	return (lookup_player(name) == NOTHING);
-}
-
-int
-ok_password(const char *password)
-{
-	const char *scan;
-
-	/* Password cannot be blank */
-	if (*password == '\0')
-		return 0;
-
-	/* Password also cannot contain any nonprintable or space-type
-	 * characters */
-	for (scan = password; *scan; scan++) {
-		if (!(isprint(*scan) && !isspace(*scan))) {
-			return 0;
-		}
-	}
-
-	/* Anything else is fair game */
-	return 1;
 }
 
 static const char *predicates_c_version = "$RCSfile$ $Revision: 1.20 $";

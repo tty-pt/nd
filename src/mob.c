@@ -499,8 +499,8 @@ respawn(dbref who)
 	struct entity *mob = ENTITY(who);
 	dbref where;
 
-	notify_except_fmt(db[getloc(who)].contents, who,
-			  "%s disappears.", NAME(who));
+	onotifyf(who, "%s disappears.", NAME(who));
+
 	if (mob->flags & EF_PLAYER) {
 		struct cmd_dir cd;
 		cd.rep = STARTING_POSITION;
@@ -513,8 +513,7 @@ respawn(dbref who)
 		moveto(who, where);
 	}
 
-	notify_except_fmt(db[where].contents, who,
-			  "%s appears.", NAME(who));
+	onotifyf(who, "%s appears.", NAME(who));
 }
 
 static inline int

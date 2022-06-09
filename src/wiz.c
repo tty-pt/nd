@@ -317,6 +317,47 @@ do_boot(command_t *cmd) {
 	}
 }
 
+static inline dbref
+reverse(dbref list)
+{
+	dbref newlist;
+	dbref rest;
+
+	newlist = NOTHING;
+	while (list != NOTHING) {
+		rest = db[list].next;
+		PUSH(list, newlist);
+		list = rest;
+	}
+	return newlist;
+}
+
+static inline void
+send_contents(dbref loc, dbref dest)
+{
+	dbref first;
+	dbref rest;
+
+	first = db[loc].contents;
+	db[loc].contents = NOTHING;
+
+	/* blast locations of everything in list */
+	DOLIST(rest, first)
+		db[rest].location = NOTHING;
+
+	while (first != NOTHING) {
+		rest = db[first].next;
+		if (!is_item(first)) {
+			moveto(first, loc);
+		} else {
+			moveto(first, parent_loop_check(first, dest) ? loc : dest);
+		}
+		first = rest;
+	}
+
+	db[loc].contents = reverse(db[loc].contents);
+}
+
 void
 do_toad(command_t *cmd) {
 	dbref player = cmd->player;

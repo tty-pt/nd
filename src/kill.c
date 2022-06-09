@@ -138,7 +138,7 @@ body(dbref player, dbref mob)
 	}
 
 	if (n > 0) {
-		ONOTIFYF(mob, "%s's body drops to the ground.", NAME(mob));
+		onotifyf(mob, "%s's body drops to the ground.", NAME(mob));
 		return dead_mob;
 	} else {
 		recycle(player, dead_mob);

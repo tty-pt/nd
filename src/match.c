@@ -70,6 +70,24 @@ ematch_absolute(const char *name)
 		return NOTHING;
 }
 
+/* accepts only nonempty matches starting at the beginning of a word */
+static inline const char *
+string_match(register const char *src, register const char *sub)
+{
+	if (*sub != '\0') {
+		while (*src) {
+			if (string_prefix(src, sub))
+				return src;
+			/* else scan to beginning of next word */
+			while (*src && isalnum(*src))
+				src++;
+			while (*src && !isalnum(*src))
+				src++;
+		}
+	}
+	return 0;
+}
+
 static dbref
 ematch_list(dbref player, dbref first, const char *name)
 {

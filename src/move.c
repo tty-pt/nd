@@ -17,6 +17,27 @@
 #include "search.h"
 #include "web.h"
 
+/* remove the first occurence of what in list headed by first */
+static inline dbref
+remove_first(dbref first, dbref what)
+{
+	dbref prev;
+
+	/* special case if it's the first one */
+	if (first == what) {
+		return db[first].next;
+	} else {
+		/* have to find it */
+		DOLIST(prev, first) {
+			if (db[prev].next == what) {
+				db[prev].next = db[what].next;
+				return first;
+			}
+		}
+		return first;
+	}
+}
+
 void
 moveto(dbref what, dbref where)
 {
@@ -69,33 +90,6 @@ moveto(dbref what, dbref where)
 	db[what].location = where;
 	web_content_in(where, what);
         CBUG(getloc(what) != where);
-}
-
-dbref reverse(dbref);
-void
-send_contents(dbref loc, dbref dest)
-{
-	dbref first;
-	dbref rest;
-
-	first = db[loc].contents;
-	db[loc].contents = NOTHING;
-
-	/* blast locations of everything in list */
-	DOLIST(rest, first)
-		db[rest].location = NOTHING;
-
-	while (first != NOTHING) {
-		rest = db[first].next;
-		if (!is_item(first)) {
-			moveto(first, loc);
-		} else {
-			moveto(first, parent_loop_check(first, dest) ? loc : dest);
-		}
-		first = rest;
-	}
-
-	db[loc].contents = reverse(db[loc].contents);
 }
 
 /* What are we doing here?  Quick explanation - we want to prevent
@@ -213,29 +207,13 @@ void
 enter_room(dbref player, dbref loc)
 {
 	dbref old;
-	char buf[BUFFER_LEN];
 
-	/* get old location */
 	old = db[player].location;
-
-	/* CBUG(loc == old); */
-
-	/* go there */
+	onotifyf(player, "%s has left.", NAME(player));
 	moveto(player, loc);
-
-	CBUG(old == NOTHING);
-
-	snprintf(buf, sizeof(buf), "%s has left.", NAME(player));
-	notify_except(db[old].contents, player, buf, player);
-
 	geo_clean(player, old);
-
-	snprintf(buf, sizeof(buf), "%s has arrived.", NAME(player));
-	notify_except(db[loc].contents, player, buf, player);
-
+	onotifyf(player, "%s has arrived.", NAME(player));
 	mobs_aggro(player);
-	/* TODO geo_notify(descr, player); */
-
 	look_around(player);
 }
 
@@ -319,7 +297,6 @@ do_drop(command_t *cmd)
 	const char *obj = cmd->argv[2];
 	dbref loc, cont;
 	dbref thing;
-	char buf[BUFFER_LEN];
 
 	if ((loc = getloc(player)) == NOTHING)
 		return;
@@ -375,9 +352,7 @@ do_drop(command_t *cmd)
 		}
 
 		notify(player, "Dropped.");
-		snprintf(buf, sizeof(buf), "%s drops %s.", NAME(player), NAME(thing));
-		notify_except(db[loc].contents, player, buf, player);
-
+		onotifyf(player, "%s drops %s.", NAME(player), NAME(thing));
 		break;
 	default:
 		notify(player, "You can't drop that.");
@@ -391,7 +366,6 @@ do_recycle(command_t *cmd)
 	dbref player = cmd->player;
 	const char *name = cmd->argv[1];
 	dbref thing;
-	char buf[BUFFER_LEN];
 
 	if (
 			(thing = ematch_absolute(name)) == NOTHING
@@ -436,15 +410,6 @@ do_recycle(command_t *cmd)
 				notify(player, "Permission denied. (You can't recycle a thing you don't control)");
 				return;
 			}
-			/* player may be a zombie or puppet */
-			if (thing == player) {
-				snprintf(buf, sizeof(buf),
-						"%.512s's owner commands it to kill itself.  It blinks a few times in shock, and says, \"But.. but.. WHY?\"  It suddenly clutches it's heart, grimacing with pain..  Staggers a few steps before falling to it's knees, then plops down on it's face.  *thud*  It kicks its legs a few times, with weakening force, as it suffers a seizure.  It's color slowly starts changing to purple, before it explodes with a fatal *POOF*!",
-						NAME(thing));
-				notify_except(db[getloc(thing)].contents, thing, buf, player);
-				notify(OWNER(player), buf);
-				notify(OWNER(player), "Now don't you feel guilty?");
-			}
 			break;
 		case TYPE_ENTITY:
 			if (ENTITY(thing)->flags & EF_PLAYER) {
@@ -483,8 +448,7 @@ recycle(dbref player, dbref thing)
 				if (Typeof(first) != TYPE_ENTITY || !(ENTITY(first)->flags & EF_PLAYER))
 					recycle(player, first);
 			}
-		notify_except(db[thing].contents, NOTHING,
-					  "You feel a wrenching sensation...", player);
+		anotifyf(thing, "You feel a wrenching sensation...");
 		map_delete(thing);
 		break;
 	case TYPE_PLANT:

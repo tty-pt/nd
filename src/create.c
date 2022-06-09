@@ -70,7 +70,6 @@ copy_props(dbref player, dbref source, dbref destination, const char *dir)
 	/* loop through all properties in the current propdir */
 	propadr = first_prop(source, (char *) dir, &pptr, propname, sizeof(propname));
 	while (propadr) {
-	
 		/* generate name for current property */
 		snprintf(buf, sizeof(buf), "%s%c%s", dir, PROPDIR_DELIMITER, propname);
 
@@ -82,11 +81,7 @@ copy_props(dbref player, dbref source, dbref destination, const char *dir)
 		
 		/* find next property in current dir */
 		propadr = next_prop(pptr, propadr, propname, sizeof(propname));
-
 	}
-	
-	/* chaos and disorder - our work here is done. */
-	return;
 }
 
 /*

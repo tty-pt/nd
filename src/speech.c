@@ -22,17 +22,10 @@ do_say(command_t *cmd)
 {
 	dbref player = cmd->player;
 	const char *message = cmd->argv[1];
-	dbref loc;
 	char buf[BUFFER_LEN];
 
-	if ((loc = getloc(player)) == NOTHING)
-		return;
-
-	/* notify everybody */
-	snprintf(buf, sizeof(buf), "You say, \"%s\"", message);
-	notify(player, buf);
-	snprintf(buf, sizeof(buf), "%s says, \"%s\"", NAME(player), message);
-	notify_except(db[loc].contents, player, buf, player);
+	notifyf(player, "You say, \"%s\"", message);
+	onotifyf(player, buf, "%s says, \"%s\"", NAME(player), message);
 }
 
 void
@@ -40,15 +33,8 @@ do_pose(command_t *cmd)
 {
 	dbref player = cmd->player;
 	const char *message = cmd->argv[1];
-	dbref loc;
-	char buf[BUFFER_LEN];
 
-	if ((loc = getloc(player)) == NOTHING)
-		return;
-
-	/* notify everybody */
-	snprintf(buf, sizeof(buf), "%s %s", NAME(player), message);
-	notify_except(db[loc].contents, NOTHING, buf, player);
+	anotifyf(getloc(player), "%s %s", NAME(player), message);
 }
 
 void
@@ -119,26 +105,6 @@ do_page(command_t *cmd)
 }
 
 void
-notify_except(dbref first, dbref exception, const char *msg, dbref who)
-{
-	DOLIST(first, first) {
-		if (Typeof(first) == TYPE_ENTITY && first != exception)
-			notify(first, msg);
-	}
-}
-
-void
-notify_except_fmt(dbref first, dbref exception, char *format, ...)
-{
-	va_list args;
-	char buf[BUFFER_LEN];
-	va_start(args, format);
-	vsnprintf(buf, sizeof(buf), format, args);
-	notify_except(first, exception, buf, exception);
-	va_end(args);
-}
-
-void
 notify_wts(dbref who, char const *a, char const *b, char *format, ...)
 {
 	va_list args;
@@ -146,7 +112,7 @@ notify_wts(dbref who, char const *a, char const *b, char *format, ...)
 	va_start(args, format);
 	vsnprintf(buf, sizeof(buf), format, args);
 	notifyf(who, "You %s%s.", a, buf);
-	ONOTIFYF(who, "%s %s%s.", NAME(who), b, buf);
+	onotifyf(who, "%s %s%s.", NAME(who), b, buf);
 	va_end(args);
 }
 
@@ -158,6 +124,6 @@ notify_wts_to(dbref who, dbref tar, char const *a, char const *b, char *format, 
 	va_start(args, format);
 	vsnprintf(buf, sizeof(buf), format, args);
 	notifyf(who, "You %s %s%s.", a, NAME(tar), buf);
-	ONOTIFYF(who, "%s %s %s%s.", NAME(who), b, NAME(tar), buf);
+	onotifyf(who, "%s %s %s%s.", NAME(who), b, NAME(tar), buf);
 	va_end(args);
 }

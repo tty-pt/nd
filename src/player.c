@@ -215,6 +215,7 @@ do_talk(command_t *cmd) {
                 dialog_start(player, npc, dialog);
 }
 
+/* TODO merge this with "copy_props()" */
 static void
 props_copy(dbref target, dbref what, const char *prefix, int ignore) {
         const char buf[BUFSIZ];

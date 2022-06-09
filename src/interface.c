@@ -606,6 +606,37 @@ notifyf(dbref player, char *format, ...)
 	va_end(args);
 }
 
+static inline void
+notify_except(dbref first, dbref exception, const char *msg, dbref who)
+{
+	DOLIST(first, first) {
+		if (Typeof(first) == TYPE_ENTITY && first != exception)
+			notify(first, msg);
+	}
+}
+
+void
+anotifyf(dbref room, char *format, ...)
+{
+	va_list args;
+	char buf[BUFFER_LEN];
+	va_start(args, format);
+	vsnprintf(buf, sizeof(buf), format, args);
+	notify_except(db[room].contents, NOTHING, buf, NOTHING);
+	va_end(args);
+}
+
+void
+onotifyf(dbref player, char *format, ...)
+{
+	va_list args;
+	char buf[BUFFER_LEN];
+	va_start(args, format);
+	vsnprintf(buf, sizeof(buf), format, args);
+	notify_except(db[getloc(player)].contents, player, buf, player);
+	va_end(args);
+}
+
 void
 wall(const char *msg)
 {
@@ -638,28 +669,7 @@ mob_welcome(int fd)
 void
 welcome_user(int fd)
 {
-	FILE *f;
-	char *ptr;
-	char buf[BUFFER_LEN];
-
-        /* if (!web_support(d->fd)) { */
-                if ((f = fopen(WELC_FILE, "rb")) == NULL) {
-                        descr_inband(fd, DEFAULT_WELCOME_MESSAGE);
-                        perror("spit_file: welcome.txt");
-                } else {
-                        while (fgets(buf, sizeof(buf) - 3, f)) {
-                                ptr = index(buf, '\n');
-                                if (ptr && ptr > buf && *(ptr - 1) != '\r') {
-                                        *ptr++ = '\r';
-                                        *ptr++ = '\n';
-                                        *ptr++ = '\0';
-                                }
-                                descr_inband(fd, buf);
-                        }
-                        fclose(f);
-                }
-        /* } */
-
+	descr_inband(fd, DEFAULT_WELCOME_MESSAGE);
         mob_welcome(fd);
 
 	if (optflags & OPT_WIZONLY) {
@@ -727,7 +737,6 @@ do_auth(command_t *cmd)
 	d->player = cmd->player = player;
 	CBUG(d->fd != fd);
 	ENTITY(player)->fd = fd;
-	spit_file(player, MOTD_FILE);
         web_stats(player);
         web_bars(player);
         web_auth_success(fd, player);
@@ -893,12 +902,6 @@ SendText(McpFrame * mfr, const char *text)
 {
 	descr_t *d = mfr->descriptor;
 	descr_inband(d->fd, text);
-}
-
-int
-mcpframe_to_user(McpFrame * ptr)
-{
-	return ((descr_t *) ptr->descriptor)->player;
 }
 
 void
