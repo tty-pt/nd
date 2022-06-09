@@ -145,9 +145,9 @@ object_add(struct object_skeleton o, dbref where)
 {
 	dbref nu = object_new();
 	NAME(nu) = alloc_string(o.name);
-	SETART(nu, alloc_string(o.art));
-        SETAVATAR(nu, o.avatar);
-	SETDESC(nu, alloc_string(o.description));
+	db[nu].description = alloc_string(o.description);
+	db[nu].art = alloc_string(o.art);
+	db[nu].avatar = alloc_string(o.avatar);
 	db[nu].location = where;
 	OWNER(nu) = 1;
 	FLAGS(nu) = TYPE_THING;

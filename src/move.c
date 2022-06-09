@@ -517,7 +517,7 @@ recycle(dbref player, dbref thing)
 	db_free_object(thing);
 	db_clear_object(thing);
 	NAME(thing) = (char*) strdup("<garbage>");
-	SETDESC(thing, "<recyclable>");
+	db[thing].description = (char *) strdup("<recyclable>");
 	FLAGS(thing) = TYPE_GARBAGE;
 
 	db[thing].next = recyclable;

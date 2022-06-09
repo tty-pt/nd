@@ -37,7 +37,7 @@ do_shop(command_t *cmd)
 
 	notifyf(player, "%s shows you what's for sale.", NAME(npc));
 
-        if (!web_look(player, npc, GETDESC(npc)))
+        if (!web_look(player, npc))
             return;
 
 	dbref tmp = db[npc].contents;

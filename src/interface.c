@@ -123,9 +123,6 @@ core_command_t cmds[] = {
 	}, {
 		.name = "create",
 		.cb = &do_create,
-	}, {
-		.name = "describe",
-		.cb = &do_describe,
 		/* sane_dump_object(player, arg1); /1* examine *1/ */
 	}, {
 		.name = "find",

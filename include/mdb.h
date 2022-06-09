@@ -20,14 +20,8 @@
 #define OWNER(x)    (db[x].owner)
 
 /* defines for possible data access mods. */
-#define MESGPROP_DESC		"_/de"
-#define MESGPROP_VALUE		"@/value"
-
 #define GETMESG(x,y)   (get_property_class(x, y))
-#define GETDESC(x)	GETMESG(x, MESGPROP_DESC)
-
 #define SETMESG(x,y,z)    {add_prop_nofetch(x, y, z, 0);}
-#define SETDESC(x,y)	SETMESG(x, MESGPROP_DESC, y)
 
 #define MESGPROP_INF	"_/inf"
 #define SETINF(x,y)	set_property_value(x, MESGPROP_INF, y)
@@ -75,14 +69,6 @@ enum at { ARMOR_LIGHT, ARMOR_MEDIUM, ARMOR_HEAVY, };
 #define MESGPROP_SPELLS "@/spells"
 #define GETSPELLS(x, a)  get_property_mark(x, MESGPROP_SPELLS, a)
 #define SETSPELLS(x, a, v)  set_property_mark(x, MESGPROP_SPELLS, a, v)
-
-#define MESGPROP_ART	"@/art"
-#define GETART(x)	envpropstr(x, MESGPROP_ART)
-#define SETART(x, y)	SETMESG(x, MESGPROP_ART, y)
-
-#define MESGPROP_AVATAR	"_/avatar"
-#define GETAVATAR(x)	GETMESG(x, MESGPROP_AVATAR)
-#define SETAVATAR(x, y)	SETMESG(x, MESGPROP_AVATAR, y)
 
 enum type {
 	TYPE_ROOM,
@@ -218,7 +204,7 @@ struct observer_node {
 
 struct object {
         struct observer_node *first_observer;
-	const char *name;
+	const char *name, *description, *art, *avatar;
 	dbref location;				/* pointer to container */
 	dbref owner;
 	dbref contents;

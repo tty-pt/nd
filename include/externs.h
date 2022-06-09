@@ -138,7 +138,6 @@ extern void do_rob(command_t *);
 
 /* From set.c */
 extern void do_name(command_t *);
-extern void do_describe(command_t *);
 extern void do_unlink(command_t *);
 extern void do_unlink_quiet(command_t *cmd, const char *name);
 extern void do_chown(command_t *);

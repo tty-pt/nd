@@ -73,24 +73,6 @@ do_name(command_t *cmd)
 }
 
 void
-do_describe(command_t *cmd)
-{
-	dbref player = cmd->player;
-	const char *name = cmd->argv[1];
-	const char *description = cmd->argv[2];
-	dbref thing;
-
-	if ((thing = match_controlled(player, name)) != NOTHING) {
-		SETDESC(thing, description);
-		if(description && *description) {
-			notify(player, "Description set.");
-		} else {
-			notify(player, "Description cleared.");
-		}
-	}
-}
-
-void
 do_chown(command_t *cmd)
 {
 	dbref player = cmd->player;

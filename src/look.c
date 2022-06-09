@@ -73,13 +73,13 @@ extern void art(dbref descr, const char *arts);
 static void
 look_simple(dbref player, dbref thing)
 {
-	char const *art_str = GETMESG(thing, MESGPROP_ART);
+	char const *art_str = db[thing].art;
 
 	if (art_str)
 		art(ENTITY(player)->fd, art_str);
 
-	if (GETDESC(thing)) {
-		notify(player, GETDESC(thing));
+	if (db[thing].description) {
+		notify(player, db[thing].description);
 	} else if (!art_str) {
 		notify(player, "You see nothing special.");
 	}
@@ -91,16 +91,12 @@ look_room(dbref player, dbref loc)
 	char const *description = "";
 	/* tell him the name, and the number if he can link to it */
 
-	/* tell him the description */
-	if (Typeof(loc) == TYPE_ROOM) {
-		if (GETDESC(loc)) {
-			description = GETDESC(loc);
-		}
-		/* tell him the appropriate messages if he has the key */
-		can_doit(player, loc, 0);
-	}
+	CBUG(Typeof(loc) != TYPE_ROOM);
 
-	if (web_look(player, loc, description)) {
+	/* tell him the appropriate messages if he has the key */
+	can_doit(player, loc, 0);
+
+	if (web_look(player, loc)) {
 		notify(player, unparse_object(player, loc));
 		notify(player, description);
 		/* tell him the contents */
@@ -111,11 +107,7 @@ look_room(dbref player, dbref loc)
 void
 look_around(dbref player)
 {
-	dbref loc;
-
-	if ((loc = getloc(player)) == NOTHING)
-		return;
-	look_room(player, loc);
+	look_room(player, getloc(player));
 }
 
 void
@@ -145,7 +137,7 @@ do_look_at(command_t *cmd)
 		view(player);
 		break;
 	case TYPE_ENTITY:
-		if (web_look(player, thing, GETDESC(thing))) {
+		if (web_look(player, thing)) {
 			look_simple(player, thing);
 			look_contents(player, thing, "Carrying:");
 		}
@@ -153,7 +145,7 @@ do_look_at(command_t *cmd)
 	case TYPE_CONSUMABLE:
 	case TYPE_EQUIPMENT:
 	case TYPE_THING:
-		if (web_look(player, thing, GETDESC(thing))) {
+		if (web_look(player, thing)) {
 			look_simple(player, thing);
 			if (!(ROOM(thing)->flags & RF_HAVEN)) {
 				look_contents(player, thing, "Contains:");
@@ -161,7 +153,7 @@ do_look_at(command_t *cmd)
 		}
 		break;
 	default:
-		if (web_look(player, thing, GETDESC(thing)))
+		if (web_look(player, thing))
 			look_simple(player, thing);
 		break;
 	}
@@ -290,8 +282,8 @@ do_examine(command_t *cmd)
 	}
 	notify(player, buf);
 
-	if (GETDESC(thing))
-		notify(player, GETDESC(thing));
+	if (db[thing].description)
+		notify(player, db[thing].description);
 
 	notify(player, "[ Use 'examine <object>=/' to list root properties. ]");
 
@@ -366,7 +358,7 @@ do_inventory(command_t *cmd)
 	dbref player = cmd->player;
 	dbref thing;
 
-        if (web_look(player, player, GETDESC(player))) {
+        if (web_look(player, player)) {
                 if ((thing = db[player].contents) == NOTHING) {
                         notify(player, "You aren't carrying anything.");
                 } else {

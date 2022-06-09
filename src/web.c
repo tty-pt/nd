@@ -51,10 +51,11 @@ web_art(int descr, char const *art)
 }
 
 int
-web_look(dbref player, dbref loc, char const *description)
+web_look(dbref player, dbref loc)
 {
         char buf[BUFSIZ];
         char buf2[BUFSIZ];
+	char const *description = "";
         dbref thing;
 	McpMesg msg;
 	McpFrame *mfr = web_frame(ENTITY(player)->fd);
@@ -81,9 +82,11 @@ web_look(dbref player, dbref loc, char const *description)
 		db_obs_add(loc, player);
 	}
 
-        mcp_mesg_arg_append(&msg, "art", GETMESG(loc, MESGPROP_ART));
+        mcp_mesg_arg_append(&msg, "art", db[loc].art);
         mcp_mesg_arg_append(&msg, "name", NAME(loc));
         mcp_mesg_arg_append(&msg, "pname", unparse_object(player, loc));
+	if (db[loc].description)
+		description = db[loc].description;
         mcp_mesg_arg_append(&msg, "description", description);
         mcp_frame_output_mesg(mfr, &msg);
         mcp_mesg_clear(&msg);
@@ -106,7 +109,7 @@ web_look(dbref player, dbref loc, char const *description)
 		snprintf(buf, sizeof(buf), "%d", db[thing].value);
 		mcp_mesg_arg_append(&msg, "price", buf);
 		snprintf(buf, sizeof(buf), "%d", ico.actions);
-		mcp_mesg_arg_append(&msg, "avatar", GETAVATAR(thing));
+		mcp_mesg_arg_append(&msg, "avatar", db[thing].avatar);
 		mcp_mesg_arg_append(&msg, "actions", buf);
 		mcp_frame_output_mesg(mfr, &msg);
 		mcp_mesg_clear(&msg);
@@ -202,7 +205,7 @@ web_content_in(dbref loc, dbref thing) {
 	mcp_mesg_arg_append(&msg, "pname", unparse_object(HUMAN_BEING, thing));
 	mcp_mesg_arg_append(&msg, "icon", ico.icon);
 	snprintf(buf, sizeof(buf), "%d", ico.actions);
-        mcp_mesg_arg_append(&msg, "avatar", GETAVATAR(thing));
+        mcp_mesg_arg_append(&msg, "avatar", db[thing].avatar);
 	mcp_mesg_arg_append(&msg, "actions", buf);
 
 	if (Typeof(loc) == TYPE_ROOM)
@@ -377,7 +380,7 @@ web_equipment_item(dbref player, enum equipment_slot eql)
 	snprintf(buf, sizeof(buf), "%d", eql);
         mcp_mesg_arg_append(&msg, "eql", buf);
         mcp_mesg_arg_append(&msg, "pname", unparse_object(player, eq));
-        mcp_mesg_arg_append(&msg, "avatar", GETAVATAR(eq));
+        mcp_mesg_arg_append(&msg, "avatar", db[eq].avatar);
         struct icon ico = icon(eq);
         mcp_mesg_arg_append(&msg, "icon", ico.icon);
 	mcp_frame_output_mesg(mfr, &msg);
