@@ -44,7 +44,7 @@ typedef struct plist *PropPtr;
 #define PROP_DIRTYP   0x0
 #define PROP_STRTYP   0x2
 #define PROP_INTTYP   0x3
-#define PROP_LOKTYP   0x4
+#define PROP_RESERVED 0x4
 #define PROP_REFTYP   0x5
 #define PROP_FLTTYP   0x6
 #define PROP_TYPMASK  0x7

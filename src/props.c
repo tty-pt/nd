@@ -174,8 +174,6 @@ free_propnode(PropPtr p)
 	if (!(PropFlags(p) & PROP_ISUNLOADED)) {
 		if (PropType(p) == PROP_STRTYP)
 			free((void *) PropDataStr(p));
-		if (PropType(p) == PROP_LOKTYP)
-			free_boolexp(PropDataLok(p));
 	}
 	free(p);
 }
@@ -188,8 +186,6 @@ clear_propnode(PropPtr p)
 			free((void *) PropDataStr(p));
 			PropDataStr(p) = NULL;
 	        }
-		if (PropType(p) == PROP_LOKTYP)
-			free_boolexp(PropDataLok(p));
 	}
 	SetPDataVal(p, 0);
 	SetPFlags(p, (PropFlags(p) & ~PROP_ISUNLOADED));
@@ -368,14 +364,6 @@ copy_proplist(dbref obj, PropPtr * nu, PropPtr old)
 		case PROP_STRTYP:
 			SetPDataStr(p, alloc_string(PropDataStr(old)));
 			break;
-		case PROP_LOKTYP:
-			if (PropFlags(old) & PROP_ISUNLOADED) {
-				SetPDataLok(p, TRUE_BOOLEXP);
-				SetPFlags(p, (PropFlags(p) & ~PROP_ISUNLOADED));
-			} else {
-				SetPDataLok(p, copy_bool(PropDataLok(old)));
-			}
-			break;
 		case PROP_DIRTYP:
 			SetPDataVal(p, 0);
 			break;
@@ -412,9 +400,6 @@ size_proplist(PropPtr avl)
 		switch (PropType(avl)) {
 		case PROP_STRTYP:
 			bytes += strlen(PropDataStr(avl)) + 1;
-			break;
-		case PROP_LOKTYP:
-			bytes += size_boolexp(PropDataLok(avl));
 			break;
 		default:
 			break;

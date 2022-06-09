@@ -86,4 +86,3 @@ do_fill(command_t *cmd)
 	notify_wts(player, "fill", "fills", " %s from %s",
 		   NAME(vial), NAME(source));
 }
-

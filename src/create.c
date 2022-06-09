@@ -174,7 +174,6 @@ do_clone(command_t *cmd)
 		switch (Typeof(thing)) {
 			case TYPE_ROOM:
 				ROOM(clonedthing)->exits = ROOM(clonedthing)->doors = 0;
-				ROOM(clonedthing)->exits = 0;
 				break;
 			case TYPE_ENTITY:
 				/* Home, sweet home */

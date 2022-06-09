@@ -93,9 +93,6 @@ set_property_nofetch(dbref player, const char *pname, PData * dat)
 			}
 		}
 		break;
-	case PROP_LOKTYP:
-		SetPDataLok(p, dat->data.lok);
-		break;
 	case PROP_DIRTYP:
 		SetPDataVal(p, 0);
 		if (!PropDir(p)) {
@@ -161,21 +158,6 @@ set_property_dbref(dbref obj, const char *propstr, dbref val)
 	mydat.data.ref = val;
 	set_property_nofetch(obj, propstr, &mydat);
 }
-
-void
-set_lock_property(dbref player, const char *pname, const char *lok)
-{
-	PData mydat;
-
-	mydat.flags = PROP_LOKTYP;
-	if (!lok || !*lok) {
-		mydat.data.lok = TRUE_BOOLEXP;
-	} else {
-		mydat.data.lok = parse_boolexp(1, lok, 1);
-	}
-	set_property_nofetch(player, pname, &mydat);
-}
-
 
 
 /* adds a new property to an object */
@@ -411,21 +393,6 @@ get_property_dbref(dbref player, const char *pname)
 	if (PropType(p) != PROP_REFTYP)
 		return NOTHING;
 	return PropDataRef(p);
-}
-
-
-/* return boolexp lock of property */
-struct boolexp *
-get_property_lock(dbref player, const char *pname)
-{
-	PropPtr p;
-
-	p = get_property(player, pname);
-	if (!p)
-		return TRUE_BOOLEXP;
-	if (PropType(p) != PROP_LOKTYP)
-		return TRUE_BOOLEXP;
-	return PropDataLok(p);
 }
 
 
@@ -665,14 +632,6 @@ displayprop(dbref player, dbref obj, const char *name, char *buf, size_t bufsiz)
 	case PROP_FLTTYP:
 		snprintf(buf, bufsiz, "%c flt %s:%.17g", blesschar, mybuf, PropDataFVal(p));
 		break;
-	case PROP_LOKTYP:
-		if (PropFlags(p) & PROP_ISUNLOADED) {
-			snprintf(buf, bufsiz, "%c lok %s:*UNLOCKED*", blesschar, mybuf);
-		} else {
-			snprintf(buf, bufsiz, "%c lok %s:%.*s", blesschar, mybuf, (BUFFER_LEN / 2),
-					unparse_boolexp(player, PropDataLok(p), 1));
-		}
-		break;
 	case PROP_DIRTYP:
 		snprintf(buf, bufsiz, "%c dir %s:(no value)", blesschar, mybuf);
 		break;
@@ -693,7 +652,6 @@ db_get_single_prop(FILE * f, dbref obj, long pos, PropPtr pnode, const char *pdi
 	char *name, *flags, *value, *p;
 	int flg;
 	long tpos=0L;
-	struct boolexp *lok;
 	short do_diskbase_propvals;
 	PData mydat;
 
@@ -765,25 +723,6 @@ db_get_single_prop(FILE * f, dbref obj, long pos, PropPtr pnode, const char *pdi
 			} else {
 				mydat.flags = flg;
 				mydat.data.str = value;
-				set_property_nofetch(obj, name, &mydat);
-			}
-		} else {
-			flg |= PROP_ISUNLOADED;
-			mydat.flags = flg;
-			mydat.data.val = tpos;
-			set_property_nofetch(obj, name, &mydat);
-		}
-		break;
-	case PROP_LOKTYP:
-		if (!do_diskbase_propvals || pos) {
-			lok = parse_boolexp(1, value, 32767);
-			flg &= ~PROP_ISUNLOADED;
-			if (pnode) {
-				SetPDataLok(pnode, lok);
-				SetPFlagsRaw(pnode, flg);
-			} else {
-				mydat.flags = flg;
-				mydat.data.lok = lok;
 				set_property_nofetch(obj, name, &mydat);
 			}
 		} else {
@@ -897,13 +836,6 @@ db_putprop(FILE * f, const char *dir, PropPtr p)
 		if (!*PropDataStr(p))
 			return;
 		ptr2 = PropDataStr(p);
-		break;
-	case PROP_LOKTYP:
-		if (PropFlags(p) & PROP_ISUNLOADED)
-			return;
-		if (PropDataLok(p) == TRUE_BOOLEXP)
-			return;
-		ptr2 = unparse_boolexp((dbref) 1, PropDataLok(p), 0);
 		break;
 	}
 

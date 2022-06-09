@@ -58,6 +58,7 @@ geo_update()
 	else
 		return;
 
+	/* geo_notify(0, -1, msg); */
 	for (i = 0; i < db_top; i++)
 		if (Typeof(i) == TYPE_ENTITY)
 			notify(i, msg);
@@ -189,8 +190,6 @@ exits_infer(dbref player, dbref here)
 {
 	const char *s = "wsnedu";
 
-	warn("exits infer start %d %d\n", here, ROOM(here)->exits);
-
 	for (; *s; s++) {
 		enum exit e = dir_e(*s);
 		dbref there = geo_there(here, e);
@@ -206,7 +205,6 @@ exits_infer(dbref player, dbref here)
 			ROOM(here)->doors |= ROOM(there)->doors & e_simm(e);
 		}
 	}
-	warn("exits infer end %d %d\n", here, ROOM(here)->exits);
 }
 
 // TODO make more add functions similar and easy to insert here
@@ -243,10 +241,8 @@ geo_room_at(dbref player, pos_t pos)
 	struct bio *bio;
 	dbref there;
 	bio = noise_point(pos);
-        there = object_add(biomes[bio->bio_idx], -1);
+        there = object_add(biomes[bio->bio_idx], NOTHING);
 	map_put(pos, there, DB_NOOVERWRITE);
-	ROOM(there)->exits = ROOM(there)->doors = 0;
-	db[there].sp.room.dropto = NOTHING;
 	/* FLAGS(there) = TYPE_ROOM | (FLAGS(cmd->player) & JUMP_OK); */
 	CBUG(there <= 0);
 	exits_infer(player, there);
@@ -254,7 +250,7 @@ geo_room_at(dbref player, pos_t pos)
 	if (pos[2] != 0)
 		return there;
 
-	db[there].sp.room.floor = bio->bio_idx;
+	ROOM(there)->floor = bio->bio_idx;
 	entities_add(there, bio->bio_idx, bio->pd.n);
 	others_add(there, bio->bio_idx, pos);
 	plants_add(player, there,
@@ -276,13 +272,28 @@ do_bio(command_t *cmd) {
 static void
 e_move(dbref player, enum exit e) {
 	dbref loc = getloc(player), dest;
+	char const *dwts = "door";
+	int door = 0;
 
 	if (!(ROOM(loc)->exits & e)) {
 		notify(player, "You can't go that way.");
 		return;
 	}
 
+	do_stand_silent(player);
+
+	if (ROOM(loc)->doors & e) {
+		if (e == E_UP || e == E_DOWN) {
+			dwts = "hatch";
+			door = 2;
+		} else
+			door = 1;
+
+		notifyf(player, "You open the %s.", dwts);
+	}
+
 	dest = geo_there(loc, e);
+	notifyf(player, "You go %s.", e_name(e));
 
 	if (dest > 0)
 		enter_room(player, dest);
@@ -290,6 +301,9 @@ e_move(dbref player, enum exit e) {
 		dest = geo_room(player, e);
 		enter_room(player, dest);
 	}
+
+	if (door)
+		notifyf(player, "You close the %s.", dwts);
 }
 
 // exclusively called by trigger() and carve, in vertical situations

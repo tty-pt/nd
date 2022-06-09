@@ -31,12 +31,6 @@
 #define SETMESG(x,y,z)    {add_prop_nofetch(x, y, z, 0);}
 #define SETDESC(x,y)	SETMESG(x, MESGPROP_DESC, y)
 
-#define GETLOCK(x)    (get_property_lock(x, MESGPROP_LOCK))
-#define SETLOCK(x,y)  {PData mydat; mydat.flags = PROP_LOKTYP; mydat.data.lok = y; set_property_nofetch(x, MESGPROP_LOCK, &mydat);}
-#define CLEARLOCK(x)  {PData mydat; mydat.flags = PROP_LOKTYP; mydat.data.lok = TRUE_BOOLEXP; set_property_nofetch(x, MESGPROP_LOCK, &mydat); }
-
-#define SETCONLOCK(x,y)  {PData mydat; mydat.flags = PROP_LOKTYP; mydat.data.lok = y; set_property_nofetch(x, MESGPROP_CONLOCK, &mydat);}
-
 #define GETVALUE(x)	get_property_value(x, MESGPROP_VALUE)
 #define SETVALUE(x,y)	add_prop_nofetch(x, MESGPROP_VALUE, NULL, y)
 
@@ -162,25 +156,6 @@ typedef long object_flag_type;
 #define Dark(x) ((FLAGS(x) & DARK) != 0)
 
 #define Builder(x) ((FLAGS(x) & (WIZARD|BUILDER)) != 0)
-
-/* Boolean expressions, for locks */
-typedef char boolexp_type;
-
-#define BOOLEXP_AND 0
-#define BOOLEXP_OR 1
-#define BOOLEXP_NOT 2
-#define BOOLEXP_CONST 3
-#define BOOLEXP_PROP 4
-
-struct boolexp {
-	boolexp_type type;
-	struct boolexp *sub1;
-	struct boolexp *sub2;
-	dbref thing;
-	struct plist *prop_check;
-};
-
-#define TRUE_BOOLEXP ((struct boolexp *) 0)
 
 /* special dbref's */
 #define NOTHING ((dbref) -1)	/* null dbref */

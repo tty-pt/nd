@@ -112,17 +112,11 @@ core_command_t cmds[] = {
 		.name = "boot",
 		.cb = &do_boot,
 	}, {
-		.name = "chlock",
-		.cb = &do_chlock,
-	}, {
 		.name = "chown",
 		.cb = &do_chown,
 	}, {
 		.name = "clone",
 		.cb = &do_clone,
-	}, {
-		.name = "conlock",
-		.cb = &do_conlock,
 	}, {
 		.name = "contents",
 		.cb = &do_contents,
@@ -142,9 +136,6 @@ core_command_t cmds[] = {
 	}, {
 		.name = "heal",
 		.cb = &do_heal,
-	}, {
-		.name = "lock",
-		.cb = &do_lock,
 	}, {
 		.name = "name",
 		.cb = &do_name,
@@ -189,9 +180,6 @@ core_command_t cmds[] = {
 	}, {
 		.name = "unbless",
 		.cb = &do_unbless,
-	}, {
-		.name = "unlock",
-		.cb = &do_unlock,
 	}, {
 		.name = "usage",
 		.cb = &do_usage,

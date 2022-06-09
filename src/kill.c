@@ -139,8 +139,6 @@ body(dbref player, dbref mob)
 
 	if (n > 0) {
 		ONOTIFYF(mob, "%s's body drops to the ground.", NAME(mob));
-		struct boolexp *key = parse_boolexp(player, NAME(player), 0);
-		SETCONLOCK(dead_mob, key);
 		return dead_mob;
 	} else {
 		recycle(player, dead_mob);

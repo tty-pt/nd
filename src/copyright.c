@@ -43,6 +43,3 @@ const char* copyright_notice[] = {
 "  statement.  Dr. Cat has given permission for the code to be used in the",
 "  FB distribution of the TinyMUCK server."
 };
-
-static const char *copyright_c_version = "$RCSfile$ $Revision: 1.4 $";
-const char *get_copyright_c_version(void) { return copyright_c_version; }

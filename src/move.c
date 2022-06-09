@@ -272,10 +272,6 @@ do_get(command_t *cmd)
 			notify(player, "You can't steal from the living.");
 			return;
 		}
-		if (!test_lock_false_default(player, cont, "_/clk")) {
-			notify(player, "You can't open that container.");
-			return;
-		}
 	}
 	if (getloc(thing) == player) {
 		notify(player, "You already have that!");
@@ -292,9 +288,7 @@ do_get(command_t *cmd)
 	case TYPE_ENTITY:
 	case TYPE_PLANT:
 		if (obj && *obj) {
-			cando = could_doit(player, thing);
-			if (!cando)
-				notify(player, "You can't get that.");
+			cando = 1;
 		} else {
 			if (OWNER(thing) != player
 					&& (Typeof(thing) == TYPE_ENTITY || Typeof(thing) == TYPE_PLANT))
@@ -356,11 +350,6 @@ do_drop(command_t *cmd)
 		if (Typeof(cont) != TYPE_ROOM && Typeof(cont) != TYPE_ENTITY &&
 			!is_item(cont)) {
 			notify(player, "You can't put anything in that.");
-			break;
-		}
-		if (Typeof(cont) != TYPE_ROOM &&
-			!test_lock_false_default(player, cont, "_/clk")) {
-			notify(player, "You don't have permission to put something in that.");
 			break;
 		}
 		if (parent_loop_check(thing, cont)) {

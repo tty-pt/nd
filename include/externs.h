@@ -130,7 +130,6 @@ extern void dialog_stop(dbref player);
 
 /* From predicates.c */
 extern int OkObj(dbref obj);
-extern int could_doit(dbref player, dbref thing);
 extern int can_doit(dbref player, dbref thing, const char *default_fail_msg);
 extern int can_see(dbref player, dbref thing, int can_see_location);
 extern int controls(dbref who, dbref what);
@@ -141,8 +140,6 @@ extern int ok_ascii_any(const char *name);
 extern int ok_name(const char *name);
 int ok_password(const char *password);
 int ok_player_name(const char *name);
-int test_lock_false_default(dbref player, dbref thing, const char *lockprop);
-int test_lock(dbref player, dbref thing, const char *lockprop);
 
 /* From rob.c */
 extern void do_give(command_t *);
@@ -151,15 +148,10 @@ extern void do_rob(command_t *);
 /* From set.c */
 extern void do_name(command_t *);
 extern void do_describe(command_t *);
-extern int setlockstr(dbref player, dbref thing, const char *keyname);
-extern void do_lock(command_t *);
-extern void do_unlock(command_t *);
 extern void do_unlink(command_t *);
 extern void do_unlink_quiet(command_t *cmd, const char *name);
 extern void do_chown(command_t *);
 extern void do_set(command_t *);
-extern void do_chlock(command_t *);
-extern void do_conlock(command_t *);
 extern void set_flags_from_tunestr(dbref obj, const char* flags);
 
 /* From speech.c */
@@ -194,15 +186,6 @@ extern void do_usage(command_t *);
 extern void do_bless(command_t *);
 extern void do_unbless(command_t *);
 
-/* From boolexp.c */
-extern int eval_boolexp(dbref player, struct boolexp *b, dbref thing);
-extern struct boolexp *parse_boolexp(dbref player, const char *string, int dbloadp);
-extern struct boolexp *copy_bool(struct boolexp *old);
-extern struct boolexp *getboolexp(FILE * f);
-extern struct boolexp *negate_boolexp(struct boolexp *b);
-extern void free_boolexp(struct boolexp *b);
-long size_boolexp(struct boolexp *b);
-
 /* From unparse.c */
 struct icon {
         int actions;
@@ -211,7 +194,6 @@ struct icon {
 
 extern struct icon icon(dbref what);
 extern const char *unparse_object(dbref player, dbref object);
-extern const char *unparse_boolexp(dbref player, struct boolexp *b, int fullname);
 
 /* From smatch.c */
 extern int equalstr(char *s, char *t);

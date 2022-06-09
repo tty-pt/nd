@@ -29,43 +29,6 @@ OkObj(dbref obj)
  * or that are jump_ok, and you cannot jump to players that are !jump_ok.
  */
 
-/*
- * could_doit: Checks to see if player could actually do what is proposing
- * to be done: if thing is an exit, this checks to see if the exit will
- * perform a move that is allowed. Then, it checks the @lock on the thing,
- * whether it's an exit or not.
- */
-int
-could_doit(dbref player, dbref thing)
-{
-
-		/* Check the @lock on the thing, as a final test. */
-	return (eval_boolexp(player, GETLOCK(thing), thing));
-}
-
-
-int
-test_lock(dbref player, dbref thing, const char *lockprop)
-{
-	struct boolexp *lokptr;
-
-	lokptr = get_property_lock(thing, lockprop);
-	return (eval_boolexp(player, lokptr, thing));
-}
-
-
-int
-test_lock_false_default(dbref player, dbref thing, const char *lockprop)
-{
-	struct boolexp *lok;
-
-	lok = get_property_lock(thing, lockprop);
-
-	if (lok == TRUE_BOOLEXP)
-		return 0;
-	return (eval_boolexp(player, lok, thing));
-}
-
 int
 can_doit(dbref player, dbref thing, const char *default_fail_msg)
 {
@@ -84,17 +47,9 @@ can_doit(dbref player, dbref thing, const char *default_fail_msg)
 		return 0;
 	}
 
-	if (!could_doit(player, thing)) {
-		if (default_fail_msg) {
-			notify(player, default_fail_msg);
-		}
-		return 0;
-	} else {
-		do_stand_silent(player);
+	do_stand_silent(player);
 
-		/* can do it */
-		return 1;
-	}
+	return 1;
 }
 
 int

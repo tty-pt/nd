@@ -90,153 +90,6 @@ do_describe(command_t *cmd)
 	}
 }
 
-/* sets a lock on an object to the lockstring passed to it.
-   If the lockstring is null, then it unlocks the object.
-   this returns a 1 or a 0 to represent success. */
-int
-setlockstr(dbref player, dbref thing, const char *keyname)
-{
-	struct boolexp *key;
-
-	if (*keyname != '\0') {
-		key = parse_boolexp(player, keyname, 0);
-		if (key == TRUE_BOOLEXP) {
-			return 0;
-		} else {
-			/* everything ok, do it */
-			SETLOCK(thing, key);
-			return 1;
-		}
-	} else {
-		CLEARLOCK(thing);
-		return 1;
-	}
-}
-
-void
-do_conlock(command_t *cmd)
-{
-	dbref player = cmd->player;
-	const char *name = cmd->argv[1];
-	const char *keyname = cmd->argv[2];
-	dbref thing = ematch_all(player, name);
-	struct boolexp *key;
-	PData mydat;
-
-	if (thing == NOTHING) {
-		notify(player, NOMATCH_MESSAGE);
-		return;
-	}
-
-	if (!controls(player, thing)) {
-		notify(player, "You can't set the container-lock on that!");
-		return;
-	}
-
-	if (!*keyname) {
-		mydat.flags = PROP_LOKTYP;
-		mydat.data.lok = TRUE_BOOLEXP;
-		set_property_nofetch(thing, "_/clk", &mydat);
-		notify(player, "Container lock cleared.");
-	} else {
-		key = parse_boolexp(player, keyname, 0);
-		if (key == TRUE_BOOLEXP) {
-			notify(player, "I don't understand that key.");
-		} else {
-			/* everything ok, do it */
-			mydat.flags = PROP_LOKTYP;
-			mydat.data.lok = key;
-			set_property_nofetch(thing, "_/clk", &mydat);
-			notify(player, "Container lock set.");
-		}
-	}
-}
-
-void
-do_chlock(command_t *cmd) {
-	dbref player = cmd->player;
-	const char *name = cmd->argv[1];
-	const char *keyname = cmd->argv[2];
-	dbref thing = ematch_all(player, name);
-	struct boolexp *key;
-	PData mydat;
-
-	if (thing == NOTHING) {
-		notify(player, NOMATCH_MESSAGE);
-		return;
-	}
-
-	if (!controls(player, thing)) {
-		notify(player, "You can't set the chown-lock on that!");
-		return;
-	}
-
-	if (!*keyname) {
-		mydat.flags = PROP_LOKTYP;
-		mydat.data.lok = TRUE_BOOLEXP;
-		set_property_nofetch(thing, "_/chlk", &mydat);
-		notify(player, "Chown lock cleared.");
-		return;
-	}
-
-	key = parse_boolexp(player, keyname, 0);
-	if (key == TRUE_BOOLEXP) {
-		notify(player, "I don't understand that key.");
-	} else {
-		/* everything ok, do it */
-		mydat.flags = PROP_LOKTYP;
-		mydat.data.lok = key;
-		set_property_nofetch(thing, "_/chlk", &mydat);
-		notify(player, "Chown lock set.");
-	}
-}
-
-void
-do_lock(command_t *cmd)
-{
-	dbref player = cmd->player;
-	const char *name = cmd->argv[1];
-	const char *keyname = cmd->argv[2];
-	dbref thing = ematch_all(player, name);
-	struct boolexp *key;
-
-	if (thing == NOTHING) {
-		notify(player, NOMATCH_MESSAGE);
-		return;
-	}
-
-	if (!controls(player, thing)) {
-		notify(player, "You can't lock that!");
-		return;
-	}
-
-	if(keyname && *keyname) {
-		key = parse_boolexp(player, keyname, 0);
-		if (key == TRUE_BOOLEXP) {
-			notify(player, "I don't understand that key.");
-		} else {
-			/* everything ok, do it */
-			SETLOCK(thing, key);
-			notify(player, "Locked.");
-		}
-	} else
-		do_unlock(cmd);
-
-}
-
-void
-do_unlock(command_t *cmd)
-{
-	dbref player = cmd->player;
-	const char *name = cmd->argv[1];
-	dbref thing;
-
-	if ((thing = match_controlled(player, name)) != NOTHING) {
-		CLEARLOCK(thing);
-		notify(player, "Unlocked.");
-	}
-}
-
 int
 controls_link(dbref who, dbref what)
 {
@@ -298,13 +151,6 @@ do_chown(command_t *cmd)
 		return;
 	}
 #endif /* GOD_PRIV */
-	if (!Wizard(OWNER(player))) {
-		if (!(FLAGS(thing) & CHOWN_OK) ||
-				!test_lock(player, thing, "_/chlk")) {
-			notify(player, "You can't take possession of that.");
-			return;
-		}
-	}
 
 	switch (Typeof(thing)) {
 	case TYPE_ROOM:
@@ -495,7 +341,6 @@ do_propset(command_t *cmd)
 	char *p, *q;
 	char buf[BUFFER_LEN];
 	char *type, *pname, *value;
-	struct boolexp *lok;
 	PData mydat;
 
 	/* find thing */
@@ -568,15 +413,6 @@ do_propset(command_t *cmd)
 
 		mydat.flags = PROP_REFTYP;
 		mydat.data.ref = ref;
-		set_property_nofetch(thing, pname, &mydat);
-	} else if (string_prefix("lock", type)) {
-		lok = parse_boolexp(player, value, 0);
-		if (lok == TRUE_BOOLEXP) {
-			notify(player, "I don't understand that lock.");
-			return;
-		}
-		mydat.flags = PROP_LOKTYP;
-		mydat.data.lok = lok;
 		set_property_nofetch(thing, pname, &mydat);
 	} else if (string_prefix("erase", type)) {
 		if (*value) {
