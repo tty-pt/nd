@@ -44,8 +44,6 @@ copy_one_prop(dbref player, dbref source, dbref destination, char *propname, int
 			case PROP_REFTYP:
 				newprop.data = currprop->data;
 				break;
-			case PROP_LOKTYP:
-				newprop.data.lok = copy_bool((currprop->data).lok);
 			case PROP_DIRTYP:
 				break;
 		}
