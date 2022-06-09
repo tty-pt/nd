@@ -176,10 +176,9 @@ object_add(struct object_skeleton o, dbref where)
 		break;
 	case S_TYPE_ENTITY:
 		FLAGS(nu) = TYPE_ENTITY;
-		// TODO use only struct entity
-		SETWTS(nu, o.sp.entity.wt);
 		mob_add_stats(&o, nu);
 		ENTITY(nu)->flags = o.sp.entity.flags;
+		ENTITY(nu)->wtso = o.sp.entity.wt;
 		mob = birth(nu);
 		object_drop(nu, o.sp.entity.drop);
 		mob->home = where;

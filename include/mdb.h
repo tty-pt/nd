@@ -31,18 +31,10 @@
 #define SETMESG(x,y,z)    {add_prop_nofetch(x, y, z, 0);}
 #define SETDESC(x,y)	SETMESG(x, MESGPROP_DESC, y)
 
-#define MESGPROP_WTS	"_/wts"
-#define SETWTS(x,y)	set_property_value(x, MESGPROP_WTS, y)
-#define GETWTS(x)	get_property_value(x, MESGPROP_WTS)
-
 #define MESGPROP_INF	"_/inf"
 #define SETINF(x,y)	set_property_value(x, MESGPROP_INF, y)
 #define GETINF(x)	get_property_value(x, MESGPROP_INF)
 #define USETINF(x)	remove_property(x, MESGPROP_INF)
-
-#define MESGPROP_DOOR	"_/door"
-#define GETDOOR(x)	get_property_value(x, MESGPROP_DOOR)
-#define SETDOOR(x, y)	set_property_value(x, MESGPROP_DOOR, y)
 
 #define SETHASH(w, x, y, z)	set_property_hash(w, x, y, z)
 #define GETHASH(w, x, y)	get_property_hash(w, x, y)
@@ -186,6 +178,7 @@ struct entity {
 	struct spell spells[8];
 	effect_t e[7];
 	dbref target, sat;
+	unsigned char wtso;
 	struct wts wts;
 	unsigned respawn_in, flags; // TODO merge these two
 	unsigned short hp, mp, hunger, thirst;

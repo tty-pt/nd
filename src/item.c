@@ -134,7 +134,7 @@ unequip(dbref who, unsigned eql)
 	switch (eql) {
 	case ES_RHAND:
 		EFFECT(mob, DMG).value -= DMG_WEAPON(eq);
-		mob->wts = phys_wts[GETWTS(who)];
+		mob->wts = phys_wts[mob->wtso];
 		break;
 	case ES_PANTS:
 	case ES_HEAD:

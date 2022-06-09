@@ -241,6 +241,7 @@ db_write_object(FILE * f, dbref i)
 		putref(f, ENTITY(i)->spend);
 		for (j = 0; j < ATTR_MAX; j++)
 			putref(f, ATTR(i, j));
+		putref(f, ENTITY(i)->wtso);
 		break;
 
 	case TYPE_PLANT:
@@ -604,6 +605,7 @@ db_read_object_foxen(FILE * f, struct object *o, dbref objno)
 		ENTITY(objno)->spend = getref(f);
 		for (j = 0; j < ATTR_MAX; j++)
 			ATTR(objno, j) = getref(f);
+		ENTITY(objno)->wtso = getref(f);
 		OWNER(objno) = objno;
 		if (ENTITY(objno)->flags & EF_PLAYER)
 			add_player(objno);

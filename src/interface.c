@@ -569,8 +569,7 @@ notify(dbref player, const char *msg)
 	char *ptr1;
 	const char *ptr2;
 
-        if (Typeof(player) != TYPE_ENTITY)
-                return 0;
+	CBUG(Typeof(player) != TYPE_ENTITY);
 
 	fd = ENTITY(player)->fd;
 	if (fd <= 0)

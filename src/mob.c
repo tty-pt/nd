@@ -411,7 +411,7 @@ struct entity *
 birth(dbref who)
 {
 	struct entity *mob = ENTITY(who);
-	mob->wts = phys_wts[GETWTS(who)];
+	mob->wts = phys_wts[ENTITY(who)->wtso];
 	mob->hunger = mob->thirst = 0;
 	mob->combo = GETCOMBO(who);
 	mob->hp = HP_MAX(who);
