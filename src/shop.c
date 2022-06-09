@@ -45,10 +45,10 @@ do_shop(command_t *cmd)
 	while (tmp > 0) {
 		if (GETINF(tmp))
 			notifyf(player, "%-13s %5dP (Inf)",
-				NAME(tmp), GETVALUE(tmp));
+				NAME(tmp), db[tmp].value);
 		else
 			notifyf(player, "%-13s %5dP",
-				NAME(tmp), GETVALUE(tmp));
+				NAME(tmp), db[tmp].value);
 
 		tmp = db[tmp].next;
 	}
@@ -73,16 +73,16 @@ do_buy(command_t *cmd)
 		return;
 	}
 
-	int cost = GETVALUE(item);
-	int ihave = GETVALUE(player);
+	int cost = db[item].value;
+	int ihave = db[player].value;
 
 	if (ihave < cost) {
 		notify(player, "You don't have enough pennies.");
 		return;
 	}
 
-	SETVALUE(player, ihave - cost);
-	SETVALUE(npc, GETVALUE(npc) + cost);
+	db[player].value -= cost;
+	db[npc].value += cost;
 
         if (GETINF(item)) {
                 dbref nu = object_copy(player, item);
@@ -113,8 +113,8 @@ do_sell(command_t *cmd)
 		return;
         }
 
-        int cost = GETVALUE(item);
-        int npchas = GETVALUE(npc);
+        int cost = db[item].value;
+        int npchas = db[npc].value;
 
         if (cost > npchas) {
                 notifyf(player, "%s can't afford to buy %s from you.",
@@ -124,8 +124,8 @@ do_sell(command_t *cmd)
 
         moveto(item, npc);
 
-        SETVALUE(player, GETVALUE(player) + cost);
-        SETVALUE(npc, npchas - cost);
+        db[player].value += cost;
+        db[npc].value -= cost;
 
         notifyf(player, "You sold %s for %dP.",
                 NAME(item), cost);

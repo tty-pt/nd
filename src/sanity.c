@@ -492,7 +492,7 @@ create_lostandfound(dbref * player, dbref * room)
 		FLAGS(*player) = TYPE_ENTITY |  SANEBIT;
 		OWNER(*player) = *player;
 		ENTITY(*player)->home = *room;
-		SETVALUE(*player, START_PENNIES);
+		db[*player].value = START_PENNIES;
 		rpass = rand_password();
 		PUSH(*player, db[*room].contents);
 		add_player(*player);

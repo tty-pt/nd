@@ -104,7 +104,7 @@ web_look(dbref player, dbref loc, char const *description)
                         mcp_mesg_arg_append(&msg, "name", NAME(thing));
                         mcp_mesg_arg_append(&msg, "pname", unparse_object(player, thing));
                         mcp_mesg_arg_append(&msg, "icon", ico.icon);
-                        snprintf(buf, sizeof(buf), "%d", GETVALUE(thing));
+                        snprintf(buf, sizeof(buf), "%d", db[thing].value);
                         mcp_mesg_arg_append(&msg, "price", buf);
                         snprintf(buf, sizeof(buf), "%d", ico.actions);
                         mcp_mesg_arg_append(&msg, "avatar", GETAVATAR(thing));

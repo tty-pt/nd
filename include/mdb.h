@@ -31,9 +31,6 @@
 #define SETMESG(x,y,z)    {add_prop_nofetch(x, y, z, 0);}
 #define SETDESC(x,y)	SETMESG(x, MESGPROP_DESC, y)
 
-#define GETVALUE(x)	get_property_value(x, MESGPROP_VALUE)
-#define SETVALUE(x,y)	add_prop_nofetch(x, MESGPROP_VALUE, NULL, y)
-
 #define MESGPROP_WTS	"_/wts"
 #define SETWTS(x,y)	set_property_value(x, MESGPROP_WTS, y)
 #define GETWTS(x)	get_property_value(x, MESGPROP_WTS)
@@ -255,6 +252,7 @@ struct object {
 	struct plist *properties;
 
 	object_flag_type flags;
+	unsigned value;
 
 	union specific sp;
 	/* int skid; */

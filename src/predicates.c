@@ -154,8 +154,8 @@ payfor(dbref who, int cost)
 		/* Wizards don't have to pay for anything. */
 	if (Wizard(who)) {
 		return 1;
-	} else if (GETVALUE(who) >= cost) {
-		SETVALUE(who, GETVALUE(who) - cost);
+	} else if (db[who].value >= cost) {
+		db[who].value -= cost;
 		return 1;
 	} else {
 		return 0;

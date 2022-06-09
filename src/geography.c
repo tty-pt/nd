@@ -99,19 +99,19 @@ geo_there(dbref where, enum exit e)
 static inline void
 reward(dbref player, const char *msg, int amount)
 {
-	SETVALUE(player, GETVALUE(player) + amount);
+	db[player].value += amount;
 	notifyf(player, "You %s. (+%dp)", msg, amount);
 }
 
 static inline int
 fee_fail(dbref player, char *desc, char *info, int cost)
 {
-	int v = GETVALUE(player);
+	int v = db[player].value;
 	if (v < cost) {
 		notifyf(player, "You can't afford to %s. (%dp)", desc, cost);
 		return 1;
 	} else {
-		SETVALUE(player, v - cost);
+		db[player].value -= cost;
 		notifyf(player, "%s (-%dp). %s",
 			   desc, cost, info);
 		return 0;
@@ -359,7 +359,7 @@ carve(dbref player, enum exit e)
 	if (!e_ground(getloc(player), e)) {
 		if (geo_claim(player, here))
 			return;
-		if (GETVALUE(player) < ROOM_COST) {
+		if (db[player].value < ROOM_COST) {
 			notify(player, "You can't pay for that room");
 			return;
 		}

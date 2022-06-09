@@ -396,7 +396,7 @@ do_toad(command_t *cmd) {
 
 		FLAGS(victim) = (FLAGS(victim) & ~TYPE_MASK) | TYPE_THING;
 		OWNER(victim) = player;	/* you get it */
-		SETVALUE(victim, 1);	/* don't let him keep his immense wealth */
+		db[victim].value = 1; /* don't let him keep his immense wealth */
 	}
 }
 

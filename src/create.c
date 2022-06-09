@@ -151,7 +151,7 @@ do_clone(command_t *cmd)
 	}
 
 	/* there ain't no such lunch as a free thing. */
-	cost = OBJECT_GETCOST(GETVALUE(thing));
+	cost = OBJECT_GETCOST(db[thing].value);
 	if (cost < OBJECT_COST) {
 		cost = OBJECT_COST;
 	}
@@ -167,7 +167,7 @@ do_clone(command_t *cmd)
 		NAME(clonedthing) = alloc_string(NAME(thing));
 		db[clonedthing].location = player;
 		OWNER(clonedthing) = OWNER(player);
-		SETVALUE(clonedthing, GETVALUE(thing));
+		db[clonedthing].value = db[thing].value;
 		/* FIXME: should we clone attached actions? */
 		switch (Typeof(thing)) {
 			case TYPE_ROOM:
@@ -184,9 +184,8 @@ do_clone(command_t *cmd)
 		copy_props(player, thing, clonedthing, "");
 
 		/* endow the object */
-		if (GETVALUE(thing) > MAX_OBJECT_ENDOWMENT) {
-			SETVALUE(thing, MAX_OBJECT_ENDOWMENT);
-		}
+		if (db[thing].value > MAX_OBJECT_ENDOWMENT)
+			db[thing].value = MAX_OBJECT_ENDOWMENT;
 		
 		/* link it in */
 		PUSH(clonedthing, db[player].contents);
@@ -257,13 +256,12 @@ do_create(command_t *cmd)
 		NAME(thing) = alloc_string(name);
 		db[thing].location = player;
 		OWNER(thing) = OWNER(player);
-		SETVALUE(thing, OBJECT_ENDOWMENT(cost));
+		db[thing].value = OBJECT_ENDOWMENT(cost);
 		FLAGS(thing) = TYPE_THING;
 
 		/* endow the object */
-		if (GETVALUE(thing) > MAX_OBJECT_ENDOWMENT) {
-			SETVALUE(thing, MAX_OBJECT_ENDOWMENT);
-		}
+		if (db[thing].value > MAX_OBJECT_ENDOWMENT)
+			db[thing].value = MAX_OBJECT_ENDOWMENT;
 
 		/* link it in */
 		PUSH(thing, db[player].contents);

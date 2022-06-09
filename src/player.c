@@ -60,7 +60,7 @@ create_player(const char *name)
 	OWNER(player) = player;
 	ENTITY(player)->home = PLAYER_START;
 
-	SETVALUE(player, START_PENNIES);
+	db[player].value = START_PENNIES;
 
 	/* link him to PLAYER_START */
 	PUSH(player, db[PLAYER_START].contents);

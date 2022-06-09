@@ -226,6 +226,7 @@ db_write_object(FILE * f, dbref i)
 	putref(f, o->location);
 	putref(f, o->contents);
 	putref(f, o->next);
+	putref(f, o->value);
 	putref(f, (FLAGS(i) & ~DUMP_MASK));	/* write non-internal flags */
 
 	putproperties(f, i);
@@ -534,6 +535,7 @@ db_read_object_foxen(FILE * f, struct object *o, dbref objno)
 	o->location = getref(f);
 	o->contents = getref(f);
 	o->next = getref(f);
+	o->value = getref(f);
 	tmp = getref(f);			/* flags list */
 	tmp &= ~DUMP_MASK;
 	FLAGS(objno) |= tmp;

@@ -40,7 +40,7 @@ do_give(command_t *cmd)
 		if (Typeof(who) != TYPE_ENTITY) {
 			notify(player, "You can only give to other entities.");
 			return;
-		} else if (GETVALUE(who) + amount > MAX_PENNIES) {
+		} else if (db[who].value + amount > MAX_PENNIES) {
 			notifyf(player, "That player doesn't need that many %s!", PENNIES);
 			return;
 		}
@@ -56,7 +56,7 @@ do_give(command_t *cmd)
 		return;
 	}
 
-	SETVALUE(who, GETVALUE(who) + amount);
+	db[who].value += amount;
 
 	if (amount >= 0) {
 		notifyf(player, "You give %d %s to %s.",

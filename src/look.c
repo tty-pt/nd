@@ -279,14 +279,14 @@ do_examine(command_t *cmd)
 				(int) (BUFFER_LEN - strlen(NAME(OWNER(thing))) - 35),
 				unparse_object(player, thing),
 				thing,
-				NAME(OWNER(thing)), GETVALUE(thing));
+				NAME(OWNER(thing)), db[thing].value);
 		break;
 	case TYPE_ENTITY:
 		snprintf(buf, sizeof(buf), "%.*s (#%d) %s: %d  ", 
 				(int) (BUFFER_LEN - strlen(CPENNIES) - 35),
 				unparse_object(player, thing),
 				thing,
-				CPENNIES, GETVALUE(thing));
+				CPENNIES, db[thing].value);
 		break;
 	case TYPE_GARBAGE:
 		strlcpy(buf, unparse_object(player, thing), sizeof(buf));
@@ -359,8 +359,8 @@ do_score(command_t *cmd)
 	dbref player = cmd->player;
 	char buf[BUFFER_LEN];
 
-	snprintf(buf, sizeof(buf), "You have %d %s.", GETVALUE(player),
-			GETVALUE(player) == 1 ? PENNY : PENNIES);
+	snprintf(buf, sizeof(buf), "You have %d %s.", db[player].value,
+			db[player].value == 1 ? PENNY : PENNIES);
 	notify(player, buf);
 }
 

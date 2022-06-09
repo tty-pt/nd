@@ -478,7 +478,7 @@ recycle(dbref player, dbref thing)
 	switch (Typeof(thing)) {
 	case TYPE_ROOM:
 		if (!Wizard(OWNER(thing)))
-			SETVALUE(OWNER(thing), GETVALUE(OWNER(thing)) + ROOM_COST);
+			db[OWNER(thing)].value += ROOM_COST;
 		if (ROOM(thing)->flags & RF_TEMP)
 			for (first = db[thing].contents; first != NOTHING; first = rest) {
 				rest = db[first].next;
@@ -494,7 +494,7 @@ recycle(dbref player, dbref thing)
 	case TYPE_EQUIPMENT:
 	case TYPE_THING:
 		if (!Wizard(OWNER(thing)))
-			SETVALUE(OWNER(thing), GETVALUE(OWNER(thing)) + GETVALUE(thing));
+			db[OWNER(thing)].value += db[thing].value;
 		if (ROOM(getloc(thing))->flags & RF_TEMP) {
 			for (first = db[thing].contents; first != NOTHING; first = rest) {
 				rest = db[first].next;
