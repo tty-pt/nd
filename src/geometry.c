@@ -141,27 +141,30 @@ rarity_get() {
 }
 
 dbref
-object_add(struct object_skeleton o, dbref where)
+object_add(struct object_skeleton sk, dbref where)
 {
 	dbref nu = object_new();
-	NAME(nu) = alloc_string(o.name);
-	db[nu].description = alloc_string(o.description);
-	db[nu].art = alloc_string(o.art);
-	db[nu].avatar = alloc_string(o.avatar);
-	db[nu].location = where;
-	OWNER(nu) = 1;
-	FLAGS(nu) = TYPE_THING;
+	OBJ *o = OBJECT(nu);
+	OBJ *w = OBJECT(where);
+	o->name = alloc_string(sk.name);
+	o->description = alloc_string(sk.description);
+	o->art = alloc_string(sk.art);
+	o->avatar = alloc_string(sk.avatar);
+	o->location = where;
+	o->owner = 1;
+	o->type = TYPE_THING;
+	o->flags = 0;
 	if (where >= 0)
-		PUSH(nu, db[where].contents);
+		PUSH(nu, w->contents);
 
-	switch (o.type) {
+	switch (sk.type) {
 	case S_TYPE_EQUIPMENT:
-		FLAGS(nu) = TYPE_EQUIPMENT;
-		EQUIPMENT(nu)->eqw = o.sp.equipment.eqw;
-		EQUIPMENT(nu)->msv = o.sp.equipment.msv;
+		o->type = TYPE_EQUIPMENT;
+		EQUIPMENT(nu)->eqw = sk.sp.equipment.eqw;
+		EQUIPMENT(nu)->msv = sk.sp.equipment.msv;
 		EQUIPMENT(nu)->rare = rarity_get();
 
-		CBUG(Typeof(where) != TYPE_ENTITY);
+		CBUG(w->type != TYPE_ENTITY);
 
 		struct entity *mob = ENTITY(where);
 
@@ -170,26 +173,26 @@ object_add(struct object_skeleton o, dbref where)
 
 		break;
 	case S_TYPE_CONSUMABLE:
-		FLAGS(nu) = TYPE_CONSUMABLE;
-		CONSUM(nu)->food = o.sp.consumable.food;
-		CONSUM(nu)->drink = o.sp.consumable.drink;
+		o->type = TYPE_CONSUMABLE;
+		CONSUM(nu)->food = sk.sp.consumable.food;
+		CONSUM(nu)->drink = sk.sp.consumable.drink;
 		break;
 	case S_TYPE_ENTITY:
-		FLAGS(nu) = TYPE_ENTITY;
-		mob_add_stats(&o, nu);
-		ENTITY(nu)->flags = o.sp.entity.flags;
-		ENTITY(nu)->wtso = o.sp.entity.wt;
+		o->type = TYPE_ENTITY;
+		mob_add_stats(&sk, nu);
+		ENTITY(nu)->flags = sk.sp.entity.flags;
+		ENTITY(nu)->wtso = sk.sp.entity.wt;
 		mob = birth(nu);
-		object_drop(nu, o.sp.entity.drop);
+		object_drop(nu, sk.sp.entity.drop);
 		mob->home = where;
 		break;
 	case S_TYPE_PLANT:
-		FLAGS(nu) = TYPE_PLANT;
-		object_drop(nu, o.sp.plant.drop);
-		OWNER(nu) = GOD;
+		o->type = TYPE_PLANT;
+		object_drop(nu, sk.sp.plant.drop);
+		o->owner = GOD;
 		break;
         case S_TYPE_BIOME:
-                FLAGS(nu) = TYPE_ROOM;
+		o->type = TYPE_ROOM;
 		ROOM(nu)->exits = ROOM(nu)->doors = 0;
 		ROOM(nu)->dropto = NOTHING;
 		ROOM(nu)->flags = RF_TEMP;
@@ -197,7 +200,7 @@ object_add(struct object_skeleton o, dbref where)
 		break;
 	}
 
-	if (o.type != S_TYPE_BIOME)
+	if (sk.type != S_TYPE_BIOME)
 		web_content_in(where, nu);
 
 	return nu;
@@ -289,17 +292,4 @@ point_rel_idx(point_t p, point_t s, smorton_t w)
 	if (s1 > p[X_COORD])
 		s1 -= UCOORD_MAX;
 	return (p[Y_COORD] - s0) * w + (p[X_COORD] - s1);
-}
-
-enum exit
-exit_e(dbref exit) {
-	const char dir = NAME(exit)[0];
-	return dir_e(dir);
-}
-
-int
-e_exit_is(dbref exit)
-{ 
-	char const *fname = e_fname(exit_e(exit));
-	return *fname && !strncmp(NAME(exit), fname, 4);
 }

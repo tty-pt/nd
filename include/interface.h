@@ -19,7 +19,7 @@ extern McpFrame *descr_mcpframe(int c);
 
 /* the following symbols are provided by game.c */
 
-extern dbref create_player(const char *name);
+dbref create_player(const char *name);
 extern dbref connect_player(const char *name);
 
 extern int init_game();

@@ -60,7 +60,7 @@ geo_update()
 
 	/* geo_notify(0, -1, msg); */
 	for (i = 0; i < db_top; i++)
-		if (Typeof(i) == TYPE_ENTITY)
+		if (OBJECT(i)->type == TYPE_ENTITY)
 			notify(i, msg);
 }
 
@@ -99,19 +99,19 @@ geo_there(dbref where, enum exit e)
 static inline void
 reward(dbref player, const char *msg, int amount)
 {
-	db[player].value += amount;
+	OBJECT(player)->value += amount;
 	notifyf(player, "You %s. (+%dp)", msg, amount);
 }
 
 static inline int
 fee_fail(dbref player, char *desc, char *info, int cost)
 {
-	int v = db[player].value;
+	int v = OBJECT(player)->value;
 	if (v < cost) {
 		notifyf(player, "You can't afford to %s. (%dp)", desc, cost);
 		return 1;
 	} else {
-		db[player].value -= cost;
+		OBJECT(player)->value -= cost;
 		notifyf(player, "%s (-%dp). %s",
 			   desc, cost, info);
 		return 0;
@@ -140,7 +140,7 @@ wall_around(dbref player, enum exit e)
 int
 geo_claim(dbref player, dbref room) {
 	if (!(ROOM(room)->flags & RF_TEMP)) {
-		if (OWNER(room) != player) {
+		if (OBJECT(room)->owner != player) {
 			notify(player, "You don't own this room");
 			return 1;
 		}
@@ -153,8 +153,8 @@ geo_claim(dbref player, dbref room) {
 
 	ROOM(room)->flags ^= RF_TEMP;
 	CBUG(ROOM(room)->flags & RF_TEMP);
-	OWNER(room) = player;
-	room = db[room].contents;
+	OBJECT(room)->owner = player;
+	room = OBJECT(room)->contents;
 
 	return 0;
 }
@@ -332,9 +332,9 @@ geo_clean(dbref player, dbref here)
 	if (!(ROOM(here)->flags & RF_TEMP))
 		return here;
 
-	tmp = db[here].contents;
+	tmp = OBJECT(here)->contents;
 	DOLIST(tmp, tmp)
-		if (Typeof(tmp) == TYPE_ENTITY && (ENTITY(tmp)->flags & EF_PLAYER)) {
+		if (OBJECT(tmp)->type == TYPE_ENTITY && (ENTITY(tmp)->flags & EF_PLAYER)) {
 			/* CBUG(tmp == cmd->player); */
 			return here;
 		}
@@ -358,7 +358,7 @@ carve(dbref player, enum exit e)
 	if (!e_ground(getloc(player), e)) {
 		if (geo_claim(player, here))
 			return;
-		if (db[player].value < ROOM_COST) {
+		if (OBJECT(player)->value < ROOM_COST) {
 			notify(player, "You can't pay for that room");
 			return;
 		}
@@ -409,7 +409,7 @@ uncarve(dbref player, enum exit e)
 		s0 = "at";
 	}
 
-	if ((ROOM(there)->flags & RF_TEMP) || OWNER(there) != player) {
+	if ((ROOM(there)->flags & RF_TEMP) || OBJECT(there)->owner != player) {
 		notifyf(player, "You don't own th%s room.", s0);
 		return;
 	}
@@ -433,12 +433,12 @@ unwall(dbref player, enum exit e)
 	dbref there,
 	      here = getloc(player);
 
-	a = OWNER(here) == player;
+	a = OBJECT(here)->owner == player;
 	b = ROOM(here)->flags & RF_TEMP;
 	there = geo_there(here, e);
 
 	if (there > 0) {
-		c = OWNER(there) == player;
+		c = OBJECT(there)->owner == player;
 		d = ROOM(there)->flags & RF_TEMP;
 	} else {
 		c = 0;
@@ -464,7 +464,7 @@ unwall(dbref player, enum exit e)
 	if (here == there)
 		return;
 
-        if (Typeof(here) != TYPE_ROOM)
+        if (OBJECT(here)->type != TYPE_ROOM)
                 here = NOTHING;
 
 	ROOM(there)->exits |= e_simm(e);
@@ -478,9 +478,9 @@ gexit_claim(dbref player, enum exit e)
 	dbref here = geo_there(player, e),
 	      there = getloc(player);
 
-	a = here > 0 && OWNER(here) == player;
+	a = here > 0 && OBJECT(here)->owner == player;
 	c = ROOM(there)->flags & RF_TEMP;
-	b = !c && OWNER(there) == player;
+	b = !c && OBJECT(there)->owner == player;
 	d = e_ground(getloc(player), e_dir(e));
 
 	if (a && (b || c))
@@ -577,7 +577,7 @@ tell_pos(dbref player, struct cmd_dir cd) {
 	dbref who = cd.rep == 1 ? player : (dbref) cd.rep;
 	int ret = 1;
 
-	if (Typeof(who) != TYPE_ENTITY) {
+	if (OBJECT(who)->type != TYPE_ENTITY) {
 		notify(player, "Invalid object type.");
 		return 0;
 	}
@@ -598,7 +598,7 @@ geo_teleport(dbref player, struct cmd_dir cd)
 	if (cd.dir == '?') {
 		// X6? teleport to chivas
 		dbref who = (dbref) cd.rep;
-		if (Typeof(who) == TYPE_ENTITY) {
+		if (OBJECT(who)->type == TYPE_ENTITY) {
 			map_where(pos, getloc(who));
 			ret = 1;
 		}
@@ -654,8 +654,8 @@ pull(dbref player, struct cmd_dir cd)
 
 	if (!(ROOM(here)->exits & e)
 	    || what < 0
-	    || Typeof(what) != TYPE_ROOM
-	    || OWNER(what) != player
+	    || OBJECT(what)->type != TYPE_ROOM
+	    || OBJECT(what)->owner != player
 	    || ((there = geo_there(here, e)) > 0
 		&& geo_clean(player, there) == there))
 	{
@@ -770,7 +770,7 @@ void geo_notify(int descr, dbref player) {
 
 	for (o_p = o; o_p < o + GEON_BDI; o_p++) {
 		dbref loc = *o_p;
-		if (loc < 0 || Typeof(loc) != TYPE_ROOM)
+		if (loc < 0 || OBJECT(loc)->type != TYPE_ROOM)
 			continue;
 
 		web_room_mcp(loc, &msg);

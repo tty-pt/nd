@@ -25,7 +25,7 @@ do_say(command_t *cmd)
 	char buf[BUFFER_LEN];
 
 	notifyf(player, "You say, \"%s\"", message);
-	onotifyf(player, buf, "%s says, \"%s\"", NAME(player), message);
+	onotifyf(player, buf, "%s says, \"%s\"", OBJECT(player)->name, message);
 }
 
 void
@@ -34,7 +34,7 @@ do_pose(command_t *cmd)
 	dbref player = cmd->player;
 	const char *message = cmd->argv[1];
 
-	anotifyf(getloc(player), "%s %s", NAME(player), message);
+	anotifyf(getloc(player), "%s %s", OBJECT(player)->name, message);
 }
 
 void
@@ -45,17 +45,17 @@ do_wall(command_t *cmd)
 	dbref i;
 	char buf[BUFFER_LEN];
 
-	CBUG(Typeof(player) != TYPE_ENTITY);
+	CBUG(OBJECT(player)->type != TYPE_ENTITY);
 
 	if (!(ENTITY(player)->flags & EF_WIZARD)) {
 		notify(player, "But what do you want to do with the wall?");
 		return;
 	}
 
-	warn("WALL from %s(%d): %s", NAME(player), player, message);
-	snprintf(buf, sizeof(buf), "%s shouts, \"%s\"", NAME(player), message);
+	warn("WALL from %s(%d): %s", OBJECT(player)->name, player, message);
+	snprintf(buf, sizeof(buf), "%s shouts, \"%s\"", OBJECT(player)->name, message);
 	for (i = 0; i < db_top; i++)
-		if (Typeof(i) == TYPE_ENTITY)
+		if (OBJECT(i)->type == TYPE_ENTITY)
 			notify(i, buf);
 }
 
@@ -92,14 +92,14 @@ do_page(command_t *cmd)
 	}
 	if (blank(arg2))
 		snprintf(buf, sizeof(buf), "You sense that %s is looking for you in %s.",
-				NAME(player), NAME(db[player].location));
+				OBJECT(player)->name, OBJECT(OBJECT(player)->location)->name);
 	else
-		snprintf(buf, sizeof(buf), "%s pages from %s: \"%s\"", NAME(player),
-				NAME(db[player].location), arg2);
+		snprintf(buf, sizeof(buf), "%s pages from %s: \"%s\"", OBJECT(player)->name,
+				OBJECT(OBJECT(player)->location)->name, arg2);
 	if (notify(target, buf))
 		notify(player, "Your message has been sent.");
 	else {
-		snprintf(buf, sizeof(buf), "%s is not connected.", NAME(target));
+		snprintf(buf, sizeof(buf), "%s is not connected.", OBJECT(target)->name);
 		notify(player, buf);
 	}
 }
@@ -112,7 +112,7 @@ notify_wts(dbref who, char const *a, char const *b, char *format, ...)
 	va_start(args, format);
 	vsnprintf(buf, sizeof(buf), format, args);
 	notifyf(who, "You %s%s.", a, buf);
-	onotifyf(who, "%s %s%s.", NAME(who), b, buf);
+	onotifyf(who, "%s %s%s.", OBJECT(who)->name, b, buf);
 	va_end(args);
 }
 
@@ -123,7 +123,7 @@ notify_wts_to(dbref who, dbref tar, char const *a, char const *b, char *format, 
 	char buf[BUFFER_LEN];
 	va_start(args, format);
 	vsnprintf(buf, sizeof(buf), format, args);
-	notifyf(who, "You %s %s%s.", a, NAME(tar), buf);
-	onotifyf(who, "%s %s %s%s.", NAME(who), b, NAME(tar), buf);
+	notifyf(who, "You %s %s%s.", a, OBJECT(tar)->name, buf);
+	onotifyf(who, "%s %s %s%s.", OBJECT(who)->name, b, OBJECT(tar)->name, buf);
 	va_end(args);
 }

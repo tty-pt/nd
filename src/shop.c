@@ -12,13 +12,13 @@ extern dbref object_copy(dbref player, dbref old);
 static inline dbref
 vendor_find(dbref where)
 {
-	dbref tmp = db[where].contents;
+	dbref tmp = OBJECT(where)->contents;
 
 	while (tmp > 0) {
-		if (Typeof(tmp) == TYPE_ENTITY && (ENTITY(tmp)->flags & EF_SHOP))
+		if (OBJECT(tmp)->type == TYPE_ENTITY && (ENTITY(tmp)->flags & EF_SHOP))
 			return tmp;
 
-		tmp = db[tmp].next;
+		tmp = OBJECT(tmp)->next;
 	}
 
 	return NOTHING;
@@ -35,22 +35,22 @@ do_shop(command_t *cmd)
 		return;
 	}
 
-	notifyf(player, "%s shows you what's for sale.", NAME(npc));
+	notifyf(player, "%s shows you what's for sale.", OBJECT(npc)->name);
 
         if (!web_look(player, npc))
             return;
 
-	dbref tmp = db[npc].contents;
+	dbref tmp = OBJECT(npc)->contents;
 
 	while (tmp > 0) {
 		if (GETINF(tmp))
 			notifyf(player, "%-13s %5dP (Inf)",
-				NAME(tmp), db[tmp].value);
+				OBJECT(tmp)->name, OBJECT(tmp)->value);
 		else
 			notifyf(player, "%-13s %5dP",
-				NAME(tmp), db[tmp].value);
+				OBJECT(tmp)->name, OBJECT(tmp)->value);
 
-		tmp = db[tmp].next;
+		tmp = OBJECT(tmp)->next;
 	}
 }
 
@@ -69,20 +69,20 @@ do_buy(command_t *cmd)
 	dbref item = ematch_at(player, npc, name);
 
 	if (item == NOTHING) {
-		notifyf(player, "%s does not sell %s.", NAME(npc), name);
+		notifyf(player, "%s does not sell %s.", OBJECT(npc)->name, name);
 		return;
 	}
 
-	int cost = db[item].value;
-	int ihave = db[player].value;
+	int cost = OBJECT(item)->value;
+	int ihave = OBJECT(player)->value;
 
 	if (ihave < cost) {
 		notify(player, "You don't have enough pennies.");
 		return;
 	}
 
-	db[player].value -= cost;
-	db[npc].value += cost;
+	OBJECT(player)->value -= cost;
+	OBJECT(npc)->value += cost;
 
         if (GETINF(item)) {
                 dbref nu = object_copy(player, item);
@@ -91,7 +91,7 @@ do_buy(command_t *cmd)
         } else
                 moveto(item, player);
 
-	notifyf(player, "You bought %s for %dP.", NAME(item), cost);
+	notifyf(player, "You bought %s for %dP.", OBJECT(item)->name, cost);
 }
 
 void
@@ -113,20 +113,20 @@ do_sell(command_t *cmd)
 		return;
         }
 
-        int cost = db[item].value;
-        int npchas = db[npc].value;
+        int cost = OBJECT(item)->value;
+        int npchas = OBJECT(npc)->value;
 
         if (cost > npchas) {
                 notifyf(player, "%s can't afford to buy %s from you.",
-                        NAME(npc), NAME(item));
+                        OBJECT(npc)->name, OBJECT(item)->name);
                 return;
         }
 
         moveto(item, npc);
 
-        db[player].value += cost;
-        db[npc].value -= cost;
+        OBJECT(player)->value += cost;
+        OBJECT(npc)->value -= cost;
 
         notifyf(player, "You sold %s for %dP.",
-                NAME(item), cost);
+                OBJECT(item)->name, cost);
 }

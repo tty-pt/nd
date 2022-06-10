@@ -126,11 +126,11 @@ db_grow(dbref newtop)
 void
 db_clear_object(dbref i)
 {
-	struct object *o = &db[i];
+	OBJ *o = OBJECT(i);
 
 	memset(o, 0, sizeof(struct object));
 
-	NAME(i) = 0;
+	o->name = 0;
 	o->location = NOTHING;
 	o->contents = NOTHING;
 	o->next = NOTHING;
@@ -148,7 +148,7 @@ object_new(void)
 
 	if (recyclable != NOTHING) {
 		newobj = recyclable;
-		recyclable = db[newobj].next;
+		recyclable = OBJECT(newobj)->next;
 		db_free_object(newobj);
 	} else {
 		newobj = db_top;
@@ -220,19 +220,19 @@ putproperties(FILE * f, dbref obj)
 static int
 db_write_object(FILE * f, dbref i)
 {
-	struct object *o = &db[i];
+	OBJ *o = OBJECT(i);
 	int j;
-	putstring(f, NAME(i));
+	putstring(f, o->name);
 	putref(f, o->location);
 	putref(f, o->contents);
 	putref(f, o->next);
 	putref(f, o->value);
-	putref(f, (FLAGS(i) & ~DUMP_MASK));	/* write non-internal flags */
+	putref(f, o->type);	/* write non-internal flags */
 
 	putproperties(f, i);
 
 
-	switch (Typeof(i)) {
+	switch (OBJECT(i)->type) {
 	case TYPE_ENTITY:
 		putref(f, ENTITY(i)->home);
 		putref(f, ENTITY(i)->flags);
@@ -258,7 +258,7 @@ db_write_object(FILE * f, dbref i)
 		putref(f, EQUIPMENT(i)->msv);
 		break;
 	case TYPE_THING:
-		putref(f, OWNER(i));
+		putref(f, OBJECT(i)->owner);
 		break;
 
 	case TYPE_ROOM:
@@ -266,7 +266,7 @@ db_write_object(FILE * f, dbref i)
 		putref(f, o->sp.room.flags);
 		putref(f, o->sp.room.exits);
 		putref(f, o->sp.room.floor);
-		putref(f, OWNER(i));
+		putref(f, OBJECT(i)->owner);
 		break;
 	}
 
@@ -409,17 +409,25 @@ getproperties(FILE * f, dbref obj, const char *pdir)
 void
 db_free_object(dbref i)
 {
-	struct object *o;
+	OBJ *o = OBJECT(i);
 
-	o = &db[i];
-	if (NAME(i))
-		free((void *) NAME(i));
+	if (o->name)
+		free((void *) o->name);
+
+	if (o->description)
+		free((void *) o->description);
+
+	if (o->art)
+		free((void *) o->art);
+
+	if (o->avatar)
+		free((void *) o->avatar);
 
 	if (o->properties) {
 		delete_proplist(o->properties);
 	}
 
-	if (Typeof(i) != TYPE_ROOM) {
+	if (o->type != TYPE_ROOM) {
 		struct observer_node *obs, *aux;
 		for (obs = o->first_observer; obs; obs = aux) {
 			aux = obs->next;
@@ -430,10 +438,9 @@ db_free_object(dbref i)
 
 void
 db_obs_add(dbref observable, dbref observer) {
-	struct object *o;
+	OBJ *o = OBJECT(observable);
 	struct observer_node *node = (struct observer_node *)
 		malloc(sizeof(struct observer_node));
-	o = &db[observable];
 	node->next = o->first_observer;
 	node->who = observer;
 	o->first_observer = node;
@@ -526,22 +533,18 @@ getstring_noalloc(FILE * f)
 void
 db_read_object_foxen(FILE * f, struct object *o, dbref objno)
 {
-	int tmp, c, prop_flag = 0;
+	int c, prop_flag = 0;
 	int j = 0;
 
 	db_clear_object(objno);
 
-	FLAGS(objno) = 0;
-	NAME(objno) = getstring(f);
+	o->flags = 0;
+	o->name = getstring(f);
 	o->location = getref(f);
 	o->contents = getref(f);
 	o->next = getref(f);
 	o->value = getref(f);
-	tmp = getref(f);			/* flags list */
-	tmp &= ~DUMP_MASK;
-	FLAGS(objno) |= tmp;
-
-	FLAGS(objno) &= ~SAVED_DELTA;
+	o->type = getref(f);
 
 	c = getc(f);
 	if (c == '*') {
@@ -571,7 +574,7 @@ db_read_object_foxen(FILE * f, struct object *o, dbref objno)
 			j = -j;
 	}
 
-	switch (FLAGS(objno) & TYPE_MASK) {
+	switch (o->type) {
 	case TYPE_PLANT:
 		PLANT(objno)->plid = prop_flag ? getref(f) : j;
 		PLANT(objno)->size = getref(f);
@@ -585,7 +588,7 @@ db_read_object_foxen(FILE * f, struct object *o, dbref objno)
 		EQUIPMENT(objno)->msv = getref(f);
 		return;
 	case TYPE_THING:
-		OWNER(objno) = prop_flag ? getref(f) : j;
+		OBJECT(objno)->owner = prop_flag ? getref(f) : j;
 		return;
 	case TYPE_ROOM:
 		ROOM(objno)->dropto = prop_flag ? getref(f) : j;
@@ -593,7 +596,7 @@ db_read_object_foxen(FILE * f, struct object *o, dbref objno)
 		ROOM(objno)->exits = getref(f);
 		ROOM(objno)->doors = getref(f);
 		ROOM(objno)->floor = getref(f);
-		OWNER(objno) = getref(f);
+		OBJECT(objno)->owner = getref(f);
 		return;
 	case TYPE_ENTITY:
 		ENTITY(objno)->home = prop_flag ? getref(f) : j;
@@ -606,7 +609,7 @@ db_read_object_foxen(FILE * f, struct object *o, dbref objno)
 		for (j = 0; j < ATTR_MAX; j++)
 			ATTR(objno, j) = getref(f);
 		ENTITY(objno)->wtso = getref(f);
-		OWNER(objno) = objno;
+		OBJECT(objno)->owner = objno;
 		if (ENTITY(objno)->flags & EF_PLAYER)
 			add_player(objno);
 		birth(objno);
@@ -640,7 +643,7 @@ db_read(FILE * f)
 			db_grow(thisref + 1);
 
 			/* read it in */
-			o = &db[thisref];
+			o = OBJECT(thisref);
 			db_read_object_foxen(f, o, thisref);
 			break;
 		case LOOKUP_TOKEN:
@@ -654,8 +657,8 @@ db_read(FILE * f)
 				if (special)
 					free((void *) special);
 				for (i = 0; i < db_top; i++) {
-					if (Typeof(i) == TYPE_GARBAGE) {
-						db[i].next = recyclable;
+					if (OBJECT(i)->type == TYPE_GARBAGE) {
+						OBJECT(i)->next = recyclable;
 						recyclable = i;
 					}
 				}
@@ -674,20 +677,20 @@ dbref
 object_copy(dbref player, dbref old)
 {
         dbref nu = object_new();
-	struct object *newp = &db[nu];
-	NAME(nu) = alloc_string(NAME(old));
+	OBJ *newp = OBJECT(nu);
+	OBJECT(nu)->name = alloc_string(OBJECT(old)->name);
 	newp->properties = copy_prop(old);
 	newp->contents = NOTHING;
 	newp->next = NOTHING;
 	newp->location = NOTHING;
-        newp->flags = db[old].flags;
-        OWNER(nu) = OWNER(old);
+        newp->flags = OBJECT(old)->flags;
+	newp->owner = OBJECT(old)->owner;
         return nu;
 }
 
 static void
 object_update(dbref what) {
-	if (Typeof(what) == TYPE_ENTITY)
+	if (OBJECT(what)->type == TYPE_ENTITY)
 		entity_update(what);
 }
 

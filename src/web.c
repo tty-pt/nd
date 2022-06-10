@@ -70,32 +70,32 @@ web_look(dbref player, dbref loc)
 	if (last_observed != NOTHING)
 		db_obs_remove(last_observed, player);
 
-        if (Typeof(loc) == TYPE_ROOM) {
+        if (OBJECT(loc)->type == TYPE_ROOM) {
                 mcp_mesg_arg_append(&msg, "room", "1");
                 snprintf(buf, sizeof(buf), "%u", ROOM(loc)->exits);
                 mcp_mesg_arg_append(&msg, "exits", buf);
         } else {
-		if (Typeof(loc) == TYPE_ENTITY && (ENTITY(loc)->flags & EF_SHOP))
+		if (OBJECT(loc)->type == TYPE_ENTITY && (ENTITY(loc)->flags & EF_SHOP))
 			mcp_mesg_arg_append(&msg, "shop", "1");
 
 		ENTITY(player)->last_observed = loc;
 		db_obs_add(loc, player);
 	}
 
-        mcp_mesg_arg_append(&msg, "art", db[loc].art);
-        mcp_mesg_arg_append(&msg, "name", NAME(loc));
+        mcp_mesg_arg_append(&msg, "art", OBJECT(loc)->art);
+        mcp_mesg_arg_append(&msg, "name", OBJECT(loc)->name);
         mcp_mesg_arg_append(&msg, "pname", unparse_object(player, loc));
-	if (db[loc].description)
-		description = db[loc].description;
+	if (OBJECT(loc)->description)
+		description = OBJECT(loc)->description;
         mcp_mesg_arg_append(&msg, "description", description);
         mcp_frame_output_mesg(mfr, &msg);
         mcp_mesg_clear(&msg);
 
-        if (loc != player && Typeof(loc) == TYPE_ENTITY && !(ENTITY(player)->flags & EF_WIZARD))
+        if (loc != player && OBJECT(loc)->type == TYPE_ENTITY && !(ENTITY(player)->flags & EF_WIZARD))
                 return 0;
 
 	// use callbacks for mcp like this versus telnet
-        DOLIST(thing, db[loc].contents) {
+        DOLIST(thing, OBJECT(loc)->contents) {
 		if (thing == player)
 			continue;
 		struct icon ico = icon(thing);
@@ -103,13 +103,13 @@ web_look(dbref player, dbref loc)
 		mcp_mesg_arg_append(&msg, "loc", buf2);
 		snprintf(buf, sizeof(buf), "%d", thing);
 		mcp_mesg_arg_append(&msg, "dbref", buf);
-		mcp_mesg_arg_append(&msg, "name", NAME(thing));
+		mcp_mesg_arg_append(&msg, "name", OBJECT(thing)->name);
 		mcp_mesg_arg_append(&msg, "pname", unparse_object(player, thing));
 		mcp_mesg_arg_append(&msg, "icon", ico.icon);
-		snprintf(buf, sizeof(buf), "%d", db[thing].value);
+		snprintf(buf, sizeof(buf), "%d", OBJECT(thing)->value);
 		mcp_mesg_arg_append(&msg, "price", buf);
 		snprintf(buf, sizeof(buf), "%d", ico.actions);
-		mcp_mesg_arg_append(&msg, "avatar", db[thing].avatar);
+		mcp_mesg_arg_append(&msg, "avatar", OBJECT(thing)->avatar);
 		mcp_mesg_arg_append(&msg, "actions", buf);
 		mcp_frame_output_mesg(mfr, &msg);
 		mcp_mesg_clear(&msg);
@@ -121,14 +121,14 @@ web_look(dbref player, dbref loc)
 void web_room_mcp(dbref room, void *msg) {
 	dbref tmp;
 
-	for (tmp = db[room].contents;
+	for (tmp = OBJECT(room)->contents;
 	     tmp > 0;
-	     tmp = db[tmp].next)
+	     tmp = OBJECT(tmp)->next)
 	{
-		if (Typeof(tmp) != TYPE_ENTITY)
+		if (OBJECT(tmp)->type != TYPE_ENTITY)
 			continue;
 
-		McpFrame *mfr = web_frame(ENTITY(OWNER(tmp))->fd);
+		McpFrame *mfr = web_frame(ENTITY(OBJECT(tmp)->owner)->fd);
 
 		if (!mfr)
 			continue;
@@ -138,17 +138,17 @@ void web_room_mcp(dbref room, void *msg) {
 }
 
 void web_obs_mcp(dbref thing, void *msg) {
-	struct object *o = &db[thing];
+	OBJ *o = OBJECT(thing);
 	struct observer_node *node = o->first_observer;
 
 	for (node = o->first_observer; node; node = node->next)
 	{
 		dbref tmp = node->who;
 
-		if (Typeof(tmp) != TYPE_ENTITY)
+		if (OBJECT(tmp)->type != TYPE_ENTITY)
 			continue;
 
-		McpFrame *mfr = web_frame(ENTITY(OWNER(tmp))->fd);
+		McpFrame *mfr = web_frame(ENTITY(OBJECT(tmp)->owner)->fd);
 
 		if (!mfr)
 			continue;
@@ -163,7 +163,7 @@ void do_meme(command_t *cmd) {
 	McpMesg msg;
         // FIXME should also work in the terminal
         mcp_mesg_init(&msg, MCP_WEB_PKG, "meme");
-        mcp_mesg_arg_append(&msg, "who", NAME(player));
+        mcp_mesg_arg_append(&msg, "who", OBJECT(player)->name);
         mcp_mesg_arg_append(&msg, "url", url);
         web_room_mcp(getloc(player), &msg);
         mcp_mesg_clear(&msg);
@@ -181,7 +181,7 @@ web_content_out(dbref loc, dbref thing) {
         mcp_mesg_arg_append(&msg, "dbref", buf);
         /* mcp_mesg_arg_append(&msg, "name", unparse_object(player, thing)); */
 
-	if (Typeof(loc) == TYPE_ROOM)
+	if (OBJECT(loc)->type == TYPE_ROOM)
 		web_room_mcp(loc, &msg);
 	else
 		web_obs_mcp(loc, &msg);
@@ -191,7 +191,6 @@ web_content_out(dbref loc, dbref thing) {
 
 void
 web_content_in(dbref loc, dbref thing) {
-	/* dbref loc = db[thing].location; */
 	struct icon ico = icon(thing);
 	char buf[BUFSIZ];
 	McpMesg msg;
@@ -201,14 +200,14 @@ web_content_in(dbref loc, dbref thing) {
         mcp_mesg_arg_append(&msg, "loc", buf);
 	snprintf(buf, BUFSIZ, "%d", thing);
         mcp_mesg_arg_append(&msg, "dbref", buf);
-	mcp_mesg_arg_append(&msg, "name", NAME(thing));
+	mcp_mesg_arg_append(&msg, "name", OBJECT(thing)->name);
 	mcp_mesg_arg_append(&msg, "pname", unparse_object(HUMAN_BEING, thing));
 	mcp_mesg_arg_append(&msg, "icon", ico.icon);
 	snprintf(buf, sizeof(buf), "%d", ico.actions);
-        mcp_mesg_arg_append(&msg, "avatar", db[thing].avatar);
+        mcp_mesg_arg_append(&msg, "avatar", OBJECT(thing)->avatar);
 	mcp_mesg_arg_append(&msg, "actions", buf);
 
-	if (Typeof(loc) == TYPE_ROOM)
+	if (OBJECT(loc)->type == TYPE_ROOM)
 		web_room_mcp(loc, &msg);
 	else
 		web_obs_mcp(loc, &msg);
@@ -380,7 +379,7 @@ web_equipment_item(dbref player, enum equipment_slot eql)
 	snprintf(buf, sizeof(buf), "%d", eql);
         mcp_mesg_arg_append(&msg, "eql", buf);
         mcp_mesg_arg_append(&msg, "pname", unparse_object(player, eq));
-        mcp_mesg_arg_append(&msg, "avatar", db[eq].avatar);
+        mcp_mesg_arg_append(&msg, "avatar", OBJECT(eq)->avatar);
         struct icon ico = icon(eq);
         mcp_mesg_arg_append(&msg, "icon", ico.icon);
 	mcp_frame_output_mesg(mfr, &msg);

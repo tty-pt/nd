@@ -48,26 +48,23 @@ connect_player(const char *qsession)
 dbref
 create_player(const char *name)
 {
-	dbref player;
+	dbref ref = object_new();
+	OBJ *player = OBJECT(ref);
+	ENT *entity = ENTITY(ref);
 
-	/* else he doesn't already exist, create him */
-	player = object_new();
+	player->name = alloc_string(name);
+	player->location = PLAYER_START;
+	player->flags = TYPE_ENTITY;
+	player->owner = ref;
+	player->value = START_PENNIES;
 
-	/* initialize everything */
-	NAME(player) = alloc_string(name);
-	db[player].location = PLAYER_START;	/* home */
-	FLAGS(player) = TYPE_ENTITY;
-	OWNER(player) = player;
-	ENTITY(player)->home = PLAYER_START;
+	entity->home = PLAYER_START;
+	entity->flags = EF_PLAYER;
 
-	db[player].value = START_PENNIES;
+	PUSH(ref, OBJECT(PLAYER_START)->contents);
+	add_player(ref);
 
-	/* link him to PLAYER_START */
-	PUSH(player, db[PLAYER_START].contents);
-	add_player(player);
-	ENTITY(player)->flags = EF_PLAYER;
-
-	return player;
+	return ref;
 }
 
 void
@@ -83,7 +80,7 @@ add_player(dbref who)
 	hash_data hd;
 
 	hd.dbval = who;
-	if (add_hash(NAME(who), hd, player_list, PLAYER_HASH_SIZE) == NULL) {
+	if (add_hash(OBJECT(who)->name, hd, player_list, PLAYER_HASH_SIZE) == NULL) {
 		BUG("Out of memory");
 	} else {
 		return;
@@ -101,43 +98,43 @@ delete_player(dbref who)
 	dbref found, ren;
 
 
-	result = free_hash(NAME(who), player_list, PLAYER_HASH_SIZE);
+	result = free_hash(OBJECT(who)->name, player_list, PLAYER_HASH_SIZE);
 
 	if (result) {
 		wall_wizards
 				("## WARNING: Playername hashtable is inconsistent.  Rebuilding it.  Don't panic.");
 		clear_players();
 		for (i = 0; i < db_top; i++) {
-			if (Typeof(i) == TYPE_ENTITY) {
-				found = lookup_player(NAME(i));
+			if (OBJECT(i)->type == TYPE_ENTITY) {
+				found = lookup_player(OBJECT(i)->name);
 				if (found != NOTHING) {
 					ren = (i == who) ? found : i;
 					j = 0;
 					do {
-						snprintf(namebuf, sizeof(namebuf), "%s%d", NAME(ren), ++j);
+						snprintf(namebuf, sizeof(namebuf), "%s%d", OBJECT(ren)->name, ++j);
 					} while (lookup_player(namebuf) != NOTHING);
 
 					snprintf(buf, sizeof(buf),
 							"## Renaming %s(#%d) to %s to prevent name collision.",
-							NAME(ren), ren, namebuf);
+							OBJECT(ren)->name, ren, namebuf);
 					wall_wizards(buf);
 
-					warn("SANITY NAME CHANGE: %s(#%d) to %s", NAME(ren), ren, namebuf);
+					warn("SANITY NAME CHANGE: %s(#%d) to %s", OBJECT(ren)->name, ren, namebuf);
 
 					if (ren == found) {
-						free_hash(NAME(ren), player_list, PLAYER_HASH_SIZE);
+						free_hash(OBJECT(ren)->name, player_list, PLAYER_HASH_SIZE);
 					}
-					if (NAME(ren)) {
-						free((void *) NAME(ren));
+					if (OBJECT(ren)->name) {
+						free((void *) OBJECT(ren)->name);
 					}
-					NAME(ren) = alloc_string(namebuf);
+					OBJECT(ren)->name = alloc_string(namebuf);
 					add_player(ren);
 				} else {
 					add_player(i);
 				}
 			}
 		}
-		result = free_hash(NAME(who), player_list, PLAYER_HASH_SIZE);
+		result = free_hash(OBJECT(who)->name, player_list, PLAYER_HASH_SIZE);
 		if (result) {
 			wall_wizards
 					("## WARNING: Playername hashtable still inconsistent.  Now you can panic.");
@@ -154,7 +151,7 @@ dialog_start(dbref player, dbref npc, const char *dialog) {
         const char *text = GETMESG(npc, buf);
 
         if (!text) {
-                /* notifyf(player, "%s stops talking .", NAME(npc)); */
+                /* notifyf(player, "%s stops talking .", OBJECT(npc)->name); */
                 web_dialog_stop(player);
                 return;
         }

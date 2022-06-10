@@ -70,7 +70,7 @@ equip_affect(dbref who, dbref eq)
 int
 equip(dbref who, dbref eq)
 {
-	CBUG(Typeof(who) != TYPE_ENTITY);
+	CBUG(OBJECT(who)->type != TYPE_ENTITY);
 	unsigned eql = EQL(EQUIPMENT(eq)->eqw);
 
 	if (!eql || EQUIP(who, eql) > 0
@@ -80,7 +80,7 @@ equip(dbref who, dbref eq)
 	EQUIP(who, eql) = eq;
 	EQUIPMENT(eq)->flags |= EF_EQUIPPED;
 
-	notifyf(who, "You equip %s.", NAME(eq));
+	notifyf(who, "You equip %s.", OBJECT(eq)->name);
 	web_stats(who);
 	web_content_out(who, eq);
 	web_equipment(who);
@@ -119,7 +119,7 @@ do_equip(command_t *cmd)
 dbref
 unequip(dbref who, unsigned eql)
 {
-	CBUG(Typeof(who) != TYPE_ENTITY);
+	CBUG(OBJECT(who)->type != TYPE_ENTITY);
 	struct entity *mob = ENTITY(who);
 	dbref eq = EQUIP(who, eql);
 	unsigned eqt, aux;
@@ -170,5 +170,5 @@ do_unequip(command_t *cmd)
 		return;
 	}
 
-	notifyf(player, "You unequip %s.", NAME(eq));
+	notifyf(player, "You unequip %s.", OBJECT(eq)->name);
 }

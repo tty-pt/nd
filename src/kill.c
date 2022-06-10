@@ -123,14 +123,14 @@ body(dbref player, dbref mob)
 {
 	char buf[32];
 	struct object_skeleton o = { "", "", "" };
-	snprintf(buf, sizeof(buf), "%s's body.", NAME(mob));
+	snprintf(buf, sizeof(buf), "%s's body.", OBJECT(mob)->name);
 	o.name = buf;
 	dbref dead_mob = object_add(o, getloc(mob));
 	dbref tmp;
 	unsigned n = 0;
 
-	for (; (tmp = db[mob].contents) != NOTHING; ) {
-		if (Typeof(tmp) == TYPE_GARBAGE)
+	for (; (tmp = OBJECT(mob)->contents) != NOTHING; ) {
+		if (OBJECT(tmp)->type == TYPE_GARBAGE)
 			continue;
 		unequip(mob, EQL(EQUIPMENT(tmp)->eqw));
 		moveto(tmp, dead_mob);
@@ -138,7 +138,7 @@ body(dbref player, dbref mob)
 	}
 
 	if (n > 0) {
-		onotifyf(mob, "%s's body drops to the ground.", NAME(mob));
+		onotifyf(mob, "%s's body drops to the ground.", OBJECT(mob)->name);
 		return dead_mob;
 	} else {
 		recycle(player, dead_mob);
@@ -180,12 +180,12 @@ kill_target(dbref attacker, dbref target)
 	body(attacker, target);
 
 	if (attacker > 0) {
-		CBUG(Typeof(attacker) != TYPE_ENTITY)
+		CBUG(OBJECT(attacker)->type != TYPE_ENTITY)
 		xp_award(attacker, target);
 		att->target = NOTHING;
 	}
 
-	CBUG(Typeof(target) != TYPE_ENTITY);
+	CBUG(OBJECT(target)->type != TYPE_ENTITY);
 
 	if (tar->target && (ENTITY(target)->flags & EF_AGGRO)) {
 		dbref target_target = tar->target;
@@ -263,12 +263,12 @@ do_kill(command_t *cmd)
 		return;
 	}
 
-	CBUG(Typeof(player) != TYPE_ENTITY);
+	CBUG(OBJECT(player)->type != TYPE_ENTITY);
 	struct entity *att = ENTITY(player);
 
 	if (target == NOTHING
 	    || player == target
-	    || Typeof(target) != TYPE_ENTITY)
+	    || OBJECT(target)->type != TYPE_ENTITY)
 	{
 		notify(player, "You can't target that.");
 		return;
@@ -285,7 +285,7 @@ kill_update(dbref attacker)
 	dbref target = att->target;
 
 	if (target <= 0
-            || Typeof(target) == TYPE_GARBAGE
+            || OBJECT(target)->type == TYPE_GARBAGE
 	    || getloc(target) != getloc(attacker)) {
 		att->target = NOTHING;
 		return;
@@ -334,7 +334,7 @@ do_heal(command_t *cmd)
 
 	if (!(ENTITY(player)->flags & EF_WIZARD)
 	    || target < 0
-	    || Typeof(target) != TYPE_ENTITY) {
+	    || OBJECT(target)->type != TYPE_ENTITY) {
                 notify(player, "You can't do that.");
                 return;
         }
@@ -357,13 +357,13 @@ do_advitam(command_t *cmd)
 
 	if (!(ENTITY(player)->flags & EF_WIZARD)
 	    || target == NOTHING
-	    || OWNER(target) != player) {
+	    || OBJECT(target)->owner != player) {
 		notify(player, "You can't do that.");
 		return;
 	}
 
 	birth(target);
-	notifyf(player, "You infuse %s with life.", NAME(target));
+	notifyf(player, "You infuse %s with life.", OBJECT(target)->name);
 }
 
 void
@@ -430,7 +430,6 @@ kill_v(dbref player, char const *opcs)
 	char *end;
 	if (isdigit(*opcs)) {
 		unsigned combo = strtol(opcs, &end, 0);
-		SETCOMBO(player, combo);
 		ENTITY(player)->combo = combo;
 		notifyf(player, "Set combo to 0x%x.", combo);
 		return end - opcs;
@@ -482,7 +481,7 @@ sit(dbref player, const char *name)
 	ENTITY(player)->flags |= EF_SITTING;
 	ENTITY(player)->sat = seat;
 
-	notify_wts(player, "sit", "sits", " on %s", NAME(seat));
+	notify_wts(player, "sit", "sits", " on %s", OBJECT(seat)->name);
 }
 
 void

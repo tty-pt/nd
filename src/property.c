@@ -12,6 +12,8 @@
 #include <string.h>
 #include <math.h>
 
+#define DoNull(s) ((s) ? (s) : "")
+
 /* property.c
    A whole new lachesis mod.
    Adds property manipulation routines to TinyMUCK.   */
@@ -43,7 +45,7 @@ set_property_nofetch(dbref player, const char *pname, PData * dat)
 	if (!*buf)
 		return;
 
-	p = propdir_new_elem(&(db[player].properties), buf);
+	p = propdir_new_elem(&(OBJECT(player)->properties), buf);
 
 	/* free up any old values */
 	clear_propnode(p);
@@ -215,12 +217,12 @@ remove_property_list(dbref player, int all)
 	PropPtr p;
 	PropPtr n;
 
-	if ((l = db[player].properties) != NULL) {
+	if ((l = OBJECT(player)->properties) != NULL) {
 		p = first_node(l);
 		while (p) {
 			n = next_node(l, PropName(p));
 			remove_proplist_item(player, p, all);
-			l = db[player].properties;
+			l = OBJECT(player)->properties;
 			p = n;
 		}
 	}
@@ -236,9 +238,9 @@ remove_property_nofetch(dbref player, const char *pname)
 
 	strlcpy(buf, pname, sizeof(buf));
 
-	l = db[player].properties;
+	l = OBJECT(player)->properties;
 	l = propdir_delete_elem(l, buf);
-	db[player].properties = l;
+	OBJECT(player)->properties = l;
 }
 
 
@@ -257,7 +259,7 @@ get_property(dbref player, const char *pname)
 
 	strlcpy(buf, pname, sizeof(buf));
 
-	p = propdir_get_elem(db[player].properties, buf);
+	p = propdir_get_elem(OBJECT(player)->properties, buf);
 	return (p);
 }
 
@@ -272,7 +274,7 @@ has_property(dbref what, const char *pname, const char *strval,
 
 	if (has_property_strict(what, pname, strval, value))
 		return 1;
-	for (things = db[what].contents; things != NOTHING; things = db[things].next) {
+	for (things = OBJECT(what)->contents; things != NOTHING; things = OBJECT(things)->next) {
 		if (has_property(things, pname, strval, value))
 			return 1;
 	}
@@ -462,7 +464,7 @@ copy_prop(dbref old)
 {
 	PropPtr p, n = NULL;
 
-	p = db[old].properties;
+	p = OBJECT(old)->properties;
 	copy_proplist(old, &n, p);
 	return (n);
 }
@@ -482,7 +484,7 @@ first_prop_nofetch(dbref player, const char *dir, PropPtr * list, char *name, in
 		}
 	}
 	if (!dir || !*dir) {
-		*list = db[player].properties;
+		*list = OBJECT(player)->properties;
 		p = first_node(*list);
 		if (p) {
 			strlcpy(name, PropName(p), maxlen);
@@ -493,7 +495,7 @@ first_prop_nofetch(dbref player, const char *dir, PropPtr * list, char *name, in
 	}
 
 	strlcpy(buf, dir, sizeof(buf));
-	*list = p = propdir_get_elem(db[player].properties, buf);
+	*list = p = propdir_get_elem(OBJECT(player)->properties, buf);
 	if (!p) {
 		*name = '\0';
 		return NULL;
@@ -547,7 +549,7 @@ next_prop(PropPtr list, PropPtr prop, char *name, int maxlen)
 long
 size_properties(dbref player, int load)
 {
-	return size_proplist(db[player].properties);
+	return size_proplist(OBJECT(player)->properties);
 }
 
 
@@ -559,7 +561,7 @@ is_propdir_nofetch(dbref player, const char *pname)
 	char w[BUFFER_LEN];
 
 	strlcpy(w, pname, sizeof(w));
-	p = propdir_get_elem(db[player].properties, w);
+	p = propdir_get_elem(OBJECT(player)->properties, w);
 	if (!p)
 		return 0;
 	return (PropDir(p) != (PropPtr) NULL);
@@ -888,7 +890,7 @@ db_dump_props_rec(dbref obj, FILE * f, const char *dir, PropPtr p)
 void
 db_dump_props(FILE * f, dbref obj)
 {
-	db_dump_props_rec(obj, f, "/", db[obj].properties);
+	db_dump_props_rec(obj, f, "/", OBJECT(obj)->properties);
 }
 
 
@@ -911,7 +913,7 @@ untouchprops_incremental(int limit)
 
 	while (untouch_lastdone < db_top) {
 		/* clear the touch flags */
-		p = db[untouch_lastdone].properties;
+		p = OBJECT(untouch_lastdone)->properties;
 		if (p) {
 			if (!limit--)
 				return;

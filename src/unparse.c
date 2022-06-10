@@ -44,7 +44,7 @@ icon(dbref what)
                 .icon = ANSI_RESET ANSI_BOLD "?",
         };
         dbref aux;
-        switch (Typeof(what)) {
+        switch (OBJECT(what)->type) {
         case TYPE_ROOM:
                 ret.icon = ANSI_FG_YELLOW "-";
                 break;
@@ -94,9 +94,9 @@ icon(dbref what)
 static inline int
 controls_link(dbref who, dbref what)
 {
-	switch (Typeof(what)) {
+	switch (OBJECT(what)->type) {
 	case TYPE_ROOM:
-		if (controls(who, db[what].sp.room.dropto))
+		if (controls(who, ROOM(what)->dropto))
 			return 1;
 		return 0;
 
@@ -115,26 +115,24 @@ unparse_object(dbref player, dbref loc)
 {
 	static char buf[BUFFER_LEN];
         size_t buf_l = 0;
-	if (player != NOTHING && Typeof(player) != TYPE_ENTITY)
-		player = OWNER(player);
+	if (player != NOTHING && OBJECT(player)->type != TYPE_ENTITY)
+		player = OBJECT(player)->owner;
 
 	switch (loc) {
 	case NOTHING:
 		return "*NOTHING*";
-	case HOME:
-		return "*HOME*";
 	default:
 		if (loc < 0 || loc >= db_top)
 			return "*INVALID*";
 
-		if (Typeof(loc) == TYPE_EQUIPMENT && EQUIPMENT(loc)->eqw) {
+		if (OBJECT(loc)->type == TYPE_EQUIPMENT && EQUIPMENT(loc)->eqw) {
 			unsigned n = EQUIPMENT(loc)->rare;
 
 			if (n != 1)
                                 BUFF("(%s) ", rarity_str[n]);
 		}
 
-                BUFF("%s", NAME(loc));
+                BUFF("%s", OBJECT(loc)->name);
 
 		if (player == NOTHING || controls_link(player, loc))
 

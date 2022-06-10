@@ -32,15 +32,6 @@ ematch_here(dbref player, const char *str)
 }
 
 inline dbref
-ematch_home(const char *str)
-{
-	if (!strcmp(str, "home"))
-		return HOME;
-	else
-		return NOTHING;
-}
-
-inline dbref
 ematch_mine(dbref player, const char *str)
 {
 	return ematch_at(player, player, str);
@@ -52,7 +43,7 @@ ematch_near(dbref player, const char *str)
 	return ematch_at(player, getloc(player), str);
 }
 
-/* all ematch minus ematch_home
+/* all ematch
  * (not found by the linker if it is not static?)
  */
 static inline dbref

@@ -19,12 +19,6 @@
 #include "props.h"
 #include "search.h"
 
-#define TYPEOF(i)   (db[i].flags & TYPE_MASK)
-#define LOCATION(x) (db[x].location)
-
-#define CONTENTS(x) (db[x].contents)
-#define NEXTOBJ(x)  (db[x].next)
-
 #define unparse(x) ((char*)unparse_object(GOD, (x)))
 
 int sanity_violated = 0;
@@ -83,7 +77,7 @@ valid_obj(dbref obj)
 	if (!valid_ref(obj)) {
 		return 0;
 	}
-	switch (TYPEOF(obj)) {
+	switch (OBJECT(obj)->type) {
 	case TYPE_ROOM:
 	case TYPE_ENTITY:
 	case TYPE_CONSUMABLE:
@@ -106,8 +100,8 @@ check_next_chain(dbref player, dbref obj)
 
 	orig = obj;
 	while (obj != NOTHING && valid_ref(obj)) {
-		for (i = orig; i != NOTHING; i = NEXTOBJ(i)) {
-			if (i == NEXTOBJ(obj)) {
+		for (i = orig; i != NOTHING; i = OBJECT(i)->next) {
+			if (i == OBJECT(obj)->next) {
 				violate(player, obj,
 						"has a 'next' field that forms an illegal loop in an object chain");
 				return;
@@ -116,7 +110,7 @@ check_next_chain(dbref player, dbref obj)
 				break;
 			}
 		}
-		obj = NEXTOBJ(obj);
+		obj = OBJECT(obj)->next;
 	}
 	if (!valid_ref(obj)) {
 		violate(player, obj, "has an invalid object in its 'next' chain");
@@ -134,46 +128,46 @@ find_orphan_objects(dbref player)
 	SanPrint(player, "Searching for orphan objects...");
 
 	for (i = 0; i < db_top; i++) {
-		FLAGS(i) &= ~SANEBIT;
+		OBJECT(i)->flags &= ~OF_SANEBIT;
 	}
 
 	if (recyclable != NOTHING) {
-		FLAGS(recyclable) |= SANEBIT;
+		OBJECT(recyclable)->flags |= OF_SANEBIT;
 	}
-	FLAGS(GLOBAL_ENVIRONMENT) |= SANEBIT;
+	OBJECT(GLOBAL_ENVIRONMENT)->flags |= OF_SANEBIT;
 
 	for (i = 0; i < db_top; i++) {
-		switch (Typeof(i)) {
+		switch (OBJECT(i)->type) {
 		case TYPE_ROOM:
-			FLAGS(i) |= SANEBIT;
+			OBJECT(i)->flags |= OF_SANEBIT;
 		}
-		if (CONTENTS(i) != NOTHING) {
-			if (FLAGS(CONTENTS(i)) & SANEBIT) {
-				violate(player, CONTENTS(i),
+		if (OBJECT(i)->contents != NOTHING) {
+			if (OBJECT(OBJECT(i)->contents)->flags & OF_SANEBIT) {
+				violate(player, OBJECT(i)->contents,
 						"is referred to by more than one object's Next or Contents field");
 			} else {
-				FLAGS(CONTENTS(i)) |= SANEBIT;
+				OBJECT(OBJECT(i)->contents)->flags |= OF_SANEBIT;
 			}
 		}
-		if (NEXTOBJ(i) != NOTHING) {
-			if (FLAGS(NEXTOBJ(i)) & SANEBIT) {
-				violate(player, NEXTOBJ(i),
+		if (OBJECT(i)->next != NOTHING) {
+			if (OBJECT(OBJECT(i)->next)->flags & OF_SANEBIT) {
+				violate(player, OBJECT(i)->next,
 						"is referred to by more than one object's Next or Contents field");
 			} else {
-				FLAGS(NEXTOBJ(i)) |= SANEBIT;
+				OBJECT(OBJECT(i)->next)->flags |= OF_SANEBIT;
 			}
 		}
 	}
 
 	for (i = 0; i < db_top; i++) {
-		if (!(FLAGS(i) & SANEBIT)) {
+		if (!(OBJECT(i)->flags & OF_SANEBIT)) {
 			violate(player, i,
 					"appears to be an orphan object, that is not referred to by any other object");
 		}
 	}
 
 	for (i = 0; i < db_top; i++) {
-		FLAGS(i) &= ~SANEBIT;
+		OBJECT(i)->flags &= ~OF_SANEBIT;
 	}
 }
 
@@ -183,11 +177,11 @@ check_room(dbref player, dbref obj)
 {
 	dbref i;
 
-	i = db[obj].sp.room.dropto;
+	i = ROOM(obj)->dropto;
 
-	if (!valid_ref(i) && i != HOME) {
+	if (!valid_ref(i)) {
 		violate(player, obj, "has its dropto set to an invalid object");
-	} else if (i >= 0 && !is_item(i) && TYPEOF(i) != TYPE_ROOM) {
+	} else if (i >= 0 && !is_item(i) && OBJECT(i)->type != TYPE_ROOM) {
 		violate(player, obj, "has its dropto set to a non-room, non-item object");
 	}
 }
@@ -201,7 +195,7 @@ check_entity(dbref player, dbref obj)
 
 	if (!valid_obj(i)) {
 		violate(player, obj, "has its home set to an invalid object");
-	} else if (i >= 0 && TYPEOF(i) != TYPE_ROOM) {
+	} else if (i >= 0 && OBJECT(i)->type != TYPE_ROOM) {
 		violate(player, obj, "has its home set to a non-room object");
 	}
 }
@@ -210,7 +204,7 @@ check_entity(dbref player, dbref obj)
 void
 check_garbage(dbref player, dbref obj)
 {
-	if (NEXTOBJ(obj) != NOTHING && TYPEOF(NEXTOBJ(obj)) != TYPE_GARBAGE) {
+	if (OBJECT(obj)->next != NOTHING && OBJECT(OBJECT(obj)->next)->type != TYPE_GARBAGE) {
 		violate(player, obj,
 				"has a non-garbage object as the 'next' object in the garbage chain");
 	}
@@ -223,20 +217,20 @@ check_contents_list(dbref player, dbref obj)
 	dbref i;
 	int limit;
 
-	if (TYPEOF(obj) != TYPE_GARBAGE) {
-		for (i = CONTENTS(obj), limit = db_top;
+	if (OBJECT(obj)->type != TYPE_GARBAGE) {
+		for (i = OBJECT(obj)->contents, limit = db_top;
 			 valid_obj(i) &&
-			 --limit && LOCATION(i) == obj; i = NEXTOBJ(i)) ;
+			 --limit && OBJECT(i)->location == obj; i = OBJECT(i)->next) ;
 		if (i != NOTHING) {
 			if (!limit) {
-				check_next_chain(player, CONTENTS(obj));
+				check_next_chain(player, OBJECT(obj)->contents);
 				violate(player, obj,
 						"is the containing object, and has the loop in its contents chain");
 			} else {
 				if (!valid_obj(i)) {
 					violate(player, obj, "has an invalid object in its contents list");
 				} else {
-					if (LOCATION(i) != obj) {
+					if (OBJECT(i)->location != obj) {
 						violate(player, obj,
 								"has an object in its contents lists that thinks it is located elsewhere");
 					}
@@ -244,8 +238,8 @@ check_contents_list(dbref player, dbref obj)
 			}
 		}
 	} else {
-		if (CONTENTS(obj) != NOTHING) {
-			if (TYPEOF(obj) == TYPE_GARBAGE) {
+		if (OBJECT(obj)->contents != NOTHING) {
+			if (OBJECT(obj)->type == TYPE_GARBAGE) {
 				violate(player, obj, "is a garbage object whose contents aren't #-1");
 			} else {
 				violate(player, obj, "is a program whose contents aren't #-1");
@@ -260,37 +254,37 @@ check_object(dbref player, dbref obj)
 	/*
 	 * Do we have a name?
 	 */
-	if (!NAME(obj))
+	if (!OBJECT(obj)->name)
 		violate(player, obj, "doesn't have a name");
 
 	/*
 	 * Check the ownership
 	 */
-	if (TYPEOF(obj) != TYPE_GARBAGE) {
-		if (!valid_obj(OWNER(obj))) {
+	if (OBJECT(obj)->type != TYPE_GARBAGE) {
+		if (!valid_obj(OBJECT(obj)->owner)) {
 			violate(player, obj, "has an invalid object as its owner.");
-		} else if (TYPEOF(OWNER(obj)) != TYPE_ENTITY) {
+		} else if (OBJECT(OBJECT(obj)->owner)->type != TYPE_ENTITY) {
 			violate(player, obj, "has a non-player object as its owner.");
 		}
 
 		/* 
 		 * check location 
 		 */
-		if (!valid_obj(LOCATION(obj)) &&
-			!((obj == GLOBAL_ENVIRONMENT || Typeof(obj) == TYPE_ROOM) && LOCATION(obj) == NOTHING)) {
+		if (!valid_obj(OBJECT(obj)->location) &&
+			!((obj == GLOBAL_ENVIRONMENT || OBJECT(obj)->type == TYPE_ROOM) && OBJECT(obj)->location == NOTHING)) {
 			violate(player, obj, "has an invalid object as it's location");
 		}
 	}
 
-	if (LOCATION(obj) != NOTHING && TYPEOF(LOCATION(obj)) == TYPE_GARBAGE)
+	if (OBJECT(obj)->location != NOTHING && OBJECT(OBJECT(obj)->location)->type == TYPE_GARBAGE)
 		violate(player, obj, "thinks it is located in a non-container object");
 
-	if ((TYPEOF(obj) == TYPE_GARBAGE) && (LOCATION(obj) != NOTHING))
+	if ((OBJECT(obj)->type == TYPE_GARBAGE) && (OBJECT(obj)->location != NOTHING))
 		violate(player, obj, "is a garbage object with a location that isn't #-1");
 
 	check_contents_list(player, obj);
 
-	switch (TYPEOF(obj)) {
+	switch (OBJECT(obj)->type) {
 	case TYPE_ROOM:
 		check_room(player, obj);
 		break;
@@ -370,9 +364,9 @@ san_fixed_log(char *format, int unparse, dbref ref1, dbref ref2)
 void
 cut_all_chains(dbref obj)
 {
-	if (CONTENTS(obj) != NOTHING) {
+	if (OBJECT(obj)->contents != NOTHING) {
 		SanFixed(obj, "Cleared contents of %s");
-		CONTENTS(obj) = NOTHING;
+		OBJECT(obj)->contents = NOTHING;
 	}
 }
 
@@ -384,18 +378,18 @@ cut_bad_recyclable(void)
 	loop = recyclable;
 	prev = NOTHING;
 	while (loop != NOTHING) {
-		if (!valid_ref(loop) || TYPEOF(loop) != TYPE_GARBAGE || FLAGS(loop) & SANEBIT) {
+		if (!valid_ref(loop) || OBJECT(loop)->type != TYPE_GARBAGE || OBJECT(loop)->flags & OF_SANEBIT) {
 			SanFixed(loop, "Recyclable object %s is not TYPE_GARBAGE");
 			if (prev != NOTHING)
-				db[prev].next = NOTHING;
+				OBJECT(prev)->next = NOTHING;
 			else {
 				recyclable = NOTHING;
 			}
 			return;
 		}
-		FLAGS(loop) |= SANEBIT;
+		OBJECT(loop)->flags |= OF_SANEBIT;
 		prev = loop;
-		loop = db[loop].next;
+		loop = OBJECT(loop)->next;
 	}
 }
 
@@ -404,31 +398,31 @@ cut_bad_contents(dbref obj)
 {
 	dbref loop, prev;
 
-	loop = CONTENTS(obj);
+	loop = OBJECT(obj)->contents;
 	prev = NOTHING;
 	while (loop != NOTHING) {
-		if (!valid_obj(loop) || FLAGS(loop) & SANEBIT ||
-			LOCATION(loop) != obj || loop == obj) {
+		if (!valid_obj(loop) || OBJECT(loop)->flags & OF_SANEBIT ||
+			OBJECT(loop)->location != obj || loop == obj) {
 			if (!valid_obj(loop)) {
 				SanFixed(obj, "Contents chain for %s cut at invalid dbref");
 			} else if (loop == obj) {
 				SanFixed(obj, "Contents chain for %s cut at self-reference");
-			} else if (LOCATION(loop) != obj) {
+			} else if (OBJECT(loop)->location != obj) {
 				SanFixed2(obj, loop, "Contents chain for %s cut at misplaced object %s");
-			} else if (FLAGS(loop) & SANEBIT) {
+			} else if (OBJECT(loop)->flags & OF_SANEBIT) {
 				SanFixed2(obj, loop, "Contents chain for %s cut at already chained object %s");
 			} else {
 				SanFixed2(obj, loop, "Contents chain for %s cut at %s");
 			}
 			if (prev != NOTHING)
-				db[prev].next = NOTHING;
+				OBJECT(prev)->next = NOTHING;
 			else
-				CONTENTS(obj) = NOTHING;
+				OBJECT(obj)->contents = NOTHING;
 			return;
 		}
-		FLAGS(loop) |= SANEBIT;
+		OBJECT(loop)->flags |= OF_SANEBIT;
 		prev = loop;
-		loop = db[loop].next;
+		loop = OBJECT(loop)->next;
 	}
 }
 
@@ -439,8 +433,8 @@ hacksaw_bad_chains(void)
 
 	cut_bad_recyclable();
 	for (loop = 0; loop < db_top; loop++) {
-		if (TYPEOF(loop) != TYPE_ROOM && !is_item(loop) &&
-			TYPEOF(loop) != TYPE_ENTITY) {
+		if (OBJECT(loop)->type != TYPE_ROOM && !is_item(loop) &&
+			OBJECT(loop)->type != TYPE_ENTITY) {
 			cut_all_chains(loop);
 		} else {
 			cut_bad_contents(loop);
@@ -470,11 +464,12 @@ create_lostandfound(dbref * player, dbref * room)
 	int temp = 0;
 
 	*room = object_new();
-	NAME(*room) = alloc_string("lost+found");
-	LOCATION(*room) = GLOBAL_ENVIRONMENT;
-	db[*room].sp.room.dropto = NOTHING;
-	FLAGS(*room) = TYPE_ROOM | SANEBIT;
-	PUSH(*room, db[GLOBAL_ENVIRONMENT].contents);
+	OBJECT(*room)->name = alloc_string("lost+found");
+	OBJECT(*room)->location = GLOBAL_ENVIRONMENT;
+	ROOM(*room)->dropto = NOTHING;
+	OBJECT(*room)->type = TYPE_ROOM;
+	OBJECT(*room)->flags = OF_SANEBIT;
+	PUSH(*room, OBJECT(GLOBAL_ENVIRONMENT)->contents);
 	SanFixed(*room, "Using %s to resolve unknown location");
 
 	while (lookup_player(player_name) != NOTHING && strlen(player_name) < PLAYER_NAME_LIMIT) {
@@ -487,19 +482,20 @@ create_lostandfound(dbref * player, dbref * room)
 	} else {
 		const char *rpass;
 		*player = object_new();
-		NAME(*player) = alloc_string(player_name);
-		LOCATION(*player) = *room;
-		FLAGS(*player) = TYPE_ENTITY |  SANEBIT;
-		OWNER(*player) = *player;
+		OBJECT(*player)->name = alloc_string(player_name);
+		OBJECT(*player)->location = *room;
+		OBJECT(*player)->type = TYPE_ENTITY;
+		OBJECT(*player)->flags = OF_SANEBIT;
+		OBJECT(*player)->owner = *player;
 		ENTITY(*player)->home = *room;
-		db[*player].value = START_PENNIES;
+		OBJECT(*player)->value = START_PENNIES;
 		rpass = rand_password();
-		PUSH(*player, db[*room].contents);
+		PUSH(*player, OBJECT(*room)->contents);
 		add_player(*player);
 		warn("Using %s (with password %s) to resolve "
 				 "unknown owner", unparse(*player), rpass);
 	}
-	OWNER(*room) = *player;
+	OBJECT(*room)->owner = *player;
 }
 
 void
@@ -507,14 +503,14 @@ fix_room(dbref obj)
 {
 	dbref i;
 
-	i = db[obj].sp.room.dropto;
+	i = ROOM(obj)->dropto;
 
-	if (!valid_ref(i) && i != HOME) {
+	if (!valid_ref(i)) {
 		SanFixed(obj, "Removing invalid drop-to from %s");
-		db[obj].sp.room.dropto = NOTHING;
-	} else if (i >= 0 && !is_item(i) && TYPEOF(i) != TYPE_ROOM) {
+		ROOM(obj)->dropto = NOTHING;
+	} else if (i >= 0 && !is_item(i) && OBJECT(i)->type != TYPE_ROOM) {
 		SanFixed2(obj, i, "Removing drop-to on %s to %s");
-		db[obj].sp.room.dropto = NOTHING;
+		ROOM(obj)->dropto = NOTHING;
 	}
 }
 
@@ -525,7 +521,7 @@ fix_entity(dbref obj)
 
 	i = ENTITY(obj)->home;
 
-	if (!valid_obj(i) || TYPEOF(i) != TYPE_ROOM) {
+	if (!valid_obj(i) || OBJECT(i)->type != TYPE_ROOM) {
 		SanFixed2(obj, PLAYER_START, "Setting the home on %s to %s");
 		ENTITY(obj)->home = PLAYER_START;
 	}
@@ -543,19 +539,18 @@ find_misplaced_objects(void)
 	dbref loop, player = NOTHING, room;
 
 	for (loop = 0; loop < db_top; loop++) {
-		if (TYPEOF(loop) != TYPE_ROOM &&
+		if (OBJECT(loop)->type != TYPE_ROOM &&
 			!is_item(loop) &&
-			TYPEOF(loop) != TYPE_ENTITY &&
-			TYPEOF(loop) != TYPE_GARBAGE) {
+			OBJECT(loop)->type != TYPE_ENTITY &&
+			OBJECT(loop)->type != TYPE_GARBAGE) {
 			SanFixedRef(loop, "Object #%d is of unknown type");
 			sanity_violated = 1;
 			continue;
 		}
-		if (!NAME(loop) || !(*NAME(loop))) {
-			switch TYPEOF
-				(loop) {
+		if (!OBJECT(loop)->name || !(*OBJECT(loop)->name)) {
+			switch (OBJECT(loop)->type) {
 			case TYPE_GARBAGE:
-				NAME(loop) = "<garbage>";
+				OBJECT(loop)->name = "<garbage>";
 				break;
 			case TYPE_ENTITY:
 				{
@@ -565,65 +560,65 @@ find_misplaced_objects(void)
 					while (lookup_player(name) != NOTHING && strlen(name) < PLAYER_NAME_LIMIT) {
 						snprintf(name, sizeof(name), "Unnamed%d", ++temp);
 					}
-					NAME(loop) = alloc_string(name);
+					OBJECT(loop)->name = alloc_string(name);
 					add_player(loop);
 				}
 				break;
 			default:
-				NAME(loop) = alloc_string("Unnamed");
+				OBJECT(loop)->name = alloc_string("Unnamed");
 				}
 			SanFixed(loop, "Gave a name to %s");
 		}
-		if (TYPEOF(loop) != TYPE_GARBAGE) {
-			if (!valid_obj(OWNER(loop)) || TYPEOF(OWNER(loop)) != TYPE_ENTITY) {
+		if (OBJECT(loop)->type != TYPE_GARBAGE) {
+			if (!valid_obj(OBJECT(loop)->owner) || OBJECT(OBJECT(loop)->owner)->type != TYPE_ENTITY) {
 				if (player == NOTHING) {
 					create_lostandfound(&player, &room);
 				}
 				SanFixed2(loop, player, "Set owner of %s to %s");
-				OWNER(loop) = player;
+				OBJECT(loop)->owner = player;
 			}
-			if (loop != GLOBAL_ENVIRONMENT && (!valid_obj(LOCATION(loop)) ||
-											   TYPEOF(LOCATION(loop)) == TYPE_GARBAGE ||
-											   (TYPEOF(loop) == TYPE_ENTITY &&
-												TYPEOF(LOCATION(loop)) == TYPE_ENTITY))) {
-				if (TYPEOF(loop) == TYPE_ENTITY) {
-					if (valid_obj(LOCATION(loop)) && TYPEOF(LOCATION(loop)) == TYPE_ENTITY) {
+			if (loop != GLOBAL_ENVIRONMENT && (!valid_obj(OBJECT(loop)->location) ||
+											   OBJECT(OBJECT(loop)->location)->type == TYPE_GARBAGE ||
+											   (OBJECT(loop)->type == TYPE_ENTITY &&
+												OBJECT(OBJECT(loop)->location)->type == TYPE_ENTITY))) {
+				if (OBJECT(loop)->type == TYPE_ENTITY) {
+					if (valid_obj(OBJECT(loop)->location) && OBJECT(OBJECT(loop)->location)->type == TYPE_ENTITY) {
 						dbref loop1;
 
-						loop1 = LOCATION(loop);
-						if (CONTENTS(loop1) == loop)
-							CONTENTS(loop1) = db[loop].next;
+						loop1 = OBJECT(loop)->location;
+						if (OBJECT(loop1)->contents == loop)
+							OBJECT(loop1)->contents = OBJECT(loop)->next;
 						else
-							for (loop1 = CONTENTS(loop1);
-								 loop1 != NOTHING; loop1 = db[loop1].next) {
-								if (db[loop1].next == loop) {
-									db[loop1].next = db[loop].next;
+							for (loop1 = OBJECT(loop1)->contents;
+								 loop1 != NOTHING; loop1 = OBJECT(loop1)->next) {
+								if (OBJECT(loop1)->next == loop) {
+									OBJECT(loop1)->next = OBJECT(loop)->next;
 									break;
 								}
 							}
 					}
-					LOCATION(loop) = PLAYER_START;
+					OBJECT(loop)->location = PLAYER_START;
 				} else {
 					if (player == NOTHING) {
 						create_lostandfound(&player, &room);
 					}
-					LOCATION(loop) = room;
+					OBJECT(loop)->location = room;
 				}
-				PUSH(loop, CONTENTS(LOCATION(loop)));
-				FLAGS(loop) |= SANEBIT;
-				SanFixed2(loop, LOCATION(loop), "Set location of %s to %s");
+				PUSH(loop, OBJECT(OBJECT(loop)->location)->contents);
+				OBJECT(loop)->flags |= OF_SANEBIT;
+				SanFixed2(loop, OBJECT(loop)->location, "Set location of %s to %s");
 			}
 		} else {
-			if (OWNER(loop) != NOTHING) {
+			if (OBJECT(loop)->owner != NOTHING) {
 				SanFixedRef(loop, "Set owner of recycled object #%d to NOTHING");
-				OWNER(loop) = NOTHING;
+				OBJECT(loop)->owner = NOTHING;
 			}
-			if (LOCATION(loop) != NOTHING) {
+			if (OBJECT(loop)->location != NOTHING) {
 				SanFixedRef(loop, "Set location of recycled object #%d to NOTHING");
-				LOCATION(loop) = NOTHING;
+				OBJECT(loop)->location = NOTHING;
 			}
 		}
-		switch (TYPEOF(loop)) {
+		switch (OBJECT(loop)->type) {
 		case TYPE_ROOM:
 			fix_room(loop);
 			break;
@@ -648,20 +643,20 @@ adopt_orphans(void)
 	dbref loop;
 
 	for (loop = 0; loop < db_top; loop++) {
-		if (!(FLAGS(loop) & SANEBIT)) {
-			switch (TYPEOF(loop)) {
+		if (!(OBJECT(loop)->flags & OF_SANEBIT)) {
+			switch (OBJECT(loop)->type) {
 			case TYPE_ROOM:
 			case TYPE_PLANT:
 			case TYPE_CONSUMABLE:
 			case TYPE_EQUIPMENT:
 			case TYPE_THING:
 			case TYPE_ENTITY:
-				db[loop].next = db[LOCATION(loop)].contents;
-				db[LOCATION(loop)].contents = loop;
-				SanFixed2(loop, LOCATION(loop), "Orphaned object %s added to contents of %s");
+				OBJECT(loop)->next = OBJECT(OBJECT(loop)->location)->contents;
+				OBJECT(OBJECT(loop)->location)->contents = loop;
+				SanFixed2(loop, OBJECT(loop)->location, "Orphaned object %s added to contents of %s");
 				break;
 			case TYPE_GARBAGE:
-				db[loop].next = recyclable;
+				OBJECT(loop)->next = recyclable;
 				recyclable = loop;
 				SanFixedRef(loop, "Litter object %d moved to recycle bin");
 				break;
@@ -676,14 +671,14 @@ adopt_orphans(void)
 void
 clean_global_environment(void)
 {
-	if (db[GLOBAL_ENVIRONMENT].next != NOTHING) {
+	if (OBJECT(GLOBAL_ENVIRONMENT)->next != NOTHING) {
 		SanFixed(GLOBAL_ENVIRONMENT, "Removed the global environment %s from a chain");
-		db[GLOBAL_ENVIRONMENT].next = NOTHING;
+		OBJECT(GLOBAL_ENVIRONMENT)->next = NOTHING;
 	}
-	if (LOCATION(GLOBAL_ENVIRONMENT) != NOTHING) {
-		SanFixed2(GLOBAL_ENVIRONMENT, LOCATION(GLOBAL_ENVIRONMENT),
+	if (OBJECT(GLOBAL_ENVIRONMENT)->location != NOTHING) {
+		SanFixed2(GLOBAL_ENVIRONMENT, OBJECT(GLOBAL_ENVIRONMENT)->location,
 				  "Removed the global environment %s from %s");
-		LOCATION(GLOBAL_ENVIRONMENT) = NOTHING;
+		OBJECT(GLOBAL_ENVIRONMENT)->location = NOTHING;
 	}
 }
 
@@ -706,9 +701,9 @@ sanfix(dbref player)
 	sanity_violated = 0;
 
 	for (loop = 0; loop < db_top; loop++) {
-		FLAGS(loop) &= ~SANEBIT;
+		OBJECT(loop)->flags &= ~OF_SANEBIT;
 	}
-	FLAGS(GLOBAL_ENVIRONMENT) |= SANEBIT;
+	OBJECT(GLOBAL_ENVIRONMENT)->flags |= OF_SANEBIT;
 
 	hacksaw_bad_chains();
 	find_misplaced_objects();
@@ -716,7 +711,7 @@ sanfix(dbref player)
 	clean_global_environment();
 
 	for (loop = 0; loop < db_top; loop++) {
-		FLAGS(loop) &= ~SANEBIT;
+		OBJECT(loop)->flags &= ~OF_SANEBIT;
 	}
 
 	if (player > NOTHING) {
@@ -788,27 +783,27 @@ sanechange(dbref player, const char *command)
 	}
 
 	if (!strcmp(field, "next")) {
-		strlcpy(buf2, unparse(NEXTOBJ(d)), sizeof(buf2));
-		NEXTOBJ(d) = v;
+		strlcpy(buf2, unparse(OBJECT(d)->next), sizeof(buf2));
+		OBJECT(d)->next = v;
 		SanPrint(player, "## Setting #%d's next field to %s", d, unparse(v));
 
 	} else if (!strcmp(field, "contents")) {
-		strlcpy(buf2, unparse(CONTENTS(d)), sizeof(buf2));
-		CONTENTS(d) = v;
+		strlcpy(buf2, unparse(OBJECT(d)->contents), sizeof(buf2));
+		OBJECT(d)->contents = v;
 		SanPrint(player, "## Setting #%d's Contents list start to %s", d, unparse(v));
 
 	} else if (!strcmp(field, "location")) {
-		strlcpy(buf2, unparse(LOCATION(d)), sizeof(buf2));
-		LOCATION(d) = v;
+		strlcpy(buf2, unparse(OBJECT(d)->location), sizeof(buf2));
+		OBJECT(d)->location = v;
 		SanPrint(player, "## Setting #%d's location to %s", d, unparse(v));
 
 	} else if (!strcmp(field, "owner")) {
-		strlcpy(buf2, unparse(OWNER(d)), sizeof(buf2));
-		OWNER(d) = v;
+		strlcpy(buf2, unparse(OBJECT(d)->owner), sizeof(buf2));
+		OBJECT(d)->owner = v;
 		SanPrint(player, "## Setting #%d's owner to %s", d, unparse(v));
 
 	} else if (!strcmp(field, "home")) {
-		switch (TYPEOF(d)) {
+		switch (OBJECT(d)->type) {
 		case TYPE_ENTITY:
 			ip = &(ENTITY(d)->home);
 			break;

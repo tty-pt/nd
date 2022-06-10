@@ -561,7 +561,7 @@ notify(dbref player, const char *msg)
 	char *ptr1;
 	const char *ptr2;
 
-	CBUG(Typeof(player) != TYPE_ENTITY);
+	CBUG(OBJECT(player)->type != TYPE_ENTITY);
 
 	fd = ENTITY(player)->fd;
 	if (fd <= 0)
@@ -607,7 +607,7 @@ static inline void
 notify_except(dbref first, dbref exception, const char *msg, dbref who)
 {
 	DOLIST(first, first) {
-		if (Typeof(first) == TYPE_ENTITY && first != exception)
+		if (OBJECT(first)->type == TYPE_ENTITY && first != exception)
 			notify(first, msg);
 	}
 }
@@ -619,7 +619,7 @@ anotifyf(dbref room, char *format, ...)
 	char buf[BUFFER_LEN];
 	va_start(args, format);
 	vsnprintf(buf, sizeof(buf), format, args);
-	notify_except(db[room].contents, NOTHING, buf, NOTHING);
+	notify_except(OBJECT(room)->contents, NOTHING, buf, NOTHING);
 	va_end(args);
 }
 
@@ -630,7 +630,7 @@ onotifyf(dbref player, char *format, ...)
 	char buf[BUFFER_LEN];
 	va_start(args, format);
 	vsnprintf(buf, sizeof(buf), format, args);
-	notify_except(db[getloc(player)].contents, player, buf, player);
+	notify_except(OBJECT(getloc(player))->contents, player, buf, player);
 	va_end(args);
 }
 
@@ -906,7 +906,7 @@ descr_close(descr_t *d)
 {
 	if (d->flags & DF_CONNECTED) {
 		warn("%s(%d) disconnects on fd %d\n",
-		     NAME(d->player), d->player, d->fd);
+		     OBJECT(d->player)->name, d->player, d->fd);
 		dbref last_observed = ENTITY(d->player)->last_observed;
 		if (last_observed != NOTHING)
 			db_obs_remove(last_observed, d->player);

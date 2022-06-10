@@ -413,7 +413,7 @@ birth(dbref who)
 	struct entity *mob = ENTITY(who);
 	mob->wts = phys_wts[ENTITY(who)->wtso];
 	mob->hunger = mob->thirst = 0;
-	mob->combo = GETCOMBO(who);
+	mob->combo = 0;
 	mob->hp = HP_MAX(who);
 	mob->mp = MP_MAX(who);
 	mob->target = -1;
@@ -482,8 +482,8 @@ mobs_aggro(dbref player)
 	dbref tmp;
 	int klock = 0;
 
-	DOLIST(tmp, db[getloc(player)].contents) {
-		if (Typeof(tmp) == TYPE_ENTITY && (ENTITY(tmp)->flags & EF_AGGRO)) {
+	DOLIST(tmp, OBJECT(getloc(player))->contents) {
+		if (OBJECT(tmp)->type == TYPE_ENTITY && (ENTITY(tmp)->flags & EF_AGGRO)) {
 			// TODO use struct
 			ENTITY(tmp)->target = player;
 			klock++;
@@ -499,7 +499,7 @@ respawn(dbref who)
 	struct entity *mob = ENTITY(who);
 	dbref where;
 
-	onotifyf(who, "%s disappears.", NAME(who));
+	onotifyf(who, "%s disappears.", OBJECT(who)->name);
 
 	if (mob->flags & EF_PLAYER) {
 		struct cmd_dir cd;
@@ -513,7 +513,7 @@ respawn(dbref who)
 		moveto(who, where);
 	}
 
-	onotifyf(who, "%s appears.", NAME(who));
+	onotifyf(who, "%s appears.", OBJECT(who)->name);
 }
 
 static inline int
@@ -546,7 +546,7 @@ huth_notify(dbref who, unsigned v, unsigned char y, char const *m[4])
 void
 entity_update(dbref who)
 {
-	CBUG(Typeof(who) != TYPE_ENTITY);
+	CBUG(OBJECT(who)->type != TYPE_ENTITY);
 
         struct entity *n = ENTITY(who);
 	static char const *thirst_msg[] = {
@@ -597,7 +597,7 @@ entity_update(dbref who)
 
 	}
 
-        CBUG(Typeof(who) == TYPE_GARBAGE);
+        CBUG(OBJECT(who)->type == TYPE_GARBAGE);
 
 	if (getloc(who) == 0)
 		return;

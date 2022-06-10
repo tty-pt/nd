@@ -31,7 +31,7 @@ can_doit(dbref player, dbref thing, const char *default_fail_msg)
 		return 0;
 	}
 
-	if (Typeof(player) != TYPE_ENTITY) {
+	if (OBJECT(player)->type != TYPE_ENTITY) {
 		notify(player, "You are not an entity.");
 		return 0;
 	}
@@ -54,17 +54,17 @@ controls(dbref who, dbref what)
 		return 0;
 
 	/* No one controls garbage */
-	if (Typeof(what) == TYPE_GARBAGE)
+	if (OBJECT(what)->type == TYPE_GARBAGE)
 		return 0;
 
 	/* Zombies and puppets use the permissions of their owner */
-	if (Typeof(who) != TYPE_ENTITY)
-		who = OWNER(who);
+	if (OBJECT(who)->type != TYPE_ENTITY)
+		who = OBJECT(who)->owner;
 
 	/* Wizard controls everything */
 	if (ENTITY(who)->flags & EF_WIZARD) {
 #ifdef GOD_PRIV
-		if(God(OWNER(what)) && !God(who))
+		if(God(OBJECT(what)->owner) && !God(who))
 			/* Only God controls God's objects */
 			return 0;
 		else
@@ -73,7 +73,7 @@ controls(dbref who, dbref what)
 	}
 
 	/* owners control their own stuff */
-	return (who == OWNER(what));
+	return (who == OBJECT(what)->owner);
 }
 
 /* Removes 'cost' value from 'who', and returns 1 if the act has been
@@ -81,7 +81,7 @@ controls(dbref who, dbref what)
 int
 payfor(dbref who, int cost)
 {
-	who = OWNER(who);
+	who = OBJECT(who)->owner;
 		/* Wizards don't have to pay for anything. */
 	if (ENTITY(who)->flags & EF_WIZARD) {
 		return 1;

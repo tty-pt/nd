@@ -127,14 +127,14 @@ do_clone(command_t *cmd)
 	/* Further sanity checks */
 
 	/* things only. */
-	if(Typeof(thing) != TYPE_THING) {
+	if(OBJECT(thing)->type != TYPE_THING) {
 		notify(player, "That is not a cloneable object.");
 		return;
 	}		
 	
 	/* check the name again, just in case reserved name patterns have
 	   changed since the original object was created. */
-	if (!ok_name(NAME(thing))) {
+	if (!ok_name(OBJECT(thing)->name)) {
 		notify(player, "You cannot clone something with such a weird name!");
 		return;
 	}
@@ -146,7 +146,7 @@ do_clone(command_t *cmd)
 	}
 
 	/* there ain't no such lunch as a free thing. */
-	cost = OBJECT_GETCOST(db[thing].value);
+	cost = OBJECT_GETCOST(OBJECT(thing)->value);
 	if (cost < OBJECT_COST) {
 		cost = OBJECT_COST;
 	}
@@ -159,12 +159,12 @@ do_clone(command_t *cmd)
 		clonedthing = object_new();
 
 		/* initialize everything */
-		NAME(clonedthing) = alloc_string(NAME(thing));
-		db[clonedthing].location = player;
-		OWNER(clonedthing) = OWNER(player);
-		db[clonedthing].value = db[thing].value;
+		OBJECT(clonedthing)->name = alloc_string(OBJECT(thing)->name);
+		OBJECT(clonedthing)->location = player;
+		OBJECT(clonedthing)->owner = OBJECT(player)->owner;
+		OBJECT(clonedthing)->value = OBJECT(thing)->value;
 		/* FIXME: should we clone attached actions? */
-		switch (Typeof(thing)) {
+		switch (OBJECT(thing)->type) {
 			case TYPE_ROOM:
 				ROOM(clonedthing)->exits = ROOM(clonedthing)->doors = 0;
 				break;
@@ -173,20 +173,21 @@ do_clone(command_t *cmd)
 				ENTITY(clonedthing)->home = ENTITY(thing)->home;
 
 		}
-		FLAGS(clonedthing) = FLAGS(thing);
+		OBJECT(clonedthing)->flags = OBJECT(thing)->flags;
+		OBJECT(clonedthing)->type = OBJECT(thing)->type;
 
 		/* copy all properties */
 		copy_props(player, thing, clonedthing, "");
 
 		/* endow the object */
-		if (db[thing].value > MAX_OBJECT_ENDOWMENT)
-			db[thing].value = MAX_OBJECT_ENDOWMENT;
+		if (OBJECT(thing)->value > MAX_OBJECT_ENDOWMENT)
+			OBJECT(thing)->value = MAX_OBJECT_ENDOWMENT;
 		
 		/* link it in */
 		PUSH(clonedthing, db[player].contents);
 
 		/* and we're done */
-		snprintf(buf, sizeof(buf), "%s created with number %d.", NAME(thing), clonedthing);
+		snprintf(buf, sizeof(buf), "%s created with number %d.", OBJECT(thing)->name, clonedthing);
 		notify(player, buf);
 	}
 	
@@ -248,15 +249,15 @@ do_create(command_t *cmd)
 		thing = object_new();
 
 		/* initialize everything */
-		NAME(thing) = alloc_string(name);
-		db[thing].location = player;
-		OWNER(thing) = OWNER(player);
-		db[thing].value = OBJECT_ENDOWMENT(cost);
-		FLAGS(thing) = TYPE_THING;
+		OBJECT(thing)->name = alloc_string(name);
+		OBJECT(thing)->location = player;
+		OBJECT(thing)->owner = OBJECT(player)->owner;
+		OBJECT(thing)->value = OBJECT_ENDOWMENT(cost);
+		OBJECT(thing)->flags = TYPE_THING;
 
 		/* endow the object */
-		if (db[thing].value > MAX_OBJECT_ENDOWMENT)
-			db[thing].value = MAX_OBJECT_ENDOWMENT;
+		if (OBJECT(thing)->value > MAX_OBJECT_ENDOWMENT)
+			OBJECT(thing)->value = MAX_OBJECT_ENDOWMENT;
 
 		/* link it in */
 		PUSH(thing, db[player].contents);

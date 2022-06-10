@@ -21,13 +21,13 @@ do_consume(command_t *cmd)
 		return;
 	}
 
-	if (Typeof(vial) != TYPE_CONSUMABLE) {
+	if (OBJECT(vial)->type != TYPE_CONSUMABLE) {
 		notify(player, "You can not consume that.");
 		return;
 	}
 
 	if (!CONSUM(vial)->quantity) {
-		notifyf(player, "%s is empty.", NAME(vial));
+		notifyf(player, "%s is empty.", OBJECT(vial)->name);
 		return;
 	}
 
@@ -42,7 +42,7 @@ do_consume(command_t *cmd)
 	}
 
 	CONSUM(vial)->quantity--;
-	notify_wts(player, "consume", "consumes", " %s", NAME(vial));
+	notify_wts(player, "consume", "consumes", " %s", OBJECT(vial)->name);
 
 	if (!CONSUM(vial)->quantity && !CONSUM(vial)->capacity)
 		recycle(player, vial);
@@ -55,6 +55,7 @@ do_fill(command_t *cmd)
 	const char *vial_s = cmd->argv[1];
 	const char *source_s = cmd->argv[2];
 	dbref vial = ematch_mine(player, vial_s);
+	OBJ *vial_o = OBJECT(vial);
 	unsigned m;
 
 	if (vial == NOTHING) {
@@ -62,13 +63,13 @@ do_fill(command_t *cmd)
 		return;
 	}
 
-	if (Typeof(vial) != TYPE_CONSUMABLE || !(m = CONSUM(vial)->capacity)) {
+	if (vial_o->type != TYPE_CONSUMABLE || !(m = CONSUM(vial)->capacity)) {
 		notify(player, "You can not fill that up.");
 		return;
 	}
 
 	if (CONSUM(vial)->quantity) {
-		notifyf(player, "%s is not empty.", NAME(vial));
+		notifyf(player, "%s is not empty.", OBJECT(vial)->name);
 		return;
 	}
 
@@ -84,5 +85,5 @@ do_fill(command_t *cmd)
 	CONSUM(vial)->food = CONSUM(source)->food;
 
 	notify_wts(player, "fill", "fills", " %s from %s",
-		   NAME(vial), NAME(source));
+		vial_o->name, OBJECT(source)->name);
 }

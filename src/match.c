@@ -23,7 +23,7 @@ ematch_player(dbref player, const char *name)
 	dbref match;
 	const char *p;
 
-	if (*name == LOOKUP_TOKEN && payfor(OWNER(player), LOOKUP_COST)) {
+	if (*name == LOOKUP_TOKEN && payfor(OBJECT(player)->owner, LOOKUP_COST)) {
 		for (p = name + 1; isspace(*p); p++) ;
 		if ((match = lookup_player(p)) != NOTHING) {
 			return match;
@@ -97,13 +97,13 @@ ematch_list(dbref player, dbref first, const char *name)
 	mob->select = 0;
 
 	absolute = ematch_absolute(name);
-	if (!controls(OWNER(player), absolute))
+	if (!controls(OBJECT(player)->owner, absolute))
 		absolute = NOTHING;
 
 	DOLIST(first, first) {
 		if (first == absolute) {
 			return first;
-		} else if (string_match(NAME(first), name)) {
+		} else if (string_match(OBJECT(first)->name, name)) {
 			if (nth <= 0)
 				return first;
 			nth--;
@@ -119,8 +119,8 @@ ematch_at(dbref player, dbref where, const char *name) {
 
 	what = ematch_absolute(name);
 
-	if (what != NOTHING && getloc(what) == where)
+	if (what != NOTHING && OBJECT(what)->location == where)
 		return what;
 
-	return ematch_list(player, db[where].contents, name);
+	return ematch_list(player, OBJECT(where)->contents, name);
 }

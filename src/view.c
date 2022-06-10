@@ -94,8 +94,8 @@ dr_room(char *buf, view_tile_t *t, const char *bg)
 
 static inline unsigned
 floor_get(dbref what) {
-	CBUG(Typeof(what) != TYPE_ROOM);
-	unsigned char floor = db[what].sp.room.floor;
+	CBUG(OBJECT(what)->type != TYPE_ROOM);
+	unsigned char floor = ROOM(what)->floor;
 	if (floor > BIOME_VOLCANIC)
 		return BIOME_VOLCANIC;
 	else
@@ -314,10 +314,10 @@ view_build_exit_s(dbref player, view_tile_t *t,
 
 static inline ucoord_t
 view_build_flags(dbref loc) {
-	dbref tmp = db[loc].contents;
+	dbref tmp = OBJECT(loc)->contents;
 	ucoord_t flags = 0;
 
-	DOLIST(tmp, tmp) switch (Typeof(tmp)) {
+	DOLIST(tmp, tmp) switch (OBJECT(tmp)->type) {
 		case TYPE_ENTITY:
 			flags |= VTF_ENTITY;
 

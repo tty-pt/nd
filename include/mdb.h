@@ -15,10 +15,6 @@
 
 #define BUFFER_LEN 8192
 
-#define NAME(x)     (db[x].name)
-#define FLAGS(x)    (db[x].flags)
-#define OWNER(x)    (db[x].owner)
-
 /* defines for possible data access mods. */
 #define GETMESG(x,y)   (get_property_class(x, y))
 #define SETMESG(x,y,z)    {add_prop_nofetch(x, y, z, 0);}
@@ -58,10 +54,6 @@ enum at { ARMOR_LIGHT, ARMOR_MEDIUM, ARMOR_HEAVY, };
 
 #define MESGPROP_CUR	"_/cur"
 
-#define MESGPROP_COMBO	MESGPROP_CUR "/combo"
-#define GETCOMBO(x)    get_property_value(x, MESGPROP_COMBO)
-#define SETCOMBO(x, y) set_property_value(x, MESGPROP_COMBO, y)
-
 #define MESGPROP_CUR_SPELLS MESGPROP_CUR "/@spells"
 #define GETCURSPELLS(x)  GETMESG(x, MESGPROP_CUR_SPELLS)
 #define SETCURSPELLS(x, y)  SETMESG(x, MESGPROP_CUR_SPELLS, y)
@@ -80,21 +72,14 @@ enum type {
 	TYPE_GARBAGE,
 };
 
-#define TYPE_MASK           0xf	/* room for expansion */
-#define is_item(x) (Typeof(x) == TYPE_THING || Typeof(x) == TYPE_CONSUMABLE || Typeof(x) == TYPE_EQUIPMENT)
+#define is_item(x) (OBJECT(x)->type == TYPE_THING || OBJECT(x)->type == TYPE_CONSUMABLE || OBJECT(x)->type == TYPE_EQUIPMENT)
 
 /* enum object_flags { */
 /* }; */
 
-#define SAVED_DELTA    0x800000	/* internal: object last saved to delta file */
-#define SANEBIT      0x20000000	/* internal: used to check db sanity */
-
-
-/* what flags to NOT dump to disk. */
-#define DUMP_MASK    (SAVED_DELTA | SANEBIT)
-
-
-typedef long object_flag_type;
+enum object_flags {
+	OF_SANEBIT = 1,
+};
 
 #define GOD ((dbref) 1)
 
@@ -102,13 +87,9 @@ typedef long object_flag_type;
 #define God(x) ((x) == (GOD))
 #endif							/* GOD_PRIV */
 
-#define DoNull(s) ((s) ? (s) : "")
-#define Typeof(x) (x == HOME ? TYPE_ROOM : (FLAGS(x) & TYPE_MASK))
-
 /* special dbref's */
 #define NOTHING ((dbref) -1)	/* null dbref */
 #define AMBIGUOUS ((dbref) -2)	/* multiple possibilities, for matchers */
-#define HOME ((dbref) -3)		/* virtual room, represents mover's home */
 
 enum entity_flags {
 	EF_PLAYER = 1,
@@ -128,7 +109,7 @@ enum attribute {
 	ATTR_MAX
 };
 
-struct entity {
+typedef struct entity {
 	dbref home;
 	int fd;
 	dbref last_observed;
@@ -147,8 +128,9 @@ struct entity {
 	unsigned lvl, spend, cxp;
 	unsigned attributes[ATTR_MAX];
 	unsigned equipment[ES_MAX];
-};
+} ENT;
 
+#define OBJECT(x)		(&db[x])
 #define ENTITY(x)		(&db[x].sp.entity)
 #define ROOM(x)			(&db[x].sp.room)
 #define ATTR(x, y)		db[x].sp.entity.attributes[y]
@@ -202,7 +184,7 @@ struct observer_node {
         struct observer_node *next;
 };
 
-struct object {
+typedef struct object {
         struct observer_node *first_observer;
 	const char *name, *description, *art, *avatar;
 	dbref location;				/* pointer to container */
@@ -211,12 +193,13 @@ struct object {
 	dbref next;					/* pointer to next in contents/exits chain */
 	struct plist *properties;
 
-	object_flag_type flags;
+	unsigned char type;
+	unsigned char flags;
 	unsigned value;
 
 	union specific sp;
 	/* int skid; */
-};
+} OBJ;
 
 /* Possible data types that may be stored in a hash table */
 union u_hash_data {
@@ -262,16 +245,4 @@ dbref getparent(dbref obj);
     {db[thing].next = (locative); (locative) = (thing);}
 #define getloc(thing) (db[thing].location)
 
-/*
-  Usage guidelines:
-
-  To obtain an object use db[i].
-
-  The programmer is responsible for managing storage for string
-  components of entries; db_read will produce malloc'd strings.  The
-  alloc_string routine is provided for generating malloc'd strings
-  duplicates of other strings.  Note that db_free and db_read will
-  attempt to free any non-NULL string that exists in db when they are
-  invoked.
-*/
 #endif							/* __MDB_H */

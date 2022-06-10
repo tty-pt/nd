@@ -196,7 +196,7 @@ spells_init(struct spell sps[8], dbref player)
 void
 debuf_end(dbref who, unsigned i)
 {
-	struct entity *mob = ENTITY(who);
+	ENT *mob = ENTITY(who);
 	struct debuf *d = &mob->debufs[i];
 	effect_t *e = &mob->e[DEBUF_TYPE(d->_sp)];
 	i = 1 << i;
@@ -415,9 +415,9 @@ cspell_heal(dbref attacker, dbref target, short amt)
 	}
 	tar->hp = hp;
 	
-	if (Typeof(target) == TYPE_ENTITY)
+	if (OBJECT(target)->type == TYPE_ENTITY)
 		web_bars(target);
-	if (attacker > 0 && Typeof(attacker) == TYPE_ENTITY)
+	if (attacker > 0 && OBJECT(attacker)->type == TYPE_ENTITY)
 		web_bars(attacker);
 	return ret;
 }

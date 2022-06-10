@@ -276,7 +276,7 @@ _map_put(morton_t code, dbref thing, int flags)
 	DBT data;
 	int ret;
 
-	CBUG(Typeof(thing) != TYPE_ROOM);
+	CBUG(OBJECT(thing)->type != TYPE_ROOM);
 
 	memset(&key, 0, sizeof(DBT));
 	memset(&data, 0, sizeof(DBT));
@@ -357,13 +357,13 @@ map_get(pos_t p)
 		case 0:
 			ref = * (dbref *) pkey.data;
 #ifdef PRECOVERY
-			if (Typeof(ref) != TYPE_ROOM) {
+			if (OBJECT(ref)->type != TYPE_ROOM) {
 				debug("GARBAGE %d REMOVED ;)", ref);
 				cur->c_del(cur, 0);
 				continue;
 			}
 #else
-			CBUG(Typeof(ref) != TYPE_ROOM);
+			CBUG(OBJECT(ref)->type != TYPE_ROOM);
 #endif
 			return ref;
 		case DB_NOTFOUND:

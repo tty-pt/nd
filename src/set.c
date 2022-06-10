@@ -53,8 +53,8 @@ do_name(command_t *cmd)
 			return;
 		}
 		/* check for renaming a player */
-		if ((Typeof(thing) == TYPE_THING && !OK_ASCII_THING(newname)) ||
-				(Typeof(thing) != TYPE_THING && !OK_ASCII_OTHER(newname)) ) {
+		if ((OBJECT(thing)->type == TYPE_THING && !OK_ASCII_THING(newname)) ||
+				(OBJECT(thing)->type != TYPE_THING && !OK_ASCII_OTHER(newname)) ) {
 			notify(player, "Invalid 8-bit name.");
 			return;
 		}
@@ -64,10 +64,10 @@ do_name(command_t *cmd)
 		}
 
 		/* everything ok, change the name */
-		if (NAME(thing)) {
-			free((void *) NAME(thing));
+		if (OBJECT(thing)->name) {
+			free((void *) OBJECT(thing)->name);
 		}
-		NAME(thing) = alloc_string(newname);
+		OBJECT(thing)->name = alloc_string(newname);
 		notify(player, "Name set.");
 	}
 }
@@ -98,35 +98,35 @@ do_chown(command_t *cmd)
 			return;
 		}
 	} else {
-		owner = OWNER(player);
+		owner = OBJECT(player)->owner;
 	}
-	if (!(ENTITY(player)->flags & EF_WIZARD) && OWNER(player) != owner) {
+	if (!(ENTITY(player)->flags & EF_WIZARD) && OBJECT(player)->owner != owner) {
 		notify(player, "Only wizards can transfer ownership to others.");
 		return;
 	}
 #ifdef GOD_PRIV
-	if ((ENTITY(OWNER(player))->flags & EF_WIZARD) && !God(player) && God(owner)) {
+	if ((ENTITY(OBJECT(player)->owner)->flags & EF_WIZARD) && !God(player) && God(owner)) {
 		notify(player, "God doesn't need an offering or sacrifice.");
 		return;
 	}
 #endif /* GOD_PRIV */
 
-	switch (Typeof(thing)) {
+	switch (OBJECT(thing)->type) {
 	case TYPE_ROOM:
-		if (!(ENTITY(OWNER(player))->flags & EF_WIZARD) && db[player].location != thing) {
+		if (!(ENTITY(OBJECT(player)->owner)->flags & EF_WIZARD) && OBJECT(player)->location != thing) {
 			notify(player, "You can only chown \"here\".");
 			return;
 		}
-		OWNER(thing) = OWNER(owner);
+		OBJECT(thing)->owner = OBJECT(owner)->owner;
 		break;
 	case TYPE_CONSUMABLE:
 	case TYPE_EQUIPMENT:
 	case TYPE_THING:
-		if (!(ENTITY(OWNER(player))->flags & EF_WIZARD) && db[thing].location != player) {
+		if (!(ENTITY(OBJECT(player)->owner)->flags & EF_WIZARD) && OBJECT(thing)->location != player) {
 			notify(player, "You aren't carrying that.");
 			return;
 		}
-		OWNER(thing) = OWNER(owner);
+		OBJECT(thing)->owner = OBJECT(owner)->owner;
 		break;
 	case TYPE_ENTITY:
 		notify(player, "Entities always own themselves.");
@@ -198,7 +198,7 @@ do_propset(command_t *cmd)
 		return;
 	}
 
-	if (Prop_System(pname) || (!(ENTITY(OWNER(player))->flags & EF_WIZARD) && (Prop_SeeOnly(pname) || Prop_Hidden(pname)))) {
+	if (Prop_System(pname) || (!(ENTITY(OBJECT(player)->owner)->flags & EF_WIZARD) && (Prop_SeeOnly(pname) || Prop_Hidden(pname)))) {
 		notify(player, "Permission denied. (can't set a property that's restricted against you)");
 		return;
 	}
