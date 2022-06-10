@@ -9,60 +9,60 @@
 
 #define NOMATCH_MESSAGE "I don't know what you mean."
 
-extern dbref ematch_at(dbref player, dbref where, const char *name);
-extern dbref ematch_player(dbref player, const char *name);
-extern dbref ematch_absolute(const char *name);
+OBJ *ematch_at(OBJ *player, OBJ *where, const char *name);
+OBJ *ematch_player(OBJ *player, const char *name);
+OBJ *ematch_absolute(const char *name);
 
-inline dbref
-ematch_me(dbref player, const char *str)
+inline OBJ *
+ematch_me(OBJ *player, const char *str)
 {
 	if (!strcmp(str, "me"))
 		return player;
 	else
-		return NOTHING;
+		return NULL;
 }
 
-inline dbref
-ematch_here(dbref player, const char *str)
+inline OBJ *
+ematch_here(OBJ *player, const char *str)
 {
 	if (!strcmp(str, "here"))
-		return getloc(player);
+		return OBJECT(player->location);
 	else
-		return NOTHING;
+		return NULL;
 }
 
-inline dbref
-ematch_mine(dbref player, const char *str)
+inline OBJ *
+ematch_mine(OBJ *player, const char *str)
 {
 	return ematch_at(player, player, str);
 }
 
-inline dbref
-ematch_near(dbref player, const char *str)
+inline OBJ *
+ematch_near(OBJ *player, const char *str)
 {
-	return ematch_at(player, getloc(player), str);
+	return ematch_at(player, OBJECT(player->location), str);
 }
 
 /* all ematch
  * (not found by the linker if it is not static?)
  */
-static inline dbref
-ematch_all(dbref player, const char *name)
+static inline OBJ *
+ematch_all(OBJ *player, const char *name)
 {
-	dbref res;
+	OBJ *res;
 
 	if (
-			(res = ematch_me(player, name)) == NOTHING
-			&& (res = ematch_here(player, name)) == NOTHING
-			&& (res = ematch_absolute(name)) == NOTHING
-			&& (res = ematch_near(player, name)) == NOTHING
-			&& (res = ematch_mine(player, name)) == NOTHING
-			&& (res = ematch_player(player, name)) == NOTHING
+			(res = ematch_me(player, name))
+			|| (res = ematch_here(player, name))
+			|| (res = ematch_absolute(name))
+			|| (res = ematch_near(player, name))
+			|| (res = ematch_mine(player, name))
+			|| (res = ematch_player(player, name))
 	   )
-		return NOTHING;
+		return res;
 
 	else
-		return res;
+		return NULL;
 }
 
 #endif /* _MATCH_H */

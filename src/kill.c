@@ -251,30 +251,29 @@ attack(dbref attacker)
 void
 do_kill(command_t *cmd)
 {
-	dbref player = cmd->player;
 	const char *what = cmd->argv[1];
-	dbref here = getloc(player);
-	dbref target = strcmp(what, "me")
+	OBJ *player = OBJECT(cmd->player);
+	dbref here = player->location;
+	OBJ *target = strcmp(what, "me")
 		? ematch_near(player, what)
 		: player;
 
 	if (here == 0 || (ROOM(here)->flags & RF_HAVEN)) {
-		notify(player, "You may not kill here");
+		notify(REF(player), "You may not kill here");
 		return;
 	}
 
-	CBUG(OBJECT(player)->type != TYPE_ENTITY);
-	struct entity *att = ENTITY(player);
+	CBUG(player->type != TYPE_ENTITY);
 
-	if (target == NOTHING
+	if (!target
 	    || player == target
-	    || OBJECT(target)->type != TYPE_ENTITY)
+	    || target->type != TYPE_ENTITY)
 	{
-		notify(player, "You can't target that.");
+		notify(REF(player), "You can't target that.");
 		return;
 	}
 
-	att->target = target;
+	player->sp.entity.target = REF(target);
 	/* notify(player, "You form a combat pose."); */
 }
 
@@ -321,10 +320,11 @@ do_status(command_t *cmd)
 void
 do_heal(command_t *cmd)
 {
-	dbref player = cmd->player;
 	const char *name = cmd->argv[1];
-	dbref target;
-	struct entity *tar;
+	OBJ *player = OBJECT(cmd->player),
+	    *target;
+	ENT *eplayer = &player->sp.entity,
+	    *etarget;
 
 	if (strcmp(name, "me")) {
 		target = ematch_near(player, name);
@@ -332,52 +332,53 @@ do_heal(command_t *cmd)
 	} else
 		target = player;
 
-	if (!(ENTITY(player)->flags & EF_WIZARD)
-	    || target < 0
-	    || OBJECT(target)->type != TYPE_ENTITY) {
-                notify(player, "You can't do that.");
+	if (!(eplayer->flags & EF_WIZARD)
+	    || !target
+	    || target->type != TYPE_ENTITY) {
+                notify(REF(player), "You can't do that.");
                 return;
         }
 
-        tar = ENTITY(target);
-	tar->hp = HP_MAX(target);
-	tar->mp = MP_MAX(target);
-	tar->hunger = tar->thirst = 0;
-	debufs_end(target);
-	notify_wts_to(player, target, "heal", "heals", "");
-	web_bars(target);
+	etarget = &target->sp.entity;
+	etarget->hp = HP_MAX(REF(target));
+	etarget->mp = MP_MAX(REF(target));
+	etarget->hunger = etarget->thirst = 0;
+	debufs_end(REF(target));
+	notify_wts_to(REF(player), REF(target), "heal", "heals", "");
+	web_bars(REF(target));
 }
 
 void
 do_advitam(command_t *cmd)
 {
-	dbref player = cmd->player;
+	OBJ *player = OBJECT(cmd->player);
+	ENT *eplayer = &player->sp.entity;
 	const char *name = cmd->argv[1];
-	dbref target = ematch_near(player, name);
+	OBJ *target = ematch_near(player, name);
 
-	if (!(ENTITY(player)->flags & EF_WIZARD)
-	    || target == NOTHING
-	    || OBJECT(target)->owner != player) {
-		notify(player, "You can't do that.");
+	if (!(eplayer->flags & EF_WIZARD)
+	    || !target
+	    || target->owner != REF(player)) {
+		notify(REF(player), "You can't do that.");
 		return;
 	}
 
-	birth(target);
-	notifyf(player, "You infuse %s with life.", OBJECT(target)->name);
+	birth(REF(target));
+	notifyf(REF(player), "You infuse %s with life.", target->name);
 }
 
 void
 do_givexp(command_t *cmd, const char *name, const char *amount)
 {
-	dbref player = cmd->player;
-	dbref target = ematch_near(player, name);
+	OBJ *player = OBJECT(cmd->player),
+	    *target = ematch_near(player, name);
+	ENT *eplayer = &player->sp.entity;
 	int amt = strtol(amount, NULL, 0);
 
-	if (!(ENTITY(player)->flags & EF_WIZARD)
-	    || target == NOTHING)
-		notify(player, "You can't do that.");
+	if (!(eplayer->flags & EF_WIZARD) || !target)
+		notify(REF(player), "You can't do that.");
 	else
-		_xp_award(target, amt);
+		_xp_award(REF(target), amt);
 }
 
 void
@@ -448,40 +449,43 @@ kill_v(dbref player, char const *opcs)
 }
 
 void
-sit(dbref player, const char *name)
+sit(dbref player_ref, const char *name)
 {
-	if (ENTITY(player)->flags & EF_SITTING) {
-		notify(player, "You are already sitting.");
+	OBJ *player = OBJECT(player_ref);
+	ENT *eplayer = &player->sp.entity;
+
+	if (eplayer->flags & EF_SITTING) {
+		notify(REF(player), "You are already sitting.");
 		return;
 	}
 
 	if (!*name) {
-		notify_wts(player, "sit", "sits", " on the ground");
-		ENTITY(player)->flags |= EF_SITTING;
-		ENTITY(player)->sat = -1;
+		notify_wts(REF(player), "sit", "sits", " on the ground");
+		eplayer->flags |= EF_SITTING;
+		eplayer->sat = -1;
 
 		/* warn("%d sits on the ground\n", player); */
 		return;
 	}
 
-	dbref seat = ematch_near(player, name);
-	int max = GETSEATM(seat);
+	OBJ *seat = ematch_near(player, name);
+	int max = GETSEATM(REF(seat));
 	if (!max) {
-		notify(player, "You can't sit on that.");
+		notify(REF(player), "You can't sit on that.");
 		return;
 	}
 
-	int cur = GETSEATN(seat);
+	int cur = GETSEATN(REF(seat));
 	if (cur >= max) {
-		notify(player, "No seats available.");
+		notify(REF(player), "No seats available.");
 		return;
 	}
 
-	SETSEATN(seat, cur + 1);
-	ENTITY(player)->flags |= EF_SITTING;
-	ENTITY(player)->sat = seat;
+	SETSEATN(REF(seat), cur + 1);
+	eplayer->flags |= EF_SITTING;
+	eplayer->sat = REF(seat);
 
-	notify_wts(player, "sit", "sits", " on %s", OBJECT(seat)->name);
+	notify_wts(REF(player), "sit", "sits", " on %s", seat->name);
 }
 
 void

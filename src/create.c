@@ -93,21 +93,22 @@ copy_props(dbref player, dbref source, dbref destination, const char *dir)
 void
 do_clone(command_t *cmd)
 {
-	dbref player = cmd->player;
+	OBJ *player = OBJECT(cmd->player);
+	ENT *eplayer = &player->sp.entity;
 	char *name = cmd->argv[1];
 	static char buf[BUFFER_LEN];
-	dbref  thing, clonedthing;
+	OBJ *thing, *clone;
 	int    cost;
 
 	/* Perform sanity checks */
 
-	if (!(ENTITY(player)->flags & (EF_WIZARD | EF_BUILDER))) {
-		notify(player, "That command is restricted to authorized builders.");
+	if (!(eplayer->flags & (EF_WIZARD | EF_BUILDER))) {
+		notify(REF(player), "That command is restricted to authorized builders.");
 		return;
 	}
 	
 	if (*name == '\0') {
-		notify(player, "Clone what?");
+		notify(REF(player), "Clone what?");
 		return;
 	} 
 
@@ -115,80 +116,86 @@ do_clone(command_t *cmd)
 	   do not allow rooms, exits, etc. to be cloned for now. */
 
 	if (
-			(thing = ematch_absolute(name)) == NOTHING
-			&& (thing = ematch_mine(player, name)) == NOTHING
-			&& (thing = ematch_near(player, name)) == NOTHING
+			!(thing = ematch_absolute(name))
+			&& !(thing = ematch_mine(player, name))
+			&& !(thing = ematch_near(player, name))
 	   )
 	{
-		notify(player, "I don't know what you mean.");
+		notify(REF(player), "I don't know what you mean.");
 		return;
 	}
 
 	/* Further sanity checks */
 
 	/* things only. */
-	if(OBJECT(thing)->type != TYPE_THING) {
-		notify(player, "That is not a cloneable object.");
+	if(thing->type != TYPE_THING) {
+		notify(REF(player), "That is not a cloneable object.");
 		return;
 	}		
 	
 	/* check the name again, just in case reserved name patterns have
 	   changed since the original object was created. */
-	if (!ok_name(OBJECT(thing)->name)) {
-		notify(player, "You cannot clone something with such a weird name!");
+	if (!ok_name(thing->name)) {
+		notify(REF(player), "You cannot clone something with such a weird name!");
 		return;
 	}
 
 	/* no stealing stuff. */
-	if(!controls(player, thing)) {
-		notify(player, "Permission denied. (you can't clone this)");
+	if(!controls(REF(player), REF(thing))) {
+		notify(REF(player), "Permission denied. (you can't clone this)");
 		return;
 	}
 
 	/* there ain't no such lunch as a free thing. */
-	cost = OBJECT_GETCOST(OBJECT(thing)->value);
+	cost = OBJECT_GETCOST(thing->value);
 	if (cost < OBJECT_COST) {
 		cost = OBJECT_COST;
 	}
 	
-	if (!payfor(player, cost)) {
-		notifyf(player, "Sorry, you don't have enough %s.", PENNIES);
+	if (!payfor(REF(player), cost)) {
+		notifyf(REF(player), "Sorry, you don't have enough %s.", PENNIES);
 		return;
 	} else {
 		/* create the object */
-		clonedthing = object_new();
+		clone = OBJECT(object_new());
 
 		/* initialize everything */
-		OBJECT(clonedthing)->name = alloc_string(OBJECT(thing)->name);
-		OBJECT(clonedthing)->location = player;
-		OBJECT(clonedthing)->owner = OBJECT(player)->owner;
-		OBJECT(clonedthing)->value = OBJECT(thing)->value;
+		clone->name = alloc_string(thing->name);
+		clone->location = REF(player);
+		clone->owner = player->owner;
+		clone->value = thing->value;
 		/* FIXME: should we clone attached actions? */
-		switch (OBJECT(thing)->type) {
+		switch (thing->type) {
 			case TYPE_ROOM:
-				ROOM(clonedthing)->exits = ROOM(clonedthing)->doors = 0;
+				{
+					ROO *rclone = &clone->sp.room;
+					rclone->exits = rclone->doors = 0;
+				}
 				break;
 			case TYPE_ENTITY:
-				/* Home, sweet home */
-				ENTITY(clonedthing)->home = ENTITY(thing)->home;
-
+				{
+					ENT *ething = &thing->sp.entity;
+					ENT *eclone = &clone->sp.entity;
+					eclone->home = ething->home;
+				}
+				break;
 		}
-		OBJECT(clonedthing)->flags = OBJECT(thing)->flags;
-		OBJECT(clonedthing)->type = OBJECT(thing)->type;
+		clone->flags = thing->flags;
+		clone->type = thing->type;
 
 		/* copy all properties */
-		copy_props(player, thing, clonedthing, "");
+		copy_props(REF(player), REF(thing), REF(clone), "");
 
 		/* endow the object */
-		if (OBJECT(thing)->value > MAX_OBJECT_ENDOWMENT)
-			OBJECT(thing)->value = MAX_OBJECT_ENDOWMENT;
+		if (thing->value > MAX_OBJECT_ENDOWMENT)
+			thing->value = MAX_OBJECT_ENDOWMENT;
 		
 		/* link it in */
-		PUSH(clonedthing, db[player].contents);
+		PUSH(REF(clone), player->contents);
 
 		/* and we're done */
-		snprintf(buf, sizeof(buf), "%s created with number %d.", OBJECT(thing)->name, clonedthing);
-		notify(player, buf);
+		snprintf(buf, sizeof(buf), "%s created with number %d.", thing->name, REF(clone));
+		notify(REF(player), buf);
 	}
 	
 }

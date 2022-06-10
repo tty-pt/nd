@@ -195,47 +195,47 @@ enter_room(dbref player, dbref loc)
 void
 do_get(command_t *cmd)
 {
-	dbref player = cmd->player;
+	OBJ *player = OBJECT(cmd->player);
 	const char *what = cmd->argv[1];
 	const char *obj = cmd->argv[2];
-	dbref thing, cont;
+	OBJ *thing, *cont;
 	int cando;
 
 	if (
-			(thing = ematch_near(player, what)) == NOTHING
-			&& (thing = ematch_mine(player, what)) == NOTHING
+			!(thing = ematch_near(player, what))
+			&& !(thing = ematch_mine(player, what))
 	   )
 	{
-		notify(player, NOMATCH_MESSAGE);
+		notify(REF(player), NOMATCH_MESSAGE);
 		return;
 	}
 
 	cont = thing;
 
 	// is this needed?
-	if (getloc(thing) != getloc(player) && !(ENTITY(OBJECT(player)->owner)->flags & EF_WIZARD)) {
-		notify(player, "That is too far away from you.");
+	if (thing->location != player->location && !(ENTITY(player->owner)->flags & EF_WIZARD)) {
+		notify(REF(player), "That is too far away from you.");
 		return;
 	}
 
 	if (obj && *obj) {
 		thing = ematch_at(player, cont, obj);
-		if (thing == NOTHING)
+		if (!thing)
 			return;
-		if (OBJECT(cont)->type == TYPE_ENTITY) {
-			notify(player, "You can't steal from the living.");
+		if (cont->type == TYPE_ENTITY) {
+			notify(REF(player), "You can't steal from the living.");
 			return;
 		}
 	}
-	if (getloc(thing) == player) {
-		notify(player, "You already have that!");
+	if (thing->location == REF(player)) {
+		notify(REF(player), "You already have that!");
 		return;
 	}
-	if (parent_loop_check(thing, player)) {
-		notify(player, "You can't pick yourself up by your bootstraps!");
+	if (parent_loop_check(REF(thing), REF(player))) {
+		notify(REF(player), "You can't pick yourself up by your bootstraps!");
 		return;
 	}
-	switch (OBJECT(thing)->type) {
+	switch (thing->type) {
 	case TYPE_CONSUMABLE:
 	case TYPE_EQUIPMENT:
 	case TYPE_THING:
@@ -244,22 +244,22 @@ do_get(command_t *cmd)
 		if (obj && *obj) {
 			cando = 1;
 		} else {
-			if (OBJECT(thing)->owner != player
-					&& (OBJECT(thing)->type == TYPE_ENTITY || OBJECT(thing)->type == TYPE_PLANT))
+			if (thing->owner != REF(player)
+					&& (thing->type == TYPE_ENTITY || thing->type == TYPE_PLANT))
 			{
-				notify(player, "You can't pick that up.");
+				notify(REF(player), "You can't pick that up.");
 				break;
 			}
 
-			cando = can_doit(player, thing, "You can't pick that up.");
+			cando = can_doit(REF(player), REF(thing), "You can't pick that up.");
 		}
 		if (cando) {
-			moveto(thing, player);
-			notify(player, "Taken.");
+			moveto(REF(thing), REF(player));
+			notify(REF(player), "Taken.");
 		}
 		break;
 	default:
-		notify(player, "You can't take that!");
+		notify(REF(player), "You can't take that!");
 		break;
 	}
 }
@@ -267,70 +267,67 @@ do_get(command_t *cmd)
 void
 do_drop(command_t *cmd)
 {
-	dbref player = cmd->player;
+	OBJ *player = OBJECT(cmd->player);
 	const char *name = cmd->argv[1];
 	const char *obj = cmd->argv[2];
-	dbref loc, cont;
-	dbref thing;
+	dbref loc;
+	OBJ *thing, *cont;
 
-	if ((loc = getloc(player)) == NOTHING)
+	if ((loc = player->location) == NOTHING)
 		return;
 
-	if (
-			(thing = ematch_mine(player, name)) == NOTHING
-	   )
-	{
-		notify(player, NOMATCH_MESSAGE);
+	if (!(thing = ematch_mine(player, name))) {
+		notify(REF(player), NOMATCH_MESSAGE);
 		return;
 	}
 
-	cont = loc;
+	cont = OBJECT(loc);
 	if (
 			obj && *obj
-			&& (cont = ematch_mine(player, obj)) == NOTHING
-			&& (cont = ematch_near(player, obj)) == NOTHING
+			&& !(cont = ematch_mine(player, obj))
+			&& !(cont = ematch_near(player, obj))
 	   )
 	{
-		notify(player, "I don't know what you mean.");
+		notify(REF(player), "I don't know what you mean.");
 		return;
 	}
         
-	switch (OBJECT(thing)->type) {
+	switch (thing->type) {
 	case TYPE_CONSUMABLE:
 	case TYPE_EQUIPMENT:
 	case TYPE_ENTITY:
 	case TYPE_THING:
-		if (OBJECT(cont)->type != TYPE_ROOM && OBJECT(cont)->type != TYPE_ENTITY &&
-			!is_item(cont)) {
-			notify(player, "You can't put anything in that.");
+		if (cont->type != TYPE_ROOM && cont->type != TYPE_ENTITY &&
+			!is_item(REF(cont))) {
+			notify(REF(player), "You can't put anything in that.");
 			break;
 		}
-		if (parent_loop_check(thing, cont)) {
-			notify(player, "You can't put something inside of itself.");
+		if (parent_loop_check(REF(thing), REF(cont))) {
+			notify(REF(player), "You can't put something inside of itself.");
 			break;
 		}
 
-		int immediate_dropto = (OBJECT(cont)->type == TYPE_ROOM &&
-				ROOM(cont)->dropto != NOTHING
+		int immediate_dropto = (cont->type == TYPE_ROOM &&
+				cont->sp.room.dropto != NOTHING
 
 				);
 
-		moveto(thing, immediate_dropto ? ROOM(cont)->dropto : cont);
+		moveto(REF(thing), immediate_dropto ? cont->sp.room.dropto : REF(cont));
 
-		if (is_item(cont)) {
-			notify(player, "Put away.");
+		if (is_item(REF(cont))) {
+			notify(REF(player), "Put away.");
 			return;
-		} else if (OBJECT(cont)->type == TYPE_ENTITY) {
-			notifyf(cont, "%s hands you %s", OBJECT(player)->name, OBJECT(thing)->name);
-			notifyf(player, "You hand %s to %s", OBJECT(thing)->name, OBJECT(cont)->name);
+		} else if (cont->type == TYPE_ENTITY) {
+			notifyf(REF(cont), "%s hands you %s", player->name, thing->name);
+			notifyf(REF(player), "You hand %s to %s", thing->name, cont->name);
 			return;
 		}
 
-		notify(player, "Dropped.");
-		onotifyf(player, "%s drops %s.", OBJECT(player)->name, OBJECT(thing)->name);
+		notify(REF(player), "Dropped.");
+		onotifyf(REF(player), "%s drops %s.", player->name, thing->name);
 		break;
 	default:
-		notify(player, "You can't drop that.");
+		notify(REF(player), "You can't drop that.");
 		break;
 	}
 }
@@ -340,12 +337,12 @@ do_recycle(command_t *cmd)
 {
 	dbref player = cmd->player;
 	const char *name = cmd->argv[1];
-	dbref thing;
+	OBJ *thing;
 
 	if (
-			(thing = ematch_absolute(name)) == NOTHING
-			&& (thing = ematch_near(player, name)) == NOTHING
-			&& (thing = ematch_mine(player, name)) == NOTHING
+			!(thing = ematch_absolute(name))
+			&& !(thing = ematch_near(OBJECT(player), name))
+			&& !(thing = ematch_mine(OBJECT(player), name))
 	   )
 	{
 		notify(player, NOMATCH_MESSAGE);
@@ -354,17 +351,17 @@ do_recycle(command_t *cmd)
 
 
 #ifdef GOD_PRIV
-	if(!God(player) && God(OBJECT(thing)->owner)) {
+	if(!God(player) && God(thing->owner)) {
 		notify(player, "Only God may reclaim God's property.");
 		return;
 	}
 #endif
-	if (!controls(player, thing)) {
+	if (!controls(player, REF(thing))) {
 		notify(player, "You can not do that.");
 	} else {
-		switch (OBJECT(thing)->type) {
+		switch (thing->type) {
 		case TYPE_ROOM:
-			if (OBJECT(thing)->owner != OBJECT(player)->owner) {
+			if (thing->owner != OBJECT(player)->owner) {
 				notify(player, "Permission denied. (You don't control the room you want to recycle)");
 				return;
 			}
@@ -381,13 +378,13 @@ do_recycle(command_t *cmd)
 		case TYPE_CONSUMABLE:
 		case TYPE_EQUIPMENT:
 		case TYPE_THING:
-			if (OBJECT(thing)->owner != OBJECT(player)->owner) {
+			if (thing->owner != OBJECT(player)->owner) {
 				notify(player, "Permission denied. (You can't recycle a thing you don't control)");
 				return;
 			}
 			break;
 		case TYPE_ENTITY:
-			if (ENTITY(thing)->flags & EF_PLAYER) {
+			if (thing->sp.entity.flags & EF_PLAYER) {
 				notify(player, "You can't recycle a player!");
 				return;
 			}
@@ -398,8 +395,8 @@ do_recycle(command_t *cmd)
 			/* NOTREACHED */
 			break;
 		}
-		notifyf(player, "Thank you for recycling %.512s (#%d).", OBJECT(thing)->name, thing);
-		recycle(player, thing);
+		notifyf(player, "Thank you for recycling %.512s (#%d).", thing->name, thing);
+		recycle(player, REF(thing));
 	}
 }
 

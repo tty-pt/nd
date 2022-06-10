@@ -155,9 +155,6 @@ core_command_t cmds[] = {
 		/* sanechange(player, full_command); /1* sanchange *1/ */
 		/* do_showextver(player); */
 	}, {
-		.name = "sweep",
-		.cb = &do_sweep,
-	}, {
 		.name = "talk",
 		.cb = &do_talk,
 	}, {

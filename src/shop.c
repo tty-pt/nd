@@ -66,14 +66,14 @@ do_buy(command_t *cmd)
 		return;
 	}
 
-	dbref item = ematch_at(player, npc, name);
+	OBJ *item = ematch_at(OBJECT(player), OBJECT(npc), name);
 
-	if (item == NOTHING) {
+	if (!item) {
 		notifyf(player, "%s does not sell %s.", OBJECT(npc)->name, name);
 		return;
 	}
 
-	int cost = OBJECT(item)->value;
+	int cost = item->value;
 	int ihave = OBJECT(player)->value;
 
 	if (ihave < cost) {
@@ -84,14 +84,14 @@ do_buy(command_t *cmd)
 	OBJECT(player)->value -= cost;
 	OBJECT(npc)->value += cost;
 
-        if (GETINF(item)) {
-                dbref nu = object_copy(player, item);
+        if (GETINF(REF(item))) {
+                dbref nu = object_copy(player, REF(item));
                 USETINF(nu);
                 moveto(nu, player);
         } else
-                moveto(item, player);
+                moveto(REF(item), player);
 
-	notifyf(player, "You bought %s for %dP.", OBJECT(item)->name, cost);
+	notifyf(player, "You bought %s for %dP.", item->name, cost);
 }
 
 void
@@ -106,27 +106,27 @@ do_sell(command_t *cmd)
 		return;
 	}
 
-	dbref item = ematch_mine(player, name);
+	OBJ *item = ematch_mine(OBJECT(player), name);
 
-        if (item == NOTHING) {
+	if (!item) {
 		notify(player, "You don't have that item.");
 		return;
         }
 
-        int cost = OBJECT(item)->value;
+        int cost = item->value;
         int npchas = OBJECT(npc)->value;
 
         if (cost > npchas) {
                 notifyf(player, "%s can't afford to buy %s from you.",
-                        OBJECT(npc)->name, OBJECT(item)->name);
+                        OBJECT(npc)->name, item->name);
                 return;
         }
 
-        moveto(item, npc);
+        moveto(REF(item), npc);
 
         OBJECT(player)->value += cost;
         OBJECT(npc)->value -= cost;
 
         notifyf(player, "You sold %s for %dP.",
-                OBJECT(item)->name, cost);
+                item->name, cost);
 }

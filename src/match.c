@@ -17,20 +17,20 @@
 #include "mob.h"
 #include "kill.h"
 
-dbref
-ematch_player(dbref player, const char *name)
+OBJ *
+ematch_player(OBJ *player, const char *name)
 {
 	dbref match;
 	const char *p;
 
-	if (*name == LOOKUP_TOKEN && payfor(OBJECT(player)->owner, LOOKUP_COST)) {
+	if (*name == LOOKUP_TOKEN && payfor(player->owner, LOOKUP_COST)) {
 		for (p = name + 1; isspace(*p); p++) ;
 		if ((match = lookup_player(p)) != NOTHING) {
-			return match;
+			return OBJECT(match);
 		}
 	}
 
-	return NOTHING;
+	return NULL;
 }
 
 static dbref
@@ -56,18 +56,18 @@ parse_dbref(const char *s)
 }
 
 /* returns nnn if name = #nnn, else NOTHING */
-dbref
+OBJ *
 ematch_absolute(const char *name)
 {
 	dbref match;
 	if (*name == NUMBER_TOKEN) {
 		match = parse_dbref(name + 1);
 		if (match < 0 || match >= db_top)
-			return NOTHING;
+			return NULL;
 		else
-			return match;
+			return OBJECT(match);
 	} else
-		return NOTHING;
+		return NULL;
 }
 
 /* accepts only nonempty matches starting at the beginning of a word */
@@ -88,39 +88,39 @@ string_match(register const char *src, register const char *sub)
 	return 0;
 }
 
-static dbref
-ematch_list(dbref player, dbref first, const char *name)
+static OBJ *
+ematch_list(OBJ *player, dbref first, const char *name)
 {
-	dbref absolute;
-	struct entity *mob = ENTITY(player);
+	OBJ *absolute;
+	ENT *mob = &player->sp.entity;
 	unsigned nth = mob->select;
 	mob->select = 0;
 
 	absolute = ematch_absolute(name);
-	if (!controls(OBJECT(player)->owner, absolute))
-		absolute = NOTHING;
+	if (!controls(player->owner, REF(absolute)))
+		absolute = NULL;
 
 	DOLIST(first, first) {
-		if (first == absolute) {
-			return first;
+		if (OBJECT(first) == absolute) {
+			return OBJECT(first);
 		} else if (string_match(OBJECT(first)->name, name)) {
 			if (nth <= 0)
-				return first;
+				return OBJECT(first);
 			nth--;
 		}
 	}
 
-	return NOTHING;
+	return NULL;
 }
 
-dbref
-ematch_at(dbref player, dbref where, const char *name) {
-	dbref what;
+OBJ *
+ematch_at(OBJ *player, OBJ *where, const char *name) {
+	OBJ *what;
 
 	what = ematch_absolute(name);
 
-	if (what != NOTHING && OBJECT(what)->location == where)
+	if (what && what->location == REF(where))
 		return what;
 
-	return ematch_list(player, OBJECT(where)->contents, name);
+	return ematch_list(player, where->contents, name);
 }

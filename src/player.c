@@ -184,18 +184,19 @@ dialog_stop(dbref player) {
 void
 do_talk(command_t *cmd) {
         const char buf[BUFSIZ];
-        dbref player = cmd->player;
+        OBJ *player = OBJECT(cmd->player);
         const char *npcs = cmd->argv[1];
-        dbref npc = *npcs ? ematch_near(player, npcs) : NOTHING;
+	OBJ *npc = *npcs ? ematch_near(player, npcs) : NULL;
+	ENT *eplayer = &player->sp.entity;
 
-        if (npc <= 0) {
-                notify(player, "Can't find that.");
+        if (!npc) {
+                notify(REF(player), "Can't find that.");
                 return;
         }
 
-        snprintf((char *) buf, sizeof(buf), "_/dialog/%d", npc);
+        snprintf((char *) buf, sizeof(buf), "_/dialog/%d", REF(npc));
 
-        const char *pdialog = GETMESG(player, buf);
+        const char *pdialog = GETMESG(REF(player), buf);
         const char *dialog;
 
         if (!pdialog)
@@ -203,13 +204,13 @@ do_talk(command_t *cmd) {
         else
                 dialog = pdialog;
 
-        ENTITY(player)->dialog_target = npc;
-        if (ENTITY(player)->dialog)
-                free((void *) ENTITY(player)->dialog);
-        ENTITY(player)->dialog = alloc_string(dialog);
+	eplayer->dialog_target = REF(npc);
+        if (eplayer->dialog)
+                free((void *) eplayer->dialog);
+        eplayer->dialog = alloc_string(dialog);
 
-        if (web_dialog_start(player, npc, dialog))
-                dialog_start(player, npc, dialog);
+        if (web_dialog_start(REF(player), REF(npc), dialog))
+                dialog_start(REF(player), REF(npc), dialog);
 }
 
 /* TODO merge this with "copy_props()" */

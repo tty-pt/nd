@@ -545,6 +545,7 @@ db_read_object_foxen(FILE * f, struct object *o, dbref objno)
 	o->next = getref(f);
 	o->value = getref(f);
 	o->type = getref(f);
+	warn("read object %d name %s type %hhx\n", objno, o->name, o->type);
 
 	c = getc(f);
 	if (c == '*') {

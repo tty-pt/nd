@@ -91,6 +91,19 @@ enum object_flags {
 #define NOTHING ((dbref) -1)	/* null dbref */
 #define AMBIGUOUS ((dbref) -2)	/* multiple possibilities, for matchers */
 
+enum room_flags {
+	RF_TEMP = 1,
+	RF_HAVEN = 2,
+};
+
+typedef struct {
+	dbref dropto;
+	unsigned flags;
+	unsigned char exits;
+	unsigned char doors;
+	unsigned char floor;
+} ROO;
+
 enum entity_flags {
 	EF_PLAYER = 1,
 	EF_AGGRO = 2,
@@ -130,7 +143,31 @@ typedef struct entity {
 	unsigned equipment[ES_MAX];
 } ENT;
 
+enum equipment_flags {
+	EF_EQUIPPED = 1,
+};
+
+typedef struct {
+	unsigned eqw;
+	unsigned msv;
+	unsigned rare;
+	unsigned flags;
+} EQU;
+
+typedef struct {
+	unsigned food;
+	unsigned drink;
+	unsigned quantity;
+	unsigned capacity;
+} CON;
+
+typedef struct {
+	unsigned plid;
+	unsigned size;
+} PLA;
+
 #define OBJECT(x)		(&db[x])
+#define REF(op)			((dbref) ((op - db) / sizeof(OBJ)))
 #define ENTITY(x)		(&db[x].sp.entity)
 #define ROOM(x)			(&db[x].sp.room)
 #define ATTR(x, y)		db[x].sp.entity.attributes[y]
@@ -139,42 +176,14 @@ typedef struct entity {
 #define CONSUM(x)		(&db[x].sp.consumable)
 #define PLANT(x)		(&db[x].sp.plant)
 
-enum room_flags {
-	RF_TEMP = 1,
-	RF_HAVEN = 2,
-};
-
-enum equipment_flags {
-	EF_EQUIPPED = 1,
-};
-
 /* union of type-specific fields */
 
 union specific {
-	struct {
-		dbref dropto;
-		unsigned flags;
-		unsigned char exits;
-		unsigned char doors;
-		unsigned char floor;
-	} room;
-	struct entity entity;
-	struct {
-		unsigned eqw;
-		unsigned msv;
-		unsigned rare;
-		unsigned flags;
-	} equipment;
-	struct {
-		unsigned food;
-		unsigned drink;
-		unsigned quantity;
-		unsigned capacity;
-	} consumable;
-	struct {
-		unsigned plid;
-		unsigned size;
-	} plant;
+	ROO room;
+	ENT entity;
+	EQU equipment;
+	CON consumable;
+	PLA plant;
 };
 
 /* timestamps record */

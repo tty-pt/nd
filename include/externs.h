@@ -32,7 +32,6 @@ extern short optflags;
 
 /* from timequeue.c */
 void do_propset(command_t *);
-void do_sweep(command_t *);
 void do_pose(command_t *);
 void do_score(command_t *);
 void do_view(command_t *);
