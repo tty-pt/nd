@@ -115,11 +115,6 @@
  to compile for some reason.
  ************************************************************************/
 
-/* Use this only if your realloc does not allocate in powers of 2
- * (if your realloc is clever, this option will cause you to waste space).
- * SunOS requires DB_DOUBLING.  ULTRIX doesn't.  */
-#define  DB_DOUBLING
-
 /* if do_usage() in wiz.c gives you problems compiling, define this */
 #undef NO_USAGE_COMMAND
 

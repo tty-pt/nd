@@ -54,7 +54,7 @@ create_player(const char *name)
 
 	player->name = alloc_string(name);
 	eplayer->home = player->location = object_get(PLAYER_START);
-	player->flags = TYPE_ENTITY;
+	player->type = TYPE_ENTITY;
 	player->owner = player;
 	player->value = START_PENNIES;
 	eplayer->flags = EF_PLAYER;

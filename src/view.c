@@ -325,7 +325,7 @@ view_build_flags(OBJ *loc) {
 	OBJ *tmp = loc->contents;
 	ucoord_t flags = 0;
 
-	DOLIST(tmp, tmp) {
+	FOR_LIST(tmp, tmp) {
 		switch (tmp->type) {
 		case TYPE_ENTITY:
 			{

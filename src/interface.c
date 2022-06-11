@@ -5,6 +5,7 @@
  * permission to distribute when linked against openSSL. */
 
 #include "copyright.h"
+#include "object.h"
 #include "config.h"
 #include "match.h"
 #include "web.h"
@@ -401,13 +402,10 @@ init_game()
                 return -1;
         }
 
-	db_free();
+	objects_free();
 	srand(getpid());			/* init random number generator */
 
-	if (db_read(f) < 0) {
-                warn("Error in db_read");
-		return -1;
-        }
+	CBUG(!objects_read(f));
 
 	return 0;
 }
@@ -515,7 +513,7 @@ main(int argc, char **argv)
 		return 1;
 	}
 
-	db_write(f);
+	objects_write(f);
 	fclose(f);
 	sync();
 
@@ -590,7 +588,7 @@ notifyf(OBJ *player, char *format, ...)
 static inline void
 notify_except(OBJ *first, OBJ *exception, const char *msg)
 {
-	DOLIST(first, first) {
+	FOR_LIST(first, first) {
 		if (first->type == TYPE_ENTITY && first != exception)
 			notify(first, msg);
 	}
@@ -899,7 +897,7 @@ descr_close(descr_t *d)
 		     player->name, d->player, d->fd);
 		OBJ *last_observed = eplayer->last_observed;
 		if (last_observed)
-			db_obs_remove(last_observed, player);
+			observer_remove(last_observed, player);
 
 		eplayer->fd = -1;
 		d->flags = 0;

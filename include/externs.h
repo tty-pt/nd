@@ -38,10 +38,7 @@ void do_meme(command_t *);
 /* from db.c */
 extern int number(const char *s);
 extern int ifloat(const char *s);
-extern void putproperties(FILE * f, int obj);
 extern void getproperties(FILE * f, OBJ *obj, const char *pdir);
-extern void db_free_object(OBJ *obj);
-extern void db_clear_object(OBJ *obj);
 
 /* From create.c */
 extern void do_create(command_t *);
@@ -102,10 +99,7 @@ extern int kill_v(OBJ *player, const char *cmdstr);
 int do_stand_silent(OBJ *player);
 
 /* From move.c */
-extern void moveto(OBJ *what, OBJ *where);
 extern void enter_room(OBJ *player, OBJ *loc);
-extern int parent_loop_check(OBJ *source, OBJ *dest);
-extern void go_move(dbref player, const char *dir);
 extern void do_get(command_t *);
 extern void do_drop(command_t *);
 extern void do_recycle(command_t *);
@@ -188,10 +182,5 @@ void untouchprops_incremental(int limit);
 void clear_propnode(PropPtr p);
 void copy_proplist(OBJ *obj, PropPtr * newer, PropPtr old);
 long size_proplist(PropPtr avl);
-
-/* from sanity.c */
-void sanechange(dbref player, const char *command);
-void sanfix(dbref player);
-void sanity(dbref player);
 
 #endif /* _EXTERNS_H */

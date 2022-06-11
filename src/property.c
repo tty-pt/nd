@@ -246,7 +246,7 @@ has_property(OBJ *what, const char *pname, const char *strval,
 
 	if (has_property_strict(what, pname, strval, value))
 		return 1;
-	DOLIST(things, what->contents) {
+	FOR_LIST(things, what->contents) {
 		if (has_property(things, pname, strval, value))
 			return 1;
 	}
@@ -778,47 +778,6 @@ db_putprop(FILE * f, const char *dir, PropPtr p)
 	}
 }
 
-
-int
-db_dump_props_rec(dbref obj, FILE * f, const char *dir, PropPtr p)
-{
-	char buf[BUFFER_LEN];
-	int count = 0;
-	int pdcount;
-
-	if (!p)
-		return 0;
-
-	count += db_dump_props_rec(obj, f, dir, AVL_LF(p));
-
-	db_putprop(f, dir, p);
-
-	if (PropDir(p)) {
-		const char *iptr;
-		char *optr;
-
-		for (iptr = dir, optr = buf; *iptr;)
-			*optr++ = *iptr++;
-		for (iptr = PropName(p); *iptr;)
-			*optr++ = *iptr++;
-		*optr++ = PROPDIR_DELIMITER;
-		*optr++ = '\0';
-
-		pdcount = db_dump_props_rec(obj, f, buf, PropDir(p));
-		count += pdcount;
-	}
-
-	count += db_dump_props_rec(obj, f, dir, AVL_RT(p));
-
-	return count;
-}
-
-
-void
-db_dump_props(FILE * f, dbref obj)
-{
-	db_dump_props_rec(obj, f, "/", object_get(obj)->properties);
-}
 
 
 void

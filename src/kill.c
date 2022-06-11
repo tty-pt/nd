@@ -137,7 +137,7 @@ body(OBJ *player, OBJ *mob)
 			EQU *etmp = &tmp->sp.equipment;
 			unequip(mob, EQL(etmp->eqw));
 		}
-		moveto(tmp, dead_mob);
+		object_move(tmp, dead_mob);
 		n++;
 	}
 
@@ -216,7 +216,7 @@ kill_target(OBJ *player, OBJ *target)
 	etarget->thirst = etarget->hunger = 0;
 
 	debufs_end(target);
-	moveto(target, object_get((dbref) 0));
+	object_move(target, object_get((dbref) 0));
 	geo_clean(target, loc);
 	look_around(target);
 	web_bars(target);

@@ -28,7 +28,7 @@ remove_first(OBJ *first, OBJ *what)
 		return first->next;
 	} else {
 		/* have to find it */
-		DOLIST(prev, first) {
+		FOR_LIST(prev, first) {
 			if (prev->next == what) {
 				prev->next = what->next;
 				return first;
@@ -39,7 +39,7 @@ remove_first(OBJ *first, OBJ *what)
 }
 
 void
-moveto(OBJ *what, OBJ *where)
+object_move(OBJ *what, OBJ *where)
 {
 	OBJ *loc;
 
@@ -60,7 +60,7 @@ moveto(OBJ *what, OBJ *where)
 		return;
 	}
 
-	if (parent_loop_check(what, where)) {
+	if (object_plc(what, where)) {
 		switch (what->type) {
 		case TYPE_ENTITY:
 			where = what->sp.entity.home;
@@ -102,8 +102,8 @@ moveto(OBJ *what, OBJ *where)
    resulted in a consistent (ie: no loops) environment.
 */
 
-int
-location_loop_check(OBJ *source, OBJ *dest)
+static inline int
+object_llc(OBJ *source, OBJ *dest)
 {   
   unsigned int level = 0;
   unsigned int place = 0;
@@ -138,13 +138,13 @@ location_loop_check(OBJ *source, OBJ *dest)
 
 // TODO why is this here?
 int
-parent_loop_check(OBJ *source, OBJ *dest)
+object_plc(OBJ *source, OBJ *dest)
 {   
   unsigned int level = 0;
   unsigned int place = 0;
   OBJ *pstack[MAX_PARENT_DEPTH+2];
 
-  if (location_loop_check(source, dest)) {
+  if (object_llc(source, dest)) {
 	  return 1;
   }
 
@@ -155,7 +155,7 @@ parent_loop_check(OBJ *source, OBJ *dest)
   pstack[1] = dest;
 
   while (level < MAX_PARENT_DEPTH) {
-    dest = getparent(dest);
+    dest = object_parent(dest);
     if (!dest)
       return 0;
     if (object_ref(dest) == (dbref) 0) {   /* Reached the top of the chain. */
@@ -179,7 +179,7 @@ enter_room(OBJ *player, OBJ *loc)
 	OBJ *old = player->location;
 
 	onotifyf(player, "%s has left.", player->name);
-	moveto(player, loc);
+	object_move(player, loc);
 	geo_clean(player, old);
 	onotifyf(player, "%s has arrived.", player->name);
 	mobs_aggro(player);
@@ -226,7 +226,7 @@ do_get(command_t *cmd)
 		notify(player, "You already have that!");
 		return;
 	}
-	if (parent_loop_check(thing, player)) {
+	if (object_plc(thing, player)) {
 		notify(player, "You can't pick yourself up by your bootstraps!");
 		return;
 	}
@@ -249,7 +249,7 @@ do_get(command_t *cmd)
 			cando = can_doit(player, thing, "You can't pick that up.");
 		}
 		if (cando) {
-			moveto(thing, player);
+			object_move(thing, player);
 			notify(player, "Taken.");
 		}
 		break;
@@ -290,20 +290,20 @@ do_drop(command_t *cmd)
 	case TYPE_ENTITY:
 	case TYPE_THING:
 		if (cont->type != TYPE_ROOM && cont->type != TYPE_ENTITY &&
-			!is_item(cont)) {
+			!object_item(cont)) {
 			notify(player, "You can't put anything in that.");
 			break;
 		}
-		if (parent_loop_check(thing, cont)) {
+		if (object_plc(thing, cont)) {
 			notify(player, "You can't put something inside of itself.");
 			break;
 		}
 
 		int immediate_dropto = (cont->type == TYPE_ROOM && cont->sp.room.dropto);
 
-		moveto(thing, immediate_dropto ? cont->sp.room.dropto : cont);
+		object_move(thing, immediate_dropto ? cont->sp.room.dropto : cont);
 
-		if (is_item(cont)) {
+		if (object_item(cont)) {
 			notify(player, "Put away.");
 			return;
 		} else if (cont->type == TYPE_ENTITY) {
@@ -490,7 +490,7 @@ recycle(OBJ *player, OBJ *thing)
 				enter_room(first, efirst->home);
 				if (first->location == thing) {
 					notifyf(player, "Escaping teleport loop!  Going home.");
-					moveto(first, object_get(PLAYER_START));
+					object_move(first, object_get(PLAYER_START));
 				}
 				continue;
 			}
@@ -500,12 +500,12 @@ recycle(OBJ *player, OBJ *thing)
 	}
 
 
-	moveto(thing, NULL);
+	object_move(thing, NULL);
 
 	depth--;
 
-	db_free_object(thing);
-	db_clear_object(thing);
+	object_free(thing);
+	object_clear(thing);
 	thing->name = (char*) strdup("<garbage>");
 	thing->description = (char *) strdup("<recyclable>");
 	thing->type = TYPE_GARBAGE;

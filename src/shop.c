@@ -7,8 +7,6 @@
 #include "kill.h"
 #include "web.h"
 
-extern OBJ *object_copy(OBJ *player, OBJ *old);
-
 static inline OBJ *
 vendor_find(OBJ *where)
 {
@@ -45,7 +43,7 @@ do_shop(command_t *cmd)
         if (!web_look(player, npc))
             return;
 
-	DOLIST(tmp, npc->contents) {
+	FOR_LIST(tmp, npc->contents) {
 		if (GETINF(tmp))
 			notifyf(player, "%-13s %5dP (Inf)",
 				tmp->name, tmp->value);
@@ -89,9 +87,9 @@ do_buy(command_t *cmd)
         if (GETINF(item)) {
                 OBJ *nu = object_copy(player, item);
                 USETINF(nu);
-                moveto(nu, player);
+                object_move(nu, player);
         } else
-                moveto(item, player);
+                object_move(item, player);
 
 	notifyf(player, "You bought %s for %dP.", item->name, cost);
 }
@@ -125,7 +123,7 @@ do_sell(command_t *cmd)
                 return;
         }
 
-        moveto(item, npc);
+        object_move(item, npc);
 
         player->value += cost;
         npc->value -= cost;

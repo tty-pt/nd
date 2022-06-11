@@ -350,7 +350,7 @@ geo_clean(OBJ *player, OBJ *here)
 		return here;
 
 	tmp = here->contents;
-	DOLIST(tmp, tmp) {
+	FOR_LIST(tmp, tmp) {
 		if (tmp->type != TYPE_ENTITY)
 			continue;
 

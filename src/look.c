@@ -55,7 +55,7 @@ look_contents(OBJ *player, OBJ *loc, const char *contents_name)
 
 	/* check to see if there is anything there */
 	if (loc->contents) {
-                DOLIST(thing, loc->contents) {
+                FOR_LIST(thing, loc->contents) {
 			if (thing == player)
 				continue;
 			buf_l += snprintf(&buf[buf_l], BUFSIZ - buf_l,
@@ -284,7 +284,7 @@ do_examine(command_t *cmd)
 	/* show him the contents */
 	if (thing->contents) {
 		notify(player, "Contents:");
-		DOLIST(content, thing->contents) {
+		FOR_LIST(content, thing->contents) {
 			notify(player, unparse_object(player, content));
 		}
 	}
@@ -365,7 +365,7 @@ do_inventory(command_t *cmd)
                         notify(player, "You aren't carrying anything.");
                 } else {
                         notify(player, "You are carrying:");
-                        DOLIST(thing, thing) {
+                        FOR_LIST(thing, thing) {
                                 notify(player, unparse_object(player, thing));
                         }
                 }
@@ -510,7 +510,7 @@ do_contents(command_t *cmd)
 		notify(player, "Permission denied. (You can't get the contents of something you don't control)");
 		return;
 	}
-	DOLIST(oi, thing->contents) {
+	FOR_LIST(oi, thing->contents) {
 		display_objinfo(player, oi, 0);
 		total++;
 	}

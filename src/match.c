@@ -100,7 +100,7 @@ ematch_list(OBJ *player, OBJ *first, const char *name)
 	if (!controls(player, absolute))
 		absolute = NULL;
 
-	DOLIST(first, first) {
+	FOR_LIST(first, first) {
 		if (first == absolute) {
 			return first;
 		} else if (string_match(first->name, name)) {

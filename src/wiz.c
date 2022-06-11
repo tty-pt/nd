@@ -59,7 +59,7 @@ do_teleport(command_t *cmd) {
 		if (!controls(player, victim) ||
 			!controls(player, destination) ||
 			!controls(player, victim->location) ||
-			(is_item(destination) && !controls(player, destination->location))) {
+			(object_item(destination) && !controls(player, destination->location))) {
 			notify(player, "Permission denied. (must control victim, dest, victim's loc, and dest's loc)");
 			break;
 		}
@@ -67,7 +67,7 @@ do_teleport(command_t *cmd) {
 			notify(player, "Bad destination.");
 			break;
 		}
-		if (parent_loop_check(victim, destination)) {
+		if (object_plc(victim, destination)) {
 			notify(player, "Objects can't contain themselves.");
 			break;
 		}
@@ -77,13 +77,13 @@ do_teleport(command_t *cmd) {
 	case TYPE_CONSUMABLE:
 	case TYPE_EQUIPMENT:
 	case TYPE_THING:
-		if (parent_loop_check(victim, destination)) {
+		if (object_plc(victim, destination)) {
 			notify(player, "You can't make a container contain itself!");
 			break;
 		}
 		if (destination->type != TYPE_ROOM
 			&& destination->type != TYPE_ENTITY
-			&& !is_item(destination)) {
+			&& !object_item(destination)) {
 			notify(player, "Bad destination.");
 			break;
 		}
@@ -98,7 +98,7 @@ do_teleport(command_t *cmd) {
 			if (rdestination->dropto)
 				destination = rdestination->dropto;
 		}
-		moveto(victim, destination);
+		object_move(victim, destination);
 		notify(player, "Teleported.");
 		break;
 	case TYPE_GARBAGE:
@@ -327,15 +327,15 @@ send_contents(OBJ *loc, OBJ *dest)
 	loc->contents = NULL;
 
 	/* blast locations of everything in list */
-	DOLIST(rest, first)
+	FOR_LIST(rest, first)
 		rest->location = NULL;
 
 	while (first) {
 		rest = first->next;
-		if (!is_item(first)) {
-			moveto(first, loc);
+		if (!object_item(first)) {
+			object_move(first, loc);
 		} else {
-			moveto(first, parent_loop_check(first, dest) ? loc : dest);
+			object_move(first, object_plc(first, dest) ? loc : dest);
 		}
 		first = rest;
 	}

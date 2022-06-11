@@ -184,6 +184,6 @@ extern PropPtr propdir_next_elem(PropPtr root, char *path);
 extern void db_putprop(FILE * f, const char *dir, PropPtr p);
 extern int db_get_single_prop(FILE * f, OBJ *obj, long pos, PropPtr pnode, const char *pdir);
 extern void db_getprops(FILE * f, OBJ *obj, const char *pdir);
-extern void db_dump_props(FILE * f, dbref obj);
+extern void db_dump_props(FILE * f, OBJ *obj);
 
 #endif /* _PROPS_H */

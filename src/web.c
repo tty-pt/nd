@@ -70,7 +70,7 @@ web_look(OBJ *player, OBJ *loc)
 
 	OBJ *last_observed = eplayer->last_observed;
 	if (last_observed)
-		db_obs_remove(last_observed, player);
+		observer_remove(last_observed, player);
 
         if (loc->type == TYPE_ROOM) {
 		ROO *rloc = &loc->sp.room;
@@ -85,7 +85,7 @@ web_look(OBJ *player, OBJ *loc)
 		}
 
 		eplayer->last_observed = loc;
-		db_obs_add(loc, player);
+		observer_add(loc, player);
 	}
 
         mcp_mesg_arg_append(&msg, "art", loc->art);
@@ -101,7 +101,7 @@ web_look(OBJ *player, OBJ *loc)
                 return 0;
 
 	// use callbacks for mcp like this versus telnet
-        DOLIST(thing, loc->contents) {
+        FOR_LIST(thing, loc->contents) {
 		if (thing == player)
 			continue;
 
@@ -150,7 +150,7 @@ void web_obs_mcp(OBJ *thing, void *msg) {
 
 	for (node = thing->first_observer; node; node = node->next)
 	{
-		OBJ *tmp = object_get(node->who);
+		OBJ *tmp = node->who;
 
 		if (tmp->type != TYPE_ENTITY)
 			continue;

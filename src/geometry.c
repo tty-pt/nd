@@ -151,7 +151,6 @@ object_add(struct object_skeleton sk, OBJ *where)
 	nu->location = where;
 	nu->owner = object_get(GOD);
 	nu->type = TYPE_THING;
-	nu->flags = 0;
 	if (where)
 		PUSH(nu, where->contents);
 

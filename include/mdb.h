@@ -51,22 +51,6 @@ enum at { ARMOR_LIGHT, ARMOR_MEDIUM, ARMOR_HEAVY, };
 #define GETSPELLS(x, a)  get_property_mark(x, MESGPROP_SPELLS, a)
 #define SETSPELLS(x, a, v)  set_property_mark(x, MESGPROP_SPELLS, a, v)
 
-enum type {
-	TYPE_ROOM,
-	TYPE_THING,
-	TYPE_PLANT,
-	TYPE_ENTITY,
-	TYPE_EQUIPMENT,
-	TYPE_CONSUMABLE,
-	TYPE_GARBAGE,
-};
-
-#define is_item(obj) (obj->type == TYPE_THING || obj->type == TYPE_CONSUMABLE || obj->type == TYPE_EQUIPMENT)
-
-enum object_flags {
-	OF_SANEBIT = 1,
-};
-
 #define GOD ((dbref) 1)
 
 #ifdef GOD_PRIV
@@ -98,25 +82,12 @@ typedef hash_entry *hash_tab;
 extern dbref db_top;
 
 extern char *alloc_string(const char *);
-OBJ *object_new(void);		/* return a new object */
-
-extern dbref db_write(FILE * f);	/* write db to file, return # of objects */
-extern dbref db_read(FILE * f);	/* read db from file, return # of objects */
-extern void db_obs_add(OBJ *observable, OBJ *observer);
-extern int db_obs_remove(OBJ *observable, OBJ *observer);
 
  /* Warning: destroys existing db contents! */
 
-extern void db_free(void);
-
 time_t get_tick();
-void objects_update();
-OBJ *getparent(OBJ *obj);
 
-#define DOLIST(var, first) \
-  for((var) = (first); var; (var) = var->next)
 #define PUSH(thing, locative) \
     {thing->next = (locative); (locative) = thing;}
-#define getloc(thing) (db[thing].location)
 
 #endif							/* __MDB_H */

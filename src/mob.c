@@ -484,7 +484,7 @@ mobs_aggro(OBJ *player)
 	OBJ *tmp;
 	int klock = 0;
 
-	DOLIST(tmp, here->contents) {
+	FOR_LIST(tmp, here->contents) {
 		if (tmp->type != TYPE_ENTITY)
 			continue;
 
@@ -516,7 +516,7 @@ respawn(OBJ *player)
 	} else {
 		where = eplayer->home;
 		/* warn("respawning %d to %d\n", who, where); */
-		moveto(player, where);
+		object_move(player, where);
 	}
 
 	onotifyf(player, "%s appears.", player->name);

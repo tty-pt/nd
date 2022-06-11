@@ -180,7 +180,6 @@ do_clone(command_t *cmd)
 				}
 				break;
 		}
-		clone->flags = thing->flags;
 		clone->type = thing->type;
 
 		/* copy all properties */
@@ -262,7 +261,7 @@ do_create(command_t *cmd)
 	thing->location = player;
 	thing->owner = player->owner;
 	thing->value = OBJECT_ENDOWMENT(cost);
-	thing->flags = TYPE_THING;
+	thing->type = TYPE_THING;
 
 	/* endow the object */
 	if (thing->value > MAX_OBJECT_ENDOWMENT)

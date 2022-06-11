@@ -23,21 +23,15 @@ OBJ *recyclable = NULL;
 #define DB_INITIAL_SIZE 10000
 #endif							/* DB_INITIAL_SIZE */
 
-#ifdef DB_DOUBLING
-
 dbref db_size = DB_INITIAL_SIZE;
-
-#endif							/* DB_DOUBLING */
 
 extern char *alloc_string(const char *);
 int number(const char *s);
 int ifloat(const char *s);
-void putproperties(FILE * f, int obj);
 void getproperties(FILE * f, OBJ *obj, const char *pdir);
 
-
-OBJ *
-getparent_logic(OBJ *obj)
+static inline OBJ *
+_object_parent(OBJ *obj)
 {
 	if (!obj)
 		return NULL;
@@ -45,16 +39,16 @@ getparent_logic(OBJ *obj)
 }
 
 OBJ *
-getparent(OBJ *obj)
+object_parent(OBJ *obj)
 {
 	OBJ *ptr, *oldptr;
 
-	ptr = getparent_logic(obj);
+	ptr = _object_parent(obj);
 	do {
-		obj = getparent_logic(obj);
-	} while (obj != (oldptr = ptr = getparent_logic(ptr)) &&
-		 obj != (ptr = getparent_logic(ptr)) &&
-		 obj && is_item(obj));
+		obj = _object_parent(obj);
+	} while (obj != (oldptr = ptr = _object_parent(ptr)) &&
+		 obj != (ptr = _object_parent(ptr)) &&
+		 obj && object_item(obj));
 	if (obj && (obj == oldptr || obj == ptr)) {
 		obj = object_get(GLOBAL_ENVIRONMENT);
 	}
@@ -62,10 +56,8 @@ getparent(OBJ *obj)
 }
 
 
-#ifdef DB_DOUBLING
-
 static void
-db_grow(dbref newtop)
+objects_grow(dbref newtop)
 {
 	struct object *newdb;
 
@@ -94,37 +86,8 @@ db_grow(dbref newtop)
 	}
 }
 
-#else							/* DB_DOUBLING */
-
-static void
-db_grow(dbref newtop)
-{
-	struct object *newdb;
-
-	if (newtop > db_top) {
-		db_top = newtop;
-		if (db) {
-			if ((newdb = (struct object *)
-				 realloc((void *) db, db_top * sizeof(struct object))) == 0) {
-				abort();
-			}
-			db = newdb;
-		} else {
-			/* make the initial one */
-			int startsize = (newtop >= DB_INITIAL_SIZE) ? newtop : DB_INITIAL_SIZE;
-
-			if ((db = (struct object *)
-				 malloc(startsize * sizeof(struct object))) == 0) {
-				abort();
-			}
-		}
-	}
-}
-
-#endif							/* DB_DOUBLING */
-
 void
-db_clear_object(OBJ *o)
+object_clear(OBJ *o)
 {
 	memset(o, 0, sizeof(struct object));
 
@@ -142,14 +105,14 @@ object_new(void)
 	if (recyclable) {
 		newobj = recyclable;
 		recyclable = newobj->next;
-		db_free_object(newobj);
+		object_free(newobj);
 	} else {
 		newobj = object_get(db_top);
-		db_grow(db_top + 1);
+		objects_grow(db_top + 1);
 	}
 
 	/* clear it out */
-	db_clear_object(newobj);
+	object_clear(newobj);
 	return newobj;
 }
 
@@ -196,39 +159,68 @@ putproperties_rec(FILE * f, const char *dir, OBJ *obj)
 	}
 }
 
-/*** CHANGED:
-was: void putproperties(FILE *f, PropPtr p)
- is: void putproperties(FILE *f, dbref obj)
-***/
+int
+props_write_rec(OBJ *obj, FILE * f, const char *dir, PropPtr p)
+{
+	char buf[BUFFER_LEN];
+	int count = 0;
+	int pdcount;
+
+	if (!p)
+		return 0;
+
+	count += props_write_rec(obj, f, dir, AVL_LF(p));
+
+	db_putprop(f, dir, p);
+
+	if (PropDir(p)) {
+		const char *iptr;
+		char *optr;
+
+		for (iptr = dir, optr = buf; *iptr;)
+			*optr++ = *iptr++;
+		for (iptr = PropName(p); *iptr;)
+			*optr++ = *iptr++;
+		*optr++ = PROPDIR_DELIMITER;
+		*optr++ = '\0';
+
+		pdcount = props_write_rec(obj, f, buf, PropDir(p));
+		count += pdcount;
+	}
+
+	count += props_write_rec(obj, f, dir, AVL_RT(p));
+
+	return count;
+}
+
 void
-putproperties(FILE * f, dbref obj)
+props_write(FILE * f, OBJ *obj)
 {
 	putstring(f, "*Props*");
-	db_dump_props(f, obj);
+	props_write_rec(obj, f, "/", obj->properties);
 	/* putproperties_rec(f, "/", obj); */
 	putstring(f, "*End*");
 }
 
 
-static int
-db_write_object(FILE * f, dbref i)
+static void
+object_write(FILE * f, OBJ *obj)
 {
-	OBJ *o = object_get(i);
 	int j;
-	putstring(f, o->name);
-	putref(f, object_ref(o->location));
-	putref(f, object_ref(o->contents));
-	putref(f, object_ref(o->next));
-	putref(f, o->value);
-	putref(f, o->type);	/* write non-internal flags */
+	putstring(f, obj->name);
+	putref(f, object_ref(obj->location));
+	putref(f, object_ref(obj->contents));
+	putref(f, object_ref(obj->next));
+	putref(f, obj->value);
+	putref(f, obj->type);	/* write non-internal flags */
 
-	putproperties(f, i);
+	props_write(f, obj);
 
 
-	switch (object_get(i)->type) {
+	switch (obj->type) {
 	case TYPE_ENTITY:
 		{
-			ENT *ent = &o->sp.entity;
+			ENT *ent = &obj->sp.entity;
 			putref(f, object_ref(ent->home));
 			putref(f, ent->flags);
 			putref(f, ent->lvl);
@@ -242,7 +234,7 @@ db_write_object(FILE * f, dbref i)
 
 	case TYPE_PLANT:
 		{
-			PLA *pla = &o->sp.plant;
+			PLA *pla = &obj->sp.plant;
 			putref(f, pla->plid);
 			putref(f, pla->size);
 		}
@@ -250,52 +242,50 @@ db_write_object(FILE * f, dbref i)
 
 	case TYPE_CONSUMABLE:
 		{
-			CON *con = &o->sp.consumable;
+			CON *con = &obj->sp.consumable;
 			putref(f, con->food);
 			putref(f, con->drink);
 		}
 		break;
 	case TYPE_EQUIPMENT:
 		{
-			EQU *equ = &o->sp.equipment;
+			EQU *equ = &obj->sp.equipment;
 			putref(f, equ->eqw);
 			putref(f, equ->msv);
 		}
 		break;
 	case TYPE_THING:
-		putref(f, object_ref(o->owner));
+		putref(f, object_ref(obj->owner));
 		break;
 
 	case TYPE_ROOM:
 		{
-			ROO *roo = &o->sp.room;
+			ROO *roo = &obj->sp.room;
 			putref(f, object_ref(roo->dropto));
 			putref(f, roo->flags);
 			putref(f, roo->exits);
 			putref(f, roo->floor);
-			putref(f, object_ref(o->owner));
+			putref(f, object_ref(obj->owner));
 		}
 		break;
 	}
-
-	return 0;
 }
 
 static inline void
 db_write_list(FILE * f)
 {
-	dbref i;
+	OBJ *obj;
 
-	for (i = db_top; i-- > 0;) {
-		if (fprintf(f, "#%d\n", i) < 0)
+	FOR_ALL(obj) {
+		if (fprintf(f, "#%d\n", object_ref(obj)) < 0)
 			abort();
-		db_write_object(f, i);
+		object_write(f, obj);
 	}
 }
 
 
-dbref
-db_write(FILE * f)
+OBJ *
+objects_write(FILE * f)
 {
 	putref(f, db_top);
 
@@ -305,10 +295,10 @@ db_write(FILE * f)
 	putstring(f, "***END OF DUMP***");
 
 	fflush(f);
-	return (db_top);
+	return object_get(db_top);
 }
 
-#define getstring(x) alloc_string(getstring_noalloc(x))
+#define STRING_READ(x) alloc_string(string_read(x))
 
 /* returns true for numbers of form [ + | - ] <series of digits> */
 int
@@ -415,7 +405,7 @@ getproperties(FILE * f, OBJ *obj, const char *pdir)
 }
 
 void
-db_free_object(OBJ *o)
+object_free(OBJ *o)
 {
 	if (o->name)
 		free((void *) o->name);
@@ -443,20 +433,20 @@ db_free_object(OBJ *o)
 }
 
 void
-db_obs_add(OBJ *observable, OBJ *observer) {
+observer_add(OBJ *observable, OBJ *observer) {
 	struct observer_node *node = (struct observer_node *)
 		malloc(sizeof(struct observer_node));
 	node->next = observable->first_observer;
-	node->who = object_ref(observer);
+	node->who = observer;
 	observable->first_observer = node;
 }
 
 int
-db_obs_remove(OBJ *observable, OBJ *observer) {
+observer_remove(OBJ *observable, OBJ *observer) {
 	struct observer_node *cur, *prev = NULL;
 
 	for (cur = observable->first_observer; cur; ) {
-		if (cur->who == object_ref(observer)) {
+		if (cur->who == observer) {
 			if (prev) {
 				prev->next = cur->next;
 				free(cur);
@@ -471,13 +461,13 @@ db_obs_remove(OBJ *observable, OBJ *observer) {
 }
 
 void
-db_free(void)
+objects_free(void)
 {
-	dbref i;
+	OBJ *obj;
 
 	if (db) {
-		for (i = 0; i < db_top; i++)
-			db_free_object(object_get(i));
+		FOR_ALL(obj)
+			object_free(obj);
 		free((void *) db);
 		db = 0;
 		db_top = 0;
@@ -487,7 +477,7 @@ db_free(void)
 }
 
 dbref
-getref(FILE * f)
+ref_read(FILE * f)
 {
 	static char buf[BUFFER_LEN];
 	int peekch;
@@ -506,10 +496,10 @@ getref(FILE * f)
 	return (atol(buf));
 }
 
-static char xyzzybuf[BUFFER_LEN];
-const char *
-getstring_noalloc(FILE * f)
+static const char *
+string_read(FILE * f)
 {
+	static char xyzzybuf[BUFFER_LEN];
 	char *p;
 	char c;
 
@@ -533,24 +523,26 @@ getstring_noalloc(FILE * f)
 	return xyzzybuf;
 }
 
-/* Reads in Foxen, Foxen[2-8], WhiteFire, Mage or Lachesis DB Formats */
-void
-db_read_object_foxen(FILE * f, dbref objno)
+static void
+object_read(FILE * f)
 {
-	OBJ *o = object_get(objno);
+	dbref ref = ref_read(f);
+	OBJ *o = object_get(ref);
 	int c, prop_flag = 0;
 	int j = 0;
 
-	db_clear_object(o);
+	object_clear(o);
 
-	o->flags = 0;
-	o->name = getstring(f);
-	o->location = object_get(getref(f));
-	o->contents = object_get(getref(f));
-	o->next = object_get(getref(f));
-	o->value = getref(f);
-	o->type = getref(f);
-	warn("db_read_object_foxen %d %s location %d contents %d next %d type %d\n", objno, o->name,
+	/* make space */
+	objects_grow(ref + 1);
+
+	o->name = STRING_READ(f);
+	o->location = object_get(ref_read(f));
+	o->contents = object_get(ref_read(f));
+	o->next = object_get(ref_read(f));
+	o->value = ref_read(f);
+	o->type = ref_read(f);
+	warn("db_read_object_foxen %d %s location %d contents %d next %d type %d\n", ref, o->name,
 			object_ref(o->location),
 			object_ref(o->contents),
 			object_ref(o->next),
@@ -563,7 +555,7 @@ db_read_object_foxen(FILE * f, dbref objno)
 
 		prop_flag++;
 	} else {
-		/* do our own getref */
+		/* do our own ref_read */
 		int sign = 0;
 		char buf[BUFFER_LEN];
 		int i = 0;
@@ -588,51 +580,51 @@ db_read_object_foxen(FILE * f, dbref objno)
 	case TYPE_PLANT:
 		{
 			PLA *po = &o->sp.plant;
-			po->plid = prop_flag ? getref(f) : j;
-			po->size = getref(f);
+			po->plid = prop_flag ? ref_read(f) : j;
+			po->size = ref_read(f);
 		}
 		return;
 	case TYPE_CONSUMABLE:
 		{
 			CON *co = &o->sp.consumable;
-			co->food = prop_flag ? getref(f) : j;
-			co->drink = getref(f);
+			co->food = prop_flag ? ref_read(f) : j;
+			co->drink = ref_read(f);
 		}
 		return;
 	case TYPE_EQUIPMENT:
 		{
 			EQU *eo = &o->sp.equipment;
-			eo->eqw = prop_flag ? getref(f) : j;
-			eo->msv = getref(f);
+			eo->eqw = prop_flag ? ref_read(f) : j;
+			eo->msv = ref_read(f);
 		}
 		return;
 	case TYPE_THING:
-		o->owner = object_get(prop_flag ? getref(f) : j);
+		o->owner = object_get(prop_flag ? ref_read(f) : j);
 		return;
 	case TYPE_ROOM:
 		{
 			ROO *ro = &o->sp.room;
-			ro->dropto = object_get(prop_flag ? getref(f) : j);
-			ro->flags = getref(f);
-			ro->exits = getref(f);
-			ro->doors = getref(f);
-			ro->floor = getref(f);
-			o->owner = object_get(getref(f));
+			ro->dropto = object_get(prop_flag ? ref_read(f) : j);
+			ro->flags = ref_read(f);
+			ro->exits = ref_read(f);
+			ro->doors = ref_read(f);
+			ro->floor = ref_read(f);
+			o->owner = object_get(ref_read(f));
 		}
 		return;
 	case TYPE_ENTITY:
 		{
 			ENT *eo = &o->sp.entity;
-			eo->home = object_get(prop_flag ? getref(f) : j);
+			eo->home = object_get(prop_flag ? ref_read(f) : j);
 			eo->fd = -1;
 			eo->last_observed = NULL;
-			eo->flags = getref(f);
-			eo->lvl = getref(f);
-			eo->cxp = getref(f);
-			eo->spend = getref(f);
+			eo->flags = ref_read(f);
+			eo->lvl = ref_read(f);
+			eo->cxp = ref_read(f);
+			eo->spend = ref_read(f);
 			for (j = 0; j < ATTR_MAX; j++)
-				ATTR(eo, j) = getref(f);
-			eo->wtso = getref(f);
+				ATTR(eo, j) = ref_read(f);
+			eo->wtso = ref_read(f);
 			o->owner = o;
 			if (eo->flags & EF_PLAYER)
 				add_player(o);
@@ -645,39 +637,34 @@ db_read_object_foxen(FILE * f, dbref objno)
 	}
 }
 
-dbref
-db_read(FILE * f)
+OBJ *
+objects_read(FILE * f)
 {
 	int i;
-	dbref grow, thisref;
+	dbref grow;
 	const char *special;
 	char c;
 
 	/* Parse the header */
-	grow = getref(f);
-	db_grow( grow );
+	grow = ref_read(f);
+	objects_grow( grow );
 
 	c = getc(f);			/* get next char */
 	for (i = 0;; i++) {
 		switch (c) {
 		case NUMBER_TOKEN:
 			/* another entry, yawn */
-			thisref = getref(f);
-
-			/* make space */
-			db_grow(thisref + 1);
-
 			/* read it in */
-			db_read_object_foxen(f, thisref);
+			object_read(f);
 			break;
 		case LOOKUP_TOKEN:
-			special = getstring(f);
+			special = STRING_READ(f);
 			if (strcmp(special, "**END OF DUMP***")) {
 				free((void *) special);
-				return -1;
+				return NULL;
 			} else {
 				free((void *) special);
-				special = getstring(f);
+				special = STRING_READ(f);
 				if (special)
 					free((void *) special);
 				for (i = 0; i < db_top; i++) {
@@ -687,11 +674,11 @@ db_read(FILE * f)
 						recyclable = o;
 					}
 				}
-				return db_top;
+				return object_get(db_top);
 			}
 			break;
 		default:
-			return -1;
+			return NULL;
 			/* break; */
 		}
 		c = getc(f);
@@ -705,7 +692,6 @@ object_copy(OBJ *player, OBJ *old)
 	nu->name = alloc_string(old->name);
 	nu->properties = copy_prop(old);
 	nu->contents = nu->next = nu->location = NULL;
-        nu->flags = old->flags;
 	nu->owner = old->owner;
         return nu;
 }
