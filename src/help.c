@@ -61,7 +61,7 @@ string_prefix(register const char *string, register const char *prefix)
 #endif
 
 void
-spit_file_segment(dbref player, const char *filename, const char *seg)
+spit_file_segment(OBJ *player, const char *filename, const char *seg)
 {
 	FILE *f;
 	char buf[BUFFER_LEN];
@@ -111,14 +111,14 @@ spit_file_segment(dbref player, const char *filename, const char *seg)
 }
 
 void
-spit_file(dbref player, const char *filename)
+spit_file(OBJ *player, const char *filename)
 {
 	spit_file_segment(player, filename, "");
 }
 
 
 void
-index_file(dbref player, const char *onwhat, const char *file)
+index_file(OBJ *player, const char *onwhat, const char *file)
 {
 	FILE *f;
 	char buf[BUFFER_LEN];
@@ -191,7 +191,7 @@ index_file(dbref player, const char *onwhat, const char *file)
 }
 
 int
-show_subfile(dbref player, const char *dir, const char *topic, const char *seg, int partial)
+show_subfile(OBJ *player, const char *dir, const char *topic, const char *seg, int partial)
 {
 	char buf[256];
 	struct stat st;
@@ -248,7 +248,7 @@ show_subfile(dbref player, const char *dir, const char *topic, const char *seg, 
 void
 do_man(command_t *cmd)
 {
-	dbref player = cmd->player;
+	OBJ *player = object_get(cmd->player);
 	char *topic = cmd->argv[1];
 	char *seg = cmd->argv[2];
 	if (show_subfile(player, MAN_DIR, topic, seg, FALSE))
@@ -259,7 +259,7 @@ do_man(command_t *cmd)
 void
 do_help(command_t *cmd)
 {
-	dbref player = cmd->player;
+	OBJ *player = object_get(cmd->player);
 	char *topic = cmd->argv[1];
 	char *seg = cmd->argv[2];
 	if (show_subfile(player, HELP_DIR, topic, seg, FALSE))
@@ -271,7 +271,7 @@ do_help(command_t *cmd)
 void
 do_news(command_t *cmd)
 {
-	dbref player = cmd->player;
+	OBJ *player = object_get(cmd->player);
 	char *topic = cmd->argv[1];
 	char *seg = cmd->argv[2];
 	if (show_subfile(player, NEWS_DIR, topic, seg, FALSE))
@@ -282,7 +282,7 @@ do_news(command_t *cmd)
 void
 do_info(command_t *cmd)
 {
-	dbref player = cmd->player;
+	OBJ *player = object_get(cmd->player);
 	const char *topic = cmd->argv[1];
 	const char *seg = cmd->argv[2];
 	char *buf;

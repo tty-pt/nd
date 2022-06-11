@@ -8,7 +8,7 @@
 #define G(x) xsqrtx(x)
 #define MSRA(ms, ra, G) G(ms) * (ra + 1) / RARE_MAX
 
-#define IE(x, G) MSRA(EQUIPMENT(x)->msv, EQUIPMENT(x)->rare, G)
+#define IE(equ, G) MSRA(equ->msv, equ->rare, G)
 #define HS(sp) MSRA(sp->ms, sp->ra, SPELL_G)
 
 #define DMG_G(v) G(v)
@@ -18,10 +18,10 @@
 #define DODGE_BASE(p) DODGE_G(ATTR(p, ATTR_DEX))
 
 #define HP_G(v) 10 * G(v)
-#define HP_MAX(p) HP_G(ATTR(p, ATTR_CON))
+#define HP_MAX(ent) HP_G(ent->attr[ATTR_CON])
 
 #define MP_G(v) HP_G(v)
-#define MP_MAX(p) MP_G(ATTR(p, ATTR_WIZ))
+#define MP_MAX(ent) MP_G(ent->attr[ATTR_WIZ])
 
 static inline unsigned
 xsqrtx(unsigned x)

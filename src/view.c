@@ -93,9 +93,11 @@ dr_room(char *buf, view_tile_t *t, const char *bg)
 }
 
 static inline unsigned
-floor_get(dbref what) {
-	CBUG(OBJECT(what)->type != TYPE_ROOM);
-	unsigned char floor = ROOM(what)->floor;
+floor_get(OBJ *what) {
+	CBUG(what->type != TYPE_ROOM);
+	ROO *rwhat = &what->sp.room;
+	unsigned char floor = rwhat->floor;
+
 	if (floor > BIOME_VOLCANIC)
 		return BIOME_VOLCANIC;
 	else
@@ -211,7 +213,7 @@ dr_hs_n(char *b, view_tile_t *t)
 	     bg = BIOME_BG(
 		     t->room < 0
 		     ? t->bio_idx
-		     : floor_get(t->room)) ;
+		     : floor_get(object_get(t->room))) ;
 	     t < t_max ;
 	     bg = BIOME_BG(floor),
 	     b = dr_h(b, bg, wp, w, toggle),
@@ -274,27 +276,36 @@ view_draw(view_t view) {
 }
 
 static inline void
-view_build_exit(view_tile_t *t, dbref loc, enum exit e) {
-	if (ROOM(loc)->exits & e) {
+view_build_exit(view_tile_t *t, OBJ *loc, enum exit e) {
+	ROO *rloc = &loc->sp.room;
+
+	if (rloc->exits & e) {
 		t->exits |= e;
-		t->doors |= ROOM(loc)->doors & e;
+		t->doors |= rloc->doors & e;
 	}
 }
 
 static inline void
-view_build_exit_z(view_tile_t *t, dbref loc, enum exit e) {
-	if (ROOM(loc)->exits & e)
+view_build_exit_z(view_tile_t *t, OBJ *loc, enum exit e) {
+	ROO *rloc = &loc->sp.room;
+
+	if (rloc->exits & e)
 		t->exits |= e;
 }
 
 static inline void
-view_build_exit_s(dbref player, view_tile_t *t,
-		  dbref loc, pos_t p, enum exit e) {
+view_build_exit_s(OBJ *player, view_tile_t *t,
+		  OBJ *loc, pos_t p, enum exit e) {
 	pos_t pa;
 	pos_move(pa, p, e);
-	register dbref tmp;
+	OBJ *tmp = map_get(pa);
 
-	tmp = map_get(pa);
+	if (!tmp) {
+		t->exits |= e;
+		return;
+	}
+
+	ROO *rtmp = &tmp->sp.room;
 
 	// FIXME not returning correct room (at least for E_SOUTH)
 	/* debug("here 0x%llx -> 0x%llx (%d)\n", */
@@ -302,45 +313,48 @@ view_build_exit_s(dbref player, view_tile_t *t,
 	/* 		* (morton_t *) pa, */
 	/* 		tmp); */
 
-	if (tmp > 0) {
-		if (ROOM(tmp)->exits & e_simm(e)) {
-			t->exits |= e;
-			if (ROOM(tmp)->doors & e_simm(e))
-				t->doors |= e;
-		}
-	} else
+	if (rtmp->exits & e_simm(e)) {
 		t->exits |= e;
+		if (rtmp->doors & e_simm(e))
+			t->doors |= e;
+	}
 }
 
 static inline ucoord_t
-view_build_flags(dbref loc) {
-	dbref tmp = OBJECT(loc)->contents;
+view_build_flags(OBJ *loc) {
+	OBJ *tmp = loc->contents;
 	ucoord_t flags = 0;
 
-	DOLIST(tmp, tmp) switch (OBJECT(tmp)->type) {
+	DOLIST(tmp, tmp) {
+		switch (tmp->type) {
 		case TYPE_ENTITY:
-			flags |= VTF_ENTITY;
+			{
+				ENT *etmp = &tmp->sp.entity;
+				flags |= VTF_ENTITY;
 
-			if (ENTITY(tmp)->flags & EF_SHOP)
-				flags |= VTF_SHOP;
+				if (etmp->flags & EF_SHOP)
+					flags |= VTF_SHOP;
+			}
 
 			break;
 
 		case TYPE_CONSUMABLE:
 			flags |= VTF_POND;
 			break;
+		}
 	}
 
 	return flags;
 }
 
 static void
-view_build_tile(dbref player,
-		struct bio *n, dbref loc,
+view_build_tile(OBJ *player,
+		struct bio *n, OBJ *loc,
 		view_tile_t *t, pos_t p)
 {
-	t->room = loc;
-	if (loc > 0) {
+	t->room = object_ref(loc);
+	if (loc) {
+		ROO *rloc = &loc->sp.room;
 		view_build_exit(t, loc, E_EAST);
 		view_build_exit(t, loc, E_NORTH);
 		view_build_exit(t, loc, E_WEST);
@@ -349,7 +363,7 @@ view_build_tile(dbref player,
 		view_build_exit_z(t, loc, E_DOWN);
 		t->flags = view_build_flags(loc);
 		t->bio_idx = floor_get(loc);
-		if (ROOM(loc)->flags & RF_TEMP)
+		if (rloc->flags & RF_TEMP)
 			t->room = -1;
 	} else {
 		view_build_exit_s(player, t, loc, p, E_EAST);
@@ -365,7 +379,7 @@ view_build_tile(dbref player,
 }
 
 static inline view_tile_t *
-_view_build(dbref player,
+_view_build(OBJ *player,
 		struct bio *n, dbref *g,
 		view_tile_t *b, pos_t p)
 {
@@ -373,18 +387,18 @@ _view_build(dbref player,
 
 	// TODO vary p vertically and horizontally
 	for (; g < g_max ; n++, g++, b++, p[1]++)
-		view_build_tile(player, n, *g, b, p);
+		view_build_tile(player, n, object_get(*g), b, p);
 
         return b;
 }
 
 void
-view(dbref player)
+view(OBJ *player)
 {
 	struct bio bd[VIEW_M], *n_p = bd,
 		   *n_max = &bd[VIEW_BDI + 1];
 	pos_t pos, opos;
-	map_where(opos, getloc(player));
+	map_where(opos, player->location);
 	view_t view;
         view_tile_t *p = view;
 	dbref o[VIEW_M], *o_p = o;
@@ -411,5 +425,5 @@ view(dbref player)
 void
 do_view(command_t *cmd)
 {
-        view(cmd->player);
+        view(object_get(cmd->player));
 }

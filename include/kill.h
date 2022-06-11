@@ -6,15 +6,15 @@
 /* #include "item.h" */
 /* #include "params.h" */
 
-void kill_update(dbref who);
-void kill_target(dbref attacker, dbref target);
-int kill_dodge(dbref attacker, struct wts wts);
+void kill_update(OBJ *player);
+OBJ *kill_target(OBJ *player, OBJ *target);
+int kill_dodge(OBJ *player, struct wts wts);
 short kill_dmg(enum element dmg_type,
 		short dmg, short def,
 		enum element def_type);
-void notify_attack(dbref att, dbref tar, struct wts wts,
+void notify_attack(OBJ *player, OBJ *target, struct wts wts,
 		short val, char const *color, short mval);
-void sit(dbref who, char const *what);
-void stand(dbref who);
+void sit(OBJ *who, char const *what);
+void stand(OBJ *who);
 
 #endif

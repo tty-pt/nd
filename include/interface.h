@@ -12,15 +12,15 @@
 
 /* these symbols must be defined by the interface */
 extern void wall_wizards(const char *msg);
-extern int boot_off(dbref player);
-extern void boot_player_off(dbref player);
+extern int boot_off(OBJ *player);
+extern void boot_player_off(OBJ *player);
 
 extern McpFrame *descr_mcpframe(int c);
 
 /* the following symbols are provided by game.c */
 
-dbref create_player(const char *name);
-extern dbref connect_player(const char *name);
+OBJ *create_player(const char *name);
+OBJ *connect_player(const char *name);
 
 extern int init_game();
 extern void panic(const char *);

@@ -71,7 +71,7 @@
 
 /* limit on player name length */
 #define PLAYER_NAME_LIMIT 16
-#define HUMAN_BEING 50
+#define HUMAN_BEING 1
 
 /************************************************************************
    Various Messages 

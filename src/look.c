@@ -25,37 +25,37 @@
 
 /* prints owner of something */
 static void
-print_owner(dbref player, dbref thing)
+print_owner(OBJ *player, OBJ *thing)
 {
 	char buf[BUFFER_LEN];
 
-	switch (OBJECT(thing)->type) {
+	switch (thing->type) {
 	case TYPE_ENTITY:
-		snprintf(buf, sizeof(buf), "%s is an entity.", OBJECT(thing)->name);
+		snprintf(buf, sizeof(buf), "%s is an entity.", thing->name);
 		break;
 	case TYPE_ROOM:
 	case TYPE_CONSUMABLE:
 	case TYPE_EQUIPMENT:
 	case TYPE_THING:
-		snprintf(buf, sizeof(buf), "Owner: %s", OBJECT(OBJECT(thing)->owner)->name);
+		snprintf(buf, sizeof(buf), "Owner: %s", thing->owner->name);
 		break;
 	case TYPE_GARBAGE:
-		snprintf(buf, sizeof(buf), "%s is garbage.", OBJECT(thing)->name);
+		snprintf(buf, sizeof(buf), "%s is garbage.", thing->name);
 		break;
 	}
 	notify(player, buf);
 }
 
 static void
-look_contents(dbref player, dbref loc, const char *contents_name)
+look_contents(OBJ *player, OBJ *loc, const char *contents_name)
 {
         char buf[BUFSIZ];
         size_t buf_l = 0;
-	dbref thing;
+	OBJ *thing;
 
 	/* check to see if there is anything there */
-	if (OBJECT(loc)->contents > 0) {
-                DOLIST(thing, OBJECT(loc)->contents) {
+	if (loc->contents) {
+                DOLIST(thing, loc->contents) {
 			if (thing == player)
 				continue;
 			buf_l += snprintf(&buf[buf_l], BUFSIZ - buf_l,
@@ -71,54 +71,50 @@ look_contents(dbref player, dbref loc, const char *contents_name)
 extern void art(dbref descr, const char *arts);
 
 static void
-look_simple(dbref player, dbref thing)
+look_simple(OBJ *player, OBJ *thing)
 {
-	char const *art_str = OBJECT(thing)->art;
+	char const *art_str = thing->art;
+	ENT *eplayer = &player->sp.entity;
 
 	if (art_str)
-		art(ENTITY(player)->fd, art_str);
+		art(eplayer->fd, art_str);
 
-	if (OBJECT(thing)->description) {
-		notify(player, OBJECT(thing)->description);
+	if (thing->description) {
+		notify(player, thing->description);
 	} else if (!art_str) {
 		notify(player, "You see nothing special.");
 	}
 }
 
 void
-look_room(dbref player, dbref loc)
+look_room(OBJ *player, OBJ *loc)
 {
 	char const *description = "";
-	/* tell him the name, and the number if he can link to it */
-
-	CBUG(OBJECT(loc)->type != TYPE_ROOM);
-
-	/* tell him the appropriate messages if he has the key */
+	CBUG(loc->type != TYPE_ROOM);
 	can_doit(player, loc, 0);
 
 	if (web_look(player, loc)) {
 		notify(player, unparse_object(player, loc));
 		notify(player, description);
-		/* tell him the contents */
 		look_contents(player, loc, "You see:");
 	}
 }
 
 void
-look_around(dbref player)
+look_around(OBJ *player)
 {
-	look_room(player, getloc(player));
+	look_room(player, player->location);
 }
 
 void
 do_look_at(command_t *cmd)
 {
-	OBJ *player = OBJECT(cmd->player);
+	OBJ *player = object_get(cmd->player);
 	const char *name = cmd->argv[1];
 	OBJ *thing;
 
 	if (*name == '\0') {
-		thing = OBJECT(player->location);
+		thing = player->location;
 	} else if (
 			!(thing = ematch_absolute(name))
 			&& !(thing = ematch_here(player, name))
@@ -127,37 +123,38 @@ do_look_at(command_t *cmd)
 			&& !(thing = ematch_mine(player, name))
 		  )
 	{
-		notify(REF(player), NOMATCH_MESSAGE);
+		notify(player, NOMATCH_MESSAGE);
 		return;
 	}
 
 	switch (thing->type) {
 	case TYPE_ROOM:
-		look_room(REF(player), REF(thing));
-		view(REF(player));
+		look_room(player, thing);
+		view(player);
 		break;
 	case TYPE_ENTITY:
-		if (web_look(REF(player), REF(thing))) {
-			look_simple(REF(player), REF(thing));
-			look_contents(REF(player), REF(thing), "Carrying:");
+		if (web_look(player, thing)) {
+			look_simple(player, thing);
+			look_contents(player, thing, "Carrying:");
 		}
 		break;
 	case TYPE_CONSUMABLE:
 	case TYPE_EQUIPMENT:
 	case TYPE_THING:
-		if (web_look(REF(player), REF(thing)))
-			look_simple(REF(player), REF(thing));
+		if (web_look(player, thing))
+			look_simple(player, thing);
 		break;
 	default:
-		if (web_look(REF(player), REF(thing)))
-			look_simple(REF(player), REF(thing));
+		if (web_look(player, thing))
+			look_simple(player, thing);
 		break;
 	}
 }
 
 int
-listprops_wildcard(dbref player, dbref thing, const char *dir, const char *wild)
+listprops_wildcard(OBJ *player, OBJ *thing, const char *dir, const char *wild)
 {
+	ENT *eplayer = &player->sp.entity;
 	char propname[BUFFER_LEN];
 	char wld[BUFFER_LEN];
 	char buf[BUFFER_LEN];
@@ -184,7 +181,7 @@ listprops_wildcard(dbref player, dbref thing, const char *dir, const char *wild)
 		if (equalstr(wldcrd, propname)) {
 			snprintf(buf, sizeof(buf), "%s%c%s", dir, PROPDIR_DELIMITER, propname);
 			if (!Prop_System(buf) && ((!Prop_Hidden(buf) && !(PropFlags(propadr) & PROP_SYSPERMS))
-				|| ENTITY(OBJECT(player)->owner)->flags & EF_WIZARD)) {
+				|| eplayer->flags & EF_WIZARD)) {
 				if (!*ptr || recurse) {
 					cnt++;
 					displayprop(player, thing, buf, buf2, sizeof(buf2));
@@ -202,15 +199,15 @@ listprops_wildcard(dbref player, dbref thing, const char *dir, const char *wild)
 
 
 long
-size_object(dbref i, int load)
+size_object(OBJ *obj, int load)
 {
 	long byts;
 	byts = sizeof(struct object);
 
-	if (OBJECT(i)->name) {
-		byts += strlen(OBJECT(i)->name) + 1;
+	if (obj->name) {
+		byts += strlen(obj->name) + 1;
 	}
-	byts += size_properties(i, load);
+	byts += size_properties(obj, load);
 
 	return byts;
 }
@@ -219,124 +216,122 @@ size_object(dbref i, int load)
 void
 do_examine(command_t *cmd)
 {
-	OBJ *player = OBJECT(cmd->player);
+	OBJ *player = object_get(cmd->player);
 	const char *name = cmd->argv[1];
 	const char *dir = cmd->argv[2];
-	OBJ *thing;
+	OBJ *thing, *content;
 	char buf[BUFFER_LEN];
-	dbref content;
 	int cnt;
 
 	if (*name == '\0') {
-		thing = OBJECT(player->location);
+		thing = player->location;
 	} else if (!(thing = ematch_all(player, name))) {
-		notify(REF(player), NOMATCH_MESSAGE);
+		notify(player, NOMATCH_MESSAGE);
 		return;
 	}
 
-	if (!controls(REF(player), REF(thing))) {
-		print_owner(REF(player), REF(thing));
+	if (!controls(player, thing)) {
+		print_owner(player, thing);
 		return;
 	}
 	if (*dir) {
 		/* show him the properties */
-		cnt = listprops_wildcard(REF(player), REF(thing), "", dir);
+		cnt = listprops_wildcard(player, thing, "", dir);
 		snprintf(buf, sizeof(buf), "%d propert%s listed.", cnt, (cnt == 1 ? "y" : "ies"));
-		notify(REF(player), buf);
+		notify(player, buf);
 		return;
 	}
 	switch (thing->type) {
 	case TYPE_ROOM:
 		snprintf(buf, sizeof(buf), "%.*s (#%d) Owner: %s  Parent: ",
-				(int) (BUFFER_LEN - strlen(OBJECT(thing->owner)->name) - 35),
-				unparse_object(REF(player), REF(thing)),
-				REF(thing),
-				OBJECT(thing->owner)->name);
-		strlcat(buf, unparse_object(REF(player), thing->location), sizeof(buf));
+				(int) (BUFFER_LEN - strlen(thing->owner->name) - 35),
+				unparse_object(player, thing),
+				object_ref(thing),
+				thing->owner->name);
+		strlcat(buf, unparse_object(player, thing->location), sizeof(buf));
 		break;
 	case TYPE_PLANT:
 	case TYPE_CONSUMABLE:
 	case TYPE_EQUIPMENT:
 	case TYPE_THING:
 		snprintf(buf, sizeof(buf), "%.*s (#%d) Owner: %s  Value: %d",
-				(int) (BUFFER_LEN - strlen(OBJECT(thing->owner)->name) - 35),
-				unparse_object(REF(player), REF(thing)),
-				REF(thing),
-				OBJECT(thing->owner)->name, thing->value);
+				(int) (BUFFER_LEN - strlen(thing->owner->name) - 35),
+				unparse_object(player, thing),
+				object_ref(thing),
+				thing->owner->name, thing->value);
 		break;
 	case TYPE_ENTITY:
 		snprintf(buf, sizeof(buf), "%.*s (#%d) %s: %d  ", 
 				(int) (BUFFER_LEN - strlen(CPENNIES) - 35),
-				unparse_object(REF(player), REF(thing)),
-				REF(thing),
+				unparse_object(player, thing),
+				object_ref(thing),
 				CPENNIES, thing->value);
 		break;
 	case TYPE_GARBAGE:
-		strlcpy(buf, unparse_object(REF(player), REF(thing)), sizeof(buf));
+		strlcpy(buf, unparse_object(player, thing), sizeof(buf));
 		break;
 	}
-	notify(REF(player), buf);
+	notify(player, buf);
 
 	if (thing->description)
-		notify(REF(player), thing->description);
+		notify(player, thing->description);
 
-	notify(REF(player), "[ Use 'examine <object>=/' to list root properties. ]");
+	notify(player, "[ Use 'examine <object>=/' to list root properties. ]");
 
-	snprintf(buf, sizeof(buf), "Memory used: %ld bytes", size_object(REF(thing), 1));
-	notify(REF(player), buf);
+	snprintf(buf, sizeof(buf), "Memory used: %ld bytes", size_object(thing, 1));
+	notify(player, buf);
 
 	/* show him the contents */
-	if (thing->contents != NOTHING) {
-		notify(REF(player), "Contents:");
+	if (thing->contents) {
+		notify(player, "Contents:");
 		DOLIST(content, thing->contents) {
-			notify(REF(player), unparse_object(REF(player), content));
+			notify(player, unparse_object(player, content));
 		}
 	}
 	switch (thing->type) {
 	case TYPE_ROOM:
 		{
 			ROO *rthing = &thing->sp.room;
-			notifyf(REF(player), "Exits: %hhx Doors: %hhx", rthing->exits, rthing->doors);
+			notifyf(player, "Exits: %hhx Doors: %hhx", rthing->exits, rthing->doors);
 
-			/* print dropto if present */
-			if (rthing->dropto != NOTHING) {
+			if (rthing->dropto) {
 				snprintf(buf, sizeof(buf), "Dropped objects go to: %s",
-						unparse_object(REF(player), rthing->dropto));
-				notify(REF(player), buf);
+						unparse_object(player, rthing->dropto));
+				notify(player, buf);
 			}
 		}
 		break;
 	case TYPE_EQUIPMENT:
 		{
 			EQU *ething = &thing->sp.equipment;
-			notifyf(REF(player), "equipment eqw %u msv %u.", ething->eqw, ething->msv);
+			notifyf(player, "equipment eqw %u msv %u.", ething->eqw, ething->msv);
 		}
 		break;
 	case TYPE_PLANT:
 		{
 			PLA *pthing = &thing->sp.plant;
-			notifyf(REF(player), "plant plid %u size %u.", pthing->plid, pthing->size);
+			notifyf(player, "plant plid %u size %u.", pthing->plid, pthing->size);
 		}
 		break;
 	case TYPE_THING:
 		/* print location if player can link to it */
-		if (thing->location != NOTHING && controls(REF(player), thing->location)) {
-			snprintf(buf, sizeof(buf), "Location: %s", unparse_object(REF(player), thing->location));
-			notify(REF(player), buf);
+		if (thing->location && controls(player, thing->location)) {
+			snprintf(buf, sizeof(buf), "Location: %s", unparse_object(player, thing->location));
+			notify(player, buf);
 		}
 		break;
 	case TYPE_ENTITY:
 		{
 			ENT *ething = &thing->sp.entity;
 
-			snprintf(buf, sizeof(buf), "Home: %s", unparse_object(REF(player), ething->home));
-			notify(REF(player), buf);
-			notifyf(REF(player), "hp: %d/%d entity flags: %d", ething->hp, HP_MAX(REF(thing)), ething->flags);
+			snprintf(buf, sizeof(buf), "Home: %s", unparse_object(player, ething->home));
+			notify(player, buf);
+			notifyf(player, "hp: %d/%d entity flags: %d", ething->hp, HP_MAX(ething), ething->flags);
 
 			/* print location if player can link to it */
-			if (thing->location != NOTHING && controls(REF(player), thing->location)) {
-				snprintf(buf, sizeof(buf), "Location: %s", unparse_object(REF(player), thing->location));
-				notify(REF(player), buf);
+			if (thing->location && controls(player, thing->location)) {
+				snprintf(buf, sizeof(buf), "Location: %s", unparse_object(player, thing->location));
+				notify(player, buf);
 			}
 		}
 		break;
@@ -350,23 +345,23 @@ do_examine(command_t *cmd)
 void
 do_score(command_t *cmd)
 {
-	dbref player = cmd->player;
-	OBJ *o = OBJECT(player);
+	OBJ *player = object_get(cmd->player);
 	char buf[BUFFER_LEN];
 
-	snprintf(buf, sizeof(buf), "You have %d %s.", o->value,
-			o->value == 1 ? PENNY : PENNIES);
+	snprintf(buf, sizeof(buf), "You have %d %s.", player->value,
+			player->value == 1 ? PENNY : PENNIES);
 	notify(player, buf);
 }
 
 void
 do_inventory(command_t *cmd)
 {
-	dbref player = cmd->player;
-	dbref thing;
+	OBJ *player = object_get(cmd->player),
+	    *thing;
 
         if (web_look(player, player)) {
-                if ((thing = OBJECT(player)->contents) == NOTHING) {
+		thing = player->contents;
+                if (!thing) {
                         notify(player, "You aren't carrying anything.");
                 } else {
                         notify(player, "You are carrying:");
@@ -380,7 +375,7 @@ do_inventory(command_t *cmd)
 }
 
 void
-display_objinfo(dbref player, dbref obj, int output_type)
+display_objinfo(OBJ *player, OBJ *obj, int output_type)
 {
 	char buf[BUFFER_LEN];
 	char buf2[BUFFER_LEN];
@@ -389,16 +384,24 @@ display_objinfo(dbref player, dbref obj, int output_type)
 
 	switch (output_type) {
 	case 1:					/* owners */
-		snprintf(buf, sizeof(buf), "%-38.512s  %.512s", buf2, unparse_object(player, OBJECT(obj)->owner));
+		snprintf(buf, sizeof(buf), "%-38.512s  %.512s", buf2, unparse_object(player, obj->owner));
 		break;
 	case 2:					/* links */
-		switch (OBJECT(obj)->type) {
+		switch (obj->type) {
 		case TYPE_ROOM:
-			snprintf(buf, sizeof(buf), "%-38.512s  %.512s", buf2,
-					unparse_object(player, ROOM(obj)->dropto));
+			{
+				ROO *robj = &obj->sp.room;
+				snprintf(buf, sizeof(buf), "%-38.512s  %.512s", buf2,
+						unparse_object(player, robj->dropto));
+			}
+
 			break;
 		case TYPE_ENTITY:
-			snprintf(buf, sizeof(buf), "%-38.512s  %.512s", buf2, unparse_object(player, ENTITY(obj)->home));
+			{
+				ENT *eobj = &obj->sp.entity;
+				snprintf(buf, sizeof(buf), "%-38.512s  %.512s", buf2, unparse_object(player, eobj->home));
+			}
+
 			break;
 		default:
 			snprintf(buf, sizeof(buf), "%-38.512s  %.512s", buf2, "N/A");
@@ -407,7 +410,7 @@ display_objinfo(dbref player, dbref obj, int output_type)
 		break;
 	case 3:					/* locations */
 		snprintf(buf, sizeof(buf), "%-38.512s  %.512s", buf2,
-				unparse_object(player, OBJECT(obj)->location));
+				unparse_object(player, obj->location));
 		break;
 	case 4:
 		return;
@@ -426,7 +429,8 @@ display_objinfo(dbref player, dbref obj, int output_type)
 void
 do_find(command_t *cmd)
 {
-	dbref player = cmd->player;
+	OBJ *player = object_get(cmd->player);
+	ENT *eplayer = &player->sp.entity;
 	const char *name = cmd->argv[1];
 	dbref i;
 	char buf[BUFFER_LEN + 2];
@@ -440,9 +444,10 @@ do_find(command_t *cmd)
 		notifyf(player, "You don't have enough %s.", PENNIES);
 	} else {
 		for (i = 0; i < db_top; i++) {
-			if (((ENTITY(OBJECT(player)->owner)->flags & EF_WIZARD) || OBJECT(i)->owner == OBJECT(player)->owner) &&
-				OBJECT(i)->name && (!*name || equalstr(buf, (char *) OBJECT(i)->name))) {
-				display_objinfo(player, i, 0);
+			OBJ *oi = object_get(i);
+			if (((eplayer->flags & EF_WIZARD) || oi->owner == player->owner) &&
+				oi->name && (!*name || equalstr(buf, (char *) oi->name))) {
+				display_objinfo(player, oi, 0);
 				total++;
 			}
 		}
@@ -455,17 +460,20 @@ do_find(command_t *cmd)
 void
 do_owned(command_t *cmd)
 {
-	dbref player = cmd->player;
+	OBJ *player = object_get(cmd->player);
+	ENT *eplayer = &player->sp.entity;
 	const char *name = cmd->argv[1];
-	dbref victim, i;
+	OBJ *victim;
+	dbref i;
 	int total = 0;
 
 	if (!payfor(player, LOOKUP_COST)) {
 		notifyf(player, "You don't have enough %s.", PENNIES);
 		return;
 	}
-	if ((ENTITY(OBJECT(player)->owner)->flags & EF_WIZARD) && *name) {
-		if ((victim = lookup_player(name)) == NOTHING) {
+	if ((eplayer->flags & EF_WIZARD) && *name) {
+		victim = lookup_player(name);
+		if (!victim) {
 			notify(player, "I couldn't find that player.");
 			return;
 		}
@@ -473,8 +481,9 @@ do_owned(command_t *cmd)
 		victim = player;
 
 	for (i = 0; i < db_top; i++) {
-		if (OBJECT(i)->owner == OBJECT(victim)->owner) {
-			display_objinfo(player, i, 0);
+		OBJ *oi = object_get(i);
+		if (oi->owner == victim->owner) {
+			display_objinfo(player, oi, 0);
 			total++;
 		}
 	}
@@ -485,29 +494,28 @@ do_owned(command_t *cmd)
 void
 do_contents(command_t *cmd)
 {
-	OBJ *player = OBJECT(cmd->player);
+	OBJ *player = object_get(cmd->player);
 	const char *name = cmd->argv[1];
-	dbref i;
-	OBJ *thing;
+	OBJ *oi, *thing;
 	int total = 0;
 
 	if (*name == '\0') {
-		thing = OBJECT(player->location);
+		thing = player->location;
 	} else if (!(thing = ematch_all(player, name))) {
-		notify(REF(player), NOMATCH_MESSAGE);
+		notify(player, NOMATCH_MESSAGE);
 		return;
 	}
 
-	if (!controls(player->owner, REF(thing))) {
-		notify(REF(player), "Permission denied. (You can't get the contents of something you don't control)");
+	if (!controls(player, thing)) {
+		notify(player, "Permission denied. (You can't get the contents of something you don't control)");
 		return;
 	}
-	DOLIST(i, thing->contents) {
-		display_objinfo(REF(player), i, 0);
+	DOLIST(oi, thing->contents) {
+		display_objinfo(player, oi, 0);
 		total++;
 	}
-	notify(REF(player), "***End of List***");
-	notifyf(REF(player), "%d objects found.", total);
+	notify(player, "***End of List***");
+	notifyf(player, "%d objects found.", total);
 }
 
 static const char *look_c_version = "$RCSfile$ $Revision: 1.29 $";

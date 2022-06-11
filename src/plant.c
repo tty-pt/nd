@@ -242,9 +242,7 @@ plants_shuffle(struct plant_data *pd, morton_t v)
 }
 
 static inline void
-_plants_add(dbref player, dbref where,
-		struct plant_data *pd,
-		coord_t tmp)
+_plants_add(OBJ *where, struct plant_data *pd, coord_t tmp)
 {
 	register int i, n;
 
@@ -255,15 +253,15 @@ _plants_add(dbref player, dbref where,
 			continue;
 
                 struct object_skeleton *obj_skel = PLANT_SKELETON(pd->id[i]);
-
-                dbref plant = object_add(*obj_skel, where);
-		PLANT(plant)->plid = pd->id[i];
-		PLANT(plant)->size = n;
+                OBJ *plant = object_add(*obj_skel, where);
+		PLA *pplant = &plant->sp.plant;
+		pplant->plid = pd->id[i];
+		pplant->size = n;
         }
 }
 
 void
-plants_add(dbref player, dbref where,
+plants_add(OBJ *where,
 		struct plant_data *pd,
 		morton_t ty, coord_t tmp,
 		ucoord_t rn)
@@ -271,12 +269,10 @@ plants_add(dbref player, dbref where,
 	/* struct plant_data epd; */
 
         if (pd->n)
-                _plants_add(player, where,
-				pd, tmp);
+                _plants_add(where, pd, tmp);
 
 	/* plants_noise(&epd, ty, tmp, rn, PLANT_EXTRA); */
 
         /* if (epd.n) */
-                /* _plants_add(cmd, where, */
-	/* 			&epd, tmp); */
+                /* _plants_add(where, &epd, tmp); */
 }

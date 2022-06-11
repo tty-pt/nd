@@ -9,14 +9,10 @@
 #define ARMORSET_LIST(s) & s ## _helmet_drop, \
 	& s ## _chest_drop, & s ## _pants_drop
 
-struct wts {
-	const char *a, *b;
-};
-
 extern struct wts phys_wts[];
 
-int equip_affect(dbref who, dbref eq);
-dbref unequip(dbref player, unsigned eql);
-int equip(dbref player, dbref eq);
+int equip_affect(OBJ *who, OBJ *eq);
+dbref unequip(OBJ *player, unsigned eql);
+int equip(OBJ *player, OBJ *eq);
 
 #endif

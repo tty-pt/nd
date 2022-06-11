@@ -5,19 +5,20 @@
 
 #include "externs.h"
 
-#define DRINK_VALUE(x) (1 << 14)
-#define FOOD_VALUE(x) (1 << (16 - CONSUM(x)->food))
+#define DRINK_VALUE (1 << 14)
+#define FOOD_VALUE(x) (1 << (16 - x->food))
 
 void
 do_consume(command_t *cmd)
 {
-	dbref player = cmd->player;
+	OBJ *player = object_get(cmd->player);
+	ENT *eplayer = &player->sp.entity;
 	const char *name = cmd->argv[1];
 	OBJ *vial;
 	CON *cvial;
 	int aux;
 
-	if (!*name || !(vial = ematch_mine(OBJECT(player), name))) {
+	if (!*name || !(vial = ematch_mine(player, name))) {
 		notify(player, "Consume what?");
 		return;
 	}
@@ -35,29 +36,29 @@ do_consume(command_t *cmd)
 	}
 
 	if (cvial->drink) {
-		aux = ENTITY(player)->thirst - DRINK_VALUE(REF(vial));
-		ENTITY(player)->thirst = aux < 0 ? 0 : aux;
+		aux = eplayer->thirst - DRINK_VALUE;
+		eplayer->thirst = aux < 0 ? 0 : aux;
 	}
 
 	if (cvial->food) {
-		aux = ENTITY(player)->hunger - FOOD_VALUE(REF(vial));
-		ENTITY(player)->hunger = aux < 0 ? 0 : aux;
+		aux = eplayer->hunger - FOOD_VALUE(cvial);
+		eplayer->hunger = aux < 0 ? 0 : aux;
 	}
 
 	cvial->quantity--;
 	notify_wts(player, "consume", "consumes", " %s", vial->name);
 
 	if (!cvial->quantity && !cvial->capacity)
-		recycle(player, REF(vial));
+		recycle(player, vial);
 }
 
 void
 do_fill(command_t *cmd)
 {
-	dbref player = cmd->player;
+	OBJ *player = object_get(cmd->player);
 	const char *vial_s = cmd->argv[1];
 	const char *source_s = cmd->argv[2];
-	OBJ *vial = ematch_mine(OBJECT(player), vial_s);
+	OBJ *vial = ematch_mine(player, vial_s);
 	CON *cvial;
 	unsigned m;
 
@@ -83,7 +84,7 @@ do_fill(command_t *cmd)
 		return;
 	}
 
-	OBJ *source = ematch_near(OBJECT(player), source_s);
+	OBJ *source = ematch_near(player, source_s);
 
 	if (!source || source->type != TYPE_CONSUMABLE) {
 		notify(player, "Invalid source.");

@@ -1,14 +1,15 @@
 #ifndef SPELL_H
 #define SPELL_H
 
+#include "object.h"
 #include "geometry.h"
 #include "stat.h"
 #include "command.h"
 
 #define ELEMENT(idx) (&element_map[idx])
 
-#define ELEMENT_NEXT(ref, type) \
-	element_next(ref, EFFECT(ENTITY(ref), type).mask)
+#define ELEMENT_NEXT(ent, type) \
+	element_next(ent, EFFECT(ent, type).mask)
 
 typedef struct {
 	char *color;
@@ -17,7 +18,7 @@ typedef struct {
 
 extern element_t element_map[];
 
-enum element element_next(dbref ref, register unsigned char a);
+enum element element_next(ENT *ref, register unsigned char a);
 
 #define DEBUF_DURATION(ra) 20 * (RARE_MAX - ra) / RARE_MAX
 #define DEBUF_DMG(sp_dmg, duration) ((long) 2 * sp_dmg) / duration
@@ -60,36 +61,13 @@ enum spell_type {
 	SPELL_STONE_SKIN,
 };
 
-struct spell_skeleton {
-	struct object_skeleton o;
-	enum element element;
-	unsigned char ms, ra, y, flags;
-};
-
-struct debuf { // one for each type of spell
-	struct spell_skeleton *_sp;
-	unsigned duration;
-	short val;
-};
-
-struct spell {
-	struct spell_skeleton *_sp;
-	unsigned cost; 
-	unsigned short val;
-};
-
-typedef struct {
-	short value;
-	unsigned char mask;
-} effect_t;
-
-void spells_init(struct spell sps[8], dbref player);
-void debuf_end(dbref who, unsigned i);
-void debufs_end(dbref who);
-int debufs_process(dbref who);
-void debuf_notify(dbref who, struct debuf *d, short val);
-int spell_cast(dbref attacker, dbref target, unsigned slot);
-int spells_cast(dbref caster, dbref target);
-int cspell_heal(dbref attacker, dbref target, short amt);
+void spells_init(struct spell sps[8], OBJ *player);
+void debuf_end(OBJ *player, unsigned i);
+void debufs_end(OBJ *player);
+int debufs_process(OBJ *player);
+void debuf_notify(OBJ *player, struct debuf *d, short val);
+int spell_cast(OBJ *player, OBJ *target, unsigned slot);
+int spells_cast(OBJ *player, OBJ *target);
+int cspell_heal(OBJ *player, OBJ *target, short amt);
 
 #endif

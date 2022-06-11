@@ -26,7 +26,7 @@ inline OBJ *
 ematch_here(OBJ *player, const char *str)
 {
 	if (!strcmp(str, "here"))
-		return OBJECT(player->location);
+		return player->location;
 	else
 		return NULL;
 }
@@ -40,7 +40,7 @@ ematch_mine(OBJ *player, const char *str)
 inline OBJ *
 ematch_near(OBJ *player, const char *str)
 {
-	return ematch_at(player, OBJECT(player->location), str);
+	return ematch_at(player, player->location, str);
 }
 
 /* all ematch

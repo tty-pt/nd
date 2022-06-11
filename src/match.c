@@ -20,14 +20,14 @@
 OBJ *
 ematch_player(OBJ *player, const char *name)
 {
-	dbref match;
+	OBJ *match;
 	const char *p;
 
-	if (*name == LOOKUP_TOKEN && payfor(player->owner, LOOKUP_COST)) {
+	if (*name == LOOKUP_TOKEN && payfor(player, LOOKUP_COST)) {
 		for (p = name + 1; isspace(*p); p++) ;
-		if ((match = lookup_player(p)) != NOTHING) {
-			return OBJECT(match);
-		}
+		match = lookup_player(p);
+		if (match)
+			return match;
 	}
 
 	return NULL;
@@ -65,7 +65,7 @@ ematch_absolute(const char *name)
 		if (match < 0 || match >= db_top)
 			return NULL;
 		else
-			return OBJECT(match);
+			return object_get(match);
 	} else
 		return NULL;
 }
@@ -89,7 +89,7 @@ string_match(register const char *src, register const char *sub)
 }
 
 static OBJ *
-ematch_list(OBJ *player, dbref first, const char *name)
+ematch_list(OBJ *player, OBJ *first, const char *name)
 {
 	OBJ *absolute;
 	ENT *mob = &player->sp.entity;
@@ -97,15 +97,15 @@ ematch_list(OBJ *player, dbref first, const char *name)
 	mob->select = 0;
 
 	absolute = ematch_absolute(name);
-	if (!controls(player->owner, REF(absolute)))
+	if (!controls(player, absolute))
 		absolute = NULL;
 
 	DOLIST(first, first) {
-		if (OBJECT(first) == absolute) {
-			return OBJECT(first);
-		} else if (string_match(OBJECT(first)->name, name)) {
+		if (first == absolute) {
+			return first;
+		} else if (string_match(first->name, name)) {
 			if (nth <= 0)
-				return OBJECT(first);
+				return first;
 			nth--;
 		}
 	}
@@ -119,7 +119,7 @@ ematch_at(OBJ *player, OBJ *where, const char *name) {
 
 	what = ematch_absolute(name);
 
-	if (what && what->location == REF(where))
+	if (what && what->location == where)
 		return what;
 
 	return ematch_list(player, where->contents, name);

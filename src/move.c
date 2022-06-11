@@ -18,19 +18,19 @@
 #include "web.h"
 
 /* remove the first occurence of what in list headed by first */
-static inline dbref
-remove_first(dbref first, dbref what)
+static inline OBJ *
+remove_first(OBJ *first, OBJ *what)
 {
-	dbref prev;
+	OBJ *prev;
 
 	/* special case if it's the first one */
 	if (first == what) {
-		return OBJECT(first)->next;
+		return first->next;
 	} else {
 		/* have to find it */
 		DOLIST(prev, first) {
-			if (OBJECT(prev)->next == what) {
-				OBJECT(prev)->next = OBJECT(what)->next;
+			if (prev->next == what) {
+				prev->next = what->next;
 				return first;
 			}
 		}
@@ -39,54 +39,53 @@ remove_first(dbref first, dbref what)
 }
 
 void
-moveto(dbref what, dbref where)
+moveto(OBJ *what, OBJ *where)
 {
-	dbref loc;
+	OBJ *loc;
 
 	/* do NOT move garbage */
-	CBUG(what == NOTHING);
-	CBUG(OBJECT(what)->type == TYPE_GARBAGE);
+	CBUG(!what);
+	CBUG(what->type == TYPE_GARBAGE);
 
-	/* remove what from old loc */
-	loc = OBJECT(what)->location;
-        if (loc != NOTHING) {
+	loc = what->location;
+
+        if (loc) {
                 web_content_out(loc, what);
-		OBJECT(loc)->contents = remove_first(OBJECT(loc)->contents, what);
+		loc->contents = remove_first(loc->contents, what);
         }
 
 	/* test for special cases */
-	switch (where) {
-	case NOTHING:
-		OBJECT(what)->location = NOTHING;
-		return;					/* NOTHING doesn't have contents */
+	if (!where) {
+		what->location = NULL;
+		return;
 	}
 
 	if (parent_loop_check(what, where)) {
-		switch (OBJECT(what)->type) {
+		switch (what->type) {
 		case TYPE_ENTITY:
-			where = ENTITY(what)->home;
+			where = what->sp.entity.home;
 			break;
 		case TYPE_PLANT:
 		case TYPE_CONSUMABLE:
 		case TYPE_EQUIPMENT:
 		case TYPE_THING:
 		case TYPE_ROOM:
-			where = GLOBAL_ENVIRONMENT;
+			where = object_get(GLOBAL_ENVIRONMENT);
 			break;
 		}
 	}
 
-        if (OBJECT(what)->type == TYPE_ENTITY) {
+        if (what->type == TYPE_ENTITY) {
+		ENT *ewhat = &what->sp.entity;
                 dialog_stop(what);
-		if ((ENTITY(what)->flags & EF_SITTING))
+		if ((ewhat->flags & EF_SITTING))
 			stand(what);
 	}
 
 	/* now put what in where */
-	PUSH(what, OBJECT(where)->contents);
-	OBJECT(what)->location = where;
+	PUSH(what, where->contents);
+	what->location = where;
 	web_content_in(where, what);
-        CBUG(getloc(what) != where);
 }
 
 /* What are we doing here?  Quick explanation - we want to prevent
@@ -104,28 +103,25 @@ moveto(dbref what, dbref where)
 */
 
 int
-location_loop_check(dbref source, dbref dest)
+location_loop_check(OBJ *source, OBJ *dest)
 {   
   unsigned int level = 0;
   unsigned int place = 0;
-  dbref pstack[MAX_PARENT_DEPTH+2];
+  OBJ *pstack[MAX_PARENT_DEPTH+2];
 
   if (source == dest) {
     return 1;
   }
 
-  if (dest == NOTHING)
+  if (!dest)
 	  return 0;
 
   pstack[0] = source;
   pstack[1] = dest;
 
   while (level < MAX_PARENT_DEPTH) {
-    dest = getloc(dest);
-    if (dest == NOTHING) {
-      return 0;
-    }
-    if (dest == (dbref) 0) {   /* Reached the top of the chain. */
+    dest = dest->location;
+    if (!dest || object_ref(dest) == (dbref) 0) {   /* Reached the top of the chain. */
       return 0;
     }
     /* Check to see if we've found this item before.. */
@@ -142,11 +138,11 @@ location_loop_check(dbref source, dbref dest)
 
 // TODO why is this here?
 int
-parent_loop_check(dbref source, dbref dest)
+parent_loop_check(OBJ *source, OBJ *dest)
 {   
   unsigned int level = 0;
   unsigned int place = 0;
-  dbref pstack[MAX_PARENT_DEPTH+2];
+  OBJ *pstack[MAX_PARENT_DEPTH+2];
 
   if (location_loop_check(source, dest)) {
 	  return 1;
@@ -160,10 +156,9 @@ parent_loop_check(dbref source, dbref dest)
 
   while (level < MAX_PARENT_DEPTH) {
     dest = getparent(dest);
-    if (dest == NOTHING) {
+    if (!dest)
       return 0;
-    }
-    if (dest == (dbref) 0) {   /* Reached the top of the chain. */
+    if (object_ref(dest) == (dbref) 0) {   /* Reached the top of the chain. */
       return 0;
     }
     /* Check to see if we've found this item before.. */
@@ -179,15 +174,14 @@ parent_loop_check(dbref source, dbref dest)
 }
 
 void
-enter_room(dbref player, dbref loc)
+enter_room(OBJ *player, OBJ *loc)
 {
-	dbref old;
+	OBJ *old = player->location;
 
-	old = OBJECT(player)->location;
-	onotifyf(player, "%s has left.", OBJECT(player)->name);
+	onotifyf(player, "%s has left.", player->name);
 	moveto(player, loc);
 	geo_clean(player, old);
-	onotifyf(player, "%s has arrived.", OBJECT(player)->name);
+	onotifyf(player, "%s has arrived.", player->name);
 	mobs_aggro(player);
 	look_around(player);
 }
@@ -195,7 +189,8 @@ enter_room(dbref player, dbref loc)
 void
 do_get(command_t *cmd)
 {
-	OBJ *player = OBJECT(cmd->player);
+	OBJ *player = object_get(cmd->player);
+	ENT *eplayer = &player->sp.entity;
 	const char *what = cmd->argv[1];
 	const char *obj = cmd->argv[2];
 	OBJ *thing, *cont;
@@ -206,15 +201,15 @@ do_get(command_t *cmd)
 			&& !(thing = ematch_mine(player, what))
 	   )
 	{
-		notify(REF(player), NOMATCH_MESSAGE);
+		notify(player, NOMATCH_MESSAGE);
 		return;
 	}
 
 	cont = thing;
 
 	// is this needed?
-	if (thing->location != player->location && !(ENTITY(player->owner)->flags & EF_WIZARD)) {
-		notify(REF(player), "That is too far away from you.");
+	if (thing->location != player->location && !(eplayer->flags & EF_WIZARD)) {
+		notify(player, "That is too far away from you.");
 		return;
 	}
 
@@ -223,16 +218,16 @@ do_get(command_t *cmd)
 		if (!thing)
 			return;
 		if (cont->type == TYPE_ENTITY) {
-			notify(REF(player), "You can't steal from the living.");
+			notify(player, "You can't steal from the living.");
 			return;
 		}
 	}
-	if (thing->location == REF(player)) {
-		notify(REF(player), "You already have that!");
+	if (thing->location == player) {
+		notify(player, "You already have that!");
 		return;
 	}
-	if (parent_loop_check(REF(thing), REF(player))) {
-		notify(REF(player), "You can't pick yourself up by your bootstraps!");
+	if (parent_loop_check(thing, player)) {
+		notify(player, "You can't pick yourself up by your bootstraps!");
 		return;
 	}
 	switch (thing->type) {
@@ -244,22 +239,22 @@ do_get(command_t *cmd)
 		if (obj && *obj) {
 			cando = 1;
 		} else {
-			if (thing->owner != REF(player)
+			if (thing->owner != player
 					&& (thing->type == TYPE_ENTITY || thing->type == TYPE_PLANT))
 			{
-				notify(REF(player), "You can't pick that up.");
+				notify(player, "You can't pick that up.");
 				break;
 			}
 
-			cando = can_doit(REF(player), REF(thing), "You can't pick that up.");
+			cando = can_doit(player, thing, "You can't pick that up.");
 		}
 		if (cando) {
-			moveto(REF(thing), REF(player));
-			notify(REF(player), "Taken.");
+			moveto(thing, player);
+			notify(player, "Taken.");
 		}
 		break;
 	default:
-		notify(REF(player), "You can't take that!");
+		notify(player, "You can't take that!");
 		break;
 	}
 }
@@ -267,28 +262,25 @@ do_get(command_t *cmd)
 void
 do_drop(command_t *cmd)
 {
-	OBJ *player = OBJECT(cmd->player);
+	OBJ *player = object_get(cmd->player);
 	const char *name = cmd->argv[1];
 	const char *obj = cmd->argv[2];
-	dbref loc;
-	OBJ *thing, *cont;
-
-	if ((loc = player->location) == NOTHING)
-		return;
+	OBJ *loc = player->location,
+	    *thing, *cont;
 
 	if (!(thing = ematch_mine(player, name))) {
-		notify(REF(player), NOMATCH_MESSAGE);
+		notify(player, NOMATCH_MESSAGE);
 		return;
 	}
 
-	cont = OBJECT(loc);
+	cont = loc;
 	if (
 			obj && *obj
 			&& !(cont = ematch_mine(player, obj))
 			&& !(cont = ematch_near(player, obj))
 	   )
 	{
-		notify(REF(player), "I don't know what you mean.");
+		notify(player, "I don't know what you mean.");
 		return;
 	}
         
@@ -298,36 +290,33 @@ do_drop(command_t *cmd)
 	case TYPE_ENTITY:
 	case TYPE_THING:
 		if (cont->type != TYPE_ROOM && cont->type != TYPE_ENTITY &&
-			!is_item(REF(cont))) {
-			notify(REF(player), "You can't put anything in that.");
+			!is_item(cont)) {
+			notify(player, "You can't put anything in that.");
 			break;
 		}
-		if (parent_loop_check(REF(thing), REF(cont))) {
-			notify(REF(player), "You can't put something inside of itself.");
+		if (parent_loop_check(thing, cont)) {
+			notify(player, "You can't put something inside of itself.");
 			break;
 		}
 
-		int immediate_dropto = (cont->type == TYPE_ROOM &&
-				cont->sp.room.dropto != NOTHING
+		int immediate_dropto = (cont->type == TYPE_ROOM && cont->sp.room.dropto);
 
-				);
+		moveto(thing, immediate_dropto ? cont->sp.room.dropto : cont);
 
-		moveto(REF(thing), immediate_dropto ? cont->sp.room.dropto : REF(cont));
-
-		if (is_item(REF(cont))) {
-			notify(REF(player), "Put away.");
+		if (is_item(cont)) {
+			notify(player, "Put away.");
 			return;
 		} else if (cont->type == TYPE_ENTITY) {
-			notifyf(REF(cont), "%s hands you %s", player->name, thing->name);
-			notifyf(REF(player), "You hand %s to %s", thing->name, cont->name);
+			notifyf(cont, "%s hands you %s", player->name, thing->name);
+			notifyf(player, "You hand %s to %s", thing->name, cont->name);
 			return;
 		}
 
-		notify(REF(player), "Dropped.");
-		onotifyf(REF(player), "%s drops %s.", player->name, thing->name);
+		notify(player, "Dropped.");
+		onotifyf(player, "%s drops %s.", player->name, thing->name);
 		break;
 	default:
-		notify(REF(player), "You can't drop that.");
+		notify(player, "You can't drop that.");
 		break;
 	}
 }
@@ -335,14 +324,14 @@ do_drop(command_t *cmd)
 void
 do_recycle(command_t *cmd)
 {
-	dbref player = cmd->player;
+	OBJ *player = object_get(cmd->player);
 	const char *name = cmd->argv[1];
 	OBJ *thing;
 
 	if (
 			!(thing = ematch_absolute(name))
-			&& !(thing = ematch_near(OBJECT(player), name))
-			&& !(thing = ematch_mine(OBJECT(player), name))
+			&& !(thing = ematch_near(player, name))
+			&& !(thing = ematch_mine(player, name))
 	   )
 	{
 		notify(player, NOMATCH_MESSAGE);
@@ -356,12 +345,12 @@ do_recycle(command_t *cmd)
 		return;
 	}
 #endif
-	if (!controls(player, REF(thing))) {
+	if (!controls(player, thing)) {
 		notify(player, "You can not do that.");
 	} else {
 		switch (thing->type) {
 		case TYPE_ROOM:
-			if (thing->owner != OBJECT(player)->owner) {
+			if (thing->owner != player->owner) {
 				notify(player, "Permission denied. (You don't control the room you want to recycle)");
 				return;
 			}
@@ -378,7 +367,7 @@ do_recycle(command_t *cmd)
 		case TYPE_CONSUMABLE:
 		case TYPE_EQUIPMENT:
 		case TYPE_THING:
-			if (thing->owner != OBJECT(player)->owner) {
+			if (thing->owner != player->owner) {
 				notify(player, "Permission denied. (You can't recycle a thing you don't control)");
 				return;
 			}
@@ -396,102 +385,131 @@ do_recycle(command_t *cmd)
 			break;
 		}
 		notifyf(player, "Thank you for recycling %.512s (#%d).", thing->name, thing);
-		recycle(player, REF(thing));
+		recycle(player, thing);
 	}
 }
 
 void
-recycle(dbref player, dbref thing)
+recycle(OBJ *player, OBJ *thing)
 {
-	extern dbref recyclable;
+	extern OBJ *recyclable;
 	static int depth = 0;
-	dbref first;
-	dbref rest;
+	OBJ *first, *rest;
 	int looplimit;
 
+	OBJ *owner = thing->owner;
+	ENT *eowner = &owner->sp.entity;
+
 	depth++;
-	switch (OBJECT(thing)->type) {
+	switch (thing->type) {
 	case TYPE_ROOM:
-		if (!(ENTITY(OBJECT(thing)->owner)->flags & EF_WIZARD))
-			OBJECT(OBJECT(thing)->owner)->value += ROOM_COST;
-		if (ROOM(thing)->flags & RF_TEMP)
-			for (first = OBJECT(thing)->contents; first != NOTHING; first = rest) {
-				rest = OBJECT(first)->next;
-				if (OBJECT(first)->type != TYPE_ENTITY || !(ENTITY(first)->flags & EF_PLAYER))
+		{
+			ROO *rthing = &thing->sp.room;
+			if (!(eowner->flags & EF_WIZARD))
+				owner->value += ROOM_COST;
+			if (rthing->flags & RF_TEMP)
+				for (first = thing->contents; first; first = rest) {
+					rest = first->next;
+
+					if (first->type == TYPE_ENTITY) {
+						ENT *efirst = &first->sp.entity;
+						if (efirst->flags & EF_PLAYER)
+							continue;
+					}
+
 					recycle(player, first);
-			}
-		anotifyf(thing, "You feel a wrenching sensation...");
-		map_delete(thing);
+				}
+			anotifyf(thing, "You feel a wrenching sensation...");
+			map_delete(thing);
+		}
+
 		break;
 	case TYPE_PLANT:
 	case TYPE_CONSUMABLE:
 	case TYPE_EQUIPMENT:
 	case TYPE_THING:
-		if (!(ENTITY(OBJECT(thing)->owner)->flags & EF_WIZARD))
-			OBJECT(OBJECT(thing)->owner)->value += OBJECT(thing)->value;
-		if (ROOM(getloc(thing))->flags & RF_TEMP) {
-			for (first = OBJECT(thing)->contents; first != NOTHING; first = rest) {
-				rest = OBJECT(first)->next;
+		if (!(eowner->flags & EF_WIZARD))
+			owner->value += thing->value;
+
+		OBJ *thingloc = thing->location;
+
+		if (thingloc->type != TYPE_ROOM)
+			break;
+
+		ROO *rthingloc = &thingloc->sp.room;
+
+		if (rthingloc->flags & RF_TEMP) {
+			for (first = thing->contents; first; first = rest) {
+				rest = first->next;
 				recycle(player, first);
 			}
 		}
+
 		break;
 	}
 
-	for (rest = 0; rest < db_top; rest++) {
-		switch (OBJECT(rest)->type) {
+	for (rest = object_get(0); rest < object_get(db_top); rest++) {
+		switch (rest->type) {
 		case TYPE_ROOM:
-			if (ROOM(rest)->dropto == thing)
-				ROOM(rest)->dropto = NOTHING;
-			if (OBJECT(rest)->owner == thing)
-				OBJECT(rest)->owner = GOD;
+			{
+				ROO *rrest = &rest->sp.room;
+				if (rrest->dropto == thing)
+					rrest->dropto = NULL;
+				if (rest->owner == thing)
+					rest->owner = object_get(GOD);
+			}
+
 			break;
 		case TYPE_PLANT:
 		case TYPE_CONSUMABLE:
 		case TYPE_EQUIPMENT:
 		case TYPE_THING:
-			if (OBJECT(rest)->owner == thing)
-				OBJECT(rest)->owner = GOD;
+			if (rest->owner == thing)
+				rest->owner = object_get(GOD);
 			break;
 		case TYPE_ENTITY:
-			if (ENTITY(rest)->home == thing)
-				ENTITY(rest)->home = PLAYER_START;
+			{
+				ENT *erest = &rest->sp.entity;
+				if (erest->home == thing)
+					erest->home = object_get(PLAYER_START);
+			}
+
 			break;
 		}
-		if (OBJECT(rest)->contents == thing)
-			OBJECT(rest)->contents = OBJECT(thing)->next;
-		if (OBJECT(rest)->next == thing)
-			OBJECT(rest)->next = OBJECT(thing)->next;
+		if (rest->contents == thing)
+			rest->contents = thing->next;
+		if (rest->next == thing)
+			rest->next = thing->next;
 	}
 
 	looplimit = db_top;
-	while ((looplimit-- > 0) && ((first = OBJECT(thing)->contents) != NOTHING)) {
-		if (OBJECT(first)->type == TYPE_ENTITY && (ENTITY(first)->flags & EF_PLAYER)) {
-			enter_room(first, ENTITY(first)->home);
-
-			/* If the room is set to drag players back, there'll be no
-			 * reasoning with it.  DRAG the player out.
-			 */
-			if (OBJECT(first)->location == thing) {
-				notifyf(player, "Escaping teleport loop!  Going home.");
-				moveto(first, PLAYER_START);
+	while ((looplimit-- > 0) && (first = thing->contents)) {
+		if (first->type == TYPE_ENTITY) {
+			ENT *efirst = &first->sp.entity;
+			if (efirst->flags & EF_PLAYER) {
+				enter_room(first, efirst->home);
+				if (first->location == thing) {
+					notifyf(player, "Escaping teleport loop!  Going home.");
+					moveto(first, object_get(PLAYER_START));
+				}
+				continue;
 			}
-		} else {
-                        recycle(player, first);
 		}
+
+		recycle(player, first);
 	}
 
 
-	moveto(thing, NOTHING);
+	moveto(thing, NULL);
 
 	depth--;
 
 	db_free_object(thing);
 	db_clear_object(thing);
-	OBJECT(thing)->name = (char*) strdup("<garbage>");
-	OBJECT(thing)->description = (char *) strdup("<recyclable>");
-	OBJECT(thing)->type = TYPE_GARBAGE;
-	OBJECT(thing)->next = recyclable;
+	thing->name = (char*) strdup("<garbage>");
+	thing->description = (char *) strdup("<recyclable>");
+	thing->type = TYPE_GARBAGE;
+	thing->next = recyclable;
 	recyclable = thing;
 }
 static const char *move_c_version = "$RCSfile$ $Revision: 1.38 $";

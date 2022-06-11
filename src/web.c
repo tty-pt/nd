@@ -22,10 +22,11 @@ web_support(int descr)
 }
 
 int
-web_geo_view(dbref player, char *buf)
+web_geo_view(OBJ *player, char *buf)
 {
+	ENT *eplayer = &player->sp.entity;
 	McpMesg msg;
-	McpFrame *mfr = web_frame(ENTITY(player)->fd);
+	McpFrame *mfr = web_frame(eplayer->fd);
 	if (!mfr)
                 return 1;
         mcp_mesg_init(&msg, MCP_WEB_PKG, "view");
@@ -51,65 +52,71 @@ web_art(int descr, char const *art)
 }
 
 int
-web_look(dbref player, dbref loc)
+web_look(OBJ *player, OBJ *loc)
 {
+	ENT *eplayer = &player->sp.entity;
         char buf[BUFSIZ];
         char buf2[BUFSIZ];
 	char const *description = "";
-        dbref thing;
+	OBJ *thing;
 	McpMesg msg;
-	McpFrame *mfr = web_frame(ENTITY(player)->fd);
+	McpFrame *mfr = web_frame(eplayer->fd);
 	if (!mfr)
                 return 1;
 
         mcp_mesg_init(&msg, MCP_WEB_PKG, "look");
-        snprintf(buf2, sizeof(buf2), "%d", loc);
+        snprintf(buf2, sizeof(buf2), "%d", object_ref(loc));
         mcp_mesg_arg_append(&msg, "dbref", buf2);
 
-	dbref last_observed = ENTITY(player)->last_observed;
-	if (last_observed != NOTHING)
+	OBJ *last_observed = eplayer->last_observed;
+	if (last_observed)
 		db_obs_remove(last_observed, player);
 
-        if (OBJECT(loc)->type == TYPE_ROOM) {
+        if (loc->type == TYPE_ROOM) {
+		ROO *rloc = &loc->sp.room;
                 mcp_mesg_arg_append(&msg, "room", "1");
-                snprintf(buf, sizeof(buf), "%u", ROOM(loc)->exits);
+                snprintf(buf, sizeof(buf), "%u", rloc->exits);
                 mcp_mesg_arg_append(&msg, "exits", buf);
         } else {
-		if (OBJECT(loc)->type == TYPE_ENTITY && (ENTITY(loc)->flags & EF_SHOP))
-			mcp_mesg_arg_append(&msg, "shop", "1");
+		if (loc->type == TYPE_ENTITY) {
+			ENT *eloc = &loc->sp.entity;
+			if (eloc->flags & EF_SHOP)
+				mcp_mesg_arg_append(&msg, "shop", "1");
+		}
 
-		ENTITY(player)->last_observed = loc;
+		eplayer->last_observed = loc;
 		db_obs_add(loc, player);
 	}
 
-        mcp_mesg_arg_append(&msg, "art", OBJECT(loc)->art);
-        mcp_mesg_arg_append(&msg, "name", OBJECT(loc)->name);
+        mcp_mesg_arg_append(&msg, "art", loc->art);
+        mcp_mesg_arg_append(&msg, "name", loc->name);
         mcp_mesg_arg_append(&msg, "pname", unparse_object(player, loc));
-	if (OBJECT(loc)->description)
-		description = OBJECT(loc)->description;
+	if (loc->description)
+		description = loc->description;
         mcp_mesg_arg_append(&msg, "description", description);
         mcp_frame_output_mesg(mfr, &msg);
         mcp_mesg_clear(&msg);
 
-        if (loc != player && OBJECT(loc)->type == TYPE_ENTITY && !(ENTITY(player)->flags & EF_WIZARD))
+        if (loc != player && loc->type == TYPE_ENTITY && !(eplayer->flags & EF_WIZARD))
                 return 0;
 
 	// use callbacks for mcp like this versus telnet
-        DOLIST(thing, OBJECT(loc)->contents) {
+        DOLIST(thing, loc->contents) {
 		if (thing == player)
 			continue;
+
 		struct icon ico = icon(thing);
 		mcp_mesg_init(&msg, MCP_WEB_PKG, "look-content");
 		mcp_mesg_arg_append(&msg, "loc", buf2);
-		snprintf(buf, sizeof(buf), "%d", thing);
+		snprintf(buf, sizeof(buf), "%d", object_ref(thing));
 		mcp_mesg_arg_append(&msg, "dbref", buf);
-		mcp_mesg_arg_append(&msg, "name", OBJECT(thing)->name);
+		mcp_mesg_arg_append(&msg, "name", thing->name);
 		mcp_mesg_arg_append(&msg, "pname", unparse_object(player, thing));
 		mcp_mesg_arg_append(&msg, "icon", ico.icon);
-		snprintf(buf, sizeof(buf), "%d", OBJECT(thing)->value);
+		snprintf(buf, sizeof(buf), "%d", thing->value);
 		mcp_mesg_arg_append(&msg, "price", buf);
 		snprintf(buf, sizeof(buf), "%d", ico.actions);
-		mcp_mesg_arg_append(&msg, "avatar", OBJECT(thing)->avatar);
+		mcp_mesg_arg_append(&msg, "avatar", thing->avatar);
 		mcp_mesg_arg_append(&msg, "actions", buf);
 		mcp_frame_output_mesg(mfr, &msg);
 		mcp_mesg_clear(&msg);
@@ -118,17 +125,18 @@ web_look(dbref player, dbref loc)
         return 0;
 }
 
-void web_room_mcp(dbref room, void *msg) {
-	dbref tmp;
+void web_room_mcp(OBJ *room, void *msg) {
+	OBJ *tmp;
 
-	for (tmp = OBJECT(room)->contents;
-	     tmp > 0;
-	     tmp = OBJECT(tmp)->next)
+	for (tmp = room->contents;
+	     tmp;
+	     tmp = tmp->next)
 	{
-		if (OBJECT(tmp)->type != TYPE_ENTITY)
+		if (tmp->type != TYPE_ENTITY)
 			continue;
 
-		McpFrame *mfr = web_frame(ENTITY(OBJECT(tmp)->owner)->fd);
+		ENT *etmp = &tmp->sp.entity;
+		McpFrame *mfr = web_frame(etmp->fd);
 
 		if (!mfr)
 			continue;
@@ -137,18 +145,19 @@ void web_room_mcp(dbref room, void *msg) {
 	}
 }
 
-void web_obs_mcp(dbref thing, void *msg) {
-	OBJ *o = OBJECT(thing);
-	struct observer_node *node = o->first_observer;
+void web_obs_mcp(OBJ *thing, void *msg) {
+	struct observer_node *node;
 
-	for (node = o->first_observer; node; node = node->next)
+	for (node = thing->first_observer; node; node = node->next)
 	{
-		dbref tmp = node->who;
+		OBJ *tmp = object_get(node->who);
 
-		if (OBJECT(tmp)->type != TYPE_ENTITY)
+		if (tmp->type != TYPE_ENTITY)
 			continue;
 
-		McpFrame *mfr = web_frame(ENTITY(OBJECT(tmp)->owner)->fd);
+		ENT *etmp = &tmp->sp.entity;
+
+		McpFrame *mfr = web_frame(etmp->fd);
 
 		if (!mfr)
 			continue;
@@ -158,30 +167,30 @@ void web_obs_mcp(dbref thing, void *msg) {
 }
 
 void do_meme(command_t *cmd) {
-        dbref player = cmd->player;
+        OBJ *player = object_get(cmd->player);
         const char *url = cmd->argv[1];
 	McpMesg msg;
         // FIXME should also work in the terminal
         mcp_mesg_init(&msg, MCP_WEB_PKG, "meme");
-        mcp_mesg_arg_append(&msg, "who", OBJECT(player)->name);
+        mcp_mesg_arg_append(&msg, "who", player->name);
         mcp_mesg_arg_append(&msg, "url", url);
-        web_room_mcp(getloc(player), &msg);
+        web_room_mcp(player->location, &msg);
         mcp_mesg_clear(&msg);
 }
 
 void
-web_content_out(dbref loc, dbref thing) {
+web_content_out(OBJ *loc, OBJ *thing) {
 	char buf[BUFSIZ];
 	McpMesg msg;
 
         mcp_mesg_init(&msg, MCP_WEB_PKG, "out");
-	snprintf(buf, BUFSIZ, "%d", loc);
+	snprintf(buf, BUFSIZ, "%d", object_ref(loc));
         mcp_mesg_arg_append(&msg, "loc", buf);
-	snprintf(buf, BUFSIZ, "%d", thing);
+	snprintf(buf, BUFSIZ, "%d", object_ref(thing));
         mcp_mesg_arg_append(&msg, "dbref", buf);
         /* mcp_mesg_arg_append(&msg, "name", unparse_object(player, thing)); */
 
-	if (OBJECT(loc)->type == TYPE_ROOM)
+	if (loc->type == TYPE_ROOM)
 		web_room_mcp(loc, &msg);
 	else
 		web_obs_mcp(loc, &msg);
@@ -190,24 +199,24 @@ web_content_out(dbref loc, dbref thing) {
 }
 
 void
-web_content_in(dbref loc, dbref thing) {
+web_content_in(OBJ *loc, OBJ *thing) {
 	struct icon ico = icon(thing);
 	char buf[BUFSIZ];
 	McpMesg msg;
 
         mcp_mesg_init(&msg, MCP_WEB_PKG, "in");
-	snprintf(buf, BUFSIZ, "%d", loc);
+	snprintf(buf, BUFSIZ, "%d", object_ref(loc));
         mcp_mesg_arg_append(&msg, "loc", buf);
-	snprintf(buf, BUFSIZ, "%d", thing);
+	snprintf(buf, BUFSIZ, "%d", object_ref(thing));
         mcp_mesg_arg_append(&msg, "dbref", buf);
-	mcp_mesg_arg_append(&msg, "name", OBJECT(thing)->name);
-	mcp_mesg_arg_append(&msg, "pname", unparse_object(HUMAN_BEING, thing));
+	mcp_mesg_arg_append(&msg, "name", thing->name);
+	mcp_mesg_arg_append(&msg, "pname", unparse_object(object_get(HUMAN_BEING), thing));
 	mcp_mesg_arg_append(&msg, "icon", ico.icon);
 	snprintf(buf, sizeof(buf), "%d", ico.actions);
-        mcp_mesg_arg_append(&msg, "avatar", OBJECT(thing)->avatar);
+        mcp_mesg_arg_append(&msg, "avatar", thing->avatar);
 	mcp_mesg_arg_append(&msg, "actions", buf);
 
-	if (OBJECT(loc)->type == TYPE_ROOM)
+	if (loc->type == TYPE_ROOM)
 		web_room_mcp(loc, &msg);
 	else
 		web_obs_mcp(loc, &msg);
@@ -232,15 +241,16 @@ web_auth_fail(int descr, int reason) {
 }
 
 int
-web_auth_success(int descr, dbref player) {
+web_auth_success(OBJ *player) {
+	ENT *eplayer = &player->sp.entity;
 	McpMesg msg;
-	McpFrame *mfr = web_frame(descr);
+	McpFrame *mfr = web_frame(eplayer->fd);
 	char buf[BUFSIZ];
 	if (!mfr)
                 return 1;
 
         mcp_mesg_init(&msg, MCP_WEB_PKG, "auth-success");
-	snprintf(buf, sizeof(buf), "%d", player);
+	snprintf(buf, sizeof(buf), "%d", object_ref(player));
         mcp_mesg_arg_append(&msg, "player", buf);
         mcp_frame_output_mesg(mfr, &msg);
         mcp_mesg_clear(&msg);
@@ -248,34 +258,34 @@ web_auth_success(int descr, dbref player) {
 }
 
 int
-web_stats(dbref player) {
+web_stats(OBJ *player) {
+	ENT *eplayer = &player->sp.entity;
 	McpMesg msg;
-	McpFrame *mfr = web_frame(ENTITY(player)->fd);
-	struct entity *mob = ENTITY(player);
+	McpFrame *mfr = web_frame(eplayer->fd);
 	char buf[BUFSIZ];
 	if (!mfr)
                 return 1;
 
         mcp_mesg_init(&msg, MCP_WEB_PKG, "stats");
-	snprintf(buf, sizeof(buf), "%d", ATTR(player, ATTR_STR));
+	snprintf(buf, sizeof(buf), "%d", eplayer->attr[ATTR_STR]);
         mcp_mesg_arg_append(&msg, "str", buf);
-	snprintf(buf, sizeof(buf), "%d", ATTR(player, ATTR_CON));
+	snprintf(buf, sizeof(buf), "%d", eplayer->attr[ATTR_CON]);
         mcp_mesg_arg_append(&msg, "con", buf);
-	snprintf(buf, sizeof(buf), "%d", ATTR(player, ATTR_DEX));
+	snprintf(buf, sizeof(buf), "%d", eplayer->attr[ATTR_DEX]);
         mcp_mesg_arg_append(&msg, "dex", buf);
-	snprintf(buf, sizeof(buf), "%d", ATTR(player, ATTR_INT));
+	snprintf(buf, sizeof(buf), "%d", eplayer->attr[ATTR_INT]);
         mcp_mesg_arg_append(&msg, "int", buf);
-	snprintf(buf, sizeof(buf), "%d", ATTR(player, ATTR_WIZ));
+	snprintf(buf, sizeof(buf), "%d", eplayer->attr[ATTR_WIZ]);
         mcp_mesg_arg_append(&msg, "wiz", buf);
-	snprintf(buf, sizeof(buf), "%d", EFFECT(mob, DODGE).value);
+	snprintf(buf, sizeof(buf), "%d", EFFECT(eplayer, DODGE).value);
         mcp_mesg_arg_append(&msg, "dodge", buf);
-	snprintf(buf, sizeof(buf), "%d", EFFECT(mob, DMG).value);
+	snprintf(buf, sizeof(buf), "%d", EFFECT(eplayer, DMG).value);
         mcp_mesg_arg_append(&msg, "dmg", buf);
-	snprintf(buf, sizeof(buf), "%d", EFFECT(mob, MDMG).value);
+	snprintf(buf, sizeof(buf), "%d", EFFECT(eplayer, MDMG).value);
         mcp_mesg_arg_append(&msg, "mdmg", buf);
-	snprintf(buf, sizeof(buf), "%d", EFFECT(mob, DEF).value);
+	snprintf(buf, sizeof(buf), "%d", EFFECT(eplayer, DEF).value);
         mcp_mesg_arg_append(&msg, "def", buf);
-	snprintf(buf, sizeof(buf), "%d", EFFECT(mob, MDEF).value);
+	snprintf(buf, sizeof(buf), "%d", EFFECT(eplayer, MDEF).value);
         mcp_mesg_arg_append(&msg, "mdef", buf);
         mcp_frame_output_mesg(mfr, &msg);
         mcp_mesg_clear(&msg);
@@ -283,22 +293,22 @@ web_stats(dbref player) {
 }
 
 int
-web_bars(dbref player) {
+web_bars(OBJ *player) {
+	ENT *eplayer = &player->sp.entity;
 	McpMesg msg;
-	McpFrame *mfr = web_frame(ENTITY(player)->fd);
-	struct entity *mob = ENTITY(player);
+	McpFrame *mfr = web_frame(eplayer->fd);
 	char buf[BUFSIZ];
 	if (!mfr)
                 return 1;
 
         mcp_mesg_init(&msg, MCP_WEB_PKG, "bars");
-	snprintf(buf, sizeof(buf), "%d", mob->hp);
+	snprintf(buf, sizeof(buf), "%d", eplayer->hp);
         mcp_mesg_arg_append(&msg, "hp", buf);
-	snprintf(buf, sizeof(buf), "%d", HP_MAX(player));
+	snprintf(buf, sizeof(buf), "%d", HP_MAX(eplayer));
         mcp_mesg_arg_append(&msg, "hpMax", buf);
-	snprintf(buf, sizeof(buf), "%d", mob->mp);
+	snprintf(buf, sizeof(buf), "%d", eplayer->mp);
         mcp_mesg_arg_append(&msg, "mp", buf);
-	snprintf(buf, sizeof(buf), "%d", MP_MAX(player));
+	snprintf(buf, sizeof(buf), "%d", MP_MAX(eplayer));
         mcp_mesg_arg_append(&msg, "mpMax", buf);
         mcp_frame_output_mesg(mfr, &msg);
         mcp_mesg_clear(&msg);
@@ -306,19 +316,20 @@ web_bars(dbref player) {
 }
 
 int
-web_dialog_start(dbref player, dbref npc, const char *dialog)
+web_dialog_start(OBJ *player, OBJ *npc, const char *dialog)
 {
+	ENT *eplayer = &player->sp.entity;
         char buf[BUFSIZ];
 	const char *text;
 	int i, n;
 	McpMesg msg;
-	McpFrame *mfr = web_frame(ENTITY(player)->fd);
+	McpFrame *mfr = web_frame(eplayer->fd);
 
 	if (!mfr)
                 return 1;
 
         mcp_mesg_init(&msg, MCP_WEB_PKG, "dialog-start");
-	snprintf(buf, sizeof(buf), "%d", npc);
+	snprintf(buf, sizeof(buf), "%d", object_ref(npc));
         mcp_mesg_arg_append(&msg, "npc", buf);
 	/* snprintf(buf, sizeof(buf), "%d", npc); */
         snprintf((char *) buf, sizeof(buf), "_/dialog/%s/text", dialog);
@@ -346,11 +357,12 @@ web_dialog_start(dbref player, dbref npc, const char *dialog)
 }
 
 int
-web_dialog_stop(dbref player)
+web_dialog_stop(OBJ *player)
 {
+	ENT *eplayer = &player->sp.entity;
         char buf[BUFSIZ];
 	McpMesg msg;
-	McpFrame *mfr = web_frame(ENTITY(player)->fd);
+	McpFrame *mfr = web_frame(eplayer->fd);
 
 	if (!mfr)
                 return 1;
@@ -364,34 +376,37 @@ web_dialog_stop(dbref player)
 }
 
 static inline void
-web_equipment_item(dbref player, enum equipment_slot eql)
+web_equipment_item(OBJ *player, enum equipment_slot eql)
 {
+	ENT *eplayer = &player->sp.entity;
         char buf[BUFSIZ];
 	McpMesg msg;
-	McpFrame *mfr = web_frame(ENTITY(player)->fd);
-        dbref eq = EQUIP(player, eql);
-        if (!eq)
+	McpFrame *mfr = web_frame(eplayer->fd);
+        dbref eq = EQUIP(eplayer, eql);
+        if (eq == NOTHING || !eq)
                 return;
+	OBJ *oeq = object_get(eq);
         CBUG(!mfr);
         mcp_mesg_init(&msg, MCP_WEB_PKG, "equipment-item");
 	snprintf(buf, sizeof(buf), "%d", eq);
         mcp_mesg_arg_append(&msg, "dbref", buf);
 	snprintf(buf, sizeof(buf), "%d", eql);
         mcp_mesg_arg_append(&msg, "eql", buf);
-        mcp_mesg_arg_append(&msg, "pname", unparse_object(player, eq));
-        mcp_mesg_arg_append(&msg, "avatar", OBJECT(eq)->avatar);
-        struct icon ico = icon(eq);
+        mcp_mesg_arg_append(&msg, "pname", unparse_object(player, oeq));
+        mcp_mesg_arg_append(&msg, "avatar", oeq->avatar);
+        struct icon ico = icon(oeq);
         mcp_mesg_arg_append(&msg, "icon", ico.icon);
 	mcp_frame_output_mesg(mfr, &msg);
 	mcp_mesg_clear(&msg);
 }
 
 int
-web_equipment(dbref player)
+web_equipment(OBJ *player)
 {
+	ENT *eplayer = &player->sp.entity;
         char buf[BUFSIZ];
 	McpMesg msg;
-	McpFrame *mfr = web_frame(ENTITY(player)->fd);
+	McpFrame *mfr = web_frame(eplayer->fd);
 
 	if (!mfr)
                 return 1;

@@ -4,5 +4,5 @@
 
 #ifndef DBSEARCH_H
 #define DBSEARCH_H
-void display_objinfo(dbref player, dbref obj, int output_type);
+void display_objinfo(OBJ *player, OBJ *obj, int output_type);
 #endif

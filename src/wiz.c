@@ -23,7 +23,7 @@
 
 void
 do_teleport(command_t *cmd) {
-	OBJ *player = OBJECT(cmd->player);
+	OBJ *player = object_get(cmd->player);
 	const char *arg1 = cmd->argv[1];
 	const char *arg2 = cmd->argv[2];
 	OBJ *victim;
@@ -35,14 +35,14 @@ do_teleport(command_t *cmd) {
 		victim = player;
 		to = arg1;
 	} else if (!(victim = ematch_all(player, arg1))) {
-		notify(REF(player), NOMATCH_MESSAGE);
+		notify(player, NOMATCH_MESSAGE);
 		return;
 	} else
 		to = arg2;
 
 #ifdef GOD_PRIV
-	if(!God(REF(player)) && God(victim->owner)) {
-		notify(REF(player), "God has already set that where He wants it to be.");
+	if(!God(player) && God(victim->owner)) {
+		notify(player, "God has already set that where He wants it to be.");
 		return;
 	}
 #endif
@@ -50,70 +50,71 @@ do_teleport(command_t *cmd) {
 	destination = ematch_all(player, to);
 
 	if (!destination) {
-		notify(REF(player), NOMATCH_MESSAGE);
+		notify(player, NOMATCH_MESSAGE);
 		return;
 	}
 
 	switch (victim->type) {
 	case TYPE_ENTITY:
-		if (!controls(REF(player), REF(victim)) ||
-			!controls(REF(player), REF(destination)) ||
-			!controls(REF(player), victim->location) ||
-			(is_item(REF(destination)) && !controls(REF(player), destination->location))) {
-			notify(REF(player), "Permission denied. (must control victim, dest, victim's loc, and dest's loc)");
+		if (!controls(player, victim) ||
+			!controls(player, destination) ||
+			!controls(player, victim->location) ||
+			(is_item(destination) && !controls(player, destination->location))) {
+			notify(player, "Permission denied. (must control victim, dest, victim's loc, and dest's loc)");
 			break;
 		}
 		if (destination->type != TYPE_ROOM) {
-			notify(REF(player), "Bad destination.");
+			notify(player, "Bad destination.");
 			break;
 		}
-		if (parent_loop_check(REF(victim), REF(destination))) {
-			notify(REF(player), "Objects can't contain themselves.");
+		if (parent_loop_check(victim, destination)) {
+			notify(player, "Objects can't contain themselves.");
 			break;
 		}
-		notify(REF(victim), "You feel a wrenching sensation...");
-		enter_room(REF(victim), REF(destination));
+		notify(victim, "You feel a wrenching sensation...");
+		enter_room(victim, destination);
 		break;
 	case TYPE_CONSUMABLE:
 	case TYPE_EQUIPMENT:
 	case TYPE_THING:
-		if (parent_loop_check(REF(victim), REF(destination))) {
-			notify(REF(player), "You can't make a container contain itself!");
+		if (parent_loop_check(victim, destination)) {
+			notify(player, "You can't make a container contain itself!");
 			break;
 		}
 		if (destination->type != TYPE_ROOM
 			&& destination->type != TYPE_ENTITY
-			&& !is_item(REF(destination))) {
-			notify(REF(player), "Bad destination.");
+			&& !is_item(destination)) {
+			notify(player, "Bad destination.");
 			break;
 		}
-		if (!(controls(REF(player), REF(destination)) &&
-			  (controls(REF(player), REF(victim)) || controls(REF(player), victim->location)))) {
-			notify(REF(player), "Permission denied. (must control dest and be able to link to it, or control dest's loc)");
+		if (!(controls(player, destination) &&
+			  (controls(player, victim) || controls(player, victim->location)))) {
+			notify(player, "Permission denied. (must control dest and be able to link to it, or control dest's loc)");
 			break;
 		}
 		/* check for non-sticky dropto */
 		if (destination->type == TYPE_ROOM) {
 			ROO *rdestination = &destination->sp.room;
-			if (rdestination->dropto != NOTHING)
-				destination = OBJECT(rdestination->dropto);
+			if (rdestination->dropto)
+				destination = rdestination->dropto;
 		}
-		moveto(REF(victim), REF(destination));
-		notify(REF(player), "Teleported.");
+		moveto(victim, destination);
+		notify(player, "Teleported.");
 		break;
 	case TYPE_GARBAGE:
-		notify(REF(player), "That object is in a place where magic cannot reach it.");
+		notify(player, "That object is in a place where magic cannot reach it.");
 		break;
 	case TYPE_ROOM:
 	default:
-		notify(REF(player), "You can't teleport that.");
+		notify(player, "You can't teleport that.");
 		break;
 	}
 }
 
 int
-blessprops_wildcard(dbref player, dbref thing, const char *dir, const char *wild, int blessp)
+blessprops_wildcard(OBJ *player, OBJ *thing, const char *dir, const char *wild, int blessp)
 {
+	ENT *eplayer = &player->sp.entity;
 	char propname[BUFFER_LEN];
 	char wld[BUFFER_LEN];
 	char buf[BUFFER_LEN];
@@ -124,8 +125,8 @@ blessprops_wildcard(dbref player, dbref thing, const char *dir, const char *wild
 	int recurse = 0;
 
 #ifdef GOD_PRIV
-	if(!God(player) && God(OBJECT(thing)->owner)) {
-		notify(player,"Only God may touch what is God's.");
+	if(!God(player) && God(thing->owner)) {
+		notify(player, "Only God may touch what is God's.");
 		return 0;
 	}
 #endif
@@ -147,7 +148,7 @@ blessprops_wildcard(dbref player, dbref thing, const char *dir, const char *wild
 		if (equalstr(wldcrd, propname)) {
 			snprintf(buf, sizeof(buf), "%s%c%s", dir, PROPDIR_DELIMITER, propname);
 			if (!Prop_System(buf) && ((!Prop_Hidden(buf) && !(PropFlags(propadr) & PROP_SYSPERMS))
-				|| (ENTITY(OBJECT(player)->owner)->flags & EF_WIZARD))) {
+				|| (eplayer->flags & EF_WIZARD))) {
 				if (!*ptr || recurse) {
 					cnt++;
 					if (blessp) {
@@ -172,7 +173,7 @@ blessprops_wildcard(dbref player, dbref thing, const char *dir, const char *wild
 
 void
 do_unbless(command_t *cmd) {
-	OBJ *player = OBJECT(cmd->player);
+	OBJ *player = object_get(cmd->player);
 	ENT *eplayer = &player->sp.entity;
 	const char *what = cmd->argv[1];
 	const char *propname = cmd->argv[2];
@@ -183,36 +184,36 @@ do_unbless(command_t *cmd) {
 	CBUG(player->type != TYPE_ENTITY);
 
 	if (!(eplayer->flags & EF_WIZARD)) {
-		notify(REF(player), "Only Wizard players may use this command.");
+		notify(player, "Only Wizard players may use this command.");
 		return;
 	}
 
 	if (!propname || !*propname) {
-		notify(REF(player), "Usage is @unbless object=propname.");
+		notify(player, "Usage is @unbless object=propname.");
 		return;
 	}
 
 	if (!(eplayer->flags & EF_WIZARD)) {
-		notify(REF(player), "Permission denied. (You're not a wizard)");
+		notify(player, "Permission denied. (You're not a wizard)");
 		return;
 	}
 
 	/* get victim */
 	victim = ematch_all(player, what);
 	if (!victim) {
-		notify(REF(player), NOMATCH_MESSAGE);
+		notify(player, NOMATCH_MESSAGE);
 		return;
 	}
 
-	cnt = blessprops_wildcard(REF(player), REF(victim), "", propname, 0);
+	cnt = blessprops_wildcard(player, victim, "", propname, 0);
 	snprintf(buf, sizeof(buf), "%d propert%s unblessed.", cnt, (cnt == 1)? "y" : "ies");
-	notify(REF(player), buf);
+	notify(player, buf);
 }
 
 
 void
 do_bless(command_t *cmd) {
-	OBJ *player = OBJECT(cmd->player);
+	OBJ *player = object_get(cmd->player);
 	ENT *eplayer = &player->sp.entity;
 	const char *what = cmd->argv[1];
 	const char *propname = cmd->argv[2];
@@ -223,56 +224,61 @@ do_bless(command_t *cmd) {
 	CBUG(player->type != TYPE_ENTITY);
 
 	if (!(eplayer->flags & EF_WIZARD)) {
-		notify(REF(player), "Only Wizard players may use this command.");
+		notify(player, "Only Wizard players may use this command.");
 		return;
 	}
 
 	if (!propname || !*propname) {
-		notify(REF(player), "Usage is @bless object=propname.");
+		notify(player, "Usage is @bless object=propname.");
 		return;
 	}
 
 	/* get victim */
 	victim = ematch_all(player, what);
 	if (!victim) {
-		notify(REF(player), NOMATCH_MESSAGE);
+		notify(player, NOMATCH_MESSAGE);
 		return;
 	}
 
 #ifdef GOD_PRIV
-	if(!God(REF(player)) && God(victim->owner)) {
-		notify(REF(player), "Only God may touch God's stuff.");
+	if(!God(player) && God(victim->owner)) {
+		notify(player, "Only God may touch God's stuff.");
 		return;
 	}
 #endif
 
 	if (!(eplayer->flags & EF_WIZARD)) {
-		notify(REF(player), "Permission denied. (you're not a wizard)");
+		notify(player, "Permission denied. (you're not a wizard)");
 		return;
 	}
 
-	cnt = blessprops_wildcard(REF(player), REF(victim), "", propname, 1);
+	cnt = blessprops_wildcard(player, victim, "", propname, 1);
 	snprintf(buf, sizeof(buf), "%d propert%s blessed.", cnt, (cnt == 1)? "y" : "ies");
-	notify(REF(player), buf);
+	notify(player, buf);
 }
 
 void
 do_boot(command_t *cmd) {
-	dbref player = cmd->player;
+	OBJ *player = object_get(cmd->player);
+	CBUG(player->type != TYPE_ENTITY);
+	ENT *eplayer = &player->sp.entity;
 	const char *name = cmd->argv[1];
-	dbref victim;
+	OBJ *victim;
 	char buf[BUFFER_LEN];
 
-	CBUG(OBJECT(player)->type != TYPE_ENTITY);
-	if (!(ENTITY(player)->flags & EF_WIZARD)) {
+	if (!(eplayer->flags & EF_WIZARD)) {
 		notify(player, "Only a Wizard player can boot someone off.");
 		return;
 	}
-	if ((victim = lookup_player(name)) == NOTHING) {
+
+	victim = lookup_player(name);
+
+	if (!victim) {
 		notify(player, "That player does not exist.");
 		return;
 	}
-	if (OBJECT(victim)->type != TYPE_ENTITY) {
+
+	if (victim->type != TYPE_ENTITY) {
 		notify(player, "You can only boot entities!");
 	}
 #ifdef GOD_PRIV
@@ -284,49 +290,48 @@ do_boot(command_t *cmd) {
 	else {
 		notify(victim, "You have been booted off the game.");
 		if (boot_off(victim)) {
-			warn("BOOTED: %s(%d) by %s(%d)", OBJECT(victim)->name,
-					   victim, OBJECT(player)->name, player);
+			warn("BOOTED: %s(%d) by %s(%d)", victim->name,
+					   object_ref(victim), player->name, object_ref(player));
 			if (player != victim) {
-				snprintf(buf, sizeof(buf), "You booted %s off!", OBJECT(victim)->name);
+				snprintf(buf, sizeof(buf), "You booted %s off!", victim->name);
 				notify(player, buf);
 			}
 		} else {
-			snprintf(buf, sizeof(buf), "%s is not connected.", OBJECT(victim)->name);
+			snprintf(buf, sizeof(buf), "%s is not connected.", victim->name);
 			notify(player, buf);
 		}
 	}
 }
 
-static inline dbref
-reverse(dbref list)
+static inline OBJ *
+reverse(OBJ *list)
 {
-	dbref newlist;
-	dbref rest;
+	OBJ *newlist = NULL;
+	OBJ *rest;
 
-	newlist = NOTHING;
-	while (list != NOTHING) {
-		rest = OBJECT(list)->next;
+	while (list) {
+		rest = list->next;
 		PUSH(list, newlist);
 		list = rest;
 	}
+
 	return newlist;
 }
 
 static inline void
-send_contents(dbref loc, dbref dest)
+send_contents(OBJ *loc, OBJ *dest)
 {
-	dbref first;
-	dbref rest;
+	OBJ *first, *rest;
 
-	first = OBJECT(loc)->contents;
-	OBJECT(loc)->contents = NOTHING;
+	first = loc->contents;
+	loc->contents = NULL;
 
 	/* blast locations of everything in list */
 	DOLIST(rest, first)
-		OBJECT(rest)->location = NOTHING;
+		rest->location = NULL;
 
-	while (first != NOTHING) {
-		rest = OBJECT(first)->next;
+	while (first) {
+		rest = first->next;
 		if (!is_item(first)) {
 			moveto(first, loc);
 		} else {
@@ -335,34 +340,39 @@ send_contents(dbref loc, dbref dest)
 		first = rest;
 	}
 
-	OBJECT(loc)->contents = reverse(OBJECT(loc)->contents);
+	loc->contents = reverse(loc->contents);
 }
 
 void
 do_toad(command_t *cmd) {
-	dbref player = cmd->player;
+	OBJ *player = object_get(cmd->player);
+	ENT *eplayer = &player->sp.entity;
 	const char *name = cmd->argv[1];
 	const char *recip = cmd->argv[2];
-	dbref victim;
-	dbref recipient;
+	OBJ *victim;
+	OBJ *recipient;
 	dbref stuff;
 	char buf[BUFFER_LEN];
 
-	CBUG(OBJECT(player)->type != TYPE_ENTITY);
+	CBUG(player->type != TYPE_ENTITY);
 
-	if (!(ENTITY(player)->flags & EF_WIZARD)) {
+	if (!(eplayer->flags & EF_WIZARD)) {
 		notify(player, "Only a Wizard player can turn an entity into a toad.");
 		return;
 	}
-	if ((victim = lookup_player(name)) == NOTHING) {
+
+	victim = lookup_player(name);
+
+	if (!victim) {
 		notify(player, "That player does not exist.");
 		return;
 	}
+
 #ifdef GOD_PRIV
 	if (God(victim)) {
 		notify(player, "You cannot @toad God.");
 		if(!God(player)) {
-			warn("TOAD ATTEMPT: %s(#%d) tried to toad God.",OBJECT(player)->name,player);
+			warn("TOAD ATTEMPT: %s(#%d) tried to toad God.", player->name, object_ref(player));
 		}
 		return;
 	}
@@ -376,34 +386,39 @@ do_toad(command_t *cmd) {
 	}
 	if (!*recip) {
 		/* FIXME: Make me a tunable parameter! */
-		recipient = GOD;
+		recipient = object_get(GOD);
 	} else {
-		if ((recipient = lookup_player(recip)) == NOTHING || recipient == victim) {
+		recipient = lookup_player(recip);
+		if (!recipient || recipient == victim) {
 			notify(player, "That recipient does not exist.");
 			return;
 		}
 	}
 
-	if (OBJECT(victim)->type != TYPE_ENTITY) {
+	if (victim->type != TYPE_ENTITY)
 		notify(player, "You can only turn entities into toads!");
+
+	ENT *evictim = &victim->sp.entity;
+
 #ifdef GOD_PRIV
-	} else if (!(God(player)) && (ENTITY(victim)->flags & EF_WIZARD)) {
+	if (!(God(player)) && (evictim->flags & EF_WIZARD)) {
 #else
-	} else if (Wizard(victim)) {
+	if (Wizard(victim)) {
 #endif
 		notify(player, "You can't turn a Wizard into a toad.");
 	} else {
 		/* we're ok */
 		/* do it */
-		send_contents(victim, ENTITY(victim)->home);
+		send_contents(victim, evictim->home);
 		for (stuff = 0; stuff < db_top; stuff++) {
-			if (OBJECT(stuff)->owner == victim) {
-				switch (OBJECT(stuff)->type) {
+			OBJ *ostuff = object_get(stuff);
+			if (ostuff->owner == victim) {
+				switch (ostuff->type) {
 				case TYPE_ROOM:
 				case TYPE_CONSUMABLE:
 				case TYPE_EQUIPMENT:
 				case TYPE_THING:
-					OBJECT(stuff)->owner = recipient;
+					ostuff->owner = recipient;
 					break;
 				}
 			}
@@ -411,33 +426,34 @@ do_toad(command_t *cmd) {
 
 		/* notify people */
 		notify(victim, "You have been turned into a toad.");
-		snprintf(buf, sizeof(buf), "You turned %s into a toad!", OBJECT(victim)->name);
+		snprintf(buf, sizeof(buf), "You turned %s into a toad!", victim->name);
 		notify(player, buf);
-		warn("TOADED: %s(%d) by %s(%d)", OBJECT(victim)->name, victim, OBJECT(player)->name, player);
+		warn("TOADED: %s(%d) by %s(%d)", victim->name, object_ref(victim), player->name, object_ref(player));
 		/* reset name */
 		delete_player(victim);
-		snprintf(buf, sizeof(buf), "A slimy toad named %s", OBJECT(victim)->name);
-		free((void *) OBJECT(victim)->name);
-		OBJECT(victim)->name = alloc_string(buf);
+		snprintf(buf, sizeof(buf), "A slimy toad named %s", victim->name);
+		free((void *) victim->name);
+		victim->name = alloc_string(buf);
 
 		boot_player_off(victim); /* Disconnect the toad */
 
-		OBJECT(victim)->type = TYPE_THING;
-		OBJECT(victim)->owner = player;	/* you get it */
-		OBJECT(victim)->value = 1; /* don't let him keep his immense wealth */
+		victim->type = TYPE_THING;
+		victim->owner = player;	/* you get it */
+		victim->value = 1; /* don't let him keep his immense wealth */
 	}
 }
 
 void
 do_usage(command_t *cmd) {
-	dbref player = cmd->player;
+	OBJ *player = object_get(cmd->player);
+	ENT *eplayer = &player->sp.entity;
 	int pid, psize;
 
 #ifdef HAVE_GETRUSAGE
 	struct rusage usage;
 #endif
 
-	if (!(ENTITY(OBJECT(player)->owner)->flags & EF_WIZARD)) {
+	if (!(eplayer->flags & EF_WIZARD)) {
 		notify(player, "Permission denied. (@usage is wizard-only)");
 		return;
 	}

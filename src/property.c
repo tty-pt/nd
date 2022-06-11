@@ -23,7 +23,7 @@
 
 
 void
-set_property_nofetch(dbref player, const char *pname, PData * dat)
+set_property_nofetch(OBJ *player, const char *pname, PData * dat)
 {
 	PropPtr p;
 	char buf[BUFFER_LEN];
@@ -45,7 +45,7 @@ set_property_nofetch(dbref player, const char *pname, PData * dat)
 	if (!*buf)
 		return;
 
-	p = propdir_new_elem(&(OBJECT(player)->properties), buf);
+	p = propdir_new_elem(&(player->properties), buf);
 
 	/* free up any old values */
 	clear_propnode(p);
@@ -106,7 +106,7 @@ set_property_nofetch(dbref player, const char *pname, PData * dat)
 
 
 void
-set_property_value(dbref obj, const char *propstr, int val)
+set_property_value(OBJ *obj, const char *propstr, int val)
 {
 	PData mydat;
 	mydat.flags = PROP_INTTYP;
@@ -114,26 +114,8 @@ set_property_value(dbref obj, const char *propstr, int val)
 	set_property_nofetch(obj, propstr, &mydat);
 }
 
-int // FIXME
-addc_property_value(dbref obj, const char *pname, int val, int cap)
-{
-	PropPtr p = get_property(obj, pname);
-	int cur;
-	if (p) {
-		cur = PropDataVal(p);
-		cur += val;
-		if (cur > cap)
-			cur = cap;
-		PropDataVal(p) = cur;
-	} else {
-		cur = val > cap ? cap : val;
-		add_prop_nofetch(obj, pname, "", cur);
-	}
-	return cur;
-}
-
 void
-set_property_hash(dbref obj, const char *propstr, int idx, int val)
+set_property_hash(OBJ *obj, const char *propstr, int idx, int val)
 {
 	char buf[BUFSIZ];
 	snprintf(buf, sizeof(buf), "%s/%d", propstr, idx);
@@ -141,7 +123,7 @@ set_property_hash(dbref obj, const char *propstr, int idx, int val)
 }
 
 void
-set_property_mark(dbref obj, const char *propstr, char mark, char *value)
+set_property_mark(OBJ *obj, const char *propstr, char mark, char *value)
 {
 	char buf[BUFSIZ];
 	PData dat;
@@ -152,19 +134,9 @@ set_property_mark(dbref obj, const char *propstr, char mark, char *value)
 	set_property_nofetch(obj, buf, &dat);
 }
 
-void
-set_property_dbref(dbref obj, const char *propstr, dbref val)
-{
-	PData mydat;
-	mydat.flags = PROP_REFTYP;
-	mydat.data.ref = val;
-	set_property_nofetch(obj, propstr, &mydat);
-}
-
-
 /* adds a new property to an object */
 void
-add_prop_nofetch(dbref player, const char *pname, const char *strval, int value)
+add_prop_nofetch(OBJ *player, const char *pname, const char *strval, int value)
 {
 	PData mydat;
 
@@ -184,7 +156,7 @@ add_prop_nofetch(dbref player, const char *pname, const char *strval, int value)
 
 
 void
-remove_proplist_item(dbref player, PropPtr p, int allp)
+remove_proplist_item(OBJ *player, PropPtr p, int allp)
 {
 	const char *ptr;
 
@@ -211,18 +183,18 @@ remove_proplist_item(dbref player, PropPtr p, int allp)
 
 /* removes property list --- if it's not there then ignore */
 void
-remove_property_list(dbref player, int all)
+remove_property_list(OBJ *player, int all)
 {
 	PropPtr l;
 	PropPtr p;
 	PropPtr n;
 
-	if ((l = OBJECT(player)->properties) != NULL) {
+	if ((l = player->properties) != NULL) {
 		p = first_node(l);
 		while (p) {
 			n = next_node(l, PropName(p));
 			remove_proplist_item(player, p, all);
-			l = OBJECT(player)->properties;
+			l = player->properties;
 			p = n;
 		}
 	}
@@ -231,35 +203,35 @@ remove_property_list(dbref player, int all)
 
 /* removes property --- if it's not there then ignore */
 void
-remove_property_nofetch(dbref player, const char *pname)
+remove_property_nofetch(OBJ *player, const char *pname)
 {
 	PropPtr l;
 	char buf[BUFFER_LEN];
 
 	strlcpy(buf, pname, sizeof(buf));
 
-	l = OBJECT(player)->properties;
+	l = player->properties;
 	l = propdir_delete_elem(l, buf);
-	OBJECT(player)->properties = l;
+	player->properties = l;
 }
 
 
 void
-remove_property(dbref player, const char *pname)
+remove_property(OBJ *player, const char *pname)
 {
 	remove_property_nofetch(player, pname);
 }
 
 
 PropPtr
-get_property(dbref player, const char *pname)
+get_property(OBJ *player, const char *pname)
 {
 	PropPtr p;
 	char buf[BUFFER_LEN];
 
 	strlcpy(buf, pname, sizeof(buf));
 
-	p = propdir_get_elem(OBJECT(player)->properties, buf);
+	p = propdir_get_elem(player->properties, buf);
 	return (p);
 }
 
@@ -267,14 +239,14 @@ get_property(dbref player, const char *pname)
 /* checks if object has property, returning 1 if it or any of its contents has
    the property stated                                                      */
 int
-has_property(dbref what, const char *pname, const char *strval,
+has_property(OBJ *what, const char *pname, const char *strval,
 			 int value)
 {
-	dbref things;
+	OBJ *things;
 
 	if (has_property_strict(what, pname, strval, value))
 		return 1;
-	for (things = OBJECT(what)->contents; things != NOTHING; things = OBJECT(things)->next) {
+	DOLIST(things, what->contents) {
 		if (has_property(things, pname, strval, value))
 			return 1;
 	}
@@ -285,7 +257,7 @@ has_property(dbref what, const char *pname, const char *strval,
 static int has_prop_recursion_limit = 2;
 /* checks if object has property, returns 1 if it has the property */
 int
-has_property_strict(dbref what, const char *pname, const char *strval,
+has_property_strict(OBJ *what, const char *pname, const char *strval,
 					int value)
 {
 	PropPtr p;
@@ -320,7 +292,7 @@ has_property_strict(dbref what, const char *pname, const char *strval,
 
 /* return string value of property */
 const char *
-get_property_class(dbref player, const char *pname)
+get_property_class(OBJ *player, const char *pname)
 {
 	PropPtr p;
 
@@ -336,7 +308,7 @@ get_property_class(dbref player, const char *pname)
 
 /* return value of property */
 int
-get_property_value(dbref player, const char *pname)
+get_property_value(OBJ *player, const char *pname)
 {
 	PropPtr p;
 
@@ -352,7 +324,7 @@ get_property_value(dbref player, const char *pname)
 }
 
 int
-get_property_hash(dbref player, const char *pname, int idx)
+get_property_hash(OBJ *player, const char *pname, int idx)
 {
 	char buf[BUFSIZ];
 	snprintf(buf, sizeof(buf), "%s/%d", pname, idx);
@@ -360,7 +332,7 @@ get_property_hash(dbref player, const char *pname, int idx)
 }
 
 const char *
-get_property_mark(dbref player, const char *pname, char mark)
+get_property_mark(OBJ *player, const char *pname, char mark)
 {
 	char buf[BUFSIZ];
 	snprintf(buf, sizeof(buf), "%s/%c", pname, mark);
@@ -369,7 +341,7 @@ get_property_mark(dbref player, const char *pname, char mark)
 
 /* return float value of a property */
 double
-get_property_fvalue(dbref player, const char *pname)
+get_property_fvalue(OBJ *player, const char *pname)
 {
 	PropPtr p;
 
@@ -383,24 +355,9 @@ get_property_fvalue(dbref player, const char *pname)
 	}
 }
 
-/* return boolexp lock of property */
-dbref
-get_property_dbref(dbref player, const char *pname)
-{
-	PropPtr p;
-
-	p = get_property(player, pname);
-	if (!p)
-		return NOTHING;
-	if (PropType(p) != PROP_REFTYP)
-		return NOTHING;
-	return PropDataRef(p);
-}
-
-
 /* return flags of property */
 int
-get_property_flags(dbref player, const char *pname)
+get_property_flags(OBJ *player, const char *pname)
 {
 	PropPtr p;
 
@@ -416,7 +373,7 @@ get_property_flags(dbref player, const char *pname)
 
 /* return flags of property */
 void
-clear_property_flags(dbref player, const char *pname, int flags)
+clear_property_flags(OBJ *player, const char *pname, int flags)
 {
 	PropPtr p;
 
@@ -430,7 +387,7 @@ clear_property_flags(dbref player, const char *pname, int flags)
 
 /* return flags of property */
 void
-set_property_flags(dbref player, const char *pname, int flags)
+set_property_flags(OBJ *player, const char *pname, int flags)
 {
 	PropPtr p;
 
@@ -444,7 +401,7 @@ set_property_flags(dbref player, const char *pname, int flags)
 
 /* return type of property */
 int
-get_property_type(dbref player, const char *pname)
+get_property_type(OBJ *player, const char *pname)
 {
 	PropPtr p;
 
@@ -460,11 +417,11 @@ get_property_type(dbref player, const char *pname)
 
 
 PropPtr
-copy_prop(dbref old)
+copy_prop(OBJ *old)
 {
 	PropPtr p, n = NULL;
 
-	p = OBJECT(old)->properties;
+	p = old->properties;
 	copy_proplist(old, &n, p);
 	return (n);
 }
@@ -473,7 +430,7 @@ copy_prop(dbref old)
    property name into 'name'.  Returns NULL if the property list is empty
    or does not exist. */
 PropPtr
-first_prop_nofetch(dbref player, const char *dir, PropPtr * list, char *name, int maxlen)
+first_prop_nofetch(OBJ *player, const char *dir, PropPtr * list, char *name, int maxlen)
 {
 	char buf[BUFFER_LEN];
 	PropPtr p;
@@ -484,7 +441,7 @@ first_prop_nofetch(dbref player, const char *dir, PropPtr * list, char *name, in
 		}
 	}
 	if (!dir || !*dir) {
-		*list = OBJECT(player)->properties;
+		*list = player->properties;
 		p = first_node(*list);
 		if (p) {
 			strlcpy(name, PropName(p), maxlen);
@@ -495,7 +452,7 @@ first_prop_nofetch(dbref player, const char *dir, PropPtr * list, char *name, in
 	}
 
 	strlcpy(buf, dir, sizeof(buf));
-	*list = p = propdir_get_elem(OBJECT(player)->properties, buf);
+	*list = p = propdir_get_elem(player->properties, buf);
 	if (!p) {
 		*name = '\0';
 		return NULL;
@@ -520,7 +477,7 @@ first_prop_nofetch(dbref player, const char *dir, PropPtr * list, char *name, in
  */
 
 PropPtr
-first_prop(dbref player, const char *dir, PropPtr * list, char *name, int maxlen)
+first_prop(OBJ *player, const char *dir, PropPtr * list, char *name, int maxlen)
 {
 
 	return (first_prop_nofetch(player, dir, list, name, maxlen));
@@ -547,21 +504,21 @@ next_prop(PropPtr list, PropPtr prop, char *name, int maxlen)
 }
 
 long
-size_properties(dbref player, int load)
+size_properties(OBJ *player, int load)
 {
-	return size_proplist(OBJECT(player)->properties);
+	return size_proplist(player->properties);
 }
 
 
 /* return true if a property contains a propdir */
 int
-is_propdir_nofetch(dbref player, const char *pname)
+is_propdir_nofetch(OBJ *player, const char *pname)
 {
 	PropPtr p;
 	char w[BUFFER_LEN];
 
 	strlcpy(w, pname, sizeof(w));
-	p = propdir_get_elem(OBJECT(player)->properties, w);
+	p = propdir_get_elem(player->properties, w);
 	if (!p)
 		return 0;
 	return (PropDir(p) != (PropPtr) NULL);
@@ -569,44 +526,14 @@ is_propdir_nofetch(dbref player, const char *pname)
 
 
 int
-is_propdir(dbref player, const char *pname)
+is_propdir(OBJ *player, const char *pname)
 {
 
 	return (is_propdir_nofetch(player, pname));
 }
 
-
-PropPtr
-envprop(dbref * where, const char *propname, int typ)
-{
-	PropPtr temp;
-
-	while (*where != NOTHING) {
-		temp = get_property(*where, propname);
-		if (temp && (!typ || PropType(temp) == typ))
-			return temp;
-		*where = getparent(*where);
-	}
-	return NULL;
-}
-
-
-const char *
-envpropstr(dbref * where, const char *propname)
-{
-	PropPtr temp;
-
-	temp = envprop(where, propname, PROP_STRTYP);
-	if (!temp)
-		return NULL;
-	if (PropType(temp) == PROP_STRTYP)
-		return (PropDataStr(temp));
-	return NULL;
-}
-
-
 char *
-displayprop(dbref player, dbref obj, const char *name, char *buf, size_t bufsiz)
+displayprop(OBJ *player, OBJ *obj, const char *name, char *buf, size_t bufsiz)
 {
 	char mybuf[BUFFER_LEN];
 	int pdflag;
@@ -626,7 +553,7 @@ displayprop(dbref player, dbref obj, const char *name, char *buf, size_t bufsiz)
 		snprintf(buf, bufsiz, "%c str %s:%.*s", blesschar, mybuf, (BUFFER_LEN / 2), PropDataStr(p));
 		break;
 	case PROP_REFTYP:
-		snprintf(buf, bufsiz, "%c ref %s:%s", blesschar, mybuf, unparse_object(player, PropDataRef(p)));
+		snprintf(buf, bufsiz, "%c ref %s:%s", blesschar, mybuf, unparse_object(player, object_get(PropDataRef(p))));
 		break;
 	case PROP_INTTYP:
 		snprintf(buf, bufsiz, "%c int %s:%d", blesschar, mybuf, PropDataVal(p));
@@ -648,7 +575,7 @@ displayprop(dbref player, dbref obj, const char *name, char *buf, size_t bufsiz)
 extern short db_conversion_flag;
 
 int
-db_get_single_prop(FILE * f, dbref obj, long pos, PropPtr pnode, const char *pdir)
+db_get_single_prop(FILE * f, OBJ *obj, long pos, PropPtr pnode, const char *pdir)
 {
 	char getprop_buf[BUFFER_LEN * 3];
 	char *name, *flags, *value, *p;
@@ -669,7 +596,7 @@ db_get_single_prop(FILE * f, dbref obj, long pos, PropPtr pnode, const char *pdi
 		wall_wizards("## WARNING! A corrupt property was found while trying to read it from disk.");
 		wall_wizards("##   This property has been skipped and will not be loaded.  See the sanity");
 		wall_wizards("##   logfile for technical details.");
-		warn("Failed to read property from disk: Failed disk read.  obj = #%d, pos = %ld, pdir = %s", obj, pos, pdir);
+		warn("Failed to read property from disk: Failed disk read.  obj = #%d, pos = %ld, pdir = %s", object_ref(obj), pos, pdir);
 		return -1;
 	}
 	if (*name == '*') {
@@ -686,7 +613,7 @@ db_get_single_prop(FILE * f, dbref obj, long pos, PropPtr pnode, const char *pdi
 		wall_wizards("## WARNING! A corrupt property was found while trying to read it from disk.");
 		wall_wizards("##   This property has been skipped and will not be loaded.  See the sanity");
 		wall_wizards("##   logfile for technical details.");
-		warn("Failed to read property from disk: Corrupt property, flag delimiter not found.  obj = #%d, pos = %ld, pdir = %s, data = %s", obj, pos, pdir, name);
+		warn("Failed to read property from disk: Corrupt property, flag delimiter not found.  obj = #%d, pos = %ld, pdir = %s, data = %s", object_ref(obj), pos, pdir, name);
 		return -1;
 	}
 	*flags++ = '\0';
@@ -696,7 +623,7 @@ db_get_single_prop(FILE * f, dbref obj, long pos, PropPtr pnode, const char *pdi
 		wall_wizards("## WARNING! A corrupt property was found while trying to read it from disk.");
 		wall_wizards("##   This property has been skipped and will not be loaded.  See the sanity");
 		wall_wizards("##   logfile for technical details.");
-		warn("Failed to read property from disk: Corrupt property, value delimiter not found.  obj = #%d, pos = %ld, pdir = %s, data = %s:%s", obj, pos, pdir, name, flags);
+		warn("Failed to read property from disk: Corrupt property, value delimiter not found.  obj = #%d, pos = %ld, pdir = %s, data = %s:%s", object_ref(obj), pos, pdir, name, flags);
 		return -1;
 	}
 	*value++ = '\0';
@@ -710,7 +637,7 @@ db_get_single_prop(FILE * f, dbref obj, long pos, PropPtr pnode, const char *pdi
 		wall_wizards("## WARNING! A corrupt property was found while trying to read it from disk.");
 		wall_wizards("##   This property has been skipped and will not be loaded.  See the sanity");
 		wall_wizards("##   logfile for technical details.");
-		warn("Failed to read property from disk: Corrupt property flags.  obj = #%d, pos = %ld, pdir = %s, data = %s:%s:%s", obj, pos, pdir, name, flags, value);
+		warn("Failed to read property from disk: Corrupt property flags.  obj = #%d, pos = %ld, pdir = %s, data = %s:%s:%s", object_ref(obj), pos, pdir, name, flags, value);
 		return -1;
 	}
 	flg = atoi(flags);
@@ -739,7 +666,7 @@ db_get_single_prop(FILE * f, dbref obj, long pos, PropPtr pnode, const char *pdi
 			wall_wizards("## WARNING! A corrupt property was found while trying to read it from disk.");
 			wall_wizards("##   This property has been skipped and will not be loaded.  See the sanity");
 			wall_wizards("##   logfile for technical details.");
-			warn("Failed to read property from disk: Corrupt integer value.  obj = #%d, pos = %ld, pdir = %s, data = %s:%s:%s", obj, pos, pdir, name, flags, value);
+			warn("Failed to read property from disk: Corrupt integer value.  obj = #%d, pos = %ld, pdir = %s, data = %s:%s:%s", object_ref(obj), pos, pdir, name, flags, value);
 			return -1;
 		}
 		mydat.flags = flg;
@@ -785,7 +712,7 @@ db_get_single_prop(FILE * f, dbref obj, long pos, PropPtr pnode, const char *pdi
 			wall_wizards("## WARNING! A corrupt property was found while trying to read it from disk.");
 			wall_wizards("##   This property has been skipped and will not be loaded.  See the sanity");
 			wall_wizards("##   logfile for technical details.");
-			warn("Failed to read property from disk: Corrupt dbref value.  obj = #%d, pos = %ld, pdir = %s, data = %s:%s:%s", obj, pos, pdir, name, flags, value);
+			warn("Failed to read property from disk: Corrupt dbref value.  obj = #%d, pos = %ld, pdir = %s, data = %s:%s:%s", object_ref(obj), pos, pdir, name, flags, value);
 			return -1;
 		}
 		mydat.flags = flg;
@@ -799,7 +726,7 @@ db_get_single_prop(FILE * f, dbref obj, long pos, PropPtr pnode, const char *pdi
 }
 
 void
-db_getprops(FILE * f, dbref obj, const char *pdir)
+db_getprops(FILE * f, OBJ *obj, const char *pdir)
 {
 	while (db_get_single_prop(f, obj, 0L, (PropPtr) NULL, pdir)) ;
 }
@@ -890,7 +817,7 @@ db_dump_props_rec(dbref obj, FILE * f, const char *dir, PropPtr p)
 void
 db_dump_props(FILE * f, dbref obj)
 {
-	db_dump_props_rec(obj, f, "/", OBJECT(obj)->properties);
+	db_dump_props_rec(obj, f, "/", object_get(obj)->properties);
 }
 
 
@@ -913,7 +840,7 @@ untouchprops_incremental(int limit)
 
 	while (untouch_lastdone < db_top) {
 		/* clear the touch flags */
-		p = OBJECT(untouch_lastdone)->properties;
+		p = object_get(untouch_lastdone)->properties;
 		if (p) {
 			if (!limit--)
 				return;

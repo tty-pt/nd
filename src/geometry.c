@@ -140,62 +140,73 @@ rarity_get() {
 	return 5; // MYTHICAL
 }
 
-dbref
-object_add(struct object_skeleton sk, dbref where)
+OBJ *
+object_add(struct object_skeleton sk, OBJ *where)
 {
-	dbref nu = object_new();
-	OBJ *o = OBJECT(nu);
-	OBJ *w = OBJECT(where);
-	o->name = alloc_string(sk.name);
-	o->description = alloc_string(sk.description);
-	o->art = alloc_string(sk.art);
-	o->avatar = alloc_string(sk.avatar);
-	o->location = where;
-	o->owner = 1;
-	o->type = TYPE_THING;
-	o->flags = 0;
-	if (where >= 0)
-		PUSH(nu, w->contents);
+	OBJ *nu = object_new();
+	nu->name = alloc_string(sk.name);
+	nu->description = alloc_string(sk.description);
+	nu->art = alloc_string(sk.art);
+	nu->avatar = alloc_string(sk.avatar);
+	nu->location = where;
+	nu->owner = object_get(GOD);
+	nu->type = TYPE_THING;
+	nu->flags = 0;
+	if (where)
+		PUSH(nu, where->contents);
 
 	switch (sk.type) {
 	case S_TYPE_EQUIPMENT:
-		o->type = TYPE_EQUIPMENT;
-		EQUIPMENT(nu)->eqw = sk.sp.equipment.eqw;
-		EQUIPMENT(nu)->msv = sk.sp.equipment.msv;
-		EQUIPMENT(nu)->rare = rarity_get();
-
-		CBUG(w->type != TYPE_ENTITY);
-
-		struct entity *mob = ENTITY(where);
-
-		if (mob->fd > 0 && equip(where, nu))
-			;
+		{
+			EQU *enu = &nu->sp.equipment;
+			nu->type = TYPE_EQUIPMENT;
+			enu->eqw = sk.sp.equipment.eqw;
+			enu->msv = sk.sp.equipment.msv;
+			enu->rare = rarity_get();
+			CBUG(!where || where->type != TYPE_ENTITY);
+			ENT *ewhere = &where->sp.entity;
+			if (ewhere->fd > 0 && equip(where, nu))
+				;
+		}
 
 		break;
 	case S_TYPE_CONSUMABLE:
-		o->type = TYPE_CONSUMABLE;
-		CONSUM(nu)->food = sk.sp.consumable.food;
-		CONSUM(nu)->drink = sk.sp.consumable.drink;
+		{
+			CON *cnu = &nu->sp.consumable;
+			nu->type = TYPE_CONSUMABLE;
+			cnu->food = sk.sp.consumable.food;
+			cnu->drink = sk.sp.consumable.drink;
+		}
+
 		break;
 	case S_TYPE_ENTITY:
-		o->type = TYPE_ENTITY;
-		mob_add_stats(&sk, nu);
-		ENTITY(nu)->flags = sk.sp.entity.flags;
-		ENTITY(nu)->wtso = sk.sp.entity.wt;
-		mob = birth(nu);
-		object_drop(nu, sk.sp.entity.drop);
-		mob->home = where;
+		{
+			ENT *enu = &nu->sp.entity;
+			nu->type = TYPE_ENTITY;
+			mob_add_stats(&sk, nu);
+			enu->flags = sk.sp.entity.flags;
+			enu->wtso = sk.sp.entity.wt;
+			birth(nu);
+			object_drop(nu, sk.sp.entity.drop);
+			enu->home = where;
+		}
+
 		break;
 	case S_TYPE_PLANT:
-		o->type = TYPE_PLANT;
+		nu->type = TYPE_PLANT;
 		object_drop(nu, sk.sp.plant.drop);
-		o->owner = GOD;
+		nu->owner = object_get(GOD);
 		break;
         case S_TYPE_BIOME:
-		o->type = TYPE_ROOM;
-		ROOM(nu)->exits = ROOM(nu)->doors = 0;
-		ROOM(nu)->dropto = NOTHING;
-		ROOM(nu)->flags = RF_TEMP;
+		{
+			ROO *rnu = &nu->sp.room;
+			nu->type = TYPE_ROOM;
+			rnu->exits = rnu->doors = 0;
+			rnu->dropto = NULL;
+			rnu->flags = RF_TEMP;
+		}
+
+		break;
 	case S_TYPE_OTHER:
 		break;
 	}
@@ -207,7 +218,7 @@ object_add(struct object_skeleton sk, dbref where)
 }
 
 void
-object_drop(dbref where, struct drop **drop)
+object_drop(OBJ *where, struct drop **drop)
 {
         register int i;
 
@@ -229,12 +240,12 @@ object_drop(dbref where, struct drop **drop)
 }
 
 int
-e_exit_can(dbref player, enum exit e) {
-	return e_ground(getloc(player), e);
+e_exit_can(OBJ *player, enum exit e) {
+	return e_ground(player->location, e);
 }
 
 int
-e_ground(dbref room, enum exit e)
+e_ground(OBJ *room, enum exit e)
 {
 	pos_t pos;
 

@@ -5,6 +5,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <string.h>
+#include "object.h"
 #include "command.h"
 
 /* it is possible to add other coord_t (like char) but a corresponding
@@ -86,84 +87,20 @@ typedef struct {
 	coord_t dim, dis;
 } exit_t;
 
-enum object_skeleton_type {
-        S_TYPE_OTHER,
-        S_TYPE_CONSUMABLE,
-        S_TYPE_EQUIPMENT,
-        S_TYPE_ENTITY,
-	S_TYPE_PLANT,
-	S_TYPE_BIOME,
-};
-
-enum element {
-	ELM_PHYSICAL,
-	ELM_FIRE,
-	ELM_ICE,
-	ELM_AIR,
-	ELM_EARTH,
-	ELM_SPIRIT,
-	ELM_VAMP,
-	ELM_DARK,
-};
-
-struct drop {
-	struct object_skeleton *i;
-	unsigned char y, yield, yield_v;
-};
-
-struct entity_skeleton {
-	struct drop *drop[32];
-	unsigned char y, stat, lvl, lvl_v, wt, flags;
-	enum element type;
-	unsigned biomes;
-};
-
-struct plant_skeleton {
-	char const *pre, small, big, *post;
-	coord_t tmp_min, tmp_max;
-	ucoord_t rn_min, rn_max;
-	struct drop *drop[32];
-	unsigned y;
-};
-
-struct object_skeleton {
-	char const *name;
-	char const *art;
-	char const *description;
-        char const *avatar;
-
-        enum object_skeleton_type type;
-
-        union {
-		struct {
-			unsigned food;
-			unsigned drink;
-		} consumable;
-                struct {
-                        unsigned short eqw, msv;
-                } equipment;
-                struct entity_skeleton entity;
-		struct plant_skeleton plant;
-                struct {
-                        const char *bg;
-                } biome;
-        } sp;
-};
-
 extern enum exit e_map[];
 extern exit_t exit_map[];
 
 morton_t pos_morton(pos_t);
 void morton_pos(pos_t p, morton_t code);
 
-int e_exit_can(dbref player, enum exit e);
-int e_ground(dbref room, enum exit e);
+int e_exit_can(OBJ *player, enum exit e);
+int e_ground(OBJ *room, enum exit e);
 
-dbref
-object_add(struct object_skeleton o, dbref where);
+OBJ *
+object_add(struct object_skeleton o, OBJ *where);
 
 void
-object_drop(dbref where, struct drop **drop);
+object_drop(OBJ *where, struct drop **drop);
 
 void pos_move(pos_t d, pos_t o, enum exit e);
 enum exit dir_e(const char dir);

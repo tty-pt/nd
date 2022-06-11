@@ -23,7 +23,7 @@ fbmuck-obj-y += create.o mdb.o \
 	move.o mcp.o \
 	player.o \
 	predicates.o propdirs.o property.o \
-	props.o rob.o sanity.o set.o \
+	props.o rob.o set.o \
 	smatch.o speech.o stringutil.o \
 	unparse.o wiz.o \
 	copyright.o interface.o web.o

@@ -71,11 +71,11 @@ enum mob_type {
 	MOB_MAX,
 };
 
-void entities_add(dbref where, enum biome, long long pdn);
-struct entity *birth(dbref where);
-void mobs_aggro(dbref player);
+void entities_add(OBJ *where, enum biome, long long pdn);
+ENT *birth(OBJ *player);
+void mobs_aggro(OBJ *player);
 struct object_skeleton const *mob_obj_random();
-void entity_update(dbref who);
-void mob_add_stats(struct object_skeleton *mob, dbref nu);
+void entity_update(OBJ *player);
+void mob_add_stats(struct object_skeleton *mob, OBJ *nu);
 
 #endif

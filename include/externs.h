@@ -2,11 +2,9 @@
 #ifndef _EXTERNS_H
 #define _EXTERNS_H
 #include "copyright.h"
-
-/* Definition of pid_t */
 #include <sys/types.h>
+#include "object.h"
 
-/* Definition of 'dbref' */
 #include "mdb.h"
 /* Definition of 'McpFrame' */
 #include "mcp.h"
@@ -41,14 +39,14 @@ void do_meme(command_t *);
 extern int number(const char *s);
 extern int ifloat(const char *s);
 extern void putproperties(FILE * f, int obj);
-extern void getproperties(FILE * f, int obj, const char *pdir);
-extern void db_free_object(dbref i);
-extern void db_clear_object(dbref i);
+extern void getproperties(FILE * f, OBJ *obj, const char *pdir);
+extern void db_free_object(OBJ *obj);
+extern void db_clear_object(OBJ *obj);
 
 /* From create.c */
 extern void do_create(command_t *);
 extern void do_clone(command_t *);
-extern void copy_one_prop(dbref player, dbref source, dbref destination, char *propname, int ignore);
+extern void copy_one_prop(OBJ *player, OBJ *source, OBJ *destination, char *propname, int ignore);
 
 /* From hashtab.c */
 extern unsigned int hash(const char *s, unsigned int hash_size);
@@ -58,7 +56,7 @@ extern int free_hash(const char *name, hash_tab * table, unsigned size);
 extern void kill_hash(hash_tab * table, unsigned size, int freeptrs);
 
 /* From help.c */
-extern void spit_file(dbref player, const char *filename);
+extern void spit_file(OBJ *player, const char *filename);
 extern void do_help(command_t *);
 extern void do_news(command_t *);
 extern void do_man(command_t *);
@@ -66,12 +64,12 @@ extern void do_motd(command_t *);
 extern void do_info(command_t *);
 
 /* From look.c */
-extern void look_room(dbref player, dbref room);
-extern long size_object(dbref i, int load);
+extern void look_room(OBJ *player, OBJ *room);
+extern long size_object(OBJ *obj, int load);
 
 
 /* extern void look_room_simple(dbref player, dbref room); */
-extern void look_around(dbref player);
+extern void look_around(OBJ *player);
 extern void do_look_at(command_t *cmd);
 extern void do_examine(command_t *cmd);
 extern void do_inventory(command_t *cmd);
@@ -100,34 +98,34 @@ extern void do_status(command_t *);
 extern void do_train(command_t *);
 extern void do_sit(command_t *);
 extern void do_stand(command_t *);
-extern int kill_v(dbref player, const char *cmdstr);
-int do_stand_silent(dbref player);
+extern int kill_v(OBJ *player, const char *cmdstr);
+int do_stand_silent(OBJ *player);
 
 /* From move.c */
-extern void moveto(dbref what, dbref where);
-extern void enter_room(dbref player, dbref loc);
-extern int parent_loop_check(dbref source, dbref dest);
+extern void moveto(OBJ *what, OBJ *where);
+extern void enter_room(OBJ *player, OBJ *loc);
+extern int parent_loop_check(OBJ *source, OBJ *dest);
 extern void go_move(dbref player, const char *dir);
 extern void do_get(command_t *);
 extern void do_drop(command_t *);
 extern void do_recycle(command_t *);
-extern void recycle(dbref player, dbref thing);
+extern void recycle(OBJ *player, OBJ *thing);
 
 /* From player.c */
-extern dbref lookup_player(const char *name);
+OBJ *lookup_player(const char *name);
 extern void do_password(command_t *);
-extern void add_player(dbref who);
-extern void delete_player(dbref who);
+extern void add_player(OBJ *who);
+extern void delete_player(OBJ *who);
 extern void clear_players(void);
 extern void do_talk(command_t *);
 extern void do_answer(command_t *);
-extern int dialog_exists(dbref what);
-extern void dialog_stop(dbref player);
+extern int dialog_exists(OBJ *what);
+extern void dialog_stop(OBJ *player);
 
 /* From predicates.c */
-extern int can_doit(dbref player, dbref thing, const char *default_fail_msg);
-extern int controls(dbref who, dbref what);
-extern int payfor(dbref who, int cost);
+extern int can_doit(OBJ *player, OBJ *thing, const char *default_fail_msg);
+extern int controls(OBJ *who, OBJ *what);
+extern int payfor(OBJ *who, int cost);
 extern int ok_ascii_any(const char *name);
 extern int ok_name(const char *name);
 
@@ -144,8 +142,8 @@ extern void do_chown(command_t *);
 /* From speech.c */
 extern void do_wall(command_t *cmd);
 extern void do_say(command_t *cmd);
-extern void notify_wts(dbref who, char const *a, char const *b, char *format, ...);
-extern void notify_wts_to(dbref who, dbref tar, char const *a, char const *b, char *format, ...);
+extern void notify_wts(OBJ *player, char const *a, char const *b, char *format, ...);
+extern void notify_wts_to(OBJ *player, OBJ *target, char const *a, char const *b, char *format, ...);
 
 /* From stringutil.c */
 extern int string_prefix(const char *string, const char *prefix);
@@ -169,26 +167,26 @@ struct icon {
         char *icon;
 };
 
-extern struct icon icon(dbref what);
-extern const char *unparse_object(dbref player, dbref object);
+extern struct icon icon(OBJ *what);
+extern const char *unparse_object(OBJ *player, OBJ *object);
 
 /* From smatch.c */
 extern int equalstr(char *s, char *t);
 
 /* from interface.c */
-int notify(dbref player, const char *msg);
-void notifyf(dbref player, char *format, ...);
-void onotifyf(dbref player, char *format, ...);
-void anotifyf(dbref room, char *format, ...);
+int notify(OBJ *player, const char *msg);
+void notifyf(OBJ *player, char *format, ...);
+void onotifyf(OBJ *player, char *format, ...);
+void anotifyf(OBJ *room, char *format, ...);
 
 /* from property.c */
-char * displayprop(dbref player, dbref obj, const char *name, char *buf, size_t bufsiz);
-long size_properties(dbref player, int load);
+char * displayprop(OBJ *player, OBJ *obj, const char *name, char *buf, size_t bufsiz);
+long size_properties(OBJ *player, int load);
 void untouchprops_incremental(int limit);
 
 /* from props.c */
 void clear_propnode(PropPtr p);
-void copy_proplist(dbref obj, PropPtr * newer, PropPtr old);
+void copy_proplist(OBJ *obj, PropPtr * newer, PropPtr old);
 long size_proplist(PropPtr avl);
 
 /* from sanity.c */

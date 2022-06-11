@@ -36,7 +36,7 @@ enum actions {
 };
 
 struct icon
-icon(dbref what)
+icon(OBJ *what)
 {
         static char buf[BUFSIZ];
         struct icon ret = {
@@ -44,42 +44,52 @@ icon(dbref what)
                 .icon = ANSI_RESET ANSI_BOLD "?",
         };
         dbref aux;
-        switch (OBJECT(what)->type) {
+        switch (what->type) {
         case TYPE_ROOM:
                 ret.icon = ANSI_FG_YELLOW "-";
                 break;
         case TYPE_ENTITY:
-                ret.actions |= ACT_KILL;
-		ret.icon = ANSI_BOLD ANSI_FG_YELLOW "!";
-		if (dialog_exists(what)) {
-			ret.actions |= ACT_TALK;
-		}
-		if (ENTITY(what)->flags & EF_SHOP) {
-                        ret.actions |= ACT_SHOP;
-                        ret.icon = ANSI_BOLD ANSI_FG_GREEN "$";
+		{
+			ENT *ewhat = &what->sp.entity;
+
+			ret.actions |= ACT_KILL;
+			ret.icon = ANSI_BOLD ANSI_FG_YELLOW "!";
+			if (dialog_exists(what)) {
+				ret.actions |= ACT_TALK;
+			}
+			if (ewhat->flags & EF_SHOP) {
+				ret.actions |= ACT_SHOP;
+				ret.icon = ANSI_BOLD ANSI_FG_GREEN "$";
+			}
 		}
                 break;
 	case TYPE_CONSUMABLE:
-		if (CONSUM(what)->drink) {
-			ret.actions |= ACT_FILL;
-			ret.icon = ANSI_BOLD ANSI_FG_BLUE "~";
-		} else {
-			ret.icon = ANSI_BOLD ANSI_FG_RED "o";
+		{
+			CON *cwhat = &what->sp.consumable;
+			if (cwhat->drink) {
+				ret.actions |= ACT_FILL;
+				ret.icon = ANSI_BOLD ANSI_FG_BLUE "~";
+			} else {
+				ret.icon = ANSI_BOLD ANSI_FG_RED "o";
+			}
+			ret.actions |= ACT_CONSUME;
 		}
-		ret.actions |= ACT_CONSUME;
 		break;
 	case TYPE_PLANT:
-		aux = PLANT(what)->plid;
-		struct object_skeleton *obj_skel = PLANT_SKELETON(aux);
-		struct plant_skeleton *pl = &obj_skel->sp.plant;
+		{
+			PLA *pwhat = &what->sp.plant;
+			aux = pwhat->plid;
+			struct object_skeleton *obj_skel = PLANT_SKELETON(aux);
+			struct plant_skeleton *pl = &obj_skel->sp.plant;
 
-		ret.actions |= ACT_CHOP;
-		snprintf(buf, sizeof(buf), "%s%c%s", pl->pre,
-				PLANT(what)->size > PLANT_HALF ? pl->big : pl->small,
-				pl->post); 
+			ret.actions |= ACT_CHOP;
+			snprintf(buf, sizeof(buf), "%s%c%s", pl->pre,
+					pwhat->size > PLANT_HALF ? pl->big : pl->small,
+					pl->post); 
 
-		// use the icon immediately
-		ret.icon = buf;
+			// use the icon immediately
+			ret.icon = buf;
+		}
 		break;
 	case TYPE_EQUIPMENT:
         case TYPE_THING:
@@ -92,16 +102,16 @@ icon(dbref what)
 #define BUFF(...) buf_l += snprintf(&buf[buf_l], BUFFER_LEN - buf_l, __VA_ARGS__)
 
 static inline int
-controls_link(dbref who, dbref what)
+controls_link(OBJ *who, OBJ *what)
 {
-	switch (OBJECT(what)->type) {
+	switch (what->type) {
 	case TYPE_ROOM:
-		if (controls(who, ROOM(what)->dropto))
+		if (controls(who, what->sp.room.dropto))
 			return 1;
 		return 0;
 
 	case TYPE_ENTITY:
-		if (controls(who, ENTITY(what)->home))
+		if (controls(who, what->sp.entity.home))
 			return 1;
 		return 0;
 
@@ -111,36 +121,35 @@ controls_link(dbref who, dbref what)
 }
 
 const char *
-unparse_object(dbref player, dbref loc)
+unparse_object(OBJ *player, OBJ *loc)
 {
 	static char buf[BUFFER_LEN];
         size_t buf_l = 0;
-	if (player != NOTHING && OBJECT(player)->type != TYPE_ENTITY)
-		player = OBJECT(player)->owner;
 
-	switch (loc) {
-	case NOTHING:
+	if (player && player->type != TYPE_ENTITY)
+		player = player->owner;
+
+	if (!loc)
 		return "*NOTHING*";
-	default:
-		if (loc < 0 || loc >= db_top)
-			return "*INVALID*";
 
-		if (OBJECT(loc)->type == TYPE_EQUIPMENT && EQUIPMENT(loc)->eqw) {
-			unsigned n = EQUIPMENT(loc)->rare;
+	if (loc->type == TYPE_EQUIPMENT) {
+		EQU *eloc = &loc->sp.equipment;
+
+		if (eloc->eqw) {
+			unsigned n = eloc->rare;
 
 			if (n != 1)
-                                BUFF("(%s) ", rarity_str[n]);
+				BUFF("(%s) ", rarity_str[n]);
 		}
-
-                BUFF("%s", OBJECT(loc)->name);
-
-		if (player == NOTHING || controls_link(player, loc))
-
-                        BUFF("(#%d)", loc);
-
-                buf[buf_l] = '\0';
-		return buf;
 	}
+
+	BUFF("%s", loc->name);
+
+	if (!player || controls_link(player, loc))
+		BUFF("(#%d)", object_ref(loc));
+
+	buf[buf_l] = '\0';
+	return buf;
 }
 
 static const char *unparse_c_version = "$RCSfile$ $Revision: 1.11 $";

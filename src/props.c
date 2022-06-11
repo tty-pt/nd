@@ -353,7 +353,7 @@ next_node(PropPtr ptr, char *name)
 
 /* copies properties */
 void
-copy_proplist(dbref obj, PropPtr * nu, PropPtr old)
+copy_proplist(OBJ *obj, PropPtr * nu, PropPtr old)
 {
 	PropPtr p;
 

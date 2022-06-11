@@ -123,7 +123,6 @@ core_command_t cmds[] = {
 	}, {
 		.name = "create",
 		.cb = &do_create,
-		/* sane_dump_object(player, arg1); /1* examine *1/ */
 	}, {
 		.name = "find",
 		.cb = &do_find,
@@ -149,10 +148,6 @@ core_command_t cmds[] = {
 	/* 	.name = "restrict", */
 	/* 	.cb = &do_restrict, */
 	/* }, { */
-		/* sanity(player); */
-		/* .name = "command", */
-		/* .cb = &do_command, */
-		/* sanechange(player, full_command); /1* sanchange *1/ */
 		/* do_showextver(player); */
 	}, {
 		.name = "talk",
@@ -378,8 +373,6 @@ show_program_usage(char *prog)
 	exit(1);
 }
 
-extern int sanity_violated;
-
 void
 close_sockets(const char *msg) {
 	descr_t *d;
@@ -506,14 +499,7 @@ main(int argc, char **argv)
 	signal(SIGUSR1, SIG_DFL);
 	signal(SIGTERM, sig_shutdown);
 
-	sanity(AMBIGUOUS);
-	errno = 0; // TODO why? sanity fails to access file
-
-	if (sanity_violated) {
-		optflags |= OPT_WIZONLY;
-		if (optflags & OPT_SANITY_AUTOFIX)
-			sanfix(AMBIGUOUS);
-	}
+	/* errno = 0; // TODO why? sanity fails to access file */
 
 	if (shovechars())
 		return 1;
@@ -550,7 +536,7 @@ descr_inband(int fd, const char *s)
 }
 
 int
-notify(dbref player, const char *msg)
+notify(OBJ *player, const char *msg)
 {
 	int retval = 0, fd;
 	char buf[BUFFER_LEN + 2];
@@ -558,9 +544,10 @@ notify(dbref player, const char *msg)
 	char *ptr1;
 	const char *ptr2;
 
-	CBUG(OBJECT(player)->type != TYPE_ENTITY);
+	CBUG(player->type != TYPE_ENTITY);
 
-	fd = ENTITY(player)->fd;
+	ENT *eplayer = &player->sp.entity;
+	fd = eplayer->fd;
 	if (fd <= 0)
 		return 0;
 
@@ -588,7 +575,7 @@ notify(dbref player, const char *msg)
 }
 
 void
-notifyf(dbref player, char *format, ...)
+notifyf(OBJ *player, char *format, ...)
 {
 	va_list args;
 	static char bufr[BUFFER_LEN];
@@ -601,33 +588,34 @@ notifyf(dbref player, char *format, ...)
 }
 
 static inline void
-notify_except(dbref first, dbref exception, const char *msg, dbref who)
+notify_except(OBJ *first, OBJ *exception, const char *msg)
 {
 	DOLIST(first, first) {
-		if (OBJECT(first)->type == TYPE_ENTITY && first != exception)
+		if (first->type == TYPE_ENTITY && first != exception)
 			notify(first, msg);
 	}
 }
 
 void
-anotifyf(dbref room, char *format, ...)
+anotifyf(OBJ *room, char *format, ...)
 {
 	va_list args;
 	char buf[BUFFER_LEN];
 	va_start(args, format);
 	vsnprintf(buf, sizeof(buf), format, args);
-	notify_except(OBJECT(room)->contents, NOTHING, buf, NOTHING);
+	notify_except(room->contents, NULL, buf);
 	va_end(args);
 }
 
 void
-onotifyf(dbref player, char *format, ...)
+onotifyf(OBJ *player, char *format, ...)
 {
+	OBJ *loc = player->location;
 	va_list args;
 	char buf[BUFFER_LEN];
 	va_start(args, format);
 	vsnprintf(buf, sizeof(buf), format, args);
-	notify_except(OBJECT(getloc(player))->contents, player, buf, player);
+	notify_except(loc->contents, player, buf);
 	va_end(args);
 }
 
@@ -699,7 +687,7 @@ do_auth(command_t *cmd)
 	int fd = cmd->fd;
 	char *qsession = cmd->argv[1];
 	FILE *fp;
-	dbref player;
+	OBJ *player;
 	descr_t *d = &descr_map[fd];
 
 	snprintf(buf, sizeof(buf), "/sessions/%s", qsession);
@@ -718,29 +706,29 @@ do_auth(command_t *cmd)
 
 	player = lookup_player(buf);
 
-	if (player == NOTHING) {
+	if (!player) {
 		player = create_player(buf);
 		birth(player);
-	} else if (ENTITY(player)->fd > 0) {
+	} else if (player->sp.entity.fd > 0) {
                 descr_inband(fd, "That player is already connected.\r\n");
                 web_auth_fail(fd, 2);
                 return;
         }
 
 	d->flags |= DF_CONNECTED;
-	d->player = cmd->player = player;
+	d->player = cmd->player = object_ref(player);
 	CBUG(d->fd != fd);
-	ENTITY(player)->fd = fd;
+	player->sp.entity.fd = fd;
         web_stats(player);
         web_bars(player);
-        web_auth_success(fd, player);
+        web_auth_success(player);
         web_equipment(player);
 	look_around(player);
 	do_view(cmd);
 }
 
 static inline void
-do_v(dbref player, char const *cmdstr)
+do_v(OBJ *player, char const *cmdstr)
 {
 	int ofs = 1;
 	char const *s = cmdstr;
@@ -771,26 +759,28 @@ command_process(command_t *cmd)
 		return;
 	}
 
-	dbref player = cmd->player;
+	OBJ *player = object_get(cmd->player);
+	ENT *eplayer = &player->sp.entity;
 
 	command_debug(cmd, "command_process");
 
 	// set current descriptor (needed for death)
-	/* if (GETLID(player) < 0) */
-	/* 	mob_put(player); */
-	struct entity *mob = ENTITY(player);
-	mob->fd = descr;
+	eplayer->fd = descr;
+
+	OBJ *here = player->location;
 
 	pos_t pos;
-	map_where(pos, getloc(player));
+	map_where(pos, here);
 
 	if (cmd_i)
 		cmd_i->cb(cmd);
 	else
-		do_v(cmd->player, cmd->argv[0]);
+		do_v(player, cmd->argv[0]);
 
 	pos_t pos2;
-	map_where(pos2, getloc(player));
+	OBJ *there = player->location;
+	map_where(pos2, there);
+
 	if (MORTON_READ(pos2) != MORTON_READ(pos))
 		do_view(cmd);
 }
@@ -902,13 +892,16 @@ void
 descr_close(descr_t *d)
 {
 	if (d->flags & DF_CONNECTED) {
-		warn("%s(%d) disconnects on fd %d\n",
-		     OBJECT(d->player)->name, d->player, d->fd);
-		dbref last_observed = ENTITY(d->player)->last_observed;
-		if (last_observed != NOTHING)
-			db_obs_remove(last_observed, d->player);
+		OBJ *player = object_get(d->player);
+		ENT *eplayer = &player->sp.entity;
 
-		ENTITY(d->player)->fd = -1;
+		warn("%s(%d) disconnects on fd %d\n",
+		     player->name, d->player, d->fd);
+		OBJ *last_observed = eplayer->last_observed;
+		if (last_observed)
+			db_obs_remove(last_observed, player);
+
+		eplayer->fd = -1;
 		d->flags = 0;
 		d->player = NOTHING;
 	} else
@@ -1052,15 +1045,18 @@ wall_wizards(const char *msg)
 	strlcpy(buf, msg, sizeof(buf));
 	strlcat(buf, "\r\n", sizeof(buf));
 
-	DESCR_ITER(d)
-		if (ENTITY(d->player)->flags & EF_WIZARD)
+	DESCR_ITER(d) {
+		OBJ *player = object_get(d->player);
+		if (player->sp.entity.flags & EF_WIZARD)
 			descr_inband(d->fd, buf);
+	}
 }
 
 int
-boot_off(dbref player)
+boot_off(OBJ *player)
 {
-	int fd = ENTITY(player)->fd;
+	ENT *eplayer = &player->sp.entity;
+	int fd = eplayer->fd;
 
 	if (fd > 0) {
 		descr_close(&descr_map[fd]);
@@ -1071,15 +1067,9 @@ boot_off(dbref player)
 }
 
 void
-boot_player_off(dbref player)
+boot_player_off(OBJ *player)
 {
 	boot_off(player);
-}
-
-void
-emergency_shutdown(void)
-{
-	close_sockets("\r\nEmergency shutdown due to server crash.");
 }
 
 void

@@ -30,8 +30,8 @@
 #define GEON_M (GEON_SIZE * GEON_SIZE)
 #define GEON_BDI (GEON_SIZE * (GEON_SIZE - 1))
 
-typedef void op_a_t(dbref player, enum exit e);
-typedef int op_b_t(dbref player, struct cmd_dir cd);
+typedef void op_a_t(OBJ *player, enum exit e);
+typedef int op_b_t(OBJ *player, struct cmd_dir cd);
 typedef struct {
 	union {
 		op_a_t *a;
@@ -59,9 +59,11 @@ geo_update()
 		return;
 
 	/* geo_notify(0, -1, msg); */
-	for (i = 0; i < db_top; i++)
-		if (OBJECT(i)->type == TYPE_ENTITY)
-			notify(i, msg);
+	for (i = 0; i < db_top; i++) {
+		OBJ *o = object_get(i);
+		if (o->type == TYPE_ENTITY)
+			notify(o, msg);
+	}
 }
 
 /* OPS {{{ */
@@ -69,7 +71,7 @@ geo_update()
 /* Basic {{{ */
 
 static inline void
-geo_pos(pos_t p, dbref loc, enum exit e)
+geo_pos(pos_t p, OBJ *loc, enum exit e)
 {
 	pos_t aux;
 	map_where(aux, loc);
@@ -81,8 +83,8 @@ geo_pos(pos_t p, dbref loc, enum exit e)
 	/* 		* (morton_t *) p); */
 }
 
-dbref
-geo_there(dbref where, enum exit e)
+OBJ *
+geo_there(OBJ *where, enum exit e)
 {
 	pos_t pos;
 	/* CBUG(!*e_name(e)); */
@@ -97,21 +99,21 @@ geo_there(dbref where, enum exit e)
 // TODO fee -> use legacy system (and improve it)
 
 static inline void
-reward(dbref player, const char *msg, int amount)
+reward(OBJ *player, const char *msg, int amount)
 {
-	OBJECT(player)->value += amount;
+	player->value += amount;
 	notifyf(player, "You %s. (+%dp)", msg, amount);
 }
 
 static inline int
-fee_fail(dbref player, char *desc, char *info, int cost)
+fee_fail(OBJ *player, char *desc, char *info, int cost)
 {
-	int v = OBJECT(player)->value;
+	int v = player->value;
 	if (v < cost) {
 		notifyf(player, "You can't afford to %s. (%dp)", desc, cost);
 		return 1;
 	} else {
-		OBJECT(player)->value -= cost;
+		player->value -= cost;
 		notifyf(player, "%s (-%dp). %s",
 			   desc, cost, info);
 		return 0;
@@ -119,28 +121,31 @@ fee_fail(dbref player, char *desc, char *info, int cost)
 }
 
 static inline int
-fee_noname(dbref player) {
+fee_noname(OBJ *player) {
 	return fee_fail(player, "claim a room", "", ROOM_COST);
 }
 
 static inline void
-wall_around(dbref player, enum exit e)
+wall_around(OBJ *player, enum exit e)
 {
-	dbref here = getloc(player);
+	OBJ *here = player->location;
+	ROO *rhere = &here->sp.room;
 	const char *s;
 	for (s = e_other(e); *s; s++) {
 		enum exit e2 = dir_e(*s);
-		dbref there = geo_there(here, e2);
+		OBJ *there = geo_there(here, e2);
 
-		if ((ROOM(here)->exits & e2) && there < 0)
-			ROOM(here)->exits ^= e2;
+		if ((rhere->exits & e2) && there)
+			rhere->exits ^= e2;
 	}
 }
 
 int
-geo_claim(dbref player, dbref room) {
-	if (!(ROOM(room)->flags & RF_TEMP)) {
-		if (OBJECT(room)->owner != player) {
+geo_claim(OBJ *player, OBJ *room) {
+	ROO *rroom = &room->sp.room;
+
+	if (!(rroom->flags & RF_TEMP)) {
+		if (room->owner != player) {
 			notify(player, "You don't own this room");
 			return 1;
 		}
@@ -151,58 +156,66 @@ geo_claim(dbref player, dbref room) {
 	if (fee_noname(player))
 		return 1;
 
-	ROOM(room)->flags ^= RF_TEMP;
-	CBUG(ROOM(room)->flags & RF_TEMP);
-	OBJECT(room)->owner = player;
-	room = OBJECT(room)->contents;
+	rroom->flags ^= RF_TEMP;
+	CBUG(rroom->flags & RF_TEMP);
+	room->owner = player;
 
 	return 0;
 }
 
 static inline void
-exits_fix(dbref player, dbref there, enum exit e)
+exits_fix(OBJ *player, OBJ *there, enum exit e)
 {
+	ROO *rthere = &there->sp.room;
 	const char *s;
 
 	for (s = e_other(e); *s; s++) {
 		enum exit e2 = dir_e(*s);
-		dbref othere = geo_there(there, e2);
+		OBJ *othere = geo_there(there, e2);
 
-		if (othere < 0 || (ROOM(othere)->flags & RF_TEMP)) {
+		if (!othere)
+			continue;
+
+		ROO *rothere = &othere->sp.room;
+
+		if (rothere->flags & RF_TEMP) {
 			continue;
 		}
 
-		if (!(ROOM(there)->exits & e2)) {
-			if (!(ROOM(othere)->exits & e_simm(e2)))
+		if (!(rthere->exits & e2)) {
+			if (!(rothere->exits & e_simm(e2)))
 				continue;
 
-			ROOM(there)->exits |= e2;
+			rthere->exits |= e2;
 			continue;
 		}
 
-		if (!(ROOM(othere)->exits & e_simm(e2)))
-			ROOM(there)->exits &= ~e2;
+		if (!(rothere->exits & e_simm(e2)))
+			rthere->exits &= ~e2;
 	}
 }
 
 static void
-exits_infer(dbref player, dbref here)
+exits_infer(OBJ *player, OBJ *here)
 {
+	ROO *rhere = &here->sp.room;
 	const char *s = "wsnedu";
 
 	for (; *s; s++) {
 		enum exit e = dir_e(*s);
-		dbref there = geo_there(here, e);
+		OBJ *there = geo_there(here, e);
 
-		if (there < 0) {
+		if (!there) {
                         if (e != E_UP && e != E_DOWN)
-				ROOM(here)->exits |= e;
+				rhere->exits |= e;
 			continue;
 		}
 
-		if (ROOM(there)->exits & e_simm(e)) {
-			ROOM(here)->exits |= e;
-			ROOM(here)->doors |= ROOM(there)->doors & e_simm(e);
+		ROO *rthere = &there->sp.room;
+
+		if (rthere->exits & e_simm(e)) {
+			rhere->exits |= e;
+			rhere->doors |= rthere->doors & e_simm(e);
 		}
 	}
 }
@@ -210,7 +223,7 @@ exits_infer(dbref player, dbref here)
 // TODO make more add functions similar and easy to insert here
 
 static inline void
-stones_add(dbref where, enum biome b, pos_t p) {
+stones_add(OBJ *where, enum biome b, pos_t p) {
 	noise_t v = uhash((const char *) p, sizeof(pos_t), 0);
 	unsigned char n = v & 0x3, i;
 	static struct object_skeleton stone = {
@@ -230,29 +243,28 @@ stones_add(dbref where, enum biome b, pos_t p) {
 }
 
 static inline void
-others_add(dbref where, enum biome b, pos_t p)
+others_add(OBJ *where, enum biome b, pos_t p)
 {
         stones_add(where, b, p);
 }
 
-static dbref
-geo_room_at(dbref player, pos_t pos)
+static OBJ *
+geo_room_at(OBJ *player, pos_t pos)
 {
 	struct bio *bio;
-	dbref there;
 	bio = noise_point(pos);
-        there = object_add(biomes[bio->bio_idx], NOTHING);
+        OBJ *there = object_add(biomes[bio->bio_idx], NULL);
+	ROO *rthere = &there->sp.room;
 	map_put(pos, there, DB_NOOVERWRITE);
-	CBUG(there <= 0);
 	exits_infer(player, there);
 
 	if (pos[2] != 0)
 		return there;
 
-	ROOM(there)->floor = bio->bio_idx;
+	rthere->floor = bio->bio_idx;
 	entities_add(there, bio->bio_idx, bio->pd.n);
 	others_add(there, bio->bio_idx, pos);
-	plants_add(player, there,
+	plants_add(there,
 			&bio->pd, bio->ty,
 			bio->tmp, bio->rn);
 	return there;
@@ -260,28 +272,31 @@ geo_room_at(dbref player, pos_t pos)
 
 void
 do_bio(command_t *cmd) {
+	OBJ *player = object_get(cmd->player);
 	struct bio *bio;
 	pos_t pos;
-	map_where(pos, getloc(cmd->player));
+	map_where(pos, player->location);
 	bio = noise_point(pos);
-	notifyf(cmd->player, "tmp %d rn %u bio %s(%d)",
+	notifyf(player, "tmp %d rn %u bio %s(%d)",
 		bio->tmp, bio->rn, biomes[bio->bio_idx].name, bio->bio_idx);
 }
 
 static void
-e_move(dbref player, enum exit e) {
-	dbref loc = getloc(player), dest;
+e_move(OBJ *player, enum exit e) {
+	OBJ *loc = player->location,
+	    *dest;
+	ROO *rloc = &loc->sp.room;
 	char const *dwts = "door";
 	int door = 0;
 
-	if (!(ROOM(loc)->exits & e)) {
+	if (!(rloc->exits & e)) {
 		notify(player, "You can't go that way.");
 		return;
 	}
 
 	do_stand_silent(player);
 
-	if (ROOM(loc)->doors & e) {
+	if (rloc->doors & e) {
 		if (e == E_UP || e == E_DOWN) {
 			dwts = "hatch";
 			door = 2;
@@ -294,7 +309,7 @@ e_move(dbref player, enum exit e) {
 	dest = geo_there(loc, e);
 	notifyf(player, "You go %s.", e_name(e));
 
-	if (dest > 0)
+	if (dest)
 		enter_room(player, dest);
 	else {
 		dest = geo_room(player, e);
@@ -306,11 +321,12 @@ e_move(dbref player, enum exit e) {
 }
 
 // exclusively called by trigger() and carve, in vertical situations
-dbref
-geo_room(dbref player, enum exit e)
+OBJ *
+geo_room(OBJ *player, enum exit e)
 {
 	pos_t pos;
-	dbref here = getloc(player), there;
+	OBJ *here = player->location,
+	    *there;
 
 	geo_pos(pos, here, e);
 	there = geo_room_at(player, pos);
@@ -324,102 +340,117 @@ geo_room(dbref player, enum exit e)
 
 /* used only on enter_room */
 
-dbref
-geo_clean(dbref player, dbref here)
+OBJ *
+geo_clean(OBJ *player, OBJ *here)
 {
-	dbref tmp;
+	ROO *rhere = &here->sp.room;
+	OBJ *tmp;
 
-	if (!(ROOM(here)->flags & RF_TEMP))
+	if (!(rhere->flags & RF_TEMP))
 		return here;
 
-	tmp = OBJECT(here)->contents;
-	DOLIST(tmp, tmp)
-		if (OBJECT(tmp)->type == TYPE_ENTITY && (ENTITY(tmp)->flags & EF_PLAYER)) {
-			/* CBUG(tmp == cmd->player); */
+	tmp = here->contents;
+	DOLIST(tmp, tmp) {
+		if (tmp->type != TYPE_ENTITY)
+			continue;
+
+		ENT *etmp = &tmp->sp.entity;
+
+		if (etmp->flags & EF_PLAYER)
 			return here;
-		}
+	}
 
 	recycle(player, here);
-	return NOTHING;
+	return NULL;
 }
 
 static void
-walk(dbref player, enum exit e) {
+walk(OBJ *player, enum exit e) {
 	e_move(player, e);
 }
 
 static void
-carve(dbref player, enum exit e)
+carve(OBJ *player, enum exit e)
 {
-	dbref there = NOTHING,
-	      here = getloc(player);
+	OBJ *there = NULL,
+	    *here = player->location;
+	ROO *rhere = &here->sp.room;
 	int wall = 0;
 
-	if (!e_ground(getloc(player), e)) {
+	if (!e_ground(here, e)) {
 		if (geo_claim(player, here))
 			return;
-		if (OBJECT(player)->value < ROOM_COST) {
+
+		if (player->value < ROOM_COST) {
 			notify(player, "You can't pay for that room");
 			return;
 		}
 
-		ROOM(here)->exits |= e;
+		rhere->exits |= e;
 
 		there = geo_there(here, e);
-		if (there < 0)
+		if (!there)
 			there = geo_room(player, e);
 		/* wall_around(cmd, exit); */
 		wall = 1;
 	}
 
 	e_move(player, e);
-	there = getloc(player);
+	there = player->location;
+
 	if (here == there)
 		return;
+
 	geo_claim(player, there);
+
 	if (wall)
 		wall_around(player, e_simm(e));
 }
 
 static void
-uncarve(dbref player, enum exit e)
+uncarve(OBJ *player, enum exit e)
 {
 	const char *s0 = "is";
-	dbref there, here = getloc(player);
+	OBJ *there,
+	    *here = player->location;
+	ROO *rhere = &here->sp.room;
 	int ht, cd = e_ground(here, e);
 
 	if (cd) {
-		ht = ROOM(here)->flags & RF_TEMP;
+		ht = rhere->flags & RF_TEMP;
 		e_move(player, e);
-		there = getloc(player);
+		there = player->location;
 
 		if (here == there)
 			return;
 	} else {
-		if (!(ROOM(here)->exits & e)) {
+		if (!(rhere->exits & e)) {
                         notifyf(player, "No exit there");
                         return;
                 }
 
 		there = geo_there(here, e);
-		if (there < 0) {
+
+		if (!there) {
 			notify(player, "No room there");
 			return;
 		}
 		s0 = "at";
 	}
 
-	if ((ROOM(there)->flags & RF_TEMP) || OBJECT(there)->owner != player) {
+	ROO *rthere = &there->sp.room;
+
+	if ((rthere->flags & RF_TEMP) || there->owner != player) {
 		notifyf(player, "You don't own th%s room.", s0);
 		return;
 	}
 
-	ROOM(there)->flags ^= RF_TEMP;
-	CBUG(!(ROOM(there)->flags & RF_TEMP));
+	rthere->flags ^= RF_TEMP;
+	CBUG(!(rthere->flags & RF_TEMP));
 	exits_infer(player, there);
 	if (cd) {
-		if (ht && (ROOM(there)->doors & e_simm(e)))
-			ROOM(there)->doors &= ~e_simm(e);
+		if (ht && (rthere->doors & e_simm(e)))
+			rthere->doors &= ~e_simm(e);
 	} else
 		geo_clean(player, there);
 
@@ -427,19 +458,22 @@ uncarve(dbref player, enum exit e)
 }
 
 static void
-unwall(dbref player, enum exit e)
+unwall(OBJ *player, enum exit e)
 {
 	int a, b, c, d;
-	dbref there,
-	      here = getloc(player);
+	OBJ *there,
+	    *here = player->location;
+	ROO *rhere = &here->sp.room;
 
-	a = OBJECT(here)->owner == player;
-	b = ROOM(here)->flags & RF_TEMP;
+	a = here->owner == player;
+	b = rhere->flags & RF_TEMP;
 	there = geo_there(here, e);
 
-	if (there > 0) {
-		c = OBJECT(there)->owner == player;
-		d = ROOM(there)->flags & RF_TEMP;
+	ROO *rthere = &there->sp.room;
+
+	if (there) {
+		c = there->owner == player;
+		d = rthere->flags & RF_TEMP;
 	} else {
 		c = 0;
 		d = 1;
@@ -451,42 +485,42 @@ unwall(dbref player, enum exit e)
 		return;
 	}
 
-	if (ROOM(here)->exits & e) {
+	if (rhere->exits & e) {
 		notify(player, "There's an exit here already.");
 		return;
 	}
 
-	debug("will create exit here %d there %d dir %c\n", here, there, e_dir(e));
-	ROOM(here)->exits |= e;
+	debug("will create exit here %d there %d dir %c\n", object_ref(here), object_ref(there), e_dir(e));
+	rhere->exits |= e;
 	e_move(player, e);
 
-	there = getloc(player);
+	there = player->location;
+	rthere = &there->sp.room;
+
 	if (here == there)
 		return;
 
-        if (OBJECT(here)->type != TYPE_ROOM)
-                here = NOTHING;
-
-	ROOM(there)->exits |= e_simm(e);
+	rthere->exits |= e_simm(e);
 	notify(player, "You tear down the wall.");
 }
 
 static inline int
-gexit_claim(dbref player, enum exit e)
+gexit_claim(OBJ *player, enum exit e)
 {
 	int a, b, c, d;
-	dbref here = geo_there(player, e),
-	      there = getloc(player);
+	OBJ *here = geo_there(player, e),
+	    *there = player->location;
+	ROO *rthere = &there->sp.room;
 
-	a = here > 0 && OBJECT(here)->owner == player;
-	c = ROOM(there)->flags & RF_TEMP;
-	b = !c && OBJECT(there)->owner == player;
-	d = e_ground(getloc(player), e_dir(e));
+	a = here && here->owner == player;
+	c = rthere->flags & RF_TEMP;
+	b = !c && there->owner == player;
+	d = e_ground(there, e_dir(e));
 
 	if (a && (b || c))
 		return 0;
 
-	if (here < 0 || (ROOM(here)->flags & RF_TEMP)) {
+	if (!here || (here->sp.room.flags & RF_TEMP)) {
 		if (b)
 			return 0;
 		if (d || c)
@@ -498,128 +532,142 @@ gexit_claim(dbref player, enum exit e)
 }
 
 static inline int
-gexit_claim_walk(dbref player, enum exit e)
+gexit_claim_walk(OBJ *player, enum exit e)
 {
-	dbref here = getloc(player);
+	OBJ *here = player->location;
+	ROO *rhere = &here->sp.room;
 
-	if (!(ROOM(here)->exits & e)) {
+	if (!(rhere->exits & e)) {
 		notify(player, "No exit here");
 		return 1;
 	}
 
 	e_move(player, e);
 
-	if (here == getloc(player))
+	OBJ *there = player->location;
+
+	if (here == there)
 		return 1;
 
-	CBUG(!(ROOM(getloc(player))->exits & e_simm(e)));
+	ROO *rthere = &there->sp.room;
+
+	CBUG(!(rthere->exits & e_simm(e)));
 
 	return gexit_claim(player, e_simm(e));
 }
 
 static void
-e_wall(dbref player, enum exit e)
+e_wall(OBJ *player, enum exit e)
 {
 	if (gexit_claim_walk(player, e))
 		return;
 
-	dbref here = getloc(player);
+	OBJ *here = player->location;
+	ROO *rhere = &here->sp.room;
 
-	ROOM(here)->exits &= ~e_simm(e);
+	rhere->exits &= ~e_simm(e);
 
-	dbref there = geo_there(here, e_simm(e));
+	OBJ *there = geo_there(here, e_simm(e));
 
-	if (there >= 0)
-		ROOM(there)->exits &= ~e;
+	if (there) {
+		ROO *rthere = &there->sp.room;
+		rthere->exits &= ~e;
+	}
 
 	notify(player, "You build a wall.");
 }
 
 static void
-door(dbref player, enum exit e)
+door(OBJ *player, enum exit e)
 {
 	if (gexit_claim_walk(player, e))
 		return;
 
-	dbref where = getloc(player);
+	OBJ *where = player->location;
+	ROO *rwhere = &where->sp.room;
 
-	ROOM(where)->doors |= e_simm(e);
+	rwhere->doors |= e_simm(e);
 
 	where = geo_there(where, e_simm(e));
 
-	if (where >= 0)
-		ROOM(where)->doors |= e;
+	if (where) {
+		rwhere = &where->sp.room;
+		rwhere->doors |= e;
+	}
 
 	notify(player, "You place a door.");
 }
 
 static void
-undoor(dbref player, enum exit e)
+undoor(OBJ *player, enum exit e)
 {
 	if (gexit_claim_walk(player, e))
 		return;
 
-	dbref where = getloc(player);
+	OBJ *where = player->location;
+	ROO *rwhere = &where->sp.room;
 
-	ROOM(where)->doors &= ~e_simm(e);
+	rwhere->doors &= ~e_simm(e);
 
 	where = geo_there(where, e_simm(e));
 
-	if (where >= 0)
-		ROOM(where)->doors &= ~e;
+	if (where) {
+		rwhere = &where->sp.room;
+		rwhere->doors &= ~e;
+	}
 
 	notify(player, "You remove a door.");
 }
 
 static int
-tell_pos(dbref player, struct cmd_dir cd) {
+tell_pos(OBJ *player, struct cmd_dir cd) {
 	pos_t pos;
-	dbref who = cd.rep == 1 ? player : (dbref) cd.rep;
+	OBJ *target = cd.rep == 1 ? player : object_get((dbref) cd.rep);
 	int ret = 1;
 
-	if (OBJECT(who)->type != TYPE_ENTITY) {
+	if (target->type != TYPE_ENTITY) {
 		notify(player, "Invalid object type.");
 		return 0;
 	}
 
-	map_where(pos, getloc(who));
+	map_where(pos, target->location);
 	notifyf(player, "0x%llx", MORTON_READ(pos));
 	return ret;
 }
 
 int
-geo_teleport(dbref player, struct cmd_dir cd)
+geo_teleport(OBJ *player, struct cmd_dir cd)
 {
 	pos_t pos;
-	dbref there;
+	OBJ *there;
 	int ret = 0;
 	if (cd.rep == 1)
 		cd.rep = 0;
 	if (cd.dir == '?') {
 		// X6? teleport to chivas
-		dbref who = (dbref) cd.rep;
-		if (OBJECT(who)->type == TYPE_ENTITY) {
-			map_where(pos, getloc(who));
+		OBJ *target = object_get((dbref) cd.rep);
+		if (target->type == TYPE_ENTITY) {
+			map_where(pos, target->location);
 			ret = 1;
 		}
 	} else
 		memcpy(pos, &cd.rep, sizeof(cd.rep));
 	there = map_get(pos);
-	if (there < 0)
+	if (!there)
 		there = geo_room_at(player, pos);
-	CBUG(there < 0);
+	CBUG(!there);
 	notifyf(player, "Teleporting to 0x%llx.", cd.rep);
 	enter_room(player, there);
 	return ret;
 }
 
 static int
-mark(dbref player, struct cmd_dir cd)
+mark(OBJ *player, struct cmd_dir cd)
 {
 	pos_t pos;
 	char value[32];
 	if (cd.rep == 1)
-		map_where(pos, getloc(player));
+		map_where(pos, player->location);
 	else
 		memcpy(pos, &cd.rep, sizeof(cd.rep));
 	snprintf(value, 32, "0x%llx", MORTON_READ(pos));
@@ -628,7 +676,7 @@ mark(dbref player, struct cmd_dir cd)
 }
 
 static int
-recall(dbref player, struct cmd_dir cd)
+recall(OBJ *player, struct cmd_dir cd)
 {
 	const char *xs = get_property_mark(player, MESGPROP_MARK, cd.dir);
 	if (!xs)
@@ -640,23 +688,25 @@ recall(dbref player, struct cmd_dir cd)
 }
 
 static int
-pull(dbref player, struct cmd_dir cd)
+pull(OBJ *player, struct cmd_dir cd)
 {
 	pos_t pos;
 	enum exit e = cd.e;
-	dbref there, here, what;
+	OBJ *there, *here, *what;
 
 	if (e == E_NULL)
 		return 0;
 
-	here = getloc(player),
-	what = (dbref) cd.rep;
+	here = player->location;
+	what = object_get((dbref) cd.rep);
 
-	if (!(ROOM(here)->exits & e)
-	    || what < 0
-	    || OBJECT(what)->type != TYPE_ROOM
-	    || OBJECT(what)->owner != player
-	    || ((there = geo_there(here, e)) > 0
+	ROO *rhere = &here->sp.room;
+
+	if (!(rhere->exits & e)
+	    || !what
+	    || what->type != TYPE_ROOM
+	    || what->owner != player
+	    || ((there = geo_there(here, e))
 		&& geo_clean(player, there) == there))
 	{
 		notify(player, "You cannot do that.");
@@ -710,7 +760,7 @@ geo_cmd_dir(struct cmd_dir *res, const char *cmd)
 }
 
 int
-geo_v(dbref player, char const *opcs)
+geo_v(OBJ *player, char const *opcs)
 {
 	struct cmd_dir cd;
 	char const *s = opcs;
@@ -744,33 +794,34 @@ geo_v(dbref player, char const *opcs)
 
 /* }}} */
 
-int gexits(dbref player, dbref where) {
+int gexits(ROO *rwhere) {
         int i, ret;
         register char *s;
         for (s = "wsnedu", ret = 0, i = 1; *s; s++, i <<= 1) {
-		if (!(ROOM(where)->exits & dir_e(*s)))
+		if (!(rwhere->exits & dir_e(*s)))
                         continue;
                 ret |= i;
         }
         return ret;
 }
 
-void geo_notify(int descr, dbref player) {
+void geo_notify(int descr, OBJ *player) {
 
+	OBJ *here = player->location;
         dbref o[GEON_M], *o_p;
 	pos_t pos;
 	char buf[BUFFER_LEN + 2];
 	McpMesg msg;
 
-	map_where(pos, getloc(player));
+	map_where(pos, here);
         map_search(o, pos, GEON_RADIUS);
 	mcp_mesg_init(&msg, MCP_WEB_PKG, "enter");
 	snprintf(buf, sizeof(buf), "0x%llx", MORTON_READ(pos));
 	mcp_mesg_arg_append(&msg, "x", buf);
 
 	for (o_p = o; o_p < o + GEON_BDI; o_p++) {
-		dbref loc = *o_p;
-		if (loc < 0 || OBJECT(loc)->type != TYPE_ROOM)
+		OBJ *loc = *o_p ? object_get(*o_p) : NULL;
+		if (!loc || loc->type != TYPE_ROOM)
 			continue;
 
 		web_room_mcp(loc, &msg);

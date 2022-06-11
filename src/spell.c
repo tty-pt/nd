@@ -150,30 +150,31 @@ struct wts buf_wts[] = {
 };
 
 enum element
-element_next(dbref ref, register unsigned char a)
+element_next(ENT *ent, register unsigned char a)
 {
-	return a ? ENTITY(ref)->debufs[__builtin_ffs(a) - 1]._sp->element
-		: ELM_PHYSICAL;
+	return a ? ent->debufs[__builtin_ffs(a) - 1]._sp->element : ELM_PHYSICAL;
 }
 
 static inline void
 spell_init(
-		struct spell *sp, dbref player,
+		struct spell *sp, OBJ *player,
 		unsigned intelligence,
 		unsigned idx)
 {
+	ENT *eplayer = &player->sp.entity;
 	struct spell_skeleton *_sp = SPELL_SKELETON(idx);
 	sp->_sp = _sp;
-	sp->val = SPELL_DMG(player, _sp);
+	sp->val = SPELL_DMG(eplayer, _sp);
 	sp->cost = SPELL_COST(sp->val, _sp->y, _sp->flags & AF_BUF);
 }
 
 void
-spells_init(struct spell sps[8], dbref player)
+spells_init(struct spell sps[8], OBJ *player)
 {
+	ENT *eplayer = &player->sp.entity;
 	char const *str = GETCURSPELLS(player);
 	unsigned i = 0;
-	unsigned intelligence = ATTR(player, ATTR_INT);
+	unsigned intelligence = eplayer->attr[ATTR_INT];
 	memset(sps, 0, sizeof(struct spell) * 8);
 
 	if (str && *str != '\0')
@@ -194,14 +195,14 @@ spells_init(struct spell sps[8], dbref player)
 }
 
 void
-debuf_end(dbref who, unsigned i)
+debuf_end(OBJ *player, unsigned i)
 {
-	ENT *mob = ENTITY(who);
-	struct debuf *d = &mob->debufs[i];
-	effect_t *e = &mob->e[DEBUF_TYPE(d->_sp)];
+	ENT *eplayer = &player->sp.entity;
+	struct debuf *d = &eplayer->debufs[i];
+	struct effect *e = &eplayer->e[DEBUF_TYPE(d->_sp)];
 	i = 1 << i;
 
-	mob->debuf_mask ^= i;
+	eplayer->debuf_mask ^= i;
 	e->mask ^= i;
 	e->value -= d->val;
 }
@@ -225,7 +226,7 @@ debuf_wts(struct spell_skeleton *_sp)
 }
 
 void
-debuf_notify(dbref who, struct debuf *d, short val)
+debuf_notify(OBJ *player, struct debuf *d, short val)
 {
 	char buf[BUFSIZ];
 	register struct spell_skeleton *_sp = d->_sp;
@@ -237,32 +238,31 @@ debuf_notify(dbref who, struct debuf *d, short val)
 	else
 		*buf = '\0';
 
-	notify_wts(who, wts->a, wts->b, "%s", buf);
+	notify_wts(player, wts->a, wts->b, "%s", buf);
 }
 
 int
-debufs_process(dbref who)
+debufs_process(OBJ *player)
 {
-	struct entity *mob = ENTITY(who);
+	ENT *eplayer = &player->sp.entity;
 	register unsigned mask, i, aux;
 	short hpi = 0, dmg;
 	struct debuf *d, *hd;
-	CBUG(!mob);
 
-	for (mask = mob->debuf_mask, i = 0;
+	for (mask = eplayer->debuf_mask, i = 0;
 	     (aux = __builtin_ffs(mask));
 	     i++, mask >>= aux)
 	{
 		i += aux - 1;
-		d = &mob->debufs[i];
+		d = &eplayer->debufs[i];
 		d->duration--;
 		if (d->duration == 0)
-			debuf_end(who, i);
+			debuf_end(player, i);
 		// wtf is this special code?
 		else if (DEBUF_TYPE(d->_sp) == AF_HP) {
 			dmg = kill_dmg(d->_sp->element, d->val,
-				      EFFECT(mob, MDEF).value,
-				      ELEMENT_NEXT(who, MDEF));
+				      EFFECT(eplayer, MDEF).value,
+				      ELEMENT_NEXT(eplayer, MDEF));
 			hd = d;
 
 			hpi += dmg;
@@ -270,69 +270,68 @@ debufs_process(dbref who)
 	}
 
 	if (hpi) {
-		debuf_notify(who, hd, hpi);
-		return cspell_heal(NOTHING, who, hpi);
+		debuf_notify(player, hd, hpi);
+		return cspell_heal(NULL, player, hpi);
 	}
 
 	return 0;
 }
 
 void
-debufs_end(dbref who)
+debufs_end(OBJ *player)
 {
-	struct entity *mob = ENTITY(who);
+	ENT *eplayer = &player->sp.entity;
 	register unsigned mask, i, aux;
 
-	for (mask = mob->debuf_mask, i = 0;
+	for (mask = eplayer->debuf_mask, i = 0;
 	     (aux = __builtin_ffs(mask));
 	     i++, mask >>= aux)
 
-		 debuf_end(who, i += aux - 1);
+		 debuf_end(player, i += aux - 1);
 }
 
 static inline int
-debuf_start(dbref who, struct spell *sp, short val)
+debuf_start(OBJ *player, struct spell *sp, short val)
 {
 	struct spell_skeleton *_sp = sp->_sp;
-	struct entity *mob;
+	ENT *eplayer = &player->sp.entity;
 	struct debuf *d;
 	int i;
 
-	mob = ENTITY(who);
-	if (mob->debuf_mask) {
-		i = __builtin_ffs(~mob->debuf_mask);
+	if (eplayer->debuf_mask) {
+		i = __builtin_ffs(~eplayer->debuf_mask);
 		if (!i)
 			return -1;
 		i--;
 	} else
 		i = 0;
 
-	d = &mob->debufs[i];
+	d = &eplayer->debufs[i];
 	d->_sp = _sp;
 	d->duration = DEBUF_DURATION(_sp->ra);
 	d->val = DEBUF_DMG(val, d->duration);
 
 	i = 1 << i;
-	mob->debuf_mask |= i;
+	eplayer->debuf_mask |= i;
 
-	effect_t *e = &mob->e[DEBUF_TYPE(_sp)];
+	struct effect *e = &eplayer->e[DEBUF_TYPE(_sp)];
 	e->mask |= i;
 	e->value += d->val;
 
-	debuf_notify(who, d, 0);
+	debuf_notify(player, d, 0);
 
 	return 0;
 }
 
 int
-spell_cast(dbref attacker, dbref target, unsigned slot)
+spell_cast(OBJ *player, OBJ *target, unsigned slot)
 {
-	struct entity *att = ENTITY(attacker);
-	struct entity *tar = ENTITY(target);
-	struct spell sp = att->spells[slot];
+	ENT *eplayer = &player->sp.entity,
+	    *etarget = &target->sp.entity;
+	struct spell sp = eplayer->spells[slot];
 	struct spell_skeleton *_sp = sp._sp;
 
-	unsigned mana = att->mp;
+	unsigned mana = eplayer->mp;
 	char a[BUFSIZ]; // FIXME way too big?
 	char b[BUFSIZ];
 	char c[BUFSIZ];
@@ -347,40 +346,40 @@ spell_cast(dbref attacker, dbref target, unsigned slot)
 	memcpy(b, a, sizeof(a));
 
 	mana -= sp.cost;
-	att->mp = mana > 0 ? mana : 0;
+	eplayer->mp = mana > 0 ? mana : 0;
 
 	short val = kill_dmg(_sp->element, sp.val,
-			EFFECT(tar, MDEF).value,
-			ELEMENT_NEXT(target, MDEF));
+			EFFECT(etarget, MDEF).value,
+			ELEMENT_NEXT(etarget, MDEF));
 
 	if (_sp->flags & AF_NEG) {
 		val = -val;
-		if (kill_dodge(attacker, wts))
+		if (kill_dodge(player, wts))
 			return 0;
 	} else
-		target = attacker;
+		target = player;
 
 	snprintf(b, sizeof(b), "casts %s on", a);
 	snprintf(c, sizeof(c), "cast %s on", a);
 	wts.a = c;
 
-	notify_attack(attacker, target, wts, 0, color, val);
+	notify_attack(player, target, wts, 0, color, val);
 
 	if (random() < (RAND_MAX >> _sp->y))
 		debuf_start(target, &sp, val);
 
-	return cspell_heal(attacker, target, val);
+	return cspell_heal(player, target, val);
 }
 
 int
-spells_cast(dbref attacker, dbref target)
+spells_cast(OBJ *player, OBJ *target)
 {
-	struct entity *att = ENTITY(attacker);
-	register unsigned i, d, combo = att->combo;
+	ENT *eplayer = &player->sp.entity;
+	register unsigned i, d, combo = eplayer->combo;
 	unsigned enough_mp = 1;
 
 	for (i = 0; enough_mp && (d = __builtin_ffs(combo)); combo >>= d) {
-		switch (spell_cast(attacker, target, (i += d) - 1)) {
+		switch (spell_cast(player, target, (i += d) - 1)) {
 		case -1: enough_mp = 0;
 			 break;
 		case 1:  return 1;
@@ -388,16 +387,16 @@ spells_cast(dbref attacker, dbref target)
 	}
 
 	if (!enough_mp)
-		notify(attacker, "Not enough mana.");
+		notify(player, "Not enough mana.");
 
 	return 0;
 }
 
 int
-cspell_heal(dbref attacker, dbref target, short amt)
+cspell_heal(OBJ *player, OBJ *target, short amt)
 {
-	struct entity *tar = ENTITY(target);
-	short hp = tar->hp;
+	ENT *etarget = &target->sp.entity;
+	short hp = etarget->hp;
 	int ret = 0;
 	hp += amt;
 
@@ -407,18 +406,24 @@ cspell_heal(dbref attacker, dbref target, short amt)
 	if (hp <= 0) {
 		hp = 1;
 		ret = 1;
-		kill_target(attacker, target);
+		target = kill_target(player, target);
 	} else {
-		register unsigned short max = HP_MAX(target);
+		register unsigned short max = HP_MAX(etarget);
 		if (hp > max)
 			hp = max;
 	}
-	tar->hp = hp;
-	
-	if (OBJECT(target)->type == TYPE_ENTITY)
+
+	if (target) {
+		etarget->hp = hp;
+		CBUG(target->type != TYPE_ENTITY);
 		web_bars(target);
-	if (attacker > 0 && OBJECT(attacker)->type == TYPE_ENTITY)
-		web_bars(attacker);
+	}
+
+	if (player && (player->type != TYPE_GARBAGE)) {
+		CBUG(player->type != TYPE_ENTITY);
+		web_bars(player);
+	}
+
 	return ret;
 }
 

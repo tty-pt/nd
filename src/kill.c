@@ -57,13 +57,13 @@ kill_dmg(enum element dmg_type, short dmg,
 
 // returns 1 if target dodges
 static inline int
-dodge_get(struct entity *att)
+dodge_get(ENT *eplayer)
 {
-	dbref target = att->target;
-	struct entity *tar = ENTITY(target);
+	OBJ *target = eplayer->target;
+	ENT *etarget = &target->sp.entity;
 	int d = RAND_MAX / 4;
-	short ad = EFFECT(att, DODGE).value,
-	      dd = EFFECT(tar, DODGE).value;
+	short ad = EFFECT(eplayer, DODGE).value,
+	      dd = EFFECT(etarget, DODGE).value;
 
 	if (ad > dd)
 		d += 3 * d / (ad - dd);
@@ -83,20 +83,20 @@ xp_get(unsigned x, unsigned y)
 }
 
 int
-kill_dodge(dbref attacker, struct wts wts)
+kill_dodge(OBJ *player, struct wts wts)
 {
-	struct entity *att = ENTITY(attacker);
-	dbref target = att->target;
-	struct entity *tar = ENTITY(target);
-	if (!EFFECT(tar, MOV).value && dodge_get(att)) {
-		notify_wts_to(target, attacker, "dodge", "dodges", "'s %s", wts.a);
+	ENT *eplayer = &player->sp.entity;
+	OBJ *target = eplayer->target;
+	ENT *etarget = &target->sp.entity;
+	if (!EFFECT(etarget, MOV).value && dodge_get(eplayer)) {
+		notify_wts_to(target, player, "dodge", "dodges", "'s %s", wts.a);
 		return 1;
 	} else
 		return 0;
 }
 
 void
-notify_attack(dbref att, dbref tar, struct wts wts, short val, char const *color, short mval)
+notify_attack(OBJ *player, OBJ *target, struct wts wts, short val, char const *color, short mval)
 {
 	char buf[BUFSIZ];
 	unsigned i = 0;
@@ -115,136 +115,146 @@ notify_attack(dbref att, dbref tar, struct wts wts, short val, char const *color
 	}
 	buf[i] = '\0';
 
-	notify_wts_to(att, tar, wts.a, wts.b, "%s", buf);
+	notify_wts_to(player, target, wts.a, wts.b, "%s", buf);
 }
 
-static inline dbref
-body(dbref player, dbref mob)
+static inline OBJ *
+body(OBJ *player, OBJ *mob)
 {
 	char buf[32];
 	struct object_skeleton o = { "", "", "" };
-	snprintf(buf, sizeof(buf), "%s's body.", OBJECT(mob)->name);
+	snprintf(buf, sizeof(buf), "%s's body.", mob->name);
 	o.name = buf;
-	dbref dead_mob = object_add(o, getloc(mob));
-	dbref tmp;
+	OBJ *dead_mob = object_add(o, mob->location);
+	OBJ *tmp;
 	unsigned n = 0;
 
-	for (; (tmp = OBJECT(mob)->contents) != NOTHING; ) {
-		if (OBJECT(tmp)->type == TYPE_GARBAGE)
-			continue;
-		unequip(mob, EQL(EQUIPMENT(tmp)->eqw));
+	for (; (tmp = mob->contents); ) {
+		CBUG(tmp->type != TYPE_GARBAGE);
+		/* if (object_get(tmp)->type == TYPE_GARBAGE) */
+		/* 	continue; */
+		if (tmp->type == TYPE_EQUIPMENT) {
+			EQU *etmp = &tmp->sp.equipment;
+			unequip(mob, EQL(etmp->eqw));
+		}
 		moveto(tmp, dead_mob);
 		n++;
 	}
 
 	if (n > 0) {
-		onotifyf(mob, "%s's body drops to the ground.", OBJECT(mob)->name);
+		onotifyf(mob, "%s's body drops to the ground.", mob->name);
 		return dead_mob;
 	} else {
 		recycle(player, dead_mob);
-		return NOTHING;
+		return NULL;
 	}
 }
 
 static inline void
-_xp_award(dbref who, unsigned const xp)
+_xp_award(OBJ *player, unsigned const xp)
 {
-	unsigned cxp = ENTITY(who)->cxp;
-	notifyf(who, "You gain %u xp!", xp);
+	ENT *eplayer = &player->sp.entity;
+	unsigned cxp = eplayer->cxp;
+	notifyf(player, "You gain %u xp!", xp);
 	cxp += xp;
 	while (cxp >= 1000) {
-		notify(who, "You level up!");
+		notify(player, "You level up!");
 		cxp -= 1000;
-		ENTITY(who)->lvl += 1;
-		ENTITY(who)->spend += 2;
+		eplayer->lvl += 1;
+		eplayer->spend += 2;
 	}
-	ENTITY(who)->cxp = cxp;
+	eplayer->cxp = cxp;
 }
 
 static inline void
-xp_award(dbref attacker, dbref target)
+xp_award(OBJ *player, OBJ *target)
 {
-	unsigned x = ENTITY(attacker)->lvl;
-	unsigned y = ENTITY(target)->lvl;
-	_xp_award(attacker, xp_get(x, y));
+	ENT *eplayer = &player->sp.entity,
+	    *etarget = &target->sp.entity;
+	unsigned x = eplayer->lvl;
+	unsigned y = etarget->lvl;
+	_xp_award(player, xp_get(x, y));
 }
 
-void
-kill_target(dbref attacker, dbref target)
+OBJ *
+kill_target(OBJ *player, OBJ *target)
 {
-	struct entity *att = attacker > 0 ? ENTITY(attacker) : NULL;
-	struct entity *tar = ENTITY(target);
+	ENT *eplayer = player ? &player->sp.entity : NULL;
+	ENT *etarget = &target->sp.entity;
 
 	notify_wts(target, "die", "dies", "");
 
-	body(attacker, target);
+	body(player, target);
 
-	if (attacker > 0) {
-		CBUG(OBJECT(attacker)->type != TYPE_ENTITY)
-		xp_award(attacker, target);
-		att->target = NOTHING;
+	if (player) {
+		CBUG(player->type != TYPE_ENTITY)
+		xp_award(player, target);
+		eplayer->target = NULL;
 	}
 
-	CBUG(OBJECT(target)->type != TYPE_ENTITY);
+	CBUG(target->type != TYPE_ENTITY);
 
-	if (tar->target && (ENTITY(target)->flags & EF_AGGRO)) {
-		dbref target_target = tar->target;
-		struct entity *tar_tar = ENTITY(target_target);
-		tar_tar->klock --;
+	if (etarget->target && (etarget->flags & EF_AGGRO)) {
+		OBJ *tartar = etarget->target;
+		ENT *etartar = &tartar->sp.entity;
+		etartar->klock --;
 	}
 
-	dbref loc = getloc(target);
+	OBJ *loc = target->location;
+	ROO *rloc = &loc->sp.room;
 
-	if ((ROOM(loc)->flags & RF_TEMP) && !(tar->flags & EF_PLAYER)) {
-		recycle(attacker, target);
+	if ((rloc->flags & RF_TEMP) && !(etarget->flags & EF_PLAYER)) {
+		recycle(player, target);
 		geo_clean(target, loc);
-		return;
+		return NULL;
 	}
 
-	tar->klock = 0;
-	tar->target = NOTHING;
-	tar->hp = 1;
-	tar->mp = 1;
-	tar->thirst = tar->hunger = 0;
+	etarget->klock = 0;
+	etarget->target = NULL;
+	etarget->hp = 1;
+	etarget->mp = 1;
+	etarget->thirst = etarget->hunger = 0;
 
 	debufs_end(target);
-	moveto(target, (dbref) 0);
+	moveto(target, object_get((dbref) 0));
 	geo_clean(target, loc);
 	look_around(target);
 	web_bars(target);
+
+	return target;
 }
 
 static inline void
-attack(dbref attacker)
+attack(OBJ *player)
 {
-	struct entity *att = ENTITY(attacker),
-		      *tar;
+	ENT *eplayer = &player->sp.entity,
+	    *etarget;
 
 	register unsigned char mask;
 
-	mask = EFFECT(att, MOV).mask;
+	mask = EFFECT(eplayer, MOV).mask;
 
 	if (mask) {
 		register unsigned i = __builtin_ffs(mask) - 1;
-		debuf_notify(attacker, &att->debufs[i], 0);
+		debuf_notify(player, &eplayer->debufs[i], 0);
 		return;
 	}
 
-	dbref target = att->target;
+	OBJ *target = eplayer->target;
 
-	if (target <= 0)
+	if (!target)
 		return;
 
-	tar = ENTITY(target);
+	etarget = &target->sp.entity;
 
-	if (!spells_cast(attacker, target) && !kill_dodge(attacker, att->wts)) {
-		enum element at = ELEMENT_NEXT(attacker, MDMG);
-		enum element dt = ELEMENT_NEXT(target, MDEF);
-		short aval = -kill_dmg(ELM_PHYSICAL, EFFECT(att, DMG).value, EFFECT(tar, DEF).value + EFFECT(tar, MDEF).value, dt);
-		short bval = -kill_dmg(at, EFFECT(att, MDMG).value, EFFECT(tar, MDEF).value, dt);
+	if (!spells_cast(player, target) && !kill_dodge(player, eplayer->wts)) {
+		enum element at = ELEMENT_NEXT(eplayer, MDMG);
+		enum element dt = ELEMENT_NEXT(etarget, MDEF);
+		short aval = -kill_dmg(ELM_PHYSICAL, EFFECT(eplayer, DMG).value, EFFECT(etarget, DEF).value + EFFECT(etarget, MDEF).value, dt);
+		short bval = -kill_dmg(at, EFFECT(eplayer, MDMG).value, EFFECT(etarget, MDEF).value, dt);
 		char const *color = ELEMENT(at)->color;
-		notify_attack(attacker, target, att->wts, aval, color, bval);
-		cspell_heal(attacker, target, aval + bval);
+		notify_attack(player, target, eplayer->wts, aval, color, bval);
+		cspell_heal(player, target, aval + bval);
 	}
 }
 
@@ -252,14 +262,15 @@ void
 do_kill(command_t *cmd)
 {
 	const char *what = cmd->argv[1];
-	OBJ *player = OBJECT(cmd->player);
-	dbref here = player->location;
+	OBJ *player = object_get(cmd->player);
+	OBJ *here = player->location;
+	ROO *rhere = &here->sp.room;
 	OBJ *target = strcmp(what, "me")
 		? ematch_near(player, what)
 		: player;
 
-	if (here == 0 || (ROOM(here)->flags & RF_HAVEN)) {
-		notify(REF(player), "You may not kill here");
+	if (object_ref(here) == 0 || (rhere->flags & RF_HAVEN)) {
+		notify(player, "You may not kill here");
 		return;
 	}
 
@@ -269,59 +280,59 @@ do_kill(command_t *cmd)
 	    || player == target
 	    || target->type != TYPE_ENTITY)
 	{
-		notify(REF(player), "You can't target that.");
+		notify(player, "You can't target that.");
 		return;
 	}
 
-	player->sp.entity.target = REF(target);
+	player->sp.entity.target = target;
 	/* notify(player, "You form a combat pose."); */
 }
 
 void
-kill_update(dbref attacker)
+kill_update(OBJ *player)
 {
-	struct entity *att = ENTITY(attacker);
-	dbref target = att->target;
+	ENT *eplayer = &player->sp.entity;
+	OBJ *target = eplayer->target;
 
-	if (target <= 0
-            || OBJECT(target)->type == TYPE_GARBAGE
-	    || getloc(target) != getloc(attacker)) {
-		att->target = NOTHING;
+	if (!target
+            || target->type == TYPE_GARBAGE
+	    || target->location != player->location) {
+		eplayer->target = NULL;
 		return;
 	}
 
-	struct entity *tar = ENTITY(target);
+	ENT *etarget = &target->sp.entity;
 
-	if (tar->target <= 0)
-		tar->target = attacker;
+	if (!etarget->target)
+		etarget->target = player;
 
-	do_stand_silent(attacker);
-	attack(attacker);
+	do_stand_silent(player);
+	attack(player);
 }
 
 void
 do_status(command_t *cmd)
 {
-	dbref player = cmd->player;
+	OBJ *player = object_get(cmd->player);
+	ENT *eplayer = &player->sp.entity;
 	// TODO optimize MOB_EV / MOB_EM
-	struct entity *mob = ENTITY(player);
 	notifyf(player, "hp %u/%u\tmp %u/%u\tstuck 0x%x\n"
 		"dodge %d\tcombo 0x%x \tdebuf_mask 0x%x\n"
 		"damage %d\tmdamage %d\tmdmg_mask 0x%x\n"
 		"defense %d\tmdefense %d\tmdef_mask 0x%x\n"
 		"klock   %u\thunger %u\tthirst %u",
-		mob->hp, HP_MAX(player), mob->mp, MP_MAX(player), EFFECT(mob, MOV).mask,
-		EFFECT(mob, DODGE).value, mob->combo, mob->debuf_mask,
-		EFFECT(mob, DMG).value, EFFECT(mob, MDMG).value, EFFECT(mob, MDMG).mask,
-		EFFECT(mob, DEF).value, EFFECT(mob, MDEF).value, EFFECT(mob, MDEF).mask,
-		mob->klock, mob->hunger, mob->thirst);
+		eplayer->hp, HP_MAX(eplayer), eplayer->mp, MP_MAX(eplayer), EFFECT(eplayer, MOV).mask,
+		EFFECT(eplayer, DODGE).value, eplayer->combo, eplayer->debuf_mask,
+		EFFECT(eplayer, DMG).value, EFFECT(eplayer, MDMG).value, EFFECT(eplayer, MDMG).mask,
+		EFFECT(eplayer, DEF).value, EFFECT(eplayer, MDEF).value, EFFECT(eplayer, MDEF).mask,
+		eplayer->klock, eplayer->hunger, eplayer->thirst);
 }
 
 void
 do_heal(command_t *cmd)
 {
 	const char *name = cmd->argv[1];
-	OBJ *player = OBJECT(cmd->player),
+	OBJ *player = object_get(cmd->player),
 	    *target;
 	ENT *eplayer = &player->sp.entity,
 	    *etarget;
@@ -335,58 +346,58 @@ do_heal(command_t *cmd)
 	if (!(eplayer->flags & EF_WIZARD)
 	    || !target
 	    || target->type != TYPE_ENTITY) {
-                notify(REF(player), "You can't do that.");
+                notify(player, "You can't do that.");
                 return;
         }
 
 	etarget = &target->sp.entity;
-	etarget->hp = HP_MAX(REF(target));
-	etarget->mp = MP_MAX(REF(target));
+	etarget->hp = HP_MAX(etarget);
+	etarget->mp = MP_MAX(etarget);
 	etarget->hunger = etarget->thirst = 0;
-	debufs_end(REF(target));
-	notify_wts_to(REF(player), REF(target), "heal", "heals", "");
-	web_bars(REF(target));
+	debufs_end(target);
+	notify_wts_to(player, target, "heal", "heals", "");
+	web_bars(target);
 }
 
 void
 do_advitam(command_t *cmd)
 {
-	OBJ *player = OBJECT(cmd->player);
+	OBJ *player = object_get(cmd->player);
 	ENT *eplayer = &player->sp.entity;
 	const char *name = cmd->argv[1];
 	OBJ *target = ematch_near(player, name);
 
 	if (!(eplayer->flags & EF_WIZARD)
 	    || !target
-	    || target->owner != REF(player)) {
-		notify(REF(player), "You can't do that.");
+	    || target->owner != player) {
+		notify(player, "You can't do that.");
 		return;
 	}
 
-	birth(REF(target));
-	notifyf(REF(player), "You infuse %s with life.", target->name);
+	birth(target);
+	notifyf(player, "You infuse %s with life.", target->name);
 }
 
 void
 do_givexp(command_t *cmd, const char *name, const char *amount)
 {
-	OBJ *player = OBJECT(cmd->player),
+	OBJ *player = object_get(cmd->player),
 	    *target = ematch_near(player, name);
 	ENT *eplayer = &player->sp.entity;
 	int amt = strtol(amount, NULL, 0);
 
 	if (!(eplayer->flags & EF_WIZARD) || !target)
-		notify(REF(player), "You can't do that.");
+		notify(player, "You can't do that.");
 	else
-		_xp_award(REF(target), amt);
+		_xp_award(target, amt);
 }
 
 void
 do_train(command_t *cmd) {
-	dbref player = cmd->player;
+	OBJ *player = object_get(cmd->player);
+	ENT *eplayer = &player->sp.entity;
 	const char *attrib = cmd->argv[1];
 	const char *amount_s = cmd->argv[2];
-	struct entity *mob = ENTITY(player);
 	int attr;
 
 	switch (attrib[0]) {
@@ -400,7 +411,7 @@ do_train(command_t *cmd) {
 		  return;
 	}
 
-	int avail = ENTITY(player)->spend;
+	int avail = eplayer->spend;
 	int amount = *amount_s ? atoi(amount_s) : 1;
 
 	if (amount > avail) {
@@ -408,37 +419,37 @@ do_train(command_t *cmd) {
 		  return;
 	}
 
-	unsigned c = ATTR(player, attr);
-	ATTR(player, attr) += amount;
+	unsigned c = ATTR(eplayer, attr);
+	ATTR(eplayer, attr) += amount;
 
 	switch (attr) {
 	case ATTR_STR:
-		EFFECT(mob, DMG).value += DMG_G(c + amount) - DMG_G(c);
+		EFFECT(eplayer, DMG).value += DMG_G(c + amount) - DMG_G(c);
 		break;
 	case ATTR_DEX:
-		EFFECT(mob, DODGE).value += DODGE_G(c + amount) - DODGE_G(c);
+		EFFECT(eplayer, DODGE).value += DODGE_G(c + amount) - DODGE_G(c);
 		break;
 	}
 
-	ENTITY(player)->spend = avail - amount;
+	eplayer->spend = avail - amount;
 	notifyf(player, "Your %s increases %d time(s).", attrib, amount);
         web_stats(player);
 }
 
 int
-kill_v(dbref player, char const *opcs)
+kill_v(OBJ *player, char const *opcs)
 {
+	ENT *eplayer = &player->sp.entity;
 	char *end;
 	if (isdigit(*opcs)) {
 		unsigned combo = strtol(opcs, &end, 0);
-		ENTITY(player)->combo = combo;
+		eplayer->combo = combo;
 		notifyf(player, "Set combo to 0x%x.", combo);
 		return end - opcs;
 	} else if (*opcs == 'c' && isdigit(opcs[1])) {
-		struct entity *p = ENTITY(player);
 		unsigned slot = strtol(opcs + 1, &end, 0);
-                dbref target = p->target == NOTHING ? player : p->target;
-		if (getloc(player) == 0) {
+                OBJ *target = eplayer->target;
+		if (player->location == 0) {
 			notify(player, "You may not cast spells in room 0");
 		} else {
 			spell_cast(player, target, slot);
@@ -449,73 +460,74 @@ kill_v(dbref player, char const *opcs)
 }
 
 void
-sit(dbref player_ref, const char *name)
+sit(OBJ *player, const char *name)
 {
-	OBJ *player = OBJECT(player_ref);
 	ENT *eplayer = &player->sp.entity;
 
 	if (eplayer->flags & EF_SITTING) {
-		notify(REF(player), "You are already sitting.");
+		notify(player, "You are already sitting.");
 		return;
 	}
 
 	if (!*name) {
-		notify_wts(REF(player), "sit", "sits", " on the ground");
+		notify_wts(player, "sit", "sits", " on the ground");
 		eplayer->flags |= EF_SITTING;
-		eplayer->sat = -1;
+		eplayer->sat = NULL;
 
 		/* warn("%d sits on the ground\n", player); */
 		return;
 	}
 
 	OBJ *seat = ematch_near(player, name);
-	int max = GETSEATM(REF(seat));
+	int max = GETSEATM(seat);
 	if (!max) {
-		notify(REF(player), "You can't sit on that.");
+		notify(player, "You can't sit on that.");
 		return;
 	}
 
-	int cur = GETSEATN(REF(seat));
+	int cur = GETSEATN(seat);
 	if (cur >= max) {
-		notify(REF(player), "No seats available.");
+		notify(player, "No seats available.");
 		return;
 	}
 
-	SETSEATN(REF(seat), cur + 1);
+	SETSEATN(seat, cur + 1);
 	eplayer->flags |= EF_SITTING;
-	eplayer->sat = REF(seat);
+	eplayer->sat = seat;
 
-	notify_wts(REF(player), "sit", "sits", " on %s", seat->name);
+	notify_wts(player, "sit", "sits", " on %s", seat->name);
 }
 
 void
 do_sit(command_t *cmd)
 {
-	dbref player = cmd->player;
+	OBJ *player = object_get(cmd->player);
 	const char *name = cmd->argv[1];
         sit(player, name);
 }
 
 int
-do_stand_silent(dbref player)
+do_stand_silent(OBJ *player)
 {
-	if (!(ENTITY(player)->flags & EF_SITTING))
+	ENT *eplayer = &player->sp.entity;
+
+	if (!(eplayer->flags & EF_SITTING))
 		return 1;
 
-	dbref chair = ENTITY(player)->sat;
+	OBJ *chair = eplayer->sat;
 
-	if (chair > 0) {
+	if (chair) {
 		SETSEATN(chair, GETSEATN(chair) - 1);
-		ENTITY(player)->sat = -1;
+		eplayer->sat = NULL;
 	}
 
-	ENTITY(player)->flags ^= EF_SITTING;
+	eplayer->flags ^= EF_SITTING;
 	notify_wts(player, "stand", "stands", " up");
 	return 0;
 }
 
 void
-stand(dbref player) {
+stand(OBJ *player) {
 	if (do_stand_silent(player))
 		notify(player, "You are already standing.");
 }
@@ -523,5 +535,5 @@ stand(dbref player) {
 void
 do_stand(command_t *cmd)
 {
-        stand(cmd->player);
+        stand(object_get(cmd->player));
 }

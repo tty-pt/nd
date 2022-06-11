@@ -24,19 +24,18 @@
  */
 
 int
-can_doit(dbref player, dbref thing, const char *default_fail_msg)
+can_doit(OBJ *player, OBJ *thing, const char *default_fail_msg)
 {
-	if (thing == NOTHING) {
+	if (!thing) {
 		notify(player, default_fail_msg);
 		return 0;
 	}
 
-	if (OBJECT(player)->type != TYPE_ENTITY) {
-		notify(player, "You are not an entity.");
-		return 0;
-	}
+	CBUG(player->type != TYPE_ENTITY);
 
-	if (ENTITY(player)->klock) {
+	ENT *eplayer = &player->sp.entity;
+
+	if (eplayer->klock) {
 		notify(player, "You can not do that right now.");
 		return 0;
 	}
@@ -47,24 +46,24 @@ can_doit(dbref player, dbref thing, const char *default_fail_msg)
 }
 
 int
-controls(dbref who, dbref what)
+controls(OBJ *who, OBJ *what)
 {
-	/* No one controls invalid objects */
-	if (what < 0 || what >= db_top)
+	if (!what)
 		return 0;
 
-	/* No one controls garbage */
-	if (OBJECT(what)->type == TYPE_GARBAGE)
+	if (what->type == TYPE_GARBAGE)
 		return 0;
 
 	/* Zombies and puppets use the permissions of their owner */
-	if (OBJECT(who)->type != TYPE_ENTITY)
-		who = OBJECT(who)->owner;
+	if (who->type != TYPE_ENTITY)
+		who = who->owner;
+
+	ENT *ewho = &who->sp.entity;
 
 	/* Wizard controls everything */
-	if (ENTITY(who)->flags & EF_WIZARD) {
+	if (ewho->flags & EF_WIZARD) {
 #ifdef GOD_PRIV
-		if(God(OBJECT(what)->owner) && !God(who))
+		if(God(what->owner) && !God(who))
 			/* Only God controls God's objects */
 			return 0;
 		else
@@ -73,20 +72,23 @@ controls(dbref who, dbref what)
 	}
 
 	/* owners control their own stuff */
-	return (who == OBJECT(what)->owner);
+	return (who == what->owner);
 }
 
 /* Removes 'cost' value from 'who', and returns 1 if the act has been
  * paid for, else returns 0. */
 int
-payfor(dbref who, int cost)
+payfor(OBJ *who, int cost)
 {
-	who = OBJECT(who)->owner;
-		/* Wizards don't have to pay for anything. */
-	if (ENTITY(who)->flags & EF_WIZARD) {
+	who = who->owner;
+
+	ENT *ewho = &who->sp.entity;
+
+	if (ewho->flags & EF_WIZARD)
 		return 1;
-	} else if (db[who].value >= cost) {
-		db[who].value -= cost;
+
+	if (who->value >= cost) {
+		who->value -= cost;
 		return 1;
 	} else {
 		return 0;

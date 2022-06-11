@@ -21,16 +21,16 @@
 
 
 static OBJ *
-match_controlled(dbref player, const char *name)
+match_controlled(OBJ *player, const char *name)
 {
-	OBJ *match = ematch_all(OBJECT(player), name);
+	OBJ *match = ematch_all(player, name);
 
 	if (!match) {
 		notify(player, NOMATCH_MESSAGE);
 		return NULL;
 	}
 
-	else if (!controls(player, REF(match))) {
+	else if (!controls(player, match)) {
 		notify(player, "Permission denied. (You don't control what was matched)");
 		return NULL;
 	}
@@ -41,7 +41,7 @@ match_controlled(dbref player, const char *name)
 void
 do_name(command_t *cmd)
 {
-	dbref player = cmd->player;
+	OBJ *player = object_get(cmd->player);
 	const char *name = cmd->argv[1];
 	char *newname = cmd->argv[2];
 	OBJ *thing = match_controlled(player, name);
@@ -77,74 +77,76 @@ do_name(command_t *cmd)
 void
 do_chown(command_t *cmd)
 {
-	OBJ *player = OBJECT(cmd->player);
+	OBJ *player = object_get(cmd->player);
 	ENT *eplayer = &player->sp.entity;
 	const char *name = cmd->argv[1];
 	const char *newowner = cmd->argv[2];
 	OBJ *thing;
-	dbref owner;
+	OBJ *owner;
 
 	if (!*name) {
-		notify(REF(player), "You must specify what you want to take ownership of.");
+		notify(player, "You must specify what you want to take ownership of.");
 		return;
 	}
 
 	thing = ematch_all(player, name);
 	if (!thing) {
-		notify(REF(player), NOMATCH_MESSAGE);
+		notify(player, NOMATCH_MESSAGE);
 		return;
 	}
 
 	if (*newowner && strcmp(newowner, "me")) {
-		if ((owner = lookup_player(newowner)) == NOTHING) {
-			notify(REF(player), "I couldn't find that player.");
+		owner = lookup_player(newowner);
+
+		if (!owner) {
+			notify(player, "I couldn't find that player.");
 			return;
 		}
 	} else {
 		owner = player->owner;
 	}
 	if (!(eplayer->flags & EF_WIZARD) && player->owner != owner) {
-		notify(REF(player), "Only wizards can transfer ownership to others.");
+		notify(player, "Only wizards can transfer ownership to others.");
 		return;
 	}
 #ifdef GOD_PRIV
-	if ((eplayer->flags & EF_WIZARD) && !God(REF(player)) && God(owner)) {
-		notify(REF(player), "God doesn't need an offering or sacrifice.");
+	if ((eplayer->flags & EF_WIZARD) && !God(player) && God(owner)) {
+		notify(player, "God doesn't need an offering or sacrifice.");
 		return;
 	}
 #endif /* GOD_PRIV */
 
 	switch (thing->type) {
 	case TYPE_ROOM:
-		if (!(eplayer->flags & EF_WIZARD) && player->location != REF(thing)) {
-			notify(REF(player), "You can only chown \"here\".");
+		if (!(eplayer->flags & EF_WIZARD) && player->location != thing) {
+			notify(player, "You can only chown \"here\".");
 			return;
 		}
-		thing->owner = OBJECT(owner)->owner;
+		thing->owner = owner->owner;
 		break;
 	case TYPE_CONSUMABLE:
 	case TYPE_EQUIPMENT:
 	case TYPE_THING:
-		if (!(eplayer->flags & EF_WIZARD) && thing->location != REF(player)) {
-			notify(REF(player), "You aren't carrying that.");
+		if (!(eplayer->flags & EF_WIZARD) && thing->location != player) {
+			notify(player, "You aren't carrying that.");
 			return;
 		}
-		thing->owner = OBJECT(owner)->owner;
+		thing->owner = owner->owner;
 		break;
 	case TYPE_ENTITY:
-		notify(REF(player), "Entities always own themselves.");
+		notify(player, "Entities always own themselves.");
 		return;
 	case TYPE_GARBAGE:
-		notify(REF(player), "No one wants to own garbage.");
+		notify(player, "No one wants to own garbage.");
 		return;
 	}
-	if (owner == REF(player))
-		notify(REF(player), "Owner changed to you.");
+	if (owner == player)
+		notify(player, "Owner changed to you.");
 	else {
 		char buf[BUFFER_LEN];
 
-		snprintf(buf, sizeof(buf), "Owner changed to %s.", unparse_object(REF(player), owner));
-		notify(REF(player), buf);
+		snprintf(buf, sizeof(buf), "Owner changed to %s.", unparse_object(player, owner));
+		notify(player, buf);
 	}
 }
 
@@ -152,7 +154,7 @@ do_chown(command_t *cmd)
 void
 do_propset(command_t *cmd)
 {
-	dbref player = cmd->player;
+	OBJ *player = object_get(cmd->player);
 	const char *name = cmd->argv[1];
 	const char *prop = cmd->argv[2];
 	OBJ *thing = match_controlled(player, name),
@@ -202,19 +204,21 @@ do_propset(command_t *cmd)
 		return;
 	}
 
-	if (Prop_System(pname) || (!(ENTITY(OBJECT(player)->owner)->flags & EF_WIZARD) && (Prop_SeeOnly(pname) || Prop_Hidden(pname)))) {
+	ENT *eplayer = &player->sp.entity;
+
+	if (Prop_System(pname) || (!(eplayer->flags & EF_WIZARD) && (Prop_SeeOnly(pname) || Prop_Hidden(pname)))) {
 		notify(player, "Permission denied. (can't set a property that's restricted against you)");
 		return;
 	}
 
 	if (!*type || string_prefix("string", type))
-		add_prop_nofetch(REF(thing), pname, value, 0);
+		add_prop_nofetch(thing, pname, value, 0);
 	else if (string_prefix("integer", type)) {
 		if (!number(value)) {
 			notify(player, "That's not an integer!");
 			return;
 		}
-		add_prop_nofetch(REF(thing), pname, NULL, atoi(value));
+		add_prop_nofetch(thing, pname, NULL, atoi(value));
 	} else if (string_prefix("float", type)) {
 		if (!ifloat(value)) {
 			notify(player, "That's not a floating point number!");
@@ -222,23 +226,23 @@ do_propset(command_t *cmd)
 		}
 		mydat.flags = PROP_FLTTYP;
 		mydat.data.fval = strtod(value, NULL);
-		set_property_nofetch(REF(thing), pname, &mydat);
+		set_property_nofetch(thing, pname, &mydat);
 	} else if (string_prefix("dbref", type)) {
-		ref = ematch_all(OBJECT(player), value);
+		ref = ematch_all(player, value);
 		if (!ref) {
 			notify(player, NOMATCH_MESSAGE);
 			return;
 		}
 
 		mydat.flags = PROP_REFTYP;
-		mydat.data.ref = REF(ref);
-		set_property_nofetch(REF(thing), pname, &mydat);
+		mydat.data.ref = object_ref(ref);
+		set_property_nofetch(thing, pname, &mydat);
 	} else if (string_prefix("erase", type)) {
 		if (*value) {
 			notify(player, "Don't give a value when erasing a property.");
 			return;
 		}
-		remove_property(REF(thing), pname);
+		remove_property(thing, pname);
 		notify(player, "Property erased.");
 		return;
 	} else {

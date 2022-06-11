@@ -20,7 +20,7 @@
  * another. helper routine for copy_props (below).
  */
 void
-copy_one_prop(dbref player, dbref source, dbref destination, char *propname, int ignore)
+copy_one_prop(OBJ *player, OBJ *source, OBJ *destination, char *propname, int ignore)
 {
 	PropPtr currprop;
 	PData newprop;
@@ -61,7 +61,7 @@ copy_one_prop(dbref player, dbref source, dbref destination, char *propname, int
  * look.c.
  */
 void
-copy_props(dbref player, dbref source, dbref destination, const char *dir)
+copy_props(OBJ *player, OBJ *source, OBJ *destination, const char *dir)
 {
 	char propname[BUFFER_LEN];
 	char buf[BUFFER_LEN];
@@ -93,7 +93,7 @@ copy_props(dbref player, dbref source, dbref destination, const char *dir)
 void
 do_clone(command_t *cmd)
 {
-	OBJ *player = OBJECT(cmd->player);
+	OBJ *player = object_get(cmd->player);
 	ENT *eplayer = &player->sp.entity;
 	char *name = cmd->argv[1];
 	static char buf[BUFFER_LEN];
@@ -103,12 +103,12 @@ do_clone(command_t *cmd)
 	/* Perform sanity checks */
 
 	if (!(eplayer->flags & (EF_WIZARD | EF_BUILDER))) {
-		notify(REF(player), "That command is restricted to authorized builders.");
+		notify(player, "That command is restricted to authorized builders.");
 		return;
 	}
 	
 	if (*name == '\0') {
-		notify(REF(player), "Clone what?");
+		notify(player, "Clone what?");
 		return;
 	} 
 
@@ -121,7 +121,7 @@ do_clone(command_t *cmd)
 			&& !(thing = ematch_near(player, name))
 	   )
 	{
-		notify(REF(player), "I don't know what you mean.");
+		notify(player, "I don't know what you mean.");
 		return;
 	}
 
@@ -129,20 +129,20 @@ do_clone(command_t *cmd)
 
 	/* things only. */
 	if(thing->type != TYPE_THING) {
-		notify(REF(player), "That is not a cloneable object.");
+		notify(player, "That is not a cloneable object.");
 		return;
 	}		
 	
 	/* check the name again, just in case reserved name patterns have
 	   changed since the original object was created. */
 	if (!ok_name(thing->name)) {
-		notify(REF(player), "You cannot clone something with such a weird name!");
+		notify(player, "You cannot clone something with such a weird name!");
 		return;
 	}
 
 	/* no stealing stuff. */
-	if(!controls(REF(player), REF(thing))) {
-		notify(REF(player), "Permission denied. (you can't clone this)");
+	if(!controls(player, thing)) {
+		notify(player, "Permission denied. (you can't clone this)");
 		return;
 	}
 
@@ -152,16 +152,16 @@ do_clone(command_t *cmd)
 		cost = OBJECT_COST;
 	}
 	
-	if (!payfor(REF(player), cost)) {
-		notifyf(REF(player), "Sorry, you don't have enough %s.", PENNIES);
+	if (!payfor(player, cost)) {
+		notifyf(player, "Sorry, you don't have enough %s.", PENNIES);
 		return;
 	} else {
 		/* create the object */
-		clone = OBJECT(object_new());
+		clone = object_new();
 
 		/* initialize everything */
 		clone->name = alloc_string(thing->name);
-		clone->location = REF(player);
+		clone->location = player;
 		clone->owner = player->owner;
 		clone->value = thing->value;
 		/* FIXME: should we clone attached actions? */
@@ -184,18 +184,18 @@ do_clone(command_t *cmd)
 		clone->type = thing->type;
 
 		/* copy all properties */
-		copy_props(REF(player), REF(thing), REF(clone), "");
+		copy_props(player, thing, clone, "");
 
 		/* endow the object */
 		if (thing->value > MAX_OBJECT_ENDOWMENT)
 			thing->value = MAX_OBJECT_ENDOWMENT;
 		
 		/* link it in */
-		PUSH(REF(clone), player->contents);
+		PUSH(clone, player->contents);
 
 		/* and we're done */
-		snprintf(buf, sizeof(buf), "%s created with number %d.", thing->name, REF(clone));
-		notify(REF(player), buf);
+		snprintf(buf, sizeof(buf), "%s created with number %d.", thing->name, object_ref(clone));
+		notify(player, buf);
 	}
 	
 }
@@ -208,10 +208,11 @@ do_clone(command_t *cmd)
 void
 do_create(command_t *cmd)
 {
-	dbref player = cmd->player;
+	OBJ *player = object_get(cmd->player);
+	ENT *eplayer = &player->sp.entity;
 	char *name = cmd->argv[1];
 	char *acost = cmd->argv[2];
-	dbref thing;
+	OBJ *thing;
 	int cost;
 
 	static char buf[BUFFER_LEN];
@@ -229,7 +230,7 @@ do_create(command_t *cmd)
 	for (; *rname && isspace(*rname); rname++) ;
 
 	cost = atoi(qname);
-	if (!(ENTITY(player)->flags & (EF_WIZARD | EF_BUILDER))) {
+	if (!(eplayer->flags & (EF_WIZARD | EF_BUILDER))) {
 		notify(player, "That command is restricted to authorized builders.");
 		return;
 	}
@@ -251,28 +252,29 @@ do_create(command_t *cmd)
 	if (!payfor(player, cost)) {
 		notifyf(player, "Sorry, you don't have enough %s.", PENNIES);
 		return;
-	} else {
-		/* create the object */
-		thing = object_new();
-
-		/* initialize everything */
-		OBJECT(thing)->name = alloc_string(name);
-		OBJECT(thing)->location = player;
-		OBJECT(thing)->owner = OBJECT(player)->owner;
-		OBJECT(thing)->value = OBJECT_ENDOWMENT(cost);
-		OBJECT(thing)->flags = TYPE_THING;
-
-		/* endow the object */
-		if (OBJECT(thing)->value > MAX_OBJECT_ENDOWMENT)
-			OBJECT(thing)->value = MAX_OBJECT_ENDOWMENT;
-
-		/* link it in */
-		PUSH(thing, db[player].contents);
-
-		/* and we're done */
-		snprintf(buf, sizeof(buf), "%s created with number %d.", name, thing);
-		notify(player, buf);
 	}
+
+	/* create the object */
+	thing = object_new();
+
+	/* initialize everything */
+	thing->name = alloc_string(name);
+	thing->location = player;
+	thing->owner = player->owner;
+	thing->value = OBJECT_ENDOWMENT(cost);
+	thing->flags = TYPE_THING;
+
+	/* endow the object */
+	if (thing->value > MAX_OBJECT_ENDOWMENT)
+		thing->value = MAX_OBJECT_ENDOWMENT;
+
+	/* link it in */
+	PUSH(thing, player->contents);
+
+	/* and we're done */
+	snprintf(buf, sizeof(buf), "%s created with number %d.", name, object_ref(thing));
+	notify(player, buf);
+
 	if (*rname) {
 		PData mydat;
 
@@ -280,7 +282,7 @@ do_create(command_t *cmd)
 		notify(player, buf);
 		snprintf(buf, sizeof(buf), "_reg/%s", rname);
 		mydat.flags = PROP_REFTYP;
-		mydat.data.ref = thing;
+		mydat.data.ref = object_ref(thing);
 		set_property_nofetch(player, buf, &mydat);
 	}
 }

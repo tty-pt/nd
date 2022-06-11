@@ -380,8 +380,9 @@ struct object_skeleton entity_skeleton_map[] = {
 };
 
 void
-mob_add_stats(struct object_skeleton *mob, dbref nu)
+mob_add_stats(struct object_skeleton *mob, OBJ *nu)
 {
+	ENT *enu = &nu->sp.entity;
 	unsigned char stat = mob->sp.entity.stat;
 	int lvl = mob->sp.entity.lvl, spend, i, sp,
 	    v = mob->sp.entity.lvl_v ? mob->sp.entity.lvl_v : 0xf;
@@ -395,10 +396,10 @@ mob_add_stats(struct object_skeleton *mob, dbref nu)
 	for (i = 0; i < ATTR_MAX; i++)
 		if (stat & (1<<i)) {
 			sp = random() % spend;
-			ATTR(nu, i) = sp;
+			ATTR(enu, i) = sp;
 		}
 
-	ENTITY(nu)->lvl = lvl;
+	enu->lvl = lvl;
 }
 
 static inline int
@@ -407,63 +408,63 @@ bird_is(struct entity_skeleton *mob)
 	return mob->wt == PECK;
 }
 
-struct entity *
-birth(dbref who)
+ENT *
+birth(OBJ *player)
 {
-	struct entity *mob = ENTITY(who);
-	mob->wts = phys_wts[ENTITY(who)->wtso];
-	mob->hunger = mob->thirst = 0;
-	mob->combo = 0;
-	mob->hp = HP_MAX(who);
-	mob->mp = MP_MAX(who);
-	mob->target = -1;
+	ENT *eplayer = &player->sp.entity;
+	eplayer->wts = phys_wts[eplayer->wtso];
+	eplayer->hunger = eplayer->thirst = 0;
+	eplayer->combo = 0;
+	eplayer->hp = HP_MAX(eplayer);
+	eplayer->mp = MP_MAX(eplayer);
+	eplayer->sat = eplayer->target = NULL;
 
-	EFFECT(mob, DMG).value = DMG_BASE(who);
-	EFFECT(mob, DODGE).value = DODGE_BASE(who);
+	EFFECT(eplayer, DMG).value = DMG_BASE(eplayer);
+	EFFECT(eplayer, DODGE).value = DODGE_BASE(eplayer);
 
-	spells_init(mob->spells, who);
+	spells_init(eplayer->spells, player);
 
 	int i;
 
 	for (i = 0; i < ES_MAX; i++) {
-		register dbref eq = EQUIP(who, i);
-		if (eq > 0)
-			CBUG(equip_affect(who, eq));
+		register dbref eq = EQUIP(eplayer, i);
+
+		if (eq <= 0)
+			continue;
+
+		OBJ *oeq = object_get(eq);
+		CBUG(equip_affect(player, oeq));
 	}
 
-        return mob;
+        return eplayer;
 }
 
-static inline dbref
-mob_add(enum mob_type mid, dbref where, enum biome biome, long long pdn) {
+static inline OBJ *
+mob_add(enum mob_type mid, OBJ *where, enum biome biome, long long pdn) {
 	struct object_skeleton *obj_skel = ENTITY_SKELETON(mid);
 	CBUG(obj_skel->type != S_TYPE_ENTITY);
 	struct entity_skeleton *mob_skel = &obj_skel->sp.entity;
-	dbref nu;
 
 	if ((bird_is(mob_skel) && !pdn)
 	    || (!NIGHT_IS && (mob_skel->type == ELM_DARK || mob_skel->type == ELM_VAMP))
 	    || random() >= (RAND_MAX >> mob_skel->y))
-		return NOTHING;
+		return NULL;
 
 	if (!((1 << biome) & mob_skel->biomes))
-		return NOTHING;
+		return NULL;
 
-	nu = object_add(*obj_skel, where);
-	return nu;
+	return object_add(*obj_skel, where);
 }
 
 void
-entities_add(dbref w, enum biome biome, long long pdn) {
+entities_add(OBJ *where, enum biome biome, long long pdn) {
 	/* int o = MOFS_ICE; */
 	int o = 1;
 	unsigned mid,
 		 n = (sizeof(entity_skeleton_map) / sizeof(struct object_skeleton)) - 1;
-	CBUG(w <= 0);
 
-	for (mid = o; mid < o + n; mid++) {
-		mob_add(mid, w, biome, pdn);
-	}
+	for (mid = o; mid < o + n; mid++)
+		mob_add(mid, where, biome, pdn);
 }
 
 struct object_skeleton const *
@@ -476,49 +477,56 @@ mob_obj_random()
 }
 
 void
-mobs_aggro(dbref player)
+mobs_aggro(OBJ *player)
 {
-        struct entity *me = ENTITY(player);
-	dbref tmp;
+	ENT *eplayer = &player->sp.entity;
+	OBJ *here = player->location;
+	OBJ *tmp;
 	int klock = 0;
 
-	DOLIST(tmp, OBJECT(getloc(player))->contents) {
-		if (OBJECT(tmp)->type == TYPE_ENTITY && (ENTITY(tmp)->flags & EF_AGGRO)) {
-			// TODO use struct
-			ENTITY(tmp)->target = player;
+	DOLIST(tmp, here->contents) {
+		if (tmp->type != TYPE_ENTITY)
+			continue;
+
+		ENT *etmp = &tmp->sp.entity;
+
+		if (etmp->flags & EF_AGGRO) {
+			etmp->target = player;
 			klock++;
 		}
 	}
 
-	me->klock += klock;
+	eplayer->klock += klock;
 }
 
 static void
-respawn(dbref who)
+respawn(OBJ *player)
 {
-	struct entity *mob = ENTITY(who);
-	dbref where;
+	ENT *eplayer = &player->sp.entity;
+	OBJ *where;
 
-	onotifyf(who, "%s disappears.", OBJECT(who)->name);
+	onotifyf(player, "%s disappears.", player->name);
 
-	if (mob->flags & EF_PLAYER) {
+	if (eplayer->flags & EF_PLAYER) {
 		struct cmd_dir cd;
 		cd.rep = STARTING_POSITION;
 		cd.dir = '\0';
-		geo_teleport(who, cd);
-		where = getloc(who);
+		geo_teleport(player, cd);
+		where = player->location;
 	} else {
-		where = mob->home;
+		where = eplayer->home;
 		/* warn("respawning %d to %d\n", who, where); */
-		moveto(who, where);
+		moveto(player, where);
 	}
 
-	onotifyf(who, "%s appears.", OBJECT(who)->name);
+	onotifyf(player, "%s appears.", player->name);
 }
 
 static inline int
-huth_notify(dbref who, unsigned v, unsigned char y, char const *m[4])
+huth_notify(OBJ *player, unsigned v, unsigned char y, char const *m[4])
 {
+	ENT *eplayer = &player->sp.entity;
+
 	static unsigned const n[] = {
 		1 << (DAY_Y - 1),
 		1 << (DAY_Y - 2),
@@ -528,27 +536,27 @@ huth_notify(dbref who, unsigned v, unsigned char y, char const *m[4])
 	register unsigned aux;
 
 	if (v == n[2])
-		notify(who, m[0]);
+		notify(player, m[0]);
 	else if (v == (aux = n[1]))
-		notify(who, m[1]);
+		notify(player, m[1]);
 	else if (v == (aux += n[0]))
-		notify(who, m[2]);
+		notify(player, m[2]);
 	else if (v == (aux += n[2]))
-		notify(who, m[3]);
+		notify(player, m[3]);
 	else if (v > aux) {
-		short val = -(HP_MAX(who) >> 3);
-		return cspell_heal(NOTHING, who, val);
+		short val = -(HP_MAX(eplayer) >> 3);
+		return cspell_heal(NULL, player, val);
 	}
 
         return 0;
 }
 
 void
-entity_update(dbref who)
+entity_update(OBJ *player)
 {
-	CBUG(OBJECT(who)->type != TYPE_ENTITY);
+	CBUG(player->type != TYPE_ENTITY);
+	ENT *eplayer = &player->sp.entity;
 
-        struct entity *n = ENTITY(who);
 	static char const *thirst_msg[] = {
 		"You are thirsty.",
 		"You are very thirsty.",
@@ -563,50 +571,50 @@ entity_update(dbref who)
 		"You are starving to death."
 	};
 
-	if (!(n->flags & EF_PLAYER)) {
-		/* warn("%d hp %d/%d\n", who, n->hp, HP_MAX(who)); */
-		if (n->hp == HP_MAX(who)) {
-			/* warn("%d's hp is maximum\n", who); */
+	if (!(eplayer->flags & EF_PLAYER)) {
+		/* warn("%d hp %d/%d\n", player, eplayer->hp, HP_MAX(player)); */
+		if (eplayer->hp == HP_MAX(eplayer)) {
+			/* warn("%d's hp is maximum\n", player); */
 
-			if ((n->flags & EF_SITTING)) {
-				/* warn("%d is sitting so they shall stand\n", who); */
-				stand(who);
+			if ((eplayer->flags & EF_SITTING)) {
+				/* warn("%d is sitting so they shall stand\n", player); */
+				stand(player);
 			}
 
-			if (getloc(who) == 0) {
-				/* warn("%d is located at 0, so they shall respawn\n", who); */
-				respawn(who);
+			if (player->location == 0) {
+				/* warn("%d is located at 0, so they shall respawn\n", player); */
+				respawn(player);
 			}
 		} else {
-			/* warn("%d's hp is not maximum\n", who); */
-			if (n->target <= 0 && !(n->flags & EF_SITTING)) {
-				/* warn("%d is not sitting so they shall sit\n", who); */
-				sit(who, "");
+			/* warn("%d's hp is not maximum\n", player); */
+			if (eplayer->target && !(eplayer->flags & EF_SITTING)) {
+				/* warn("%d is not sitting so they shall sit\n", player); */
+				sit(player, "");
 			}
 		}
 	}
 
-	if (get_tick() % 16 == 0 && (n->flags & EF_SITTING)) {
+	if (get_tick() % 16 == 0 && (eplayer->flags & EF_SITTING)) {
 		int div = 10;
 		int max, cur;
-		cspell_heal(NOTHING, who, HP_MAX(who) / div);
+		cspell_heal(NULL, player, HP_MAX(eplayer) / div);
 
-		max = MP_MAX(who);
-		cur = n->mp + (max / div);
-		n->mp = cur > max ? max : cur;
+		max = MP_MAX(eplayer);
+		cur = eplayer->mp + (max / div);
+		eplayer->mp = cur > max ? max : cur;
 
 	}
 
-        CBUG(OBJECT(who)->type == TYPE_GARBAGE);
+        CBUG(player->type == TYPE_GARBAGE);
 
-	if (getloc(who) == 0)
+	if (player->location == 0)
 		return;
 
         /* if mob dies, return */
-	if (huth_notify(who, n->thirst += THIRST_INC, THIRST_Y, thirst_msg)
-                || huth_notify(who, n->hunger += HUNGER_INC, HUNGER_Y, hunger_msg)
-                || debufs_process(who))
+	if (huth_notify(player, eplayer->thirst += THIRST_INC, THIRST_Y, thirst_msg)
+                || huth_notify(player, eplayer->hunger += HUNGER_INC, HUNGER_Y, hunger_msg)
+                || debufs_process(player))
                         return;
 
-	kill_update(who);
+	kill_update(player);
 }
