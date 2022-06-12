@@ -1,6 +1,9 @@
 #include "item.h"
+#include "io.h"
 
 #include <stddef.h> // offsetof
+#include "entity.h"
+#include "mcp.h"
 #include "props.h"
 #include "externs.h"
 #include "kill.h"
@@ -9,7 +12,6 @@
 #include "geography.h"
 #include "item.h"
 #include "mob.h"
-#include "web.h"
 
 #define DMG_WEAPON(equ) IE(equ, DMG_G)
 #define WTS_WEAPON(equ) phys_wts[EQT(equ->eqw)]
@@ -19,13 +21,10 @@
 #define DODGE_ARMOR(def) def / 4
 
 int
-equip_affect(OBJ *who, OBJ *eq)
+equip_affect(ENT *ewho, EQU *equ)
 {
-	ENT *ewho = &who->sp.entity;
-	EQU *eeq = &eq->sp.equipment;
-
-	register int msv = eeq->msv,
-		 eqw = eeq->eqw,
+	register int msv = equ->msv,
+		 eqw = equ->eqw,
 		 eql = EQL(eqw),
 		 eqt = EQT(eqw);
 
@@ -35,8 +34,8 @@ equip_affect(OBJ *who, OBJ *eq)
 	case ES_RHAND:
 		if (ewho->attr[ATTR_STR] < msv)
 			return 1;
-		EFFECT(ewho, DMG).value += DMG_WEAPON(eeq);
-		ewho->wts = WTS_WEAPON(eeq);
+		EFFECT(ewho, DMG).value += DMG_WEAPON(equ);
+		ewho->wts = WTS_WEAPON(equ);
 		break;
 
 	case ES_HEAD:
@@ -61,7 +60,7 @@ equip_affect(OBJ *who, OBJ *eq)
 			if (ewho->attr[ATTR_STR] < msv)
 				return 1;
 		}
-		aux = DEF_ARMOR(eeq, aux);
+		aux = DEF_ARMOR(equ, aux);
 		EFFECT(ewho, DEF).value += aux;
 		int pd = EFFECT(ewho, DODGE).value - DODGE_ARMOR(aux);
 		EFFECT(ewho, DODGE).value = pd > 0 ? pd : 0;
@@ -80,16 +79,16 @@ equip(OBJ *who, OBJ *eq)
 	unsigned eql = EQL(eeq->eqw);
 
 	if (!eql || EQUIP(ewho, eql) > 0
-	    || equip_affect(who, eq))
+	    || equip_affect(ewho, eeq))
 		return 1;
 
 	EQUIP(ewho, eql) = object_ref(eq);
 	eeq->flags |= EF_EQUIPPED;
 
-	notifyf(who, "You equip %s.", eq->name);
-	web_stats(who);
-	web_content_out(who, eq);
-	web_equipment(who);
+	notifyf(ewho, "You equip %s.", eq->name);
+	mcp_stats(who);
+	mcp_content_out(who, eq);
+	mcp_equipment(who);
 	return 0;
 }
 
@@ -101,23 +100,24 @@ do_select(command_t *cmd)
 	const char *n_s = cmd->argv[1];
 	unsigned n = strtoul(n_s, NULL, 0);
 	eplayer->select = n;
-	notifyf(player, "You select %u.", n);
+	notifyf(eplayer, "You select %u.", n);
 }
 
 void
 do_equip(command_t *cmd)
 {
 	OBJ *player = object_get(cmd->player);
+	ENT *eplayer = &player->sp.entity;
 	char const *name = cmd->argv[1];
 	OBJ *eq = ematch_mine(player, name);
 
 	if (!eq) {
-		notify(player, "You are not carrying that.");
+		notify(eplayer, "You are not carrying that.");
 		return;
 	}
 
 	if (equip(player, eq)) { 
-		notify(player, "You can't equip that.");
+		notify(eplayer, "You can't equip that.");
 		return;
 	}
 }
@@ -157,9 +157,9 @@ unequip(OBJ *player, unsigned eql)
 
 	EQUIP(eplayer, eql) = NOTHING;
 	eeq->flags &= ~EF_EQUIPPED;
-	web_content_in(player, oeq);
-	web_stats(player);
-	web_equipment(player);
+	mcp_content_in(player, oeq);
+	mcp_stats(player);
+	mcp_equipment(player);
 	return eq;
 }
 
@@ -167,14 +167,15 @@ void
 do_unequip(command_t *cmd)
 {
 	OBJ *player = object_get(cmd->player);
+	ENT *eplayer = &player->sp.entity;
 	char const *name = cmd->argv[1];
 	enum bodypart bp = BODYPART_ID(*name);
 	dbref eq;
 
 	if ((eq = unequip(player, bp)) == NOTHING) {
-		notify(player, "You don't have that equipped.");
+		notify(eplayer, "You don't have that equipped.");
 		return;
 	}
 
-	notifyf(player, "You unequip %s.", object_get(eq)->name);
+	notifyf(eplayer, "You unequip %s.", object_get(eq)->name);
 }

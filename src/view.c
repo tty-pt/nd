@@ -1,6 +1,9 @@
+#include "io.h"
+
+#include "entity.h"
 #include "view.h"
 
-#include "search.h"
+#include "map.h"
 #include "noise.h"
 #include "geography.h"
 #include "item.h"
@@ -9,7 +12,6 @@
 #include "externs.h"
 #include "props.h"
 #include "params.h"
-#include "web.h"
 
 #define BIOME_BG(i) (NIGHT_IS \
 		? ANSI_RESET : biomes[i].sp.biome.bg)
@@ -395,6 +397,7 @@ _view_build(OBJ *player,
 void
 view(OBJ *player)
 {
+	ENT *eplayer = &player->sp.entity;
 	struct bio bd[VIEW_M], *n_p = bd,
 		   *n_max = &bd[VIEW_BDI + 1];
 	pos_t pos, opos;
@@ -418,8 +421,8 @@ view(OBJ *player)
 	}
 
 	char *view_buf = view_draw(view);
-        if (web_geo_view(player, view_buf))
-		notify(player, view_buf);
+        if (mcp_view(eplayer, view_buf))
+		notify(eplayer, view_buf);
 }
 
 void

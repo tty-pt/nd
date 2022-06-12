@@ -37,7 +37,6 @@ enum at { ARMOR_LIGHT, ARMOR_MEDIUM, ARMOR_HEAVY, };
 
 #define EQT(x)		(x>>6)
 #define EQ(i, t)	(i | (t<<6))
-#define EQL(x)		(x & 15)
 
 /* }}} */
 
@@ -51,14 +50,9 @@ enum at { ARMOR_LIGHT, ARMOR_MEDIUM, ARMOR_HEAVY, };
 #define GETSPELLS(x, a)  get_property_mark(x, MESGPROP_SPELLS, a)
 #define SETSPELLS(x, a, v)  set_property_mark(x, MESGPROP_SPELLS, a, v)
 
-#define GOD ((dbref) 1)
-
 #ifdef GOD_PRIV
 #define God(obj) (object_ref(obj) == (GOD))
 #endif							/* GOD_PRIV */
-
-#define ATTR(ent, y)		ent->attr[y]
-#define EQUIP(ent, y)		ent->equipment[y]
 
 /* Possible data types that may be stored in a hash table */
 union u_hash_data {
@@ -78,8 +72,6 @@ typedef struct t_hash_entry hash_entry;
 typedef hash_entry *hash_tab;
 
 #define PLAYER_HASH_SIZE   (1024)	/* Table for player lookups */
-
-extern dbref db_top;
 
 extern char *alloc_string(const char *);
 

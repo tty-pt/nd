@@ -227,7 +227,7 @@ object_write(FILE * f, OBJ *obj)
 			putref(f, ent->cxp);
 			putref(f, ent->spend);
 			for (j = 0; j < ATTR_MAX; j++)
-				putref(f, ATTR(ent, j));
+				putref(f, ent->attr[j]);
 			putref(f, ent->wtso);
 		}
 		break;
@@ -623,7 +623,7 @@ object_read(FILE * f)
 			eo->cxp = ref_read(f);
 			eo->spend = ref_read(f);
 			for (j = 0; j < ATTR_MAX; j++)
-				ATTR(eo, j) = ref_read(f);
+				eo->attr[j] = ref_read(f);
 			eo->wtso = ref_read(f);
 			o->owner = o;
 			if (eo->flags & EF_PLAYER)

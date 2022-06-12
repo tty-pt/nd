@@ -1,4 +1,6 @@
 #include "drink.h"
+#include "io.h"
+#include "entity.h"
 
 #include <stddef.h>
 #include "mob.h"
@@ -19,19 +21,19 @@ do_consume(command_t *cmd)
 	int aux;
 
 	if (!*name || !(vial = ematch_mine(player, name))) {
-		notify(player, "Consume what?");
+		notify(eplayer, "Consume what?");
 		return;
 	}
 
 	if (vial->type != TYPE_CONSUMABLE) {
-		notify(player, "You can not consume that.");
+		notify(eplayer, "You can not consume that.");
 		return;
 	}
 
 	cvial = &vial->sp.consumable;
 
 	if (!cvial->quantity) {
-		notifyf(player, "%s is empty.", vial->name);
+		notifyf(eplayer, "%s is empty.", vial->name);
 		return;
 	}
 
@@ -56,6 +58,7 @@ void
 do_fill(command_t *cmd)
 {
 	OBJ *player = object_get(cmd->player);
+	ENT *eplayer = &player->sp.entity;
 	const char *vial_s = cmd->argv[1];
 	const char *source_s = cmd->argv[2];
 	OBJ *vial = ematch_mine(player, vial_s);
@@ -63,31 +66,31 @@ do_fill(command_t *cmd)
 	unsigned m;
 
 	if (!vial) {
-		notify(player, "Fill what?");
+		notify(eplayer, "Fill what?");
 		return;
 	}
 
 	if (vial->type != TYPE_CONSUMABLE) {
-		notify(player, "You can not fill that up.");
+		notify(eplayer, "You can not fill that up.");
 		return;
 	}
 
 	cvial = &vial->sp.consumable;
 
 	if (!(m = cvial->capacity)) {
-		notify(player, "You can not fill that up.");
+		notify(eplayer, "You can not fill that up.");
 		return;
 	}
 
 	if (cvial->quantity) {
-		notifyf(player, "%s is not empty.", vial->name);
+		notifyf(eplayer, "%s is not empty.", vial->name);
 		return;
 	}
 
 	OBJ *source = ematch_near(player, source_s);
 
 	if (!source || source->type != TYPE_CONSUMABLE) {
-		notify(player, "Invalid source.");
+		notify(eplayer, "Invalid source.");
 		return;
 	}
 

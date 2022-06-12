@@ -1,3 +1,5 @@
+#include "io.h"
+#include "entity.h"
 #include "kill.h"
 #include <math.h>
 #include "mdb.h"
@@ -7,18 +9,8 @@
 #include "params.h"
 #include "geography.h"
 #include "view.h"
-#include "search.h"
 #include "spell.h"
 #include "mob.h"
-#include "web.h"
-
-#define MESGPROP_SEATM	"_seat_m"
-#define GETSEATM(x)	get_property_value(x, MESGPROP_SEATM)
-/* #define SETSEATM(x,y)	set_property_value(x, MESGPROP_SEATM, y) */
-
-#define MESGPROP_SEATN	"_seat_n"
-#define GETSEATN(x)	get_property_value(x, MESGPROP_SEATN)
-#define SETSEATN(x, y)	set_property_value(x, MESGPROP_SEATN, y)
 
 struct wts phys_wts[] = {
 	{ "punch", "punches" },
@@ -71,17 +63,6 @@ dodge_get(ENT *eplayer)
 	return rand() <= d;
 }
 
-static inline unsigned
-xp_get(unsigned x, unsigned y)
-{
-	// alternatively (2000/x)*y/x
-	unsigned r = 254 * y / (x * x);
-	if (r < 0)
-		return 0;
-	else
-		return r;
-}
-
 int
 kill_dodge(OBJ *player, struct wts wts)
 {
@@ -118,112 +99,6 @@ notify_attack(OBJ *player, OBJ *target, struct wts wts, short val, char const *c
 	notify_wts_to(player, target, wts.a, wts.b, "%s", buf);
 }
 
-static inline OBJ *
-body(OBJ *player, OBJ *mob)
-{
-	char buf[32];
-	struct object_skeleton o = { "", "", "" };
-	snprintf(buf, sizeof(buf), "%s's body.", mob->name);
-	o.name = buf;
-	OBJ *dead_mob = object_add(o, mob->location);
-	OBJ *tmp;
-	unsigned n = 0;
-
-	for (; (tmp = mob->contents); ) {
-		CBUG(tmp->type != TYPE_GARBAGE);
-		/* if (object_get(tmp)->type == TYPE_GARBAGE) */
-		/* 	continue; */
-		if (tmp->type == TYPE_EQUIPMENT) {
-			EQU *etmp = &tmp->sp.equipment;
-			unequip(mob, EQL(etmp->eqw));
-		}
-		object_move(tmp, dead_mob);
-		n++;
-	}
-
-	if (n > 0) {
-		onotifyf(mob, "%s's body drops to the ground.", mob->name);
-		return dead_mob;
-	} else {
-		recycle(player, dead_mob);
-		return NULL;
-	}
-}
-
-static inline void
-_xp_award(OBJ *player, unsigned const xp)
-{
-	ENT *eplayer = &player->sp.entity;
-	unsigned cxp = eplayer->cxp;
-	notifyf(player, "You gain %u xp!", xp);
-	cxp += xp;
-	while (cxp >= 1000) {
-		notify(player, "You level up!");
-		cxp -= 1000;
-		eplayer->lvl += 1;
-		eplayer->spend += 2;
-	}
-	eplayer->cxp = cxp;
-}
-
-static inline void
-xp_award(OBJ *player, OBJ *target)
-{
-	ENT *eplayer = &player->sp.entity,
-	    *etarget = &target->sp.entity;
-	unsigned x = eplayer->lvl;
-	unsigned y = etarget->lvl;
-	_xp_award(player, xp_get(x, y));
-}
-
-OBJ *
-kill_target(OBJ *player, OBJ *target)
-{
-	ENT *eplayer = player ? &player->sp.entity : NULL;
-	ENT *etarget = &target->sp.entity;
-
-	notify_wts(target, "die", "dies", "");
-
-	body(player, target);
-
-	if (player) {
-		CBUG(player->type != TYPE_ENTITY)
-		xp_award(player, target);
-		eplayer->target = NULL;
-	}
-
-	CBUG(target->type != TYPE_ENTITY);
-
-	if (etarget->target && (etarget->flags & EF_AGGRO)) {
-		OBJ *tartar = etarget->target;
-		ENT *etartar = &tartar->sp.entity;
-		etartar->klock --;
-	}
-
-	OBJ *loc = target->location;
-	ROO *rloc = &loc->sp.room;
-
-	if ((rloc->flags & RF_TEMP) && !(etarget->flags & EF_PLAYER)) {
-		recycle(player, target);
-		geo_clean(target, loc);
-		return NULL;
-	}
-
-	etarget->klock = 0;
-	etarget->target = NULL;
-	etarget->hp = 1;
-	etarget->mp = 1;
-	etarget->thirst = etarget->hunger = 0;
-
-	debufs_end(target);
-	object_move(target, object_get((dbref) 0));
-	geo_clean(target, loc);
-	look_around(target);
-	web_bars(target);
-
-	return target;
-}
-
 static inline void
 attack(OBJ *player)
 {
@@ -254,7 +129,7 @@ attack(OBJ *player)
 		short bval = -kill_dmg(at, EFFECT(eplayer, MDMG).value, EFFECT(etarget, MDEF).value, dt);
 		char const *color = ELEMENT(at)->color;
 		notify_attack(player, target, eplayer->wts, aval, color, bval);
-		cspell_heal(player, target, aval + bval);
+		entity_damage(player, target, aval + bval);
 	}
 }
 
@@ -263,6 +138,7 @@ do_kill(command_t *cmd)
 {
 	const char *what = cmd->argv[1];
 	OBJ *player = object_get(cmd->player);
+	ENT *eplayer = &player->sp.entity;
 	OBJ *here = player->location;
 	ROO *rhere = &here->sp.room;
 	OBJ *target = strcmp(what, "me")
@@ -270,7 +146,7 @@ do_kill(command_t *cmd)
 		: player;
 
 	if (object_ref(here) == 0 || (rhere->flags & RF_HAVEN)) {
-		notify(player, "You may not kill here");
+		notify(eplayer, "You may not kill here");
 		return;
 	}
 
@@ -280,12 +156,12 @@ do_kill(command_t *cmd)
 	    || player == target
 	    || target->type != TYPE_ENTITY)
 	{
-		notify(player, "You can't target that.");
+		notify(eplayer, "You can't target that.");
 		return;
 	}
 
 	player->sp.entity.target = target;
-	/* notify(player, "You form a combat pose."); */
+	/* notify(eplayer, "You form a combat pose."); */
 }
 
 void
@@ -306,7 +182,7 @@ kill_update(OBJ *player)
 	if (!etarget->target)
 		etarget->target = player;
 
-	do_stand_silent(player);
+	stand_silent(player);
 	attack(player);
 }
 
@@ -316,7 +192,7 @@ do_status(command_t *cmd)
 	OBJ *player = object_get(cmd->player);
 	ENT *eplayer = &player->sp.entity;
 	// TODO optimize MOB_EV / MOB_EM
-	notifyf(player, "hp %u/%u\tmp %u/%u\tstuck 0x%x\n"
+	notifyf(eplayer, "hp %u/%u\tmp %u/%u\tstuck 0x%x\n"
 		"dodge %d\tcombo 0x%x \tdebuf_mask 0x%x\n"
 		"damage %d\tmdamage %d\tmdmg_mask 0x%x\n"
 		"defense %d\tmdefense %d\tmdef_mask 0x%x\n"
@@ -346,7 +222,7 @@ do_heal(command_t *cmd)
 	if (!(eplayer->flags & EF_WIZARD)
 	    || !target
 	    || target->type != TYPE_ENTITY) {
-                notify(player, "You can't do that.");
+                notify(eplayer, "You can't do that.");
                 return;
         }
 
@@ -354,9 +230,9 @@ do_heal(command_t *cmd)
 	etarget->hp = HP_MAX(etarget);
 	etarget->mp = MP_MAX(etarget);
 	etarget->hunger = etarget->thirst = 0;
-	debufs_end(target);
+	debufs_end(etarget);
 	notify_wts_to(player, target, "heal", "heals", "");
-	web_bars(target);
+	mcp_bars(etarget);
 }
 
 void
@@ -370,26 +246,12 @@ do_advitam(command_t *cmd)
 	if (!(eplayer->flags & EF_WIZARD)
 	    || !target
 	    || target->owner != player) {
-		notify(player, "You can't do that.");
+		notify(eplayer, "You can't do that.");
 		return;
 	}
 
 	birth(target);
-	notifyf(player, "You infuse %s with life.", target->name);
-}
-
-void
-do_givexp(command_t *cmd, const char *name, const char *amount)
-{
-	OBJ *player = object_get(cmd->player),
-	    *target = ematch_near(player, name);
-	ENT *eplayer = &player->sp.entity;
-	int amt = strtol(amount, NULL, 0);
-
-	if (!(eplayer->flags & EF_WIZARD) || !target)
-		notify(player, "You can't do that.");
-	else
-		_xp_award(target, amt);
+	notifyf(eplayer, "You infuse %s with life.", target->name);
 }
 
 void
@@ -407,7 +269,7 @@ do_train(command_t *cmd) {
 	case 'i': attr = ATTR_INT; break;
 	case 'w': attr = ATTR_WIZ; break;
 	default:
-		  notify(player, "Invalid attribute.");
+		  notify(eplayer, "Invalid attribute.");
 		  return;
 	}
 
@@ -415,12 +277,12 @@ do_train(command_t *cmd) {
 	int amount = *amount_s ? atoi(amount_s) : 1;
 
 	if (amount > avail) {
-		  notify(player, "Not enough points.");
+		  notify(eplayer, "Not enough points.");
 		  return;
 	}
 
-	unsigned c = ATTR(eplayer, attr);
-	ATTR(eplayer, attr) += amount;
+	unsigned c = eplayer->attr[attr];
+	eplayer->attr[attr] += amount;
 
 	switch (attr) {
 	case ATTR_STR:
@@ -432,8 +294,8 @@ do_train(command_t *cmd) {
 	}
 
 	eplayer->spend = avail - amount;
-	notifyf(player, "Your %s increases %d time(s).", attrib, amount);
-        web_stats(player);
+	notifyf(eplayer, "Your %s increases %d time(s).", attrib, amount);
+        mcp_stats(player);
 }
 
 int
@@ -444,58 +306,19 @@ kill_v(OBJ *player, char const *opcs)
 	if (isdigit(*opcs)) {
 		unsigned combo = strtol(opcs, &end, 0);
 		eplayer->combo = combo;
-		notifyf(player, "Set combo to 0x%x.", combo);
+		notifyf(eplayer, "Set combo to 0x%x.", combo);
 		return end - opcs;
 	} else if (*opcs == 'c' && isdigit(opcs[1])) {
 		unsigned slot = strtol(opcs + 1, &end, 0);
                 OBJ *target = eplayer->target;
 		if (player->location == 0) {
-			notify(player, "You may not cast spells in room 0");
+			notify(eplayer, "You may not cast spells in room 0");
 		} else {
 			spell_cast(player, target, slot);
 		}
 		return end - opcs;
 	} else
 		return 0;
-}
-
-void
-sit(OBJ *player, const char *name)
-{
-	ENT *eplayer = &player->sp.entity;
-
-	if (eplayer->flags & EF_SITTING) {
-		notify(player, "You are already sitting.");
-		return;
-	}
-
-	if (!*name) {
-		notify_wts(player, "sit", "sits", " on the ground");
-		eplayer->flags |= EF_SITTING;
-		eplayer->sat = NULL;
-
-		/* warn("%d sits on the ground\n", player); */
-		return;
-	}
-
-	OBJ *seat = ematch_near(player, name);
-	int max = GETSEATM(seat);
-	if (!max) {
-		notify(player, "You can't sit on that.");
-		return;
-	}
-
-	int cur = GETSEATN(seat);
-	if (cur >= max) {
-		notify(player, "No seats available.");
-		return;
-	}
-
-	SETSEATN(seat, cur + 1);
-	eplayer->flags |= EF_SITTING;
-	eplayer->sat = seat;
-
-	notify_wts(player, "sit", "sits", " on %s", seat->name);
 }
 
 void
@@ -506,30 +329,11 @@ do_sit(command_t *cmd)
         sit(player, name);
 }
 
-int
-do_stand_silent(OBJ *player)
-{
-	ENT *eplayer = &player->sp.entity;
-
-	if (!(eplayer->flags & EF_SITTING))
-		return 1;
-
-	OBJ *chair = eplayer->sat;
-
-	if (chair) {
-		SETSEATN(chair, GETSEATN(chair) - 1);
-		eplayer->sat = NULL;
-	}
-
-	eplayer->flags ^= EF_SITTING;
-	notify_wts(player, "stand", "stands", " up");
-	return 0;
-}
-
 void
 stand(OBJ *player) {
-	if (do_stand_silent(player))
-		notify(player, "You are already standing.");
+	ENT *eplayer = &player->sp.entity;
+	if (stand_silent(player))
+		notify(eplayer, "You are already standing.");
 }
 
 void

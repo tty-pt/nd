@@ -26,16 +26,3 @@ extern int init_game();
 extern void panic(const char *);
 
 #endif /* _INTERFACE_H */
-
-#ifdef DEFINE_HEADER_VERSIONS
-
-#ifndef interfaceh_version
-#define interfaceh_version
-const char *interface_h_version = "$RCSfile$ $Revision: 1.12 $";
-#endif
-#else
-extern const char *interface_h_version;
-#endif
-
-/* extern void art_print(dbref player, dbref what); */
-void art(int descr, const char *art_str);

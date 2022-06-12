@@ -1,6 +1,7 @@
 /* $Header$ */
 
 #include "copyright.h"
+#include "entity.h"
 #include "config.h"
 
 /* Predicates for testing various conditions */
@@ -22,58 +23,6 @@
  * you can only jump with an action from rooms that you own
  * or that are jump_ok, and you cannot jump to players that are !jump_ok.
  */
-
-int
-can_doit(OBJ *player, OBJ *thing, const char *default_fail_msg)
-{
-	if (!thing) {
-		notify(player, default_fail_msg);
-		return 0;
-	}
-
-	CBUG(player->type != TYPE_ENTITY);
-
-	ENT *eplayer = &player->sp.entity;
-
-	if (eplayer->klock) {
-		notify(player, "You can not do that right now.");
-		return 0;
-	}
-
-	do_stand_silent(player);
-
-	return 1;
-}
-
-int
-controls(OBJ *who, OBJ *what)
-{
-	if (!what)
-		return 0;
-
-	if (what->type == TYPE_GARBAGE)
-		return 0;
-
-	/* Zombies and puppets use the permissions of their owner */
-	if (who->type != TYPE_ENTITY)
-		who = who->owner;
-
-	ENT *ewho = &who->sp.entity;
-
-	/* Wizard controls everything */
-	if (ewho->flags & EF_WIZARD) {
-#ifdef GOD_PRIV
-		if(God(what->owner) && !God(who))
-			/* Only God controls God's objects */
-			return 0;
-		else
-#endif
-		return 1;
-	}
-
-	/* owners control their own stuff */
-	return (who == what->owner);
-}
 
 /* Removes 'cost' value from 'who', and returns 1 if the act has been
  * paid for, else returns 0. */

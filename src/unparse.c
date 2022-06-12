@@ -14,15 +14,6 @@
 #include "item.h"
 #include "plant.h"
 
-static const char *rarity_str[] = {
-	ANSI_BOLD ANSI_FG_BLACK "Poor" ANSI_RESET,
-	"",
-	ANSI_BOLD "Uncommon" ANSI_RESET,
-	ANSI_BOLD ANSI_FG_CYAN "Rare" ANSI_RESET,
-	ANSI_BOLD ANSI_FG_GREEN "Epic" ANSI_RESET,
-	ANSI_BOLD ANSI_FG_MAGENTA "Mythical" ANSI_RESET
-};
-
 enum actions {
         ACT_LOOK = 1,
         ACT_KILL = 2,
@@ -97,59 +88,6 @@ icon(OBJ *what)
                 break;
         }
         return ret;
-}
-
-#define BUFF(...) buf_l += snprintf(&buf[buf_l], BUFFER_LEN - buf_l, __VA_ARGS__)
-
-static inline int
-controls_link(OBJ *who, OBJ *what)
-{
-	switch (what->type) {
-	case TYPE_ROOM:
-		if (controls(who, what->sp.room.dropto))
-			return 1;
-		return 0;
-
-	case TYPE_ENTITY:
-		if (controls(who, what->sp.entity.home))
-			return 1;
-		return 0;
-
-	default:
-		return 0;
-	}
-}
-
-const char *
-unparse_object(OBJ *player, OBJ *loc)
-{
-	static char buf[BUFFER_LEN];
-        size_t buf_l = 0;
-
-	if (player && player->type != TYPE_ENTITY)
-		player = player->owner;
-
-	if (!loc)
-		return "*NOTHING*";
-
-	if (loc->type == TYPE_EQUIPMENT) {
-		EQU *eloc = &loc->sp.equipment;
-
-		if (eloc->eqw) {
-			unsigned n = eloc->rare;
-
-			if (n != 1)
-				BUFF("(%s) ", rarity_str[n]);
-		}
-	}
-
-	BUFF("%s", loc->name);
-
-	if (!player || controls_link(player, loc))
-		BUFF("(#%d)", object_ref(loc));
-
-	buf[buf_l] = '\0';
-	return buf;
 }
 
 static const char *unparse_c_version = "$RCSfile$ $Revision: 1.11 $";

@@ -1,7 +1,8 @@
 /* $Header$ */
 
-
+#include "io.h"
 #include "copyright.h"
+#include "entity.h"
 #include "config.h"
 
 #include <string.h>
@@ -11,7 +12,6 @@
 #include "defaults.h"
 #include "interface.h"
 #include "externs.h"
-#include "web.h"
 
 static hash_tab player_list[PLAYER_HASH_SIZE];
 
@@ -148,17 +148,18 @@ delete_player(OBJ *who)
 
 static inline void
 dialog_start(OBJ *player, OBJ *npc, const char *dialog) {
+	ENT *eplayer = &player->sp.entity;
         const char buf[BUFSIZ];
         snprintf((char *) buf, sizeof(buf), "_/dialog/%s/text", dialog);
         const char *text = GETMESG(npc, buf);
 
         if (!text) {
-                /* notifyf(player, "%s stops talking .", object_get(npc)->name); */
-                web_dialog_stop(player);
+                /* notifyf(eplayer, "%s stops talking .", object_get(npc)->name); */
+                mcp_dialog_stop(player);
                 return;
         }
 
-        notify(player, text);
+        notify(eplayer, text);
 
         snprintf((char *) buf, sizeof(buf), "_/dialog/%s/n", dialog);
         int i, n = get_property_value(npc, buf);
@@ -166,7 +167,7 @@ dialog_start(OBJ *player, OBJ *npc, const char *dialog) {
         for (i = 0; i < n; i++) {
                 snprintf((char *) buf, sizeof(buf), "_/dialog/%s/%d/text", dialog, i);
                 const char *answer = GETMESG(npc, buf);
-                notifyf(player, "%d) %s", i, answer);
+                notifyf(eplayer, "%d) %s", i, answer);
         }
 }
 
@@ -181,19 +182,19 @@ dialog_stop(OBJ *player) {
         }
 
         eplayer->dialog_target = NULL;
-        web_dialog_stop(player);
+        mcp_dialog_stop(player);
 }
 
 void
 do_talk(command_t *cmd) {
         const char buf[BUFSIZ];
         OBJ *player = object_get(cmd->player);
+	ENT *eplayer = &player->sp.entity;
         const char *npcs = cmd->argv[1];
 	OBJ *npc = *npcs ? ematch_near(player, npcs) : NULL;
-	ENT *eplayer = &player->sp.entity;
 
         if (!npc) {
-                notify(player, "Can't find that.");
+                notify(eplayer, "Can't find that.");
                 return;
         }
 
@@ -212,7 +213,7 @@ do_talk(command_t *cmd) {
                 free((void *) eplayer->dialog);
         eplayer->dialog = alloc_string(dialog);
 
-        if (web_dialog_start(player, npc, dialog))
+        if (mcp_dialog_start(player, npc, dialog))
                 dialog_start(player, npc, dialog);
 }
 
@@ -244,7 +245,7 @@ do_answer(command_t *cmd) {
         OBJ *npc = eplayer->dialog_target;
         const char *dialog = eplayer->dialog;
         if (!npc || !dialog) {
-                notify(player, "You are not in a conversation\n");
+                notify(eplayer, "You are not in a conversation\n");
                 return;
         }
         const char *answers = cmd->argv[1];
@@ -258,12 +259,12 @@ do_answer(command_t *cmd) {
         free((void *) eplayer->dialog);
         if (!dialog) {
                 eplayer->dialog = NULL;
-                web_dialog_stop(player);
+                mcp_dialog_stop(player);
                 return;
         }
         eplayer->dialog = alloc_string(dialog);
 
-        if (web_dialog_start(player, npc, dialog))
+        if (mcp_dialog_start(player, npc, dialog))
                 dialog_start(player, npc, dialog);
 }
 

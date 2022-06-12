@@ -40,9 +40,6 @@ OBJ *geo_there(OBJ *where, enum exit e);
 void gexit_snull(dbref player, dbref exit);
 int gexits(ROO *rwhere);
 
-/* void geo_notify(int descr, dbref player); */
-OBJ *geo_clean(OBJ *player, OBJ *here);
-
 int geo_teleport(OBJ *player, struct cmd_dir cd);
 
 #endif

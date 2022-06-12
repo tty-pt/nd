@@ -8,9 +8,6 @@
 
 #define ELEMENT(idx) (&element_map[idx])
 
-#define ELEMENT_NEXT(ent, type) \
-	element_next(ent, EFFECT(ent, type).mask)
-
 typedef struct {
 	char *color;
 	enum element weakness;
@@ -18,16 +15,12 @@ typedef struct {
 
 extern element_t element_map[];
 
-enum element element_next(ENT *ref, register unsigned char a);
-
 #define DEBUF_DURATION(ra) 20 * (RARE_MAX - ra) / RARE_MAX
 #define DEBUF_DMG(sp_dmg, duration) ((long) 2 * sp_dmg) / duration
 #define DEBUF_TYPE_MASK 0xf
 #define DEBUF_TYPE(sp) (sp->flags & DEBUF_TYPE_MASK)
 
 #define SPELL_SKELETON(idx) (&spell_skeleton_map[idx])
-#define SPELL_G(v) G(v)
-#define SPELL_DMG(p, sp) SPELL_G(ATTR(p, ATTR_INT)) + HS(sp)
 #define SPELL_COST(dmg, y, no_bdmg) (no_bdmg ? 0 : dmg) + dmg / (1 << y)
 
 enum spell_affects {
@@ -62,12 +55,11 @@ enum spell_type {
 };
 
 void spells_init(struct spell sps[8], OBJ *player);
-void debuf_end(OBJ *player, unsigned i);
-void debufs_end(OBJ *player);
+void debuf_end(ENT *player, unsigned i);
+void debufs_end(ENT *player);
 int debufs_process(OBJ *player);
 void debuf_notify(OBJ *player, struct debuf *d, short val);
 int spell_cast(OBJ *player, OBJ *target, unsigned slot);
 int spells_cast(OBJ *player, OBJ *target);
-int cspell_heal(OBJ *player, OBJ *target, short amt);
 
 #endif

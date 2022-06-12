@@ -96,12 +96,6 @@ void morton_pos(pos_t p, morton_t code);
 int e_exit_can(OBJ *player, enum exit e);
 int e_ground(OBJ *room, enum exit e);
 
-OBJ *
-object_add(struct object_skeleton o, OBJ *where);
-
-void
-object_drop(OBJ *where, struct drop **drop);
-
 void pos_move(pos_t d, pos_t o, enum exit e);
 enum exit dir_e(const char dir);
 const char e_dir(enum exit e);

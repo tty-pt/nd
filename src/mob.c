@@ -1,4 +1,7 @@
+#include "io.h"
+
 #include "mob.h"
+#include "entity.h"
 
 #include "stat.h"
 #include "spell.h"
@@ -380,12 +383,11 @@ struct object_skeleton entity_skeleton_map[] = {
 };
 
 void
-mob_add_stats(struct object_skeleton *mob, OBJ *nu)
+stats_init(ENT *enu, SENT *sk)
 {
-	ENT *enu = &nu->sp.entity;
-	unsigned char stat = mob->sp.entity.stat;
-	int lvl = mob->sp.entity.lvl, spend, i, sp,
-	    v = mob->sp.entity.lvl_v ? mob->sp.entity.lvl_v : 0xf;
+	unsigned char stat = sk->stat;
+	int lvl = sk->lvl, spend, i, sp,
+	    v = sk->lvl_v ? sk->lvl_v : 0xf;
 
 	lvl += random() & v;
 
@@ -396,16 +398,16 @@ mob_add_stats(struct object_skeleton *mob, OBJ *nu)
 	for (i = 0; i < ATTR_MAX; i++)
 		if (stat & (1<<i)) {
 			sp = random() % spend;
-			ATTR(enu, i) = sp;
+			enu->attr[i] = sp;
 		}
 
 	enu->lvl = lvl;
 }
 
 static inline int
-bird_is(struct entity_skeleton *mob)
+bird_is(SENT *sk)
 {
-	return mob->wt == PECK;
+	return sk->wt == PECK;
 }
 
 ENT *
@@ -433,7 +435,8 @@ birth(OBJ *player)
 			continue;
 
 		OBJ *oeq = object_get(eq);
-		CBUG(equip_affect(player, oeq));
+		EQU *eeq = &oeq->sp.equipment;
+		CBUG(equip_affect(eplayer, eeq));
 	}
 
         return eplayer;
@@ -453,7 +456,7 @@ mob_add(enum mob_type mid, OBJ *where, enum biome biome, long long pdn) {
 	if (!((1 << biome) & mob_skel->biomes))
 		return NULL;
 
-	return object_add(*obj_skel, where);
+	return object_add(obj_skel, where);
 }
 
 void
@@ -536,16 +539,16 @@ huth_notify(OBJ *player, unsigned v, unsigned char y, char const *m[4])
 	register unsigned aux;
 
 	if (v == n[2])
-		notify(player, m[0]);
+		notify(eplayer, m[0]);
 	else if (v == (aux = n[1]))
-		notify(player, m[1]);
+		notify(eplayer, m[1]);
 	else if (v == (aux += n[0]))
-		notify(player, m[2]);
+		notify(eplayer, m[2]);
 	else if (v == (aux += n[2]))
-		notify(player, m[3]);
+		notify(eplayer, m[3]);
 	else if (v > aux) {
 		short val = -(HP_MAX(eplayer) >> 3);
-		return cspell_heal(NULL, player, val);
+		return entity_damage(NULL, player, val);
 	}
 
         return 0;
@@ -597,7 +600,7 @@ entity_update(OBJ *player)
 	if (get_tick() % 16 == 0 && (eplayer->flags & EF_SITTING)) {
 		int div = 10;
 		int max, cur;
-		cspell_heal(NULL, player, HP_MAX(eplayer) / div);
+		entity_damage(NULL, player, HP_MAX(eplayer) / div);
 
 		max = MP_MAX(eplayer);
 		cur = eplayer->mp + (max / div);

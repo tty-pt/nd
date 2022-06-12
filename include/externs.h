@@ -61,12 +61,8 @@ extern void do_motd(command_t *);
 extern void do_info(command_t *);
 
 /* From look.c */
-extern void look_room(OBJ *player, OBJ *room);
 extern long size_object(OBJ *obj, int load);
 
-
-/* extern void look_room_simple(dbref player, dbref room); */
-extern void look_around(OBJ *player);
 extern void do_look_at(command_t *cmd);
 extern void do_examine(command_t *cmd);
 extern void do_inventory(command_t *cmd);
@@ -96,14 +92,11 @@ extern void do_train(command_t *);
 extern void do_sit(command_t *);
 extern void do_stand(command_t *);
 extern int kill_v(OBJ *player, const char *cmdstr);
-int do_stand_silent(OBJ *player);
 
 /* From move.c */
-extern void enter_room(OBJ *player, OBJ *loc);
 extern void do_get(command_t *);
 extern void do_drop(command_t *);
 extern void do_recycle(command_t *);
-extern void recycle(OBJ *player, OBJ *thing);
 
 /* From player.c */
 OBJ *lookup_player(const char *name);
@@ -117,7 +110,6 @@ extern int dialog_exists(OBJ *what);
 extern void dialog_stop(OBJ *player);
 
 /* From predicates.c */
-extern int can_doit(OBJ *player, OBJ *thing, const char *default_fail_msg);
 extern int controls(OBJ *who, OBJ *what);
 extern int payfor(OBJ *who, int cost);
 extern int ok_ascii_any(const char *name);
@@ -136,8 +128,6 @@ extern void do_chown(command_t *);
 /* From speech.c */
 extern void do_wall(command_t *cmd);
 extern void do_say(command_t *cmd);
-extern void notify_wts(OBJ *player, char const *a, char const *b, char *format, ...);
-extern void notify_wts_to(OBJ *player, OBJ *target, char const *a, char const *b, char *format, ...);
 
 /* From stringutil.c */
 extern int string_prefix(const char *string, const char *prefix);
@@ -162,16 +152,9 @@ struct icon {
 };
 
 extern struct icon icon(OBJ *what);
-extern const char *unparse_object(OBJ *player, OBJ *object);
 
 /* From smatch.c */
 extern int equalstr(char *s, char *t);
-
-/* from interface.c */
-int notify(OBJ *player, const char *msg);
-void notifyf(OBJ *player, char *format, ...);
-void onotifyf(OBJ *player, char *format, ...);
-void anotifyf(OBJ *room, char *format, ...);
 
 /* from property.c */
 char * displayprop(OBJ *player, OBJ *obj, const char *name, char *buf, size_t bufsiz);

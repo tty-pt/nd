@@ -1,14 +1,13 @@
-/* $Header$ */
-
 /* Copyright 1992-2001 by Fuzzball Software */
 /* Consider this code protected under the GNU public license, with explicit
  * permission to distribute when linked against openSSL. */
+
+#include "io.h"
 
 #include "copyright.h"
 #include "object.h"
 #include "config.h"
 #include "match.h"
-#include "web.h"
 
 #include <sys/types.h>
 
@@ -31,8 +30,6 @@
 #include <openssl/ssl.h>
 
 #include <err.h>
-
-#include "descr.h"
 
 #ifdef CONFIG_SECURE
 #include <openssl/bio.h>
@@ -57,7 +54,7 @@
 #include "externs.h"
 #include "interp.h"
 #include "kill.h"
-#include "search.h"
+#include "map.h"
 #include "view.h"
 #include "geography.h"
 #include "item.h"
@@ -534,7 +531,7 @@ descr_inband(int fd, const char *s)
 }
 
 int
-notify(OBJ *player, const char *msg)
+notify(ENT *eplayer, const char *msg)
 {
 	int retval = 0, fd;
 	char buf[BUFFER_LEN + 2];
@@ -542,15 +539,9 @@ notify(OBJ *player, const char *msg)
 	char *ptr1;
 	const char *ptr2;
 
-	CBUG(player->type != TYPE_ENTITY);
-
-	ENT *eplayer = &player->sp.entity;
 	fd = eplayer->fd;
 	if (fd <= 0)
 		return 0;
-
-	/* descr_inband(fd, msg); */
-	/* retval++; */
 
 	ptr2 = msg;
 	while (ptr2 && *ptr2) {
@@ -573,7 +564,7 @@ notify(OBJ *player, const char *msg)
 }
 
 void
-notifyf(OBJ *player, char *format, ...)
+notifyf(ENT *eplayer, char *format, ...)
 {
 	va_list args;
 	static char bufr[BUFFER_LEN];
@@ -581,7 +572,7 @@ notifyf(OBJ *player, char *format, ...)
 	va_start(args, format);
 	vsnprintf(bufr, sizeof(bufr), format, args);
 	bufr[sizeof(bufr)-1] = '\0';
-	notify(player, bufr);
+	notify(eplayer, bufr);
 	va_end(args);
 }
 
@@ -589,8 +580,10 @@ static inline void
 notify_except(OBJ *first, OBJ *exception, const char *msg)
 {
 	FOR_LIST(first, first) {
-		if (first->type == TYPE_ENTITY && first != exception)
-			notify(first, msg);
+		if (first->type == TYPE_ENTITY && first != exception) {
+			ENT *efirst = &first->sp.entity;
+			notify(efirst, msg);
+		}
 	}
 }
 
@@ -630,27 +623,9 @@ wall(const char *msg)
 }
 
 void
-mob_welcome(int fd)
-{
-	struct object_skeleton const *o = mob_obj_random();
-	if (o) {
-		CBUG(*o->name == '\0');
-		descr_inband(fd, o->name);
-		descr_inband(fd, "\r\n\r\n");
-		art(fd, o->art);
-                if (*o->description) {
-                        if (*o->description != '\0')
-                                descr_inband(fd, o->description);
-                        descr_inband(fd, "\r\n\r\n");
-                }
-	}
-}
-
-void
 welcome_user(int fd)
 {
 	descr_inband(fd, DEFAULT_WELCOME_MESSAGE);
-        mob_welcome(fd);
 
 	if (optflags & OPT_WIZONLY) {
 		descr_inband(fd, "## The game is currently in maintenance mode, and only wizards will be able to connect.\r\n");
@@ -693,7 +668,7 @@ do_auth(command_t *cmd)
 
 	if (!fp) {
 		descr_inband(fd, "No such session\r\n");
-		web_auth_fail(fd, 1);
+		mcp_auth_fail(fd, 1);
 		return;
 	}
 
@@ -709,18 +684,19 @@ do_auth(command_t *cmd)
 		birth(player);
 	} else if (player->sp.entity.fd > 0) {
                 descr_inband(fd, "That player is already connected.\r\n");
-                web_auth_fail(fd, 2);
+                mcp_auth_fail(fd, 2);
                 return;
         }
 
 	d->flags |= DF_CONNECTED;
 	d->player = cmd->player = object_ref(player);
 	CBUG(d->fd != fd);
-	player->sp.entity.fd = fd;
-        web_stats(player);
-        web_bars(player);
-        web_auth_success(player);
-        web_equipment(player);
+	ENT *eplayer = &player->sp.entity;
+	eplayer->fd = fd;
+        mcp_stats(player);
+        mcp_bars(eplayer);
+        mcp_auth_success(player);
+        mcp_equipment(player);
 	look_around(player);
 	do_view(cmd);
 }
@@ -1068,36 +1044,6 @@ void
 boot_player_off(OBJ *player)
 {
 	boot_off(player);
-}
-
-void
-art(int fd, const char *art)
-{
-	FILE *f;
-	char buf[BUFFER_LEN];
-
-	if (*art == '/' || strstr(art, "..")
-	    || (!(string_prefix(art, "bird/")
-		|| string_prefix(art, "fish/")
-                || !strchr(art, '/'))))
-
-		return;
-	
-        size_t len = strlen(art);
-
-        if (!strcmp(art + len - 3, "txt")) {
-                snprintf(buf, sizeof(buf), "../art/%s", art);
-
-                if ((f = fopen(buf, "rb")) == NULL) 
-                        return;
-
-                while (fgets(buf, sizeof(buf) - 3, f))
-                        descr_inband(fd, buf);
-
-                fclose(f);
-                descr_inband(fd, "\r\n");
-        } else
-                web_art(fd, art);
 }
 
 McpFrame *

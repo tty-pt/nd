@@ -8,8 +8,6 @@
 /* FIXME use ref as index */
 #define ENTITY_SKELETON(mob_id) (&entity_skeleton_map[mob_id])
 
-#define EFFECT(mob, w) mob->e[AF_ ## w]
-
 #define BODYPART_ID(_c) ch_bodypart_map[(int) _c]
 /* #define BODYPART(_c) bodypart_map[BODYPART_ID(_c)] */
 
@@ -76,6 +74,5 @@ ENT *birth(OBJ *player);
 void mobs_aggro(OBJ *player);
 struct object_skeleton const *mob_obj_random();
 void entity_update(OBJ *player);
-void mob_add_stats(struct object_skeleton *mob, OBJ *nu);
 
 #endif

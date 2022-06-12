@@ -553,7 +553,7 @@ displayprop(OBJ *player, OBJ *obj, const char *name, char *buf, size_t bufsiz)
 		snprintf(buf, bufsiz, "%c str %s:%.*s", blesschar, mybuf, (BUFFER_LEN / 2), PropDataStr(p));
 		break;
 	case PROP_REFTYP:
-		snprintf(buf, bufsiz, "%c ref %s:%s", blesschar, mybuf, unparse_object(player, object_get(PropDataRef(p))));
+		snprintf(buf, bufsiz, "%c ref %s:%s", blesschar, mybuf, unparse(player, object_get(PropDataRef(p))));
 		break;
 	case PROP_INTTYP:
 		snprintf(buf, bufsiz, "%c int %s:%d", blesschar, mybuf, PropDataVal(p));

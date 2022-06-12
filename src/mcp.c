@@ -1,21 +1,31 @@
 /* mcp.c: MUD Client Protocol.
    Part of the FuzzBall distribution. */
 
+#include "mcp.h"
+#include "entity.h"
 #include "config.h"
 #include <stdlib.h>
 #include <ctype.h>
 #include <string.h>
 #include "mdb.h"
 #include "externs.h"
-#include "mcp.h"
 
+#define MCP_WEB_PKG "web"
 #define MCP_MESG_PREFIX		"#$#"
-#define MCP_QUOTE_PREFIX	"#$\""
 #define MCP_ARG_EMPTY		"\"\""
 #define MCP_INIT_PKG		"mcp"
 #define MCP_DATATAG			"_data-tag"
 #define MCP_INIT_MESG		"mcp "
 #define MCP_NEGOTIATE_PKG	"mcp-negotiate"
+
+#define EMCP_SUCCESS		 0	/* successful result */
+#define EMCP_ARGCOUNT		-3	/* Too many arguments in mesg. */
+#define EMCP_ARGNAMELEN		-5	/* Arg name is too long. */
+#define EMCP_MESGSIZE		-6	/* Message is too large. */
+
+#define MAX_MCP_ARGNAME_LEN    30 /* max length of argument name. */
+#define MAX_MCP_MESG_ARGS      30 /* max number of args per mesg. */
+#define MAX_MCP_MESG_SIZE  262144 /* max mesg size in bytes. */
 
 /* Defined elsewhere.  Used to send text to a connection */
 void SendText(McpFrame * mfr, const char *mesg);
@@ -71,16 +81,6 @@ typedef struct McpFrameList_t McpFrameList;
 McpFrameList* mcp_frame_list;
 
 
-/*****************************************************************
- *
- * void mcp_frame_init(McpFrame* mfr, connection_t con);
- *
- *   Initializes an McpFrame for a new connection.
- *   You MUST call this to initialize a new McpFrame.
- *   The caller is responsible for the allocation of the McpFrame.
- *
- *****************************************************************/
-
 void
 mcp_frame_init(McpFrame * mfr, connection_t con)
 {
@@ -100,55 +100,7 @@ mcp_frame_init(McpFrame * mfr, connection_t con)
 	mcp_frame_list = mfrl;
 }
 
-/*****************************************************************
- *
- * McpVer mcp_frame_package_supported(
- *              McpFrame* mfr,
- *              char* package
- *          );
- *
- *   Returns the supported version of the given package.
- *   Returns {0,0} if the package is not supported.
- *
- *****************************************************************/
-
-McpVer
-mcp_frame_package_supported(McpFrame * mfr, const char *package)
-{
-	McpPkg *ptr;
-	McpVer errver = { 0, 0 };
-
-	if (!mfr->enabled) {
-		return errver;
-	}
-
-	for (ptr = mfr->packages; ptr; ptr = ptr->next) {
-		if (!strcmp_nocase(ptr->pkgname, package)) {
-			break;
-		}
-	}
-	if (!ptr) {
-		return errver;
-	}
-
-	return (ptr->minver);
-}
-
-/*****************************************************************
- *
- * int mcp_frame_output_mesg(
- *             McpFrame* mfr,
- *             McpMesg* msg
- *         );
- *
- *   Sends an MCP message to the given connection.
- *   Returns EMCP_SUCCESS if successful.
- *   Returns EMCP_NOMCP if MCP isn't supported on this connection.
- *   Returns EMCP_NOPACKAGE if this connection doesn't support the needed package.
- *
- *****************************************************************/
-
-int
+static int
 mcp_frame_output_mesg(McpFrame * mfr, McpMesg * msg)
 {
 	char outbuf[BUFFER_LEN * 2];
@@ -160,10 +112,6 @@ mcp_frame_output_mesg(McpFrame * mfr, McpMesg * msg)
 	char *p;
 	char *out;
 
-	/* if (!mfr->enabled && strcmp_nocase(msg->package, MCP_INIT_PKG)) { */
-	/* 	return EMCP_NOMCP; */
-	/* } */
-
 	/* Create the message name from the package and message subnames */
 	if (msg->mesgname && *msg->mesgname) {
 		snprintf(mesgname, sizeof(mesgname), "%s-%s", msg->package, msg->mesgname);
@@ -173,19 +121,6 @@ mcp_frame_output_mesg(McpFrame * mfr, McpMesg * msg)
 
 	strlcpy(outbuf, MCP_MESG_PREFIX, sizeof(outbuf));
 	strlcat(outbuf, mesgname, sizeof(outbuf));
-	/* if (strcmp_nocase(mesgname, MCP_INIT_PKG)) { */
-	/* 	McpVer nullver = { 0, 0 }; */
-
-	/* 	strlcat(outbuf, " ", sizeof(outbuf)); */
-	/* 	strlcat(outbuf, mfr->authkey, sizeof(outbuf)); */
-	/* 	if (strcmp_nocase(msg->package, MCP_NEGOTIATE_PKG)) { */
-	/* 		McpVer ver = mcp_frame_package_supported(mfr, msg->package); */
-
-	/* 		if (!mcp_version_compare(ver, nullver)) { */
-	/* 			return EMCP_NOPACKAGE; */
-	/* 		} */
-	/* 	} */
-	/* } */
 
 	/* If the argument lines contain newlines, split them into separate lines. */
 	for (anarg = msg->args; anarg; anarg = anarg->next) {
@@ -286,26 +221,6 @@ mcp_frame_output_mesg(McpFrame * mfr, McpMesg * msg)
 	return EMCP_SUCCESS;
 }
 
-/*****************************************************************/
-/***                   *******************************************/
-/***  MESSAGE METHODS  *******************************************/
-/***                   *******************************************/
-/*****************************************************************/
-
-/*****************************************************************
- *
- * void mcp_mesg_init(
- *         McpMesg*    msg,
- *         const char* package,
- *         const char* mesgname
- *     );
- *
- *   Initializes an MCP message.
- *   You MUST initialize a message before using it.
- *   You MUST also mcp_mesg_clear() a mesg once you are done using it.
- *
- *****************************************************************/
-
 void
 mcp_mesg_init(McpMesg * msg, const char *package, const char *mesgname)
 {
@@ -318,19 +233,7 @@ mcp_mesg_init(McpMesg * msg, const char *package, const char *mesgname)
 	msg->next = NULL;
 }
 
-/*****************************************************************
- *
- * void mcp_mesg_clear(
- *              McpMesg* msg
- *          );
- *
- *   Clear the given MCP message.
- *   You MUST clear every message after you are done using it, to
- *     free the memory used by the message.
- *
- *****************************************************************/
-
-void
+static void
 mcp_mesg_clear(McpMesg * msg)
 {
 	if (msg->package)
@@ -359,69 +262,7 @@ mcp_mesg_clear(McpMesg * msg)
 	msg->bytes = 0;
 }
 
-/*****************************************************************/
-/***                  ********************************************/
-/*** ARGUMENT METHODS ********************************************/
-/***                  ********************************************/
-/*****************************************************************/
-
-/*****************************************************************
- *
- * char* mcp_mesg_arg_getline(
- *         McpMesg* msg,
- *         const char* argname
- *         int linenum;
- *     );
- *
- *   Gets the value of a named argument in the given message.
- *
- *****************************************************************/
-
-char *
-mcp_mesg_arg_getline(McpMesg * msg, const char *argname, int linenum)
-{
-	McpArg *ptr = msg->args;
-
-	while (ptr && strcmp_nocase(ptr->name, argname)) {
-		ptr = ptr->next;
-	}
-	if (ptr) {
-		McpArgPart *ptr2 = ptr->value;
-
-		while (linenum > 0 && ptr2) {
-			ptr2 = ptr2->next;
-			linenum--;
-		}
-		if (ptr2) {
-			return (ptr2->value);
-		}
-		return NULL;
-	}
-	return NULL;
-}
-
-
-
-
-/*****************************************************************
- *
- * int mcp_mesg_arg_append(
- *         McpMesg* msg,
- *         const char* argname,
- *         const char* argval
- *     );
- *
- *   Appends to the list value of the named arg in the given mesg.
- *   If that named argument doesn't exist yet, it will be created.
- *   This is used to construct arguments that have lists as values.
- *   Returns the success state of the call.  EMCP_SUCCESS if the
- *   call was successful.  EMCP_ARGCOUNT if this would make too
- *   many arguments in the message.  EMCP_ARGLENGTH is this would
- *   cause an argument to exceed the max allowed number of lines.
- *
- *****************************************************************/
-
-int
+static int
 mcp_mesg_arg_append(McpMesg * msg, const char *argname, const char *argval)
 {
 	McpArg *ptr = msg->args;
@@ -483,4 +324,424 @@ mcp_mesg_arg_append(McpMesg * msg, const char *argname, const char *argval)
 	}
 	ptr->was_shown = 0;
 	return EMCP_SUCCESS;
+}
+
+static inline McpFrame *
+mcp_frame(int descr)
+{
+	McpFrame *mfr = descr_mcpframe(descr);
+
+	if (!mfr || !mfr->enabled)
+                return NULL;
+
+        return mfr;
+}
+
+int
+mcp_view(ENT *eplayer, char *buf)
+{
+	McpMesg msg;
+	McpFrame *mfr = mcp_frame(eplayer->fd);
+	if (!mfr)
+                return 1;
+        mcp_mesg_init(&msg, MCP_WEB_PKG, "view");
+        mcp_mesg_arg_append(&msg, "data", buf);
+        mcp_frame_output_mesg(mfr, &msg);
+        mcp_mesg_clear(&msg);
+        return 0;
+}
+
+int
+mcp_art(int descr, char const *art)
+{
+	McpMesg msg;
+	McpFrame *mfr = mcp_frame(descr);
+	if (!mfr)
+                return 1;
+
+        mcp_mesg_init(&msg, MCP_WEB_PKG, "art");
+        mcp_mesg_arg_append(&msg, "src", art);
+        mcp_frame_output_mesg(mfr, &msg);
+        mcp_mesg_clear(&msg);
+        return 0;
+}
+
+int
+mcp_look(OBJ *player, OBJ *loc)
+{
+	ENT *eplayer = &player->sp.entity;
+        char buf[BUFSIZ];
+        char buf2[BUFSIZ];
+	char const *description = "";
+	OBJ *thing;
+	McpMesg msg;
+	McpFrame *mfr = mcp_frame(eplayer->fd);
+	if (!mfr)
+                return 1;
+
+        mcp_mesg_init(&msg, MCP_WEB_PKG, "look");
+        snprintf(buf2, sizeof(buf2), "%d", object_ref(loc));
+        mcp_mesg_arg_append(&msg, "dbref", buf2);
+
+	OBJ *last_observed = eplayer->last_observed;
+	if (last_observed)
+		observer_remove(last_observed, player);
+
+        if (loc->type == TYPE_ROOM) {
+		ROO *rloc = &loc->sp.room;
+                mcp_mesg_arg_append(&msg, "room", "1");
+                snprintf(buf, sizeof(buf), "%u", rloc->exits);
+                mcp_mesg_arg_append(&msg, "exits", buf);
+        } else {
+		if (loc->type == TYPE_ENTITY) {
+			ENT *eloc = &loc->sp.entity;
+			if (eloc->flags & EF_SHOP)
+				mcp_mesg_arg_append(&msg, "shop", "1");
+		}
+
+		eplayer->last_observed = loc;
+		observer_add(loc, player);
+	}
+
+        mcp_mesg_arg_append(&msg, "art", loc->art);
+        mcp_mesg_arg_append(&msg, "name", loc->name);
+        mcp_mesg_arg_append(&msg, "pname", unparse(player, loc));
+	if (loc->description)
+		description = loc->description;
+        mcp_mesg_arg_append(&msg, "description", description);
+        mcp_frame_output_mesg(mfr, &msg);
+        mcp_mesg_clear(&msg);
+
+        if (loc != player && loc->type == TYPE_ENTITY && !(eplayer->flags & EF_WIZARD))
+                return 0;
+
+	// use callbacks for mcp like this versus telnet
+        FOR_LIST(thing, loc->contents) {
+		if (thing == player)
+			continue;
+
+		struct icon ico = icon(thing);
+		mcp_mesg_init(&msg, MCP_WEB_PKG, "look-content");
+		mcp_mesg_arg_append(&msg, "loc", buf2);
+		snprintf(buf, sizeof(buf), "%d", object_ref(thing));
+		mcp_mesg_arg_append(&msg, "dbref", buf);
+		mcp_mesg_arg_append(&msg, "name", thing->name);
+		mcp_mesg_arg_append(&msg, "pname", unparse(player, thing));
+		mcp_mesg_arg_append(&msg, "icon", ico.icon);
+		snprintf(buf, sizeof(buf), "%d", thing->value);
+		mcp_mesg_arg_append(&msg, "price", buf);
+		snprintf(buf, sizeof(buf), "%d", ico.actions);
+		mcp_mesg_arg_append(&msg, "avatar", thing->avatar);
+		mcp_mesg_arg_append(&msg, "actions", buf);
+		mcp_frame_output_mesg(mfr, &msg);
+		mcp_mesg_clear(&msg);
+        }
+
+        return 0;
+}
+
+static void
+mcp_room(OBJ *room, void *msg)
+{
+	OBJ *tmp;
+
+	for (tmp = room->contents;
+	     tmp;
+	     tmp = tmp->next)
+	{
+		if (tmp->type != TYPE_ENTITY)
+			continue;
+
+		ENT *etmp = &tmp->sp.entity;
+		McpFrame *mfr = mcp_frame(etmp->fd);
+
+		if (!mfr)
+			continue;
+
+		mcp_frame_output_mesg(mfr, msg);
+	}
+}
+
+static void
+mcp_observers(OBJ *thing, void *msg)
+{
+	struct observer_node *node;
+
+	for (node = thing->first_observer; node; node = node->next)
+	{
+		OBJ *tmp = node->who;
+
+		if (tmp->type != TYPE_ENTITY)
+			continue;
+
+		ENT *etmp = &tmp->sp.entity;
+
+		McpFrame *mfr = mcp_frame(etmp->fd);
+
+		if (!mfr)
+			continue;
+
+		mcp_frame_output_mesg(mfr, msg);
+	}
+}
+
+void do_meme(command_t *cmd) {
+        OBJ *player = object_get(cmd->player);
+        const char *url = cmd->argv[1];
+	McpMesg msg;
+        // FIXME should also work in the terminal
+        mcp_mesg_init(&msg, MCP_WEB_PKG, "meme");
+        mcp_mesg_arg_append(&msg, "who", player->name);
+        mcp_mesg_arg_append(&msg, "url", url);
+        mcp_room(player->location, &msg);
+        mcp_mesg_clear(&msg);
+}
+
+void
+mcp_content_out(OBJ *loc, OBJ *thing) {
+	char buf[BUFSIZ];
+	McpMesg msg;
+
+        mcp_mesg_init(&msg, MCP_WEB_PKG, "out");
+	snprintf(buf, BUFSIZ, "%d", object_ref(loc));
+        mcp_mesg_arg_append(&msg, "loc", buf);
+	snprintf(buf, BUFSIZ, "%d", object_ref(thing));
+        mcp_mesg_arg_append(&msg, "dbref", buf);
+
+	if (loc->type == TYPE_ROOM)
+		mcp_room(loc, &msg);
+	else
+		mcp_observers(loc, &msg);
+
+        mcp_mesg_clear(&msg);
+}
+
+void
+mcp_content_in(OBJ *loc, OBJ *thing) {
+	struct icon ico = icon(thing);
+	char buf[BUFSIZ];
+	McpMesg msg;
+
+        mcp_mesg_init(&msg, MCP_WEB_PKG, "in");
+	snprintf(buf, BUFSIZ, "%d", object_ref(loc));
+        mcp_mesg_arg_append(&msg, "loc", buf);
+	snprintf(buf, BUFSIZ, "%d", object_ref(thing));
+        mcp_mesg_arg_append(&msg, "dbref", buf);
+	mcp_mesg_arg_append(&msg, "name", thing->name);
+	mcp_mesg_arg_append(&msg, "pname", unparse(object_get(HUMAN_BEING), thing));
+	mcp_mesg_arg_append(&msg, "icon", ico.icon);
+	snprintf(buf, sizeof(buf), "%d", ico.actions);
+        mcp_mesg_arg_append(&msg, "avatar", thing->avatar);
+	mcp_mesg_arg_append(&msg, "actions", buf);
+
+	if (loc->type == TYPE_ROOM)
+		mcp_room(loc, &msg);
+	else
+		mcp_observers(loc, &msg);
+
+        mcp_mesg_clear(&msg);
+}
+
+int
+mcp_auth_fail(int descr, int reason) {
+	McpMesg msg;
+	McpFrame *mfr = mcp_frame(descr);
+	char buf[BUFSIZ];
+	if (!mfr)
+                return 1;
+
+        mcp_mesg_init(&msg, MCP_WEB_PKG, "auth-fail");
+	snprintf(buf, sizeof(buf), "%d", reason);
+        mcp_mesg_arg_append(&msg, "reason", buf);
+        mcp_frame_output_mesg(mfr, &msg);
+        mcp_mesg_clear(&msg);
+        return 0;
+}
+
+int
+mcp_auth_success(OBJ *player) {
+	ENT *eplayer = &player->sp.entity;
+	McpMesg msg;
+	McpFrame *mfr = mcp_frame(eplayer->fd);
+	char buf[BUFSIZ];
+	if (!mfr)
+                return 1;
+
+        mcp_mesg_init(&msg, MCP_WEB_PKG, "auth-success");
+	snprintf(buf, sizeof(buf), "%d", object_ref(player));
+        mcp_mesg_arg_append(&msg, "player", buf);
+        mcp_frame_output_mesg(mfr, &msg);
+        mcp_mesg_clear(&msg);
+        return 0;
+}
+
+int
+mcp_stats(OBJ *player) {
+	ENT *eplayer = &player->sp.entity;
+	McpMesg msg;
+	McpFrame *mfr = mcp_frame(eplayer->fd);
+	char buf[BUFSIZ];
+	if (!mfr)
+                return 1;
+
+        mcp_mesg_init(&msg, MCP_WEB_PKG, "stats");
+	snprintf(buf, sizeof(buf), "%d", eplayer->attr[ATTR_STR]);
+        mcp_mesg_arg_append(&msg, "str", buf);
+	snprintf(buf, sizeof(buf), "%d", eplayer->attr[ATTR_CON]);
+        mcp_mesg_arg_append(&msg, "con", buf);
+	snprintf(buf, sizeof(buf), "%d", eplayer->attr[ATTR_DEX]);
+        mcp_mesg_arg_append(&msg, "dex", buf);
+	snprintf(buf, sizeof(buf), "%d", eplayer->attr[ATTR_INT]);
+        mcp_mesg_arg_append(&msg, "int", buf);
+	snprintf(buf, sizeof(buf), "%d", eplayer->attr[ATTR_WIZ]);
+        mcp_mesg_arg_append(&msg, "wiz", buf);
+	snprintf(buf, sizeof(buf), "%d", EFFECT(eplayer, DODGE).value);
+        mcp_mesg_arg_append(&msg, "dodge", buf);
+	snprintf(buf, sizeof(buf), "%d", EFFECT(eplayer, DMG).value);
+        mcp_mesg_arg_append(&msg, "dmg", buf);
+	snprintf(buf, sizeof(buf), "%d", EFFECT(eplayer, MDMG).value);
+        mcp_mesg_arg_append(&msg, "mdmg", buf);
+	snprintf(buf, sizeof(buf), "%d", EFFECT(eplayer, DEF).value);
+        mcp_mesg_arg_append(&msg, "def", buf);
+	snprintf(buf, sizeof(buf), "%d", EFFECT(eplayer, MDEF).value);
+        mcp_mesg_arg_append(&msg, "mdef", buf);
+        mcp_frame_output_mesg(mfr, &msg);
+        mcp_mesg_clear(&msg);
+        return 0;
+}
+
+int
+mcp_bars(ENT *eplayer) {
+	McpMesg msg;
+	McpFrame *mfr = mcp_frame(eplayer->fd);
+	char buf[BUFSIZ];
+	if (!mfr)
+                return 1;
+
+        mcp_mesg_init(&msg, MCP_WEB_PKG, "bars");
+	snprintf(buf, sizeof(buf), "%d", eplayer->hp);
+        mcp_mesg_arg_append(&msg, "hp", buf);
+	snprintf(buf, sizeof(buf), "%d", HP_MAX(eplayer));
+        mcp_mesg_arg_append(&msg, "hpMax", buf);
+	snprintf(buf, sizeof(buf), "%d", eplayer->mp);
+        mcp_mesg_arg_append(&msg, "mp", buf);
+	snprintf(buf, sizeof(buf), "%d", MP_MAX(eplayer));
+        mcp_mesg_arg_append(&msg, "mpMax", buf);
+        mcp_frame_output_mesg(mfr, &msg);
+        mcp_mesg_clear(&msg);
+        return 0;
+}
+
+int
+mcp_dialog_start(OBJ *player, OBJ *npc, const char *dialog)
+{
+	ENT *eplayer = &player->sp.entity;
+        char buf[BUFSIZ];
+	const char *text;
+	int i, n;
+	McpMesg msg;
+	McpFrame *mfr = mcp_frame(eplayer->fd);
+
+	if (!mfr)
+                return 1;
+
+        mcp_mesg_init(&msg, MCP_WEB_PKG, "dialog-start");
+	snprintf(buf, sizeof(buf), "%d", object_ref(npc));
+        mcp_mesg_arg_append(&msg, "npc", buf);
+	/* snprintf(buf, sizeof(buf), "%d", npc); */
+        snprintf((char *) buf, sizeof(buf), "_/dialog/%s/text", dialog);
+        text = GETMESG(npc, buf);
+        mcp_mesg_arg_append(&msg, "text", text);
+        mcp_frame_output_mesg(mfr, &msg);
+        mcp_mesg_clear(&msg);
+
+        snprintf((char *) buf, sizeof(buf), "_/dialog/%s/n", dialog);
+	n = get_property_value(npc, buf);
+
+	for (i = 0; i < n; i++) {
+		const char *answer;
+		mcp_mesg_init(&msg, MCP_WEB_PKG, "dialog-answer");
+		snprintf(buf, sizeof(buf), "%d", i);
+		mcp_mesg_arg_append(&msg, "id", buf);
+		snprintf((char *) buf, sizeof(buf), "_/dialog/%s/%d/text", dialog, i);
+		answer = GETMESG(npc, buf);
+		mcp_mesg_arg_append(&msg, "text", answer);
+		mcp_frame_output_mesg(mfr, &msg);
+		mcp_mesg_clear(&msg);
+	}
+
+	return 0;
+}
+
+int
+mcp_dialog_stop(OBJ *player)
+{
+	ENT *eplayer = &player->sp.entity;
+        char buf[BUFSIZ];
+	McpMesg msg;
+	McpFrame *mfr = mcp_frame(eplayer->fd);
+
+	if (!mfr)
+                return 1;
+
+        mcp_mesg_init(&msg, MCP_WEB_PKG, "dialog-stop");
+	snprintf(buf, sizeof(buf), "%d", 1);
+        mcp_mesg_arg_append(&msg, "ignore", buf);
+	mcp_frame_output_mesg(mfr, &msg);
+	mcp_mesg_clear(&msg);
+	return 0;
+}
+
+static inline void
+_mcp_equipment(OBJ *player, enum equipment_slot eql)
+{
+	ENT *eplayer = &player->sp.entity;
+        char buf[BUFSIZ];
+	McpMesg msg;
+	McpFrame *mfr = mcp_frame(eplayer->fd);
+        dbref eq = EQUIP(eplayer, eql);
+        if (eq == NOTHING || !eq)
+                return;
+	OBJ *oeq = object_get(eq);
+        CBUG(!mfr);
+        mcp_mesg_init(&msg, MCP_WEB_PKG, "equipment-item");
+	snprintf(buf, sizeof(buf), "%d", eq);
+        mcp_mesg_arg_append(&msg, "dbref", buf);
+	snprintf(buf, sizeof(buf), "%d", eql);
+        mcp_mesg_arg_append(&msg, "eql", buf);
+        mcp_mesg_arg_append(&msg, "pname", unparse(player, oeq));
+        mcp_mesg_arg_append(&msg, "avatar", oeq->avatar);
+        struct icon ico = icon(oeq);
+        mcp_mesg_arg_append(&msg, "icon", ico.icon);
+	mcp_frame_output_mesg(mfr, &msg);
+	mcp_mesg_clear(&msg);
+}
+
+int
+mcp_equipment(OBJ *player)
+{
+	ENT *eplayer = &player->sp.entity;
+        char buf[BUFSIZ];
+	McpMesg msg;
+	McpFrame *mfr = mcp_frame(eplayer->fd);
+
+	if (!mfr)
+                return 1;
+
+        mcp_mesg_init(&msg, MCP_WEB_PKG, "equipment");
+	snprintf(buf, sizeof(buf), "%d", 1);
+        mcp_mesg_arg_append(&msg, "ignore", buf);
+	mcp_frame_output_mesg(mfr, &msg);
+	mcp_mesg_clear(&msg);
+
+        _mcp_equipment(player, ES_HEAD);
+        _mcp_equipment(player, ES_NECK);
+        _mcp_equipment(player, ES_CHEST);
+        _mcp_equipment(player, ES_BACK);
+        _mcp_equipment(player, ES_RHAND);
+        _mcp_equipment(player, ES_LFINGER);
+        _mcp_equipment(player, ES_RFINGER);
+        _mcp_equipment(player, ES_PANTS);
+
+	return 0;
 }

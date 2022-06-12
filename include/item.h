@@ -11,8 +11,4 @@
 
 extern struct wts phys_wts[];
 
-int equip_affect(OBJ *who, OBJ *eq);
-dbref unequip(OBJ *player, unsigned eql);
-int equip(OBJ *player, OBJ *eq);
-
 #endif

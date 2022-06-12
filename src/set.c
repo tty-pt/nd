@@ -1,9 +1,9 @@
-
 /* $Header$ */
+#include "io.h"
 
 
 #include "copyright.h"
-#include "config.h"
+#include "entity.h"
 
 /* commands which set parameters */
 #include <stdio.h>
@@ -23,15 +23,16 @@
 static OBJ *
 match_controlled(OBJ *player, const char *name)
 {
+	ENT *eplayer = &player->sp.entity;
 	OBJ *match = ematch_all(player, name);
 
 	if (!match) {
-		notify(player, NOMATCH_MESSAGE);
+		notify(eplayer, NOMATCH_MESSAGE);
 		return NULL;
 	}
 
 	else if (!controls(player, match)) {
-		notify(player, "Permission denied. (You don't control what was matched)");
+		notify(eplayer, "Permission denied. (You don't control what was matched)");
 		return NULL;
 	}
 
@@ -42,6 +43,7 @@ void
 do_name(command_t *cmd)
 {
 	OBJ *player = object_get(cmd->player);
+	ENT *eplayer = &player->sp.entity;
 	const char *name = cmd->argv[1];
 	char *newname = cmd->argv[2];
 	OBJ *thing = match_controlled(player, name);
@@ -52,17 +54,17 @@ do_name(command_t *cmd)
 
 	/* check for bad name */
 	if (*newname == '\0') {
-		notify(player, "Give it what new name?");
+		notify(eplayer, "Give it what new name?");
 		return;
 	}
 	/* check for renaming a player */
 	if ((thing->type == TYPE_THING && !OK_ASCII_THING(newname)) ||
 			(thing->type != TYPE_THING && !OK_ASCII_OTHER(newname)) ) {
-		notify(player, "Invalid 8-bit name.");
+		notify(eplayer, "Invalid 8-bit name.");
 		return;
 	}
 	if (!ok_name(newname)) {
-		notify(player, "That is not a reasonable name.");
+		notify(eplayer, "That is not a reasonable name.");
 		return;
 	}
 
@@ -71,7 +73,7 @@ do_name(command_t *cmd)
 		free((void *) thing->name);
 	}
 	thing->name = alloc_string(newname);
-	notify(player, "Name set.");
+	notify(eplayer, "Name set.");
 }
 
 void
@@ -85,13 +87,13 @@ do_chown(command_t *cmd)
 	OBJ *owner;
 
 	if (!*name) {
-		notify(player, "You must specify what you want to take ownership of.");
+		notify(eplayer, "You must specify what you want to take ownership of.");
 		return;
 	}
 
 	thing = ematch_all(player, name);
 	if (!thing) {
-		notify(player, NOMATCH_MESSAGE);
+		notify(eplayer, NOMATCH_MESSAGE);
 		return;
 	}
 
@@ -99,19 +101,19 @@ do_chown(command_t *cmd)
 		owner = lookup_player(newowner);
 
 		if (!owner) {
-			notify(player, "I couldn't find that player.");
+			notify(eplayer, "I couldn't find that player.");
 			return;
 		}
 	} else {
 		owner = player->owner;
 	}
 	if (!(eplayer->flags & EF_WIZARD) && player->owner != owner) {
-		notify(player, "Only wizards can transfer ownership to others.");
+		notify(eplayer, "Only wizards can transfer ownership to others.");
 		return;
 	}
 #ifdef GOD_PRIV
 	if ((eplayer->flags & EF_WIZARD) && !God(player) && God(owner)) {
-		notify(player, "God doesn't need an offering or sacrifice.");
+		notify(eplayer, "God doesn't need an offering or sacrifice.");
 		return;
 	}
 #endif /* GOD_PRIV */
@@ -119,7 +121,7 @@ do_chown(command_t *cmd)
 	switch (thing->type) {
 	case TYPE_ROOM:
 		if (!(eplayer->flags & EF_WIZARD) && player->location != thing) {
-			notify(player, "You can only chown \"here\".");
+			notify(eplayer, "You can only chown \"here\".");
 			return;
 		}
 		thing->owner = owner->owner;
@@ -128,25 +130,25 @@ do_chown(command_t *cmd)
 	case TYPE_EQUIPMENT:
 	case TYPE_THING:
 		if (!(eplayer->flags & EF_WIZARD) && thing->location != player) {
-			notify(player, "You aren't carrying that.");
+			notify(eplayer, "You aren't carrying that.");
 			return;
 		}
 		thing->owner = owner->owner;
 		break;
 	case TYPE_ENTITY:
-		notify(player, "Entities always own themselves.");
+		notify(eplayer, "Entities always own themselves.");
 		return;
 	case TYPE_GARBAGE:
-		notify(player, "No one wants to own garbage.");
+		notify(eplayer, "No one wants to own garbage.");
 		return;
 	}
 	if (owner == player)
-		notify(player, "Owner changed to you.");
+		notify(eplayer, "Owner changed to you.");
 	else {
 		char buf[BUFFER_LEN];
 
-		snprintf(buf, sizeof(buf), "Owner changed to %s.", unparse_object(player, owner));
-		notify(player, buf);
+		snprintf(buf, sizeof(buf), "Owner changed to %s.", unparse(player, owner));
+		notify(eplayer, buf);
 	}
 }
 
@@ -155,6 +157,7 @@ void
 do_propset(command_t *cmd)
 {
 	OBJ *player = object_get(cmd->player);
+	ENT *eplayer = &player->sp.entity;
 	const char *name = cmd->argv[1];
 	const char *prop = cmd->argv[2];
 	OBJ *thing = match_controlled(player, name),
@@ -200,14 +203,12 @@ do_propset(command_t *cmd)
 	}
 
 	if (!*pname) {
-		notify(player, "I don't know which property you want to set!");
+		notify(eplayer, "I don't know which property you want to set!");
 		return;
 	}
 
-	ENT *eplayer = &player->sp.entity;
-
 	if (Prop_System(pname) || (!(eplayer->flags & EF_WIZARD) && (Prop_SeeOnly(pname) || Prop_Hidden(pname)))) {
-		notify(player, "Permission denied. (can't set a property that's restricted against you)");
+		notify(eplayer, "Permission denied. (can't set a property that's restricted against you)");
 		return;
 	}
 
@@ -215,13 +216,13 @@ do_propset(command_t *cmd)
 		add_prop_nofetch(thing, pname, value, 0);
 	else if (string_prefix("integer", type)) {
 		if (!number(value)) {
-			notify(player, "That's not an integer!");
+			notify(eplayer, "That's not an integer!");
 			return;
 		}
 		add_prop_nofetch(thing, pname, NULL, atoi(value));
 	} else if (string_prefix("float", type)) {
 		if (!ifloat(value)) {
-			notify(player, "That's not a floating point number!");
+			notify(eplayer, "That's not a floating point number!");
 			return;
 		}
 		mydat.flags = PROP_FLTTYP;
@@ -230,7 +231,7 @@ do_propset(command_t *cmd)
 	} else if (string_prefix("dbref", type)) {
 		ref = ematch_all(player, value);
 		if (!ref) {
-			notify(player, NOMATCH_MESSAGE);
+			notify(eplayer, NOMATCH_MESSAGE);
 			return;
 		}
 
@@ -239,18 +240,18 @@ do_propset(command_t *cmd)
 		set_property_nofetch(thing, pname, &mydat);
 	} else if (string_prefix("erase", type)) {
 		if (*value) {
-			notify(player, "Don't give a value when erasing a property.");
+			notify(eplayer, "Don't give a value when erasing a property.");
 			return;
 		}
 		remove_property(thing, pname);
-		notify(player, "Property erased.");
+		notify(eplayer, "Property erased.");
 		return;
 	} else {
-		notify(player, "I don't know what type of property you want to set!");
-		notify(player, "Valid types are string, integer, float, dbref, lock, and erase.");
+		notify(eplayer, "I don't know what type of property you want to set!");
+		notify(eplayer, "Valid types are string, integer, float, dbref, lock, and erase.");
 		return;
 	}
-	notify(player, "Property set.");
+	notify(eplayer, "Property set.");
 }
 
 static const char *set_c_version = "$RCSfile$ $Revision: 1.31 $";

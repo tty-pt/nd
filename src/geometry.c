@@ -2,8 +2,7 @@
 #include "mdb.h"
 #include "props.h"
 #include "externs.h"
-#include "search.h"
-#include "web.h"
+#include "map.h"
 
 enum exit e_map[] = {
 	[0 ... 254] = E_NULL,
@@ -141,26 +140,26 @@ rarity_get() {
 }
 
 OBJ *
-object_add(struct object_skeleton sk, OBJ *where)
+object_add(SKEL *sk, OBJ *where)
 {
 	OBJ *nu = object_new();
-	nu->name = alloc_string(sk.name);
-	nu->description = alloc_string(sk.description);
-	nu->art = alloc_string(sk.art);
-	nu->avatar = alloc_string(sk.avatar);
+	nu->name = alloc_string(sk->name);
+	nu->description = alloc_string(sk->description);
+	nu->art = alloc_string(sk->art);
+	nu->avatar = alloc_string(sk->avatar);
 	nu->location = where;
 	nu->owner = object_get(GOD);
 	nu->type = TYPE_THING;
 	if (where)
 		PUSH(nu, where->contents);
 
-	switch (sk.type) {
+	switch (sk->type) {
 	case S_TYPE_EQUIPMENT:
 		{
 			EQU *enu = &nu->sp.equipment;
 			nu->type = TYPE_EQUIPMENT;
-			enu->eqw = sk.sp.equipment.eqw;
-			enu->msv = sk.sp.equipment.msv;
+			enu->eqw = sk->sp.equipment.eqw;
+			enu->msv = sk->sp.equipment.msv;
 			enu->rare = rarity_get();
 			CBUG(!where || where->type != TYPE_ENTITY);
 			ENT *ewhere = &where->sp.entity;
@@ -173,8 +172,8 @@ object_add(struct object_skeleton sk, OBJ *where)
 		{
 			CON *cnu = &nu->sp.consumable;
 			nu->type = TYPE_CONSUMABLE;
-			cnu->food = sk.sp.consumable.food;
-			cnu->drink = sk.sp.consumable.drink;
+			cnu->food = sk->sp.consumable.food;
+			cnu->drink = sk->sp.consumable.drink;
 		}
 
 		break;
@@ -182,18 +181,18 @@ object_add(struct object_skeleton sk, OBJ *where)
 		{
 			ENT *enu = &nu->sp.entity;
 			nu->type = TYPE_ENTITY;
-			mob_add_stats(&sk, nu);
-			enu->flags = sk.sp.entity.flags;
-			enu->wtso = sk.sp.entity.wt;
+			stats_init(enu, &sk->sp.entity);
+			enu->flags = sk->sp.entity.flags;
+			enu->wtso = sk->sp.entity.wt;
 			birth(nu);
-			object_drop(nu, sk.sp.entity.drop);
+			object_drop(nu, sk->sp.entity.drop);
 			enu->home = where;
 		}
 
 		break;
 	case S_TYPE_PLANT:
 		nu->type = TYPE_PLANT;
-		object_drop(nu, sk.sp.plant.drop);
+		object_drop(nu, sk->sp.plant.drop);
 		nu->owner = object_get(GOD);
 		break;
         case S_TYPE_BIOME:
@@ -210,8 +209,8 @@ object_add(struct object_skeleton sk, OBJ *where)
 		break;
 	}
 
-	if (sk.type != S_TYPE_BIOME)
-		web_content_in(where, nu);
+	if (sk->type != S_TYPE_BIOME)
+		mcp_content_in(where, nu);
 
 	return nu;
 }
@@ -227,14 +226,14 @@ object_drop(OBJ *where, struct drop **drop)
                             yield_v = (*drop)->yield_v;
 
                         if (!yield) {
-                                object_add(*(*drop)->i, where);
+                                object_add((*drop)->i, where);
                                 continue;
                         }
 
                         yield += random() & yield_v;
 
                         for (i = 0; i < yield; i++)
-                                object_add(*(*drop)->i, where);
+                                object_add((*drop)->i, where);
                 }
 }
 

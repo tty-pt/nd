@@ -14,19 +14,20 @@ exe := fbmuck prochelp
 src = ChangeLog COPYING ${real-obj-y:%.o=%.c}
 
 prochelp-obj-y := prochelp.o
-fbmuck-obj-y := geometry.o plant.o biome.o noise.o search.o \
+fbmuck-obj-y := object.o entity.o mcp.o map.o \
+	geometry.o plant.o biome.o noise.o \
 	view.o item.o spell.o drink.o mob.o kill.o geography.o \
 	shop.o ws.o
-fbmuck-obj-y += create.o mdb.o \
+fbmuck-obj-y += create.o \
 	hashtab.o help.o \
 	look.o match.o \
-	move.o mcp.o \
+	move.o \
 	player.o \
 	predicates.o propdirs.o property.o \
 	props.o rob.o set.o \
 	smatch.o speech.o stringutil.o \
 	unparse.o wiz.o \
-	copyright.o interface.o web.o
+	copyright.o interface.o
 
 exe-obj-y := ${fbmuck-obj-y} ${prochelp-obj-y}
 

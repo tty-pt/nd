@@ -253,7 +253,7 @@ _plants_add(OBJ *where, struct plant_data *pd, coord_t tmp)
 			continue;
 
                 struct object_skeleton *obj_skel = PLANT_SKELETON(pd->id[i]);
-                OBJ *plant = object_add(*obj_skel, where);
+                OBJ *plant = object_add(obj_skel, where);
 		PLA *pplant = &plant->sp.plant;
 		pplant->plid = pd->id[i];
 		pplant->size = n;

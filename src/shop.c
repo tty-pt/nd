@@ -1,3 +1,5 @@
+#include "io.h"
+#include "entity.h"
 #include "mdb.h"
 #include <stddef.h>
 #include "match.h"
@@ -5,7 +7,6 @@
 #include "externs.h"
 #include "item.h"
 #include "kill.h"
-#include "web.h"
 
 static inline OBJ *
 vendor_find(OBJ *where)
@@ -29,26 +30,27 @@ void
 do_shop(command_t *cmd)
 {
 	OBJ *player = object_get(cmd->player);
+	ENT *eplayer = &player->sp.entity;
 	OBJ *here = player->location;
 	OBJ *npc = vendor_find(here);
 	OBJ *tmp;
 
 	if (!npc) {
-		notify(player, "No one here wants to buy or sell anything.");
+		notify(eplayer, "No one here wants to buy or sell anything.");
 		return;
 	}
 
-	notifyf(player, "%s shows you what's for sale.", npc->name);
+	notifyf(eplayer, "%s shows you what's for sale.", npc->name);
 
-        if (!web_look(player, npc))
+        if (!mcp_look(player, npc))
             return;
 
 	FOR_LIST(tmp, npc->contents) {
 		if (GETINF(tmp))
-			notifyf(player, "%-13s %5dP (Inf)",
+			notifyf(eplayer, "%-13s %5dP (Inf)",
 				tmp->name, tmp->value);
 		else
-			notifyf(player, "%-13s %5dP",
+			notifyf(eplayer, "%-13s %5dP",
 				tmp->name, tmp->value);
 	}
 }
@@ -57,19 +59,20 @@ void
 do_buy(command_t *cmd)
 {
 	OBJ *player = object_get(cmd->player);
+	ENT *eplayer = &player->sp.entity;
 	OBJ *here = player->location;
 	const char *name = cmd->argv[1];
 	OBJ *npc = vendor_find(here);
 
 	if (!npc) {
-		notify(player, "No one here wants to sell you anything.");
+		notify(eplayer, "No one here wants to sell you anything.");
 		return;
 	}
 
 	OBJ *item = ematch_at(player, npc, name);
 
 	if (!item) {
-		notifyf(player, "%s does not sell %s.", npc->name, name);
+		notifyf(eplayer, "%s does not sell %s.", npc->name, name);
 		return;
 	}
 
@@ -77,7 +80,7 @@ do_buy(command_t *cmd)
 	int ihave = player->value;
 
 	if (ihave < cost) {
-		notify(player, "You don't have enough pennies.");
+		notify(eplayer, "You don't have enough pennies.");
 		return;
 	}
 
@@ -91,7 +94,7 @@ do_buy(command_t *cmd)
         } else
                 object_move(item, player);
 
-	notifyf(player, "You bought %s for %dP.", item->name, cost);
+	notifyf(eplayer, "You bought %s for %dP.", item->name, cost);
 }
 
 void
@@ -99,18 +102,19 @@ do_sell(command_t *cmd)
 {
 	OBJ *player = object_get(cmd->player),
 	    *here = player->location;
+	ENT *eplayer = &player->sp.entity;
 	const char *name = cmd->argv[1];
 	OBJ *npc = vendor_find(here);
 
 	if (!npc) {
-		notify(player, "No one here wants to buy you anything.");
+		notify(eplayer, "No one here wants to buy you anything.");
 		return;
 	}
 
 	OBJ *item = ematch_mine(player, name);
 
 	if (!item) {
-		notify(player, "You don't have that item.");
+		notify(eplayer, "You don't have that item.");
 		return;
         }
 
@@ -118,7 +122,7 @@ do_sell(command_t *cmd)
         int npchas = npc->value;
 
         if (cost > npchas) {
-                notifyf(player, "%s can't afford to buy %s from you.",
+                notifyf(eplayer, "%s can't afford to buy %s from you.",
                         npc->name, item->name);
                 return;
         }
@@ -128,6 +132,6 @@ do_sell(command_t *cmd)
         player->value += cost;
         npc->value -= cost;
 
-        notifyf(player, "You sold %s for %dP.",
+        notifyf(eplayer, "You sold %s for %dP.",
                 item->name, cost);
 }

@@ -1,3 +1,5 @@
+#include "io.h"
+#include "entity.h"
 #include "geography.h"
 #include "mdb.h"
 #include "props.h"
@@ -14,8 +16,7 @@
 #endif
 #include "kill.h"
 #include "externs.h"
-#include "web.h"
-#include "search.h"
+#include "map.h"
 #include "noise.h"
 #include "hash.h"
 #include "view.h"
@@ -58,11 +59,12 @@ geo_update()
 	else
 		return;
 
-	/* geo_notify(0, -1, msg); */
 	for (i = 0; i < db_top; i++) {
 		OBJ *o = object_get(i);
-		if (o->type == TYPE_ENTITY)
-			notify(o, msg);
+		if (o->type == TYPE_ENTITY) {
+			ENT *eo = &o->sp.entity;
+			notify(eo, msg);
+		}
 	}
 }
 
@@ -101,20 +103,22 @@ geo_there(OBJ *where, enum exit e)
 static inline void
 reward(OBJ *player, const char *msg, int amount)
 {
+	ENT *eplayer = &player->sp.entity;
 	player->value += amount;
-	notifyf(player, "You %s. (+%dp)", msg, amount);
+	notifyf(eplayer, "You %s. (+%dp)", msg, amount);
 }
 
 static inline int
 fee_fail(OBJ *player, char *desc, char *info, int cost)
 {
+	ENT *eplayer = &player->sp.entity;
 	int v = player->value;
 	if (v < cost) {
-		notifyf(player, "You can't afford to %s. (%dp)", desc, cost);
+		notifyf(eplayer, "You can't afford to %s. (%dp)", desc, cost);
 		return 1;
 	} else {
 		player->value -= cost;
-		notifyf(player, "%s (-%dp). %s",
+		notifyf(eplayer, "%s (-%dp). %s",
 			   desc, cost, info);
 		return 0;
 	}
@@ -142,11 +146,12 @@ wall_around(OBJ *player, enum exit e)
 
 int
 geo_claim(OBJ *player, OBJ *room) {
+	ENT *eplayer = &player->sp.entity;
 	ROO *rroom = &room->sp.room;
 
 	if (!(rroom->flags & RF_TEMP)) {
 		if (room->owner != player) {
-			notify(player, "You don't own this room");
+			notify(eplayer, "You don't own this room");
 			return 1;
 		}
 
@@ -239,7 +244,7 @@ stones_add(OBJ *where, enum biome b, pos_t p) {
                 return;
 
         for (i = 0; i < n; i++)
-                object_add(stone, where);
+                object_add(&stone, where);
 }
 
 static inline void
@@ -253,7 +258,7 @@ geo_room_at(OBJ *player, pos_t pos)
 {
 	struct bio *bio;
 	bio = noise_point(pos);
-        OBJ *there = object_add(biomes[bio->bio_idx], NULL);
+        OBJ *there = object_add(&biomes[bio->bio_idx], NULL);
 	ROO *rthere = &there->sp.room;
 	map_put(pos, there, DB_NOOVERWRITE);
 	exits_infer(player, there);
@@ -273,16 +278,18 @@ geo_room_at(OBJ *player, pos_t pos)
 void
 do_bio(command_t *cmd) {
 	OBJ *player = object_get(cmd->player);
+	ENT *eplayer = &player->sp.entity;
 	struct bio *bio;
 	pos_t pos;
 	map_where(pos, player->location);
 	bio = noise_point(pos);
-	notifyf(player, "tmp %d rn %u bio %s(%d)",
+	notifyf(eplayer, "tmp %d rn %u bio %s(%d)",
 		bio->tmp, bio->rn, biomes[bio->bio_idx].name, bio->bio_idx);
 }
 
 static void
 e_move(OBJ *player, enum exit e) {
+	ENT *eplayer = &player->sp.entity;
 	OBJ *loc = player->location,
 	    *dest;
 	ROO *rloc = &loc->sp.room;
@@ -290,11 +297,11 @@ e_move(OBJ *player, enum exit e) {
 	int door = 0;
 
 	if (!(rloc->exits & e)) {
-		notify(player, "You can't go that way.");
+		notify(eplayer, "You can't go that way.");
 		return;
 	}
 
-	do_stand_silent(player);
+	stand_silent(player);
 
 	if (rloc->doors & e) {
 		if (e == E_UP || e == E_DOWN) {
@@ -303,21 +310,19 @@ e_move(OBJ *player, enum exit e) {
 		} else
 			door = 1;
 
-		notifyf(player, "You open the %s.", dwts);
+		notifyf(eplayer, "You open the %s.", dwts);
 	}
 
 	dest = geo_there(loc, e);
-	notifyf(player, "You go %s.", e_name(e));
+	notifyf(eplayer, "You go %s.", e_name(e));
 
-	if (dest)
-		enter_room(player, dest);
-	else {
+	if (!dest)
 		dest = geo_room(player, e);
-		enter_room(player, dest);
-	}
+
+	enter(player, dest);
 
 	if (door)
-		notifyf(player, "You close the %s.", dwts);
+		notifyf(eplayer, "You close the %s.", dwts);
 }
 
 // exclusively called by trigger() and carve, in vertical situations
@@ -341,7 +346,7 @@ geo_room(OBJ *player, enum exit e)
 /* used only on enter_room */
 
 OBJ *
-geo_clean(OBJ *player, OBJ *here)
+room_clean(OBJ *player, OBJ *here)
 {
 	ROO *rhere = &here->sp.room;
 	OBJ *tmp;
@@ -372,6 +377,7 @@ walk(OBJ *player, enum exit e) {
 static void
 carve(OBJ *player, enum exit e)
 {
+	ENT *eplayer = &player->sp.entity;
 	OBJ *there = NULL,
 	    *here = player->location;
 	ROO *rhere = &here->sp.room;
@@ -382,7 +388,7 @@ carve(OBJ *player, enum exit e)
 			return;
 
 		if (player->value < ROOM_COST) {
-			notify(player, "You can't pay for that room");
+			notify(eplayer, "You can't pay for that room");
 			return;
 		}
 
@@ -410,6 +416,7 @@ carve(OBJ *player, enum exit e)
 static void
 uncarve(OBJ *player, enum exit e)
 {
+	ENT *eplayer = &player->sp.entity;
 	const char *s0 = "is";
 	OBJ *there,
 	    *here = player->location;
@@ -425,14 +432,14 @@ uncarve(OBJ *player, enum exit e)
 			return;
 	} else {
 		if (!(rhere->exits & e)) {
-                        notifyf(player, "No exit there");
+                        notifyf(eplayer, "No exit there");
                         return;
                 }
 
 		there = geo_there(here, e);
 
 		if (!there) {
-			notify(player, "No room there");
+			notify(eplayer, "No room there");
 			return;
 		}
 		s0 = "at";
@@ -441,7 +448,7 @@ uncarve(OBJ *player, enum exit e)
 	ROO *rthere = &there->sp.room;
 
 	if ((rthere->flags & RF_TEMP) || there->owner != player) {
-		notifyf(player, "You don't own th%s room.", s0);
+		notifyf(eplayer, "You don't own th%s room.", s0);
 		return;
 	}
 
@@ -452,7 +459,7 @@ uncarve(OBJ *player, enum exit e)
 		if (ht && (rthere->doors & e_simm(e)))
 			rthere->doors &= ~e_simm(e);
 	} else
-		geo_clean(player, there);
+		room_clean(player, there);
 
 	reward(player, "collect your materials", ROOM_COST);
 }
@@ -460,6 +467,7 @@ uncarve(OBJ *player, enum exit e)
 static void
 unwall(OBJ *player, enum exit e)
 {
+	ENT *eplayer = &player->sp.entity;
 	int a, b, c, d;
 	OBJ *there,
 	    *here = player->location;
@@ -481,12 +489,12 @@ unwall(OBJ *player, enum exit e)
 
 	if (!((a && !b && (d || c))
 	    || (c && !d && b))) {
-		notify(player, "You can't do that here.");
+		notify(eplayer, "You can't do that here.");
 		return;
 	}
 
 	if (rhere->exits & e) {
-		notify(player, "There's an exit here already.");
+		notify(eplayer, "There's an exit here already.");
 		return;
 	}
 
@@ -501,12 +509,13 @@ unwall(OBJ *player, enum exit e)
 		return;
 
 	rthere->exits |= e_simm(e);
-	notify(player, "You tear down the wall.");
+	notify(eplayer, "You tear down the wall.");
 }
 
 static inline int
 gexit_claim(OBJ *player, enum exit e)
 {
+	ENT *eplayer = &player->sp.entity;
 	int a, b, c, d;
 	OBJ *here = geo_there(player, e),
 	    *there = player->location;
@@ -527,18 +536,19 @@ gexit_claim(OBJ *player, enum exit e)
 			return geo_claim(player, there);
 	}
 
-	notify(player, "You can't claim that exit");
+	notify(eplayer, "You can't claim that exit");
 	return 1;
 }
 
 static inline int
 gexit_claim_walk(OBJ *player, enum exit e)
 {
+	ENT *eplayer = &player->sp.entity;
 	OBJ *here = player->location;
 	ROO *rhere = &here->sp.room;
 
 	if (!(rhere->exits & e)) {
-		notify(player, "No exit here");
+		notify(eplayer, "No exit here");
 		return 1;
 	}
 
@@ -559,6 +569,7 @@ gexit_claim_walk(OBJ *player, enum exit e)
 static void
 e_wall(OBJ *player, enum exit e)
 {
+	ENT *eplayer = &player->sp.entity;
 	if (gexit_claim_walk(player, e))
 		return;
 
@@ -574,12 +585,14 @@ e_wall(OBJ *player, enum exit e)
 		rthere->exits &= ~e;
 	}
 
-	notify(player, "You build a wall.");
+	notify(eplayer, "You build a wall.");
 }
 
 static void
 door(OBJ *player, enum exit e)
 {
+	ENT *eplayer = &player->sp.entity;
+
 	if (gexit_claim_walk(player, e))
 		return;
 
@@ -595,12 +608,14 @@ door(OBJ *player, enum exit e)
 		rwhere->doors |= e;
 	}
 
-	notify(player, "You place a door.");
+	notify(eplayer, "You place a door.");
 }
 
 static void
 undoor(OBJ *player, enum exit e)
 {
+	ENT *eplayer = &player->sp.entity;
+
 	if (gexit_claim_walk(player, e))
 		return;
 
@@ -616,28 +631,30 @@ undoor(OBJ *player, enum exit e)
 		rwhere->doors &= ~e;
 	}
 
-	notify(player, "You remove a door.");
+	notify(eplayer, "You remove a door.");
 }
 
 static int
 tell_pos(OBJ *player, struct cmd_dir cd) {
+	ENT *eplayer = &player->sp.entity;
 	pos_t pos;
 	OBJ *target = cd.rep == 1 ? player : object_get((dbref) cd.rep);
 	int ret = 1;
 
 	if (target->type != TYPE_ENTITY) {
-		notify(player, "Invalid object type.");
+		notify(eplayer, "Invalid object type.");
 		return 0;
 	}
 
 	map_where(pos, target->location);
-	notifyf(player, "0x%llx", MORTON_READ(pos));
+	notifyf(eplayer, "0x%llx", MORTON_READ(pos));
 	return ret;
 }
 
 int
 geo_teleport(OBJ *player, struct cmd_dir cd)
 {
+	ENT *eplayer = &player->sp.entity;
 	pos_t pos;
 	OBJ *there;
 	int ret = 0;
@@ -656,8 +673,8 @@ geo_teleport(OBJ *player, struct cmd_dir cd)
 	if (!there)
 		there = geo_room_at(player, pos);
 	CBUG(!there);
-	notifyf(player, "Teleporting to 0x%llx.", cd.rep);
-	enter_room(player, there);
+	notifyf(eplayer, "Teleporting to 0x%llx.", cd.rep);
+	enter(player, there);
 	return ret;
 }
 
@@ -690,6 +707,7 @@ recall(OBJ *player, struct cmd_dir cd)
 static int
 pull(OBJ *player, struct cmd_dir cd)
 {
+	ENT *eplayer = &player->sp.entity;
 	pos_t pos;
 	enum exit e = cd.e;
 	OBJ *there, *here, *what;
@@ -707,9 +725,9 @@ pull(OBJ *player, struct cmd_dir cd)
 	    || what->type != TYPE_ROOM
 	    || what->owner != player
 	    || ((there = geo_there(here, e))
-		&& geo_clean(player, there) == there))
+		&& room_clean(player, there) == there))
 	{
-		notify(player, "You cannot do that.");
+		notify(eplayer, "You cannot do that.");
 		return 1;
 	}
 
@@ -803,29 +821,4 @@ int gexits(ROO *rwhere) {
                 ret |= i;
         }
         return ret;
-}
-
-void geo_notify(int descr, OBJ *player) {
-
-	OBJ *here = player->location;
-        dbref o[GEON_M], *o_p;
-	pos_t pos;
-	char buf[BUFFER_LEN + 2];
-	McpMesg msg;
-
-	map_where(pos, here);
-        map_search(o, pos, GEON_RADIUS);
-	mcp_mesg_init(&msg, MCP_WEB_PKG, "enter");
-	snprintf(buf, sizeof(buf), "0x%llx", MORTON_READ(pos));
-	mcp_mesg_arg_append(&msg, "x", buf);
-
-	for (o_p = o; o_p < o + GEON_BDI; o_p++) {
-		OBJ *loc = *o_p ? object_get(*o_p) : NULL;
-		if (!loc || loc->type != TYPE_ROOM)
-			continue;
-
-		web_room_mcp(loc, &msg);
-	}
-
-	mcp_mesg_clear(&msg);
 }

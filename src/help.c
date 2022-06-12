@@ -1,7 +1,5 @@
-/* $Header$ */
-
-
-#include "config.h"
+#include "io.h"
+#include "entity.h"
 
 /* commands for giving help */
 
@@ -40,29 +38,10 @@
 # define DIR_AVALIBLE
 #endif
 
-#if defined(STANDALONE_HELP)
-# define dbref int
-
-int
-notify(dbref player, const char *msg)
-{
-	return printf("%s\n", msg);
-}
-
-
-int
-string_prefix(register const char *string, register const char *prefix)
-{
-	while (*string && *prefix && tolower(*string) == tolower(*prefix))
-				string++, prefix++;
-		return *prefix == '\0';
-}
-
-#endif
-
 void
 spit_file_segment(OBJ *player, const char *filename, const char *seg)
 {
+	ENT *eplayer = &player->sp.entity;
 	FILE *f;
 	char buf[BUFFER_LEN];
 	char segbuf[BUFFER_LEN];
@@ -86,7 +65,7 @@ spit_file_segment(OBJ *player, const char *filename, const char *seg)
 	}
 	if ((f = fopen(filename, "rb")) == NULL) {
 		snprintf(buf, sizeof(buf), "Sorry, %s is missing.  Management has been notified.", filename);
-		notify(player, buf);
+		notify(eplayer, buf);
 		fputs("spit_file:", stderr);
 		perror(filename);
 	} else {
@@ -100,9 +79,9 @@ spit_file_segment(OBJ *player, const char *filename, const char *seg)
 			currline++;
 			if ((!startline || (currline >= startline)) && (!endline || (currline <= endline))) {
 				if (*buf) {
-					notify(player, buf);
+					notify(eplayer, buf);
 				} else {
-					notify(player, "  ");
+					notify(eplayer, "  ");
 				}
 			}
 		}
@@ -120,6 +99,7 @@ spit_file(OBJ *player, const char *filename)
 void
 index_file(OBJ *player, const char *onwhat, const char *file)
 {
+	ENT *eplayer = &player->sp.entity;
 	FILE *f;
 	char buf[BUFFER_LEN];
 	char topic[BUFFER_LEN];
@@ -134,7 +114,7 @@ index_file(OBJ *player, const char *onwhat, const char *file)
 
 	if ((f = fopen(file, "rb")) == NULL) {
 		snprintf(buf, sizeof(buf), "Sorry, %s is missing.  Management has been notified.", file);
-		notify(player, buf);
+		notify(eplayer, buf);
 		fprintf(stderr, "help: No file %s!\n", file);
 	} else {
 		if (*topic) {
@@ -143,7 +123,7 @@ index_file(OBJ *player, const char *onwhat, const char *file)
 				do {
 					if (!(fgets(buf, sizeof buf, f))) {
 						snprintf(buf, sizeof(buf), "Sorry, no help available on topic \"%s\"", onwhat);
-						notify(player, buf);
+						notify(eplayer, buf);
 						fclose(f);
 						return;
 					}
@@ -151,7 +131,7 @@ index_file(OBJ *player, const char *onwhat, const char *file)
 				do {
 					if (!(fgets(buf, sizeof buf, f))) {
 						snprintf(buf, sizeof(buf), "Sorry, no help available on topic \"%s\"", onwhat);
-						notify(player, buf);
+						notify(eplayer, buf);
 						fclose(f);
 						return;
 					}
@@ -181,9 +161,9 @@ index_file(OBJ *player, const char *onwhat, const char *file)
 				}
 			}
 			if (*buf) {
-				notify(player, buf);
+				notify(eplayer, buf);
 			} else {
-				notify(player, "  ");
+				notify(eplayer, "  ");
 			}
 		}
 		fclose(f);
@@ -283,6 +263,7 @@ void
 do_info(command_t *cmd)
 {
 	OBJ *player = object_get(cmd->player);
+	ENT *eplayer = &player->sp.entity;
 	const char *topic = cmd->argv[1];
 	const char *seg = cmd->argv[2];
 	char *buf;
@@ -297,7 +278,7 @@ do_info(command_t *cmd)
 
 	if (*topic) {
 		if (!show_subfile(player, INFO_DIR, topic, seg, TRUE)) {
-			notify(player, NO_INFO_MSG);
+			notify(eplayer, NO_INFO_MSG);
 		}
 	} else {
 #ifdef DIR_AVALIBLE
@@ -310,9 +291,9 @@ do_info(command_t *cmd)
 
 				if (*(dp->d_name) != '.') {
 					if (!f)
-						notify(player, "Available information files are:");
+						notify(eplayer, "Available information files are:");
 					if ((cols++ > 2) || ((strlen(buf) + strlen(dp->d_name)) > 63)) {
-						notify(player, buf);
+						notify(eplayer, buf);
 						strlcpy(buf, "    ", buflen);
 						cols = 0;
 					}
@@ -327,11 +308,11 @@ do_info(command_t *cmd)
 			closedir(df);
 		}
 		if (f)
-			notify(player, buf);
+			notify(eplayer, buf);
 		else
-			notify(player, "No information files are available.");
+			notify(eplayer, "No information files are available.");
 		free(buf);
-		notify(player, "Index not available on this system.");
+		notify(eplayer, "Index not available on this system.");
 #endif							/* !DIR_AVALIBLE */
 	}
 }

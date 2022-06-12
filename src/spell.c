@@ -1,4 +1,7 @@
+#include "io.h"
+
 #include "spell.h"
+#include "entity.h"
 
 #include "mob.h"
 #include "kill.h"
@@ -7,7 +10,6 @@
 #include "props.h"
 /* #include "speech.h" */
 #include "externs.h"
-#include "web.h"
 
 element_t element_map[] = {
 	[ELM_PHYSICAL] = {
@@ -195,9 +197,8 @@ spells_init(struct spell sps[8], OBJ *player)
 }
 
 void
-debuf_end(OBJ *player, unsigned i)
+debuf_end(ENT *eplayer, unsigned i)
 {
-	ENT *eplayer = &player->sp.entity;
 	struct debuf *d = &eplayer->debufs[i];
 	struct effect *e = &eplayer->e[DEBUF_TYPE(d->_sp)];
 	i = 1 << i;
@@ -257,7 +258,7 @@ debufs_process(OBJ *player)
 		d = &eplayer->debufs[i];
 		d->duration--;
 		if (d->duration == 0)
-			debuf_end(player, i);
+			debuf_end(eplayer, i);
 		// wtf is this special code?
 		else if (DEBUF_TYPE(d->_sp) == AF_HP) {
 			dmg = kill_dmg(d->_sp->element, d->val,
@@ -271,23 +272,22 @@ debufs_process(OBJ *player)
 
 	if (hpi) {
 		debuf_notify(player, hd, hpi);
-		return cspell_heal(NULL, player, hpi);
+		return entity_damage(NULL, player, hpi);
 	}
 
 	return 0;
 }
 
 void
-debufs_end(OBJ *player)
+debufs_end(ENT *eplayer)
 {
-	ENT *eplayer = &player->sp.entity;
 	register unsigned mask, i, aux;
 
 	for (mask = eplayer->debuf_mask, i = 0;
 	     (aux = __builtin_ffs(mask));
 	     i++, mask >>= aux)
 
-		 debuf_end(player, i += aux - 1);
+		 debuf_end(eplayer, i += aux - 1);
 }
 
 static inline int
@@ -368,7 +368,7 @@ spell_cast(OBJ *player, OBJ *target, unsigned slot)
 	if (random() < (RAND_MAX >> _sp->y))
 		debuf_start(target, &sp, val);
 
-	return cspell_heal(player, target, val);
+	return entity_damage(player, target, val);
 }
 
 int
@@ -387,43 +387,8 @@ spells_cast(OBJ *player, OBJ *target)
 	}
 
 	if (!enough_mp)
-		notify(player, "Not enough mana.");
+		notify(eplayer, "Not enough mana.");
 
 	return 0;
-}
-
-int
-cspell_heal(OBJ *player, OBJ *target, short amt)
-{
-	ENT *etarget = &target->sp.entity;
-	short hp = etarget->hp;
-	int ret = 0;
-	hp += amt;
-
-	if (!amt)
-		return ret;
-
-	if (hp <= 0) {
-		hp = 1;
-		ret = 1;
-		target = kill_target(player, target);
-	} else {
-		register unsigned short max = HP_MAX(etarget);
-		if (hp > max)
-			hp = max;
-	}
-
-	if (target) {
-		etarget->hp = hp;
-		CBUG(target->type != TYPE_ENTITY);
-		web_bars(target);
-	}
-
-	if (player && (player->type != TYPE_GARBAGE)) {
-		CBUG(player->type != TYPE_ENTITY);
-		web_bars(player);
-	}
-
-	return ret;
 }
 

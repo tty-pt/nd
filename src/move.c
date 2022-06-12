@@ -1,6 +1,5 @@
-/* $Header$ */
-
-#include "copyright.h"
+#include "io.h"
+#include "entity.h"
 #include "config.h"
 
 #include "mdb.h"
@@ -14,8 +13,6 @@
 #include "item.h"
 #include "mob.h"
 #include "kill.h"
-#include "search.h"
-#include "web.h"
 
 /* remove the first occurence of what in list headed by first */
 static inline OBJ *
@@ -50,7 +47,7 @@ object_move(OBJ *what, OBJ *where)
 	loc = what->location;
 
         if (loc) {
-                web_content_out(loc, what);
+                mcp_content_out(loc, what);
 		loc->contents = remove_first(loc->contents, what);
         }
 
@@ -85,7 +82,7 @@ object_move(OBJ *what, OBJ *where)
 	/* now put what in where */
 	PUSH(what, where->contents);
 	what->location = where;
-	web_content_in(where, what);
+	mcp_content_in(where, what);
 }
 
 /* What are we doing here?  Quick explanation - we want to prevent
@@ -174,19 +171,6 @@ object_plc(OBJ *source, OBJ *dest)
 }
 
 void
-enter_room(OBJ *player, OBJ *loc)
-{
-	OBJ *old = player->location;
-
-	onotifyf(player, "%s has left.", player->name);
-	object_move(player, loc);
-	geo_clean(player, old);
-	onotifyf(player, "%s has arrived.", player->name);
-	mobs_aggro(player);
-	look_around(player);
-}
-
-void
 do_get(command_t *cmd)
 {
 	OBJ *player = object_get(cmd->player);
@@ -194,14 +178,14 @@ do_get(command_t *cmd)
 	const char *what = cmd->argv[1];
 	const char *obj = cmd->argv[2];
 	OBJ *thing, *cont;
-	int cando;
+	int can;
 
 	if (
 			!(thing = ematch_near(player, what))
 			&& !(thing = ematch_mine(player, what))
 	   )
 	{
-		notify(player, NOMATCH_MESSAGE);
+		notify(eplayer, NOMATCH_MESSAGE);
 		return;
 	}
 
@@ -209,7 +193,7 @@ do_get(command_t *cmd)
 
 	// is this needed?
 	if (thing->location != player->location && !(eplayer->flags & EF_WIZARD)) {
-		notify(player, "That is too far away from you.");
+		notify(eplayer, "That is too far away from you.");
 		return;
 	}
 
@@ -218,16 +202,16 @@ do_get(command_t *cmd)
 		if (!thing)
 			return;
 		if (cont->type == TYPE_ENTITY) {
-			notify(player, "You can't steal from the living.");
+			notify(eplayer, "You can't steal from the living.");
 			return;
 		}
 	}
 	if (thing->location == player) {
-		notify(player, "You already have that!");
+		notify(eplayer, "You already have that!");
 		return;
 	}
 	if (object_plc(thing, player)) {
-		notify(player, "You can't pick yourself up by your bootstraps!");
+		notify(eplayer, "You can't pick yourself up by your bootstraps!");
 		return;
 	}
 	switch (thing->type) {
@@ -237,24 +221,24 @@ do_get(command_t *cmd)
 	case TYPE_ENTITY:
 	case TYPE_PLANT:
 		if (obj && *obj) {
-			cando = 1;
+			can = 1;
 		} else {
 			if (thing->owner != player
 					&& (thing->type == TYPE_ENTITY || thing->type == TYPE_PLANT))
 			{
-				notify(player, "You can't pick that up.");
+				notify(eplayer, "You can't pick that up.");
 				break;
 			}
 
-			cando = can_doit(player, thing, "You can't pick that up.");
+			can = cando(player, thing, "You can't pick that up.");
 		}
-		if (cando) {
+		if (can) {
 			object_move(thing, player);
-			notify(player, "Taken.");
+			notify(eplayer, "Taken.");
 		}
 		break;
 	default:
-		notify(player, "You can't take that!");
+		notify(eplayer, "You can't take that!");
 		break;
 	}
 }
@@ -263,13 +247,14 @@ void
 do_drop(command_t *cmd)
 {
 	OBJ *player = object_get(cmd->player);
+	ENT *eplayer = &player->sp.entity;
 	const char *name = cmd->argv[1];
 	const char *obj = cmd->argv[2];
 	OBJ *loc = player->location,
 	    *thing, *cont;
 
 	if (!(thing = ematch_mine(player, name))) {
-		notify(player, NOMATCH_MESSAGE);
+		notify(eplayer, NOMATCH_MESSAGE);
 		return;
 	}
 
@@ -280,7 +265,7 @@ do_drop(command_t *cmd)
 			&& !(cont = ematch_near(player, obj))
 	   )
 	{
-		notify(player, "I don't know what you mean.");
+		notify(eplayer, "I don't know what you mean.");
 		return;
 	}
         
@@ -291,11 +276,11 @@ do_drop(command_t *cmd)
 	case TYPE_THING:
 		if (cont->type != TYPE_ROOM && cont->type != TYPE_ENTITY &&
 			!object_item(cont)) {
-			notify(player, "You can't put anything in that.");
+			notify(eplayer, "You can't put anything in that.");
 			break;
 		}
 		if (object_plc(thing, cont)) {
-			notify(player, "You can't put something inside of itself.");
+			notify(eplayer, "You can't put something inside of itself.");
 			break;
 		}
 
@@ -304,19 +289,20 @@ do_drop(command_t *cmd)
 		object_move(thing, immediate_dropto ? cont->sp.room.dropto : cont);
 
 		if (object_item(cont)) {
-			notify(player, "Put away.");
+			notify(eplayer, "Put away.");
 			return;
 		} else if (cont->type == TYPE_ENTITY) {
-			notifyf(cont, "%s hands you %s", player->name, thing->name);
-			notifyf(player, "You hand %s to %s", thing->name, cont->name);
+			ENT *econt = &cont->sp.entity;
+			notifyf(econt, "%s hands you %s", player->name, thing->name);
+			notifyf(eplayer, "You hand %s to %s", thing->name, cont->name);
 			return;
 		}
 
-		notify(player, "Dropped.");
+		notify(eplayer, "Dropped.");
 		onotifyf(player, "%s drops %s.", player->name, thing->name);
 		break;
 	default:
-		notify(player, "You can't drop that.");
+		notify(eplayer, "You can't drop that.");
 		break;
 	}
 }
@@ -325,6 +311,7 @@ void
 do_recycle(command_t *cmd)
 {
 	OBJ *player = object_get(cmd->player);
+	ENT *eplayer = &player->sp.entity;
 	const char *name = cmd->argv[1];
 	OBJ *thing;
 
@@ -334,32 +321,32 @@ do_recycle(command_t *cmd)
 			&& !(thing = ematch_mine(player, name))
 	   )
 	{
-		notify(player, NOMATCH_MESSAGE);
+		notify(eplayer, NOMATCH_MESSAGE);
 		return;
 	}
 
 
 #ifdef GOD_PRIV
 	if(!God(player) && God(thing->owner)) {
-		notify(player, "Only God may reclaim God's property.");
+		notify(eplayer, "Only God may reclaim God's property.");
 		return;
 	}
 #endif
 	if (!controls(player, thing)) {
-		notify(player, "You can not do that.");
+		notify(eplayer, "You can not do that.");
 	} else {
 		switch (thing->type) {
 		case TYPE_ROOM:
 			if (thing->owner != player->owner) {
-				notify(player, "Permission denied. (You don't control the room you want to recycle)");
+				notify(eplayer, "Permission denied. (You don't control the room you want to recycle)");
 				return;
 			}
 			if (thing == PLAYER_START) {
-				notify(player, "That is the player start room, and may not be recycled.");
+				notify(eplayer, "That is the player start room, and may not be recycled.");
 				return;
 			}
 			if (thing == GLOBAL_ENVIRONMENT) {
-				notify(player, "If you want to do that, why don't you just delete the database instead?  Room #0 contains everything, and is needed for database sanity.");
+				notify(eplayer, "If you want to do that, why don't you just delete the database instead?  Room #0 contains everything, and is needed for database sanity.");
 				return;
 			}
 			break;
@@ -368,149 +355,26 @@ do_recycle(command_t *cmd)
 		case TYPE_EQUIPMENT:
 		case TYPE_THING:
 			if (thing->owner != player->owner) {
-				notify(player, "Permission denied. (You can't recycle a thing you don't control)");
+				notify(eplayer, "Permission denied. (You can't recycle a thing you don't control)");
 				return;
 			}
 			break;
 		case TYPE_ENTITY:
 			if (thing->sp.entity.flags & EF_PLAYER) {
-				notify(player, "You can't recycle a player!");
+				notify(eplayer, "You can't recycle a player!");
 				return;
 			}
 			break;
 		case TYPE_GARBAGE:
-			notify(player, "That's already garbage!");
+			notify(eplayer, "That's already garbage!");
 			return;
 			/* NOTREACHED */
 			break;
 		}
-		notifyf(player, "Thank you for recycling %.512s (#%d).", thing->name, thing);
+		notifyf(eplayer, "Thank you for recycling %.512s (#%d).", thing->name, thing);
 		recycle(player, thing);
 	}
 }
 
-void
-recycle(OBJ *player, OBJ *thing)
-{
-	extern OBJ *recyclable;
-	static int depth = 0;
-	OBJ *first, *rest;
-	int looplimit;
-
-	OBJ *owner = thing->owner;
-	ENT *eowner = &owner->sp.entity;
-
-	depth++;
-	switch (thing->type) {
-	case TYPE_ROOM:
-		{
-			ROO *rthing = &thing->sp.room;
-			if (!(eowner->flags & EF_WIZARD))
-				owner->value += ROOM_COST;
-			if (rthing->flags & RF_TEMP)
-				for (first = thing->contents; first; first = rest) {
-					rest = first->next;
-
-					if (first->type == TYPE_ENTITY) {
-						ENT *efirst = &first->sp.entity;
-						if (efirst->flags & EF_PLAYER)
-							continue;
-					}
-
-					recycle(player, first);
-				}
-			anotifyf(thing, "You feel a wrenching sensation...");
-			map_delete(thing);
-		}
-
-		break;
-	case TYPE_PLANT:
-	case TYPE_CONSUMABLE:
-	case TYPE_EQUIPMENT:
-	case TYPE_THING:
-		if (!(eowner->flags & EF_WIZARD))
-			owner->value += thing->value;
-
-		OBJ *thingloc = thing->location;
-
-		if (thingloc->type != TYPE_ROOM)
-			break;
-
-		ROO *rthingloc = &thingloc->sp.room;
-
-		if (rthingloc->flags & RF_TEMP) {
-			for (first = thing->contents; first; first = rest) {
-				rest = first->next;
-				recycle(player, first);
-			}
-		}
-
-		break;
-	}
-
-	for (rest = object_get(0); rest < object_get(db_top); rest++) {
-		switch (rest->type) {
-		case TYPE_ROOM:
-			{
-				ROO *rrest = &rest->sp.room;
-				if (rrest->dropto == thing)
-					rrest->dropto = NULL;
-				if (rest->owner == thing)
-					rest->owner = object_get(GOD);
-			}
-
-			break;
-		case TYPE_PLANT:
-		case TYPE_CONSUMABLE:
-		case TYPE_EQUIPMENT:
-		case TYPE_THING:
-			if (rest->owner == thing)
-				rest->owner = object_get(GOD);
-			break;
-		case TYPE_ENTITY:
-			{
-				ENT *erest = &rest->sp.entity;
-				if (erest->home == thing)
-					erest->home = object_get(PLAYER_START);
-			}
-
-			break;
-		}
-		if (rest->contents == thing)
-			rest->contents = thing->next;
-		if (rest->next == thing)
-			rest->next = thing->next;
-	}
-
-	looplimit = db_top;
-	while ((looplimit-- > 0) && (first = thing->contents)) {
-		if (first->type == TYPE_ENTITY) {
-			ENT *efirst = &first->sp.entity;
-			if (efirst->flags & EF_PLAYER) {
-				enter_room(first, efirst->home);
-				if (first->location == thing) {
-					notifyf(player, "Escaping teleport loop!  Going home.");
-					object_move(first, object_get(PLAYER_START));
-				}
-				continue;
-			}
-		}
-
-		recycle(player, first);
-	}
-
-
-	object_move(thing, NULL);
-
-	depth--;
-
-	object_free(thing);
-	object_clear(thing);
-	thing->name = (char*) strdup("<garbage>");
-	thing->description = (char *) strdup("<recyclable>");
-	thing->type = TYPE_GARBAGE;
-	thing->next = recyclable;
-	recyclable = thing;
-}
 static const char *move_c_version = "$RCSfile$ $Revision: 1.38 $";
 const char *get_move_c_version(void) { return move_c_version; }

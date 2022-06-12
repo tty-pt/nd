@@ -26,6 +26,8 @@
 #define STD_DB "std.db"
 #define GEO_DB "geo.db"
 
+#define CONFIG_SECURE
+
 /* Makes God (#1) immune to @force, @newpassword, and being set !Wizard.  
  */
 #define GOD_PRIV

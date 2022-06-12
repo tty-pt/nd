@@ -1,4 +1,4 @@
-#include "search.h"
+#include "map.h"
 
 #ifdef __OpenBSD__
 #include <db4/db.h>

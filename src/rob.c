@@ -1,11 +1,5 @@
-/* $Header$ */
-
-
-#include "copyright.h"
-#include "config.h"
-
-/* rob and give */
-
+#include "io.h"
+#include "entity.h"
 #include "mdb.h"
 #include "props.h"
 #include "params.h"
@@ -18,13 +12,13 @@ void
 do_give(command_t *cmd)
 {
 	OBJ *player = object_get(cmd->player);
+	ENT *eplayer = &player->sp.entity;
 	const char *recipient = cmd->argv[1];
 	int amount = atoi(cmd->argv[2]);
 	OBJ *who;
-	ENT *eplayer = &player->sp.entity;
 
 	if (amount < 0 && !(eplayer->flags & EF_WIZARD)) {
-		notify(player, "Invalid amount.");
+		notify(eplayer, "Invalid amount.");
 		return;
 	}
 
@@ -33,42 +27,44 @@ do_give(command_t *cmd)
 			&& !(who = ematch_near(player, recipient))
 	   )
 	{
-		notify(player, NOMATCH_MESSAGE);
+		notify(eplayer, NOMATCH_MESSAGE);
 		return;
 	}
 
+	ENT *ewho = &who->sp.entity;
+
 	if (!(eplayer->flags & EF_WIZARD)) {
 		if (who->type != TYPE_ENTITY) {
-			notify(player, "You can only give to other entities.");
+			notify(eplayer, "You can only give to other entities.");
 			return;
 		} else if (who->value + amount > MAX_PENNIES) {
-			notifyf(player, "That player doesn't need that many %s!", PENNIES);
+			notifyf(eplayer, "That player doesn't need that many %s!", PENNIES);
 			return;
 		}
 	}
 
 	if (!payfor(player, amount)) {
-		notifyf(player, "You don't have that many %s to give!", PENNIES);
+		notifyf(eplayer, "You don't have that many %s to give!", PENNIES);
 		return;
 	}
 
 	if (who->type != TYPE_ENTITY) {
-		notifyf(player, "You can't give %s to that!", PENNIES);
+		notifyf(eplayer, "You can't give %s to that!", PENNIES);
 		return;
 	}
 
 	who->value += amount;
 
 	if (amount >= 0) {
-		notifyf(player, "You give %d %s to %s.",
+		notifyf(eplayer, "You give %d %s to %s.",
 				amount, amount == 1 ? PENNY : PENNIES, who->name);
 
-		notifyf(who, "%s gives you %d %s.",
+		notifyf(ewho, "%s gives you %d %s.",
 				player->name, amount, amount == 1 ? PENNY : PENNIES);
 	} else {
-		notifyf(player, "You take %d %s from %s.",
+		notifyf(eplayer, "You take %d %s from %s.",
 				-amount, amount == -1 ? PENNY : PENNIES, who->name);
-		notifyf(who, "%s takes %d %s from you!",
+		notifyf(ewho, "%s takes %d %s from you!",
 				player->name, -amount, -amount == 1 ? PENNY : PENNIES);
 	}
 }

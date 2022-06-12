@@ -1,6 +1,7 @@
 /* $Header$ */
 
-#include "copyright.h"
+#include "io.h"
+#include "entity.h"
 #include "config.h"
 
 /* Commands that create new objects */
@@ -103,12 +104,12 @@ do_clone(command_t *cmd)
 	/* Perform sanity checks */
 
 	if (!(eplayer->flags & (EF_WIZARD | EF_BUILDER))) {
-		notify(player, "That command is restricted to authorized builders.");
+		notify(eplayer, "That command is restricted to authorized builders.");
 		return;
 	}
 	
 	if (*name == '\0') {
-		notify(player, "Clone what?");
+		notify(eplayer, "Clone what?");
 		return;
 	} 
 
@@ -121,7 +122,7 @@ do_clone(command_t *cmd)
 			&& !(thing = ematch_near(player, name))
 	   )
 	{
-		notify(player, "I don't know what you mean.");
+		notify(eplayer, "I don't know what you mean.");
 		return;
 	}
 
@@ -129,20 +130,20 @@ do_clone(command_t *cmd)
 
 	/* things only. */
 	if(thing->type != TYPE_THING) {
-		notify(player, "That is not a cloneable object.");
+		notify(eplayer, "That is not a cloneable object.");
 		return;
 	}		
 	
 	/* check the name again, just in case reserved name patterns have
 	   changed since the original object was created. */
 	if (!ok_name(thing->name)) {
-		notify(player, "You cannot clone something with such a weird name!");
+		notify(eplayer, "You cannot clone something with such a weird name!");
 		return;
 	}
 
 	/* no stealing stuff. */
 	if(!controls(player, thing)) {
-		notify(player, "Permission denied. (you can't clone this)");
+		notify(eplayer, "Permission denied. (you can't clone this)");
 		return;
 	}
 
@@ -153,7 +154,7 @@ do_clone(command_t *cmd)
 	}
 	
 	if (!payfor(player, cost)) {
-		notifyf(player, "Sorry, you don't have enough %s.", PENNIES);
+		notifyf(eplayer, "Sorry, you don't have enough %s.", PENNIES);
 		return;
 	} else {
 		/* create the object */
@@ -194,7 +195,7 @@ do_clone(command_t *cmd)
 
 		/* and we're done */
 		snprintf(buf, sizeof(buf), "%s created with number %d.", thing->name, object_ref(clone));
-		notify(player, buf);
+		notify(eplayer, buf);
 	}
 	
 }
@@ -230,26 +231,26 @@ do_create(command_t *cmd)
 
 	cost = atoi(qname);
 	if (!(eplayer->flags & (EF_WIZARD | EF_BUILDER))) {
-		notify(player, "That command is restricted to authorized builders.");
+		notify(eplayer, "That command is restricted to authorized builders.");
 		return;
 	}
 	if (*name == '\0') {
-		notify(player, "Create what?");
+		notify(eplayer, "Create what?");
 		return;
 	} else if(!OK_ASCII_THING(name)) {
-		notify(player, "Thing names are limited to 7-bit ASCII.");
+		notify(eplayer, "Thing names are limited to 7-bit ASCII.");
 		return;
 	} else if (!ok_name(name)) {
-		notify(player, "That's a silly name for a thing!");
+		notify(eplayer, "That's a silly name for a thing!");
 		return;
 	} else if (cost < 0) {
-		notify(player, "You can't create an object for less than nothing!");
+		notify(eplayer, "You can't create an object for less than nothing!");
 		return;
 	} else if (cost < OBJECT_COST) {
 		cost = OBJECT_COST;
 	}
 	if (!payfor(player, cost)) {
-		notifyf(player, "Sorry, you don't have enough %s.", PENNIES);
+		notifyf(eplayer, "Sorry, you don't have enough %s.", PENNIES);
 		return;
 	}
 
@@ -272,13 +273,13 @@ do_create(command_t *cmd)
 
 	/* and we're done */
 	snprintf(buf, sizeof(buf), "%s created with number %d.", name, object_ref(thing));
-	notify(player, buf);
+	notify(eplayer, buf);
 
 	if (*rname) {
 		PData mydat;
 
 		snprintf(buf, sizeof(buf), "Registered as $%s", rname);
-		notify(player, buf);
+		notify(eplayer, buf);
 		snprintf(buf, sizeof(buf), "_reg/%s", rname);
 		mydat.flags = PROP_REFTYP;
 		mydat.data.ref = object_ref(thing);
