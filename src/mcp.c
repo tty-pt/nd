@@ -632,66 +632,6 @@ mcp_bars(ENT *eplayer) {
         return 0;
 }
 
-int
-mcp_dialog_start(OBJ *player, OBJ *npc, const char *dialog)
-{
-	ENT *eplayer = &player->sp.entity;
-        char buf[BUFSIZ];
-	const char *text;
-	int i, n;
-	McpMesg msg;
-	McpFrame *mfr = mcp_frame(eplayer->fd);
-
-	if (!mfr)
-                return 1;
-
-        mcp_mesg_init(&msg, MCP_WEB_PKG, "dialog-start");
-	snprintf(buf, sizeof(buf), "%d", object_ref(npc));
-        mcp_mesg_arg_append(&msg, "npc", buf);
-	/* snprintf(buf, sizeof(buf), "%d", npc); */
-        snprintf((char *) buf, sizeof(buf), "_/dialog/%s/text", dialog);
-        text = GETMESG(npc, buf);
-        mcp_mesg_arg_append(&msg, "text", text);
-        mcp_frame_output_mesg(mfr, &msg);
-        mcp_mesg_clear(&msg);
-
-        snprintf((char *) buf, sizeof(buf), "_/dialog/%s/n", dialog);
-	n = get_property_value(npc, buf);
-
-	for (i = 0; i < n; i++) {
-		const char *answer;
-		mcp_mesg_init(&msg, MCP_WEB_PKG, "dialog-answer");
-		snprintf(buf, sizeof(buf), "%d", i);
-		mcp_mesg_arg_append(&msg, "id", buf);
-		snprintf((char *) buf, sizeof(buf), "_/dialog/%s/%d/text", dialog, i);
-		answer = GETMESG(npc, buf);
-		mcp_mesg_arg_append(&msg, "text", answer);
-		mcp_frame_output_mesg(mfr, &msg);
-		mcp_mesg_clear(&msg);
-	}
-
-	return 0;
-}
-
-int
-mcp_dialog_stop(OBJ *player)
-{
-	ENT *eplayer = &player->sp.entity;
-        char buf[BUFSIZ];
-	McpMesg msg;
-	McpFrame *mfr = mcp_frame(eplayer->fd);
-
-	if (!mfr)
-                return 1;
-
-        mcp_mesg_init(&msg, MCP_WEB_PKG, "dialog-stop");
-	snprintf(buf, sizeof(buf), "%d", 1);
-        mcp_mesg_arg_append(&msg, "ignore", buf);
-	mcp_frame_output_mesg(mfr, &msg);
-	mcp_mesg_clear(&msg);
-	return 0;
-}
-
 static inline void
 _mcp_equipment(OBJ *player, enum equipment_slot eql)
 {

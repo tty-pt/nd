@@ -18,13 +18,6 @@
 #define LOOKUP_TOKEN '*'
 #define NUMBER_TOKEN '#'
 #define ARG_DELIMITER '='
-#define PROP_DELIMITER ':'
-#define PROPDIR_DELIMITER '/'
-#define PROP_RDONLY '_'
-#define PROP_RDONLY2 '%'
-#define PROP_PRIVATE '.'
-#define PROP_HIDDEN '@'
-#define PROP_SEEONLY '~'
 
 /* ANSI attributes and color codes */
 

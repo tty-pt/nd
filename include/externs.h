@@ -8,7 +8,6 @@
 #include "mdb.h"
 /* Definition of 'McpFrame' */
 #include "mcp.h"
-#include "props.h"
 /* Definition of match_data */
 #include "match.h"
 /* Auto-generated list of extern functions */
@@ -29,7 +28,6 @@ enum opts {
 extern short optflags;
 
 /* from timequeue.c */
-void do_propset(command_t *);
 void do_pose(command_t *);
 void do_score(command_t *);
 void do_view(command_t *);
@@ -38,12 +36,10 @@ void do_meme(command_t *);
 /* from db.c */
 extern int number(const char *s);
 extern int ifloat(const char *s);
-extern void getproperties(FILE * f, OBJ *obj);
 
 /* From create.c */
 extern void do_create(command_t *);
 extern void do_clone(command_t *);
-extern void copy_one_prop(OBJ *player, OBJ *source, OBJ *destination, char *propname, int ignore);
 
 /* From hashtab.c */
 extern unsigned int hash(const char *s, unsigned int hash_size);
@@ -103,8 +99,6 @@ extern void delete_player(OBJ *who);
 extern void clear_players(void);
 extern void do_talk(command_t *);
 extern void do_answer(command_t *);
-extern int dialog_exists(OBJ *what);
-extern void dialog_stop(OBJ *player);
 
 /* From predicates.c */
 extern int ok_ascii_any(const char *name);
@@ -124,7 +118,6 @@ extern void do_say(command_t *cmd);
 /* From stringutil.c */
 extern int string_prefix(const char *string, const char *prefix);
 extern char *intostr(int i);
-extern int is_prop_prefix(const char* Property, const char* Prefix);
 
 /* From wiz.c */
 extern void do_teleport(command_t *);
@@ -134,15 +127,5 @@ extern void do_usage(command_t *);
 
 /* From unparse.c */
 extern struct icon icon(OBJ *what);
-
-/* from property.c */
-char * displayprop(OBJ *player, OBJ *obj, const char *name, char *buf, size_t bufsiz);
-long size_properties(OBJ *player, int load);
-void untouchprops_incremental(int limit);
-
-/* from props.c */
-void clear_propnode(PropPtr p);
-void copy_proplist(OBJ *obj, PropPtr * newer, PropPtr old);
-long size_proplist(PropPtr avl);
 
 #endif /* _EXTERNS_H */

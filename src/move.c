@@ -3,7 +3,6 @@
 #include "config.h"
 
 #include "mdb.h"
-#include "props.h"
 #include "params.h"
 #include "defaults.h"
 #include "interface.h"
@@ -64,6 +63,7 @@ object_move(OBJ *what, OBJ *where)
 		case TYPE_EQUIPMENT:
 		case TYPE_THING:
 		case TYPE_ROOM:
+		case TYPE_SEAT:
 			where = object_get(GLOBAL_ENVIRONMENT);
 			break;
 		}
@@ -71,7 +71,6 @@ object_move(OBJ *what, OBJ *where)
 
         if (what->type == TYPE_ENTITY) {
 		ENT *ewhat = &what->sp.entity;
-                dialog_stop(what);
 		if ((ewhat->flags & EF_SITTING))
 			stand(what);
 	}
@@ -217,11 +216,12 @@ do_get(command_t *cmd)
 	case TYPE_THING:
 	case TYPE_ENTITY:
 	case TYPE_PLANT:
+	case TYPE_SEAT:
 		if (obj && *obj) {
 			can = 1;
 		} else {
 			if (thing->owner != player
-					&& (thing->type == TYPE_ENTITY || thing->type == TYPE_PLANT))
+					&& (thing->type == TYPE_ENTITY || thing->type == TYPE_PLANT || thing->type == TYPE_SEAT))
 			{
 				notify(eplayer, "You can't pick that up.");
 				break;
@@ -350,6 +350,7 @@ do_recycle(command_t *cmd)
 		case TYPE_CONSUMABLE:
 		case TYPE_EQUIPMENT:
 		case TYPE_THING:
+		case TYPE_SEAT:
 			if (thing->owner != player->owner) {
 				notify(eplayer, "Permission denied. (You can't recycle a thing you don't control)");
 				return;

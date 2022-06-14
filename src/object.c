@@ -7,12 +7,12 @@
 #include <string.h>
 
 #include "mdb.h"
-#include "props.h"
 #include "params.h"
 #include "defaults.h"
 #include "interface.h"
 
 #include "externs.h"
+#include "spell.h"
 
 struct object *db = 0;
 dbref db_top = 0;
@@ -88,7 +88,6 @@ object_clear(OBJ *o)
 	o->name = 0;
 	o->first_observer = NULL;
 	o->contents = o->location = o->next = NULL;
-	o->properties = 0;
 }
 
 OBJ *
@@ -131,72 +130,6 @@ putstring(FILE * f, const char *s)
 	}
 }
 
-void
-putproperties_rec(FILE * f, const char *dir, OBJ *obj)
-{
-	PropPtr pref;
-	PropPtr p, pptr;
-	char buf[BUFFER_LEN];
-	char name[BUFFER_LEN];
-
-	pref = first_prop_nofetch(obj, dir, &pptr, name, sizeof(name));
-	while (pref) {
-		p = pref;
-		db_putprop(f, dir, p);
-		strlcpy(buf, dir, sizeof(buf));
-		strlcat(buf, name, sizeof(buf));
-		if (PropDir(p)) {
-			strlcat(buf, "/", sizeof(buf));
-			putproperties_rec(f, buf, obj);
-		}
-		pref = next_prop(pptr, pref, name, sizeof(name));
-	}
-}
-
-int
-props_write_rec(OBJ *obj, FILE * f, const char *dir, PropPtr p)
-{
-	char buf[BUFFER_LEN];
-	int count = 0;
-	int pdcount;
-
-	if (!p)
-		return 0;
-
-	count += props_write_rec(obj, f, dir, AVL_LF(p));
-
-	db_putprop(f, dir, p);
-
-	if (PropDir(p)) {
-		const char *iptr;
-		char *optr;
-
-		for (iptr = dir, optr = buf; *iptr;)
-			*optr++ = *iptr++;
-		for (iptr = PropName(p); *iptr;)
-			*optr++ = *iptr++;
-		*optr++ = PROPDIR_DELIMITER;
-		*optr++ = '\0';
-
-		pdcount = props_write_rec(obj, f, buf, PropDir(p));
-		count += pdcount;
-	}
-
-	count += props_write_rec(obj, f, dir, AVL_RT(p));
-
-	return count;
-}
-
-void
-props_write(FILE * f, OBJ *obj)
-{
-	putstring(f, "*Props*");
-	props_write_rec(obj, f, "/", obj->properties);
-	/* putproperties_rec(f, "/", obj); */
-	putstring(f, "*End*");
-}
-
-
 static void
 object_write(FILE * f, OBJ *obj)
 {
@@ -208,9 +141,6 @@ object_write(FILE * f, OBJ *obj)
 	putref(f, obj->value);
 	putref(f, obj->type);
 	putref(f, obj->flags);
-
-	props_write(f, obj);
-
 
 	switch (obj->type) {
 	case TYPE_ENTITY:
@@ -224,6 +154,9 @@ object_write(FILE * f, OBJ *obj)
 			for (j = 0; j < ATTR_MAX; j++)
 				putref(f, ent->attr[j]);
 			putref(f, ent->wtso);
+			putref(f, object_ref(ent->sat));
+			for (j = 0; j < 8; j++)
+				putref(f, ent->spells[j]._sp - spell_skeleton_map);
 		}
 		break;
 
@@ -232,6 +165,14 @@ object_write(FILE * f, OBJ *obj)
 			PLA *pla = &obj->sp.plant;
 			putref(f, pla->plid);
 			putref(f, pla->size);
+		}
+		break;
+
+	case TYPE_SEAT:
+		{
+			SEA *sea = &obj->sp.seat;
+			putref(f, sea->quantity);
+			putref(f, sea->capacity);
 		}
 		break;
 
@@ -356,46 +297,6 @@ ifloat(const char *s)
 }
 
 void
-getproperties(FILE * f, OBJ *obj)
-{
-	char buf[BUFFER_LEN * 3], *p;
-	int datalen;
-
-	/* get rid of first line */
-	fgets(buf, sizeof(buf), f);
-
-	if (strcmp(buf, "Props*\n")) {
-		/* initialize first line stuff */
-		fgets(buf, sizeof(buf), f);
-		while (1) {
-			/* fgets reads in \n too! */
-			if (!strcmp(buf, "***Property list end ***\n") || !strcmp(buf, "*End*\n"))
-				break;
-			p = index(buf, PROP_DELIMITER);
-			*(p++) = '\0';		/* Purrrrrrrrrr... */
-			datalen = strlen(p);
-			p[datalen - 1] = '\0';
-
-			if ((p - buf) >= BUFFER_LEN)
-				buf[BUFFER_LEN - 1] = '\0';
-			if (datalen >= BUFFER_LEN)
-				p[BUFFER_LEN - 1] = '\0';
-
-			if ((*p == '^') && (number(p + 1))) {
-				add_prop_nofetch(obj, buf, NULL, atol(p + 1));
-			} else {
-				if (*buf) {
-					add_prop_nofetch(obj, buf, p, 0);
-				}
-			}
-			fgets(buf, sizeof(buf), f);
-		}
-	} else {
-		db_getprops(f, obj);
-	}
-}
-
-void
 object_free(OBJ *o)
 {
 	if (o->name)
@@ -409,10 +310,6 @@ object_free(OBJ *o)
 
 	if (o->avatar)
 		free((void *) o->avatar);
-
-	if (o->properties) {
-		delete_proplist(o->properties);
-	}
 
 	if (o->type != TYPE_ROOM) {
 		struct observer_node *obs, *aux;
@@ -519,7 +416,6 @@ object_read(FILE * f)
 {
 	dbref ref = ref_read(f);
 	OBJ *o = object_get(ref);
-	int c, prop_flag = 0;
 	int j = 0;
 
 	object_clear(o);
@@ -540,63 +436,42 @@ object_read(FILE * f)
 			object_ref(o->next),
 			o->type);
 
-	c = getc(f);
-	if (c == '*') {
-
-		getproperties(f, o);
-
-		prop_flag++;
-	} else {
-		/* do our own ref_read */
-		int sign = 0;
-		char buf[BUFFER_LEN];
-		int i = 0;
-
-		if (c == '-')
-			sign = 1;
-		else if (c != '+') {
-			buf[i] = c;
-			i++;
-		}
-		while ((c = getc(f)) != '\n') {
-			buf[i] = c;
-			i++;
-		}
-		buf[i] = '\0';
-		j = atol(buf);
-		if (sign)
-			j = -j;
-	}
-
 	switch (o->type) {
 	case TYPE_PLANT:
 		{
 			PLA *po = &o->sp.plant;
-			po->plid = prop_flag ? ref_read(f) : j;
+			po->plid = ref_read(f);
 			po->size = ref_read(f);
+		}
+		return;
+	case TYPE_SEAT:
+		{
+			SEA *ps = &o->sp.seat;
+			ps->quantity = ref_read(f);
+			ps->capacity = ref_read(f);
 		}
 		return;
 	case TYPE_CONSUMABLE:
 		{
 			CON *co = &o->sp.consumable;
-			co->food = prop_flag ? ref_read(f) : j;
+			co->food = ref_read(f);
 			co->drink = ref_read(f);
 		}
 		return;
 	case TYPE_EQUIPMENT:
 		{
 			EQU *eo = &o->sp.equipment;
-			eo->eqw = prop_flag ? ref_read(f) : j;
+			eo->eqw = ref_read(f);
 			eo->msv = ref_read(f);
 		}
 		return;
 	case TYPE_THING:
-		o->owner = object_get(prop_flag ? ref_read(f) : j);
+		o->owner = object_get(ref_read(f));
 		return;
 	case TYPE_ROOM:
 		{
 			ROO *ro = &o->sp.room;
-			ro->dropto = object_get(prop_flag ? ref_read(f) : j);
+			ro->dropto = object_get(ref_read(f));
 			ro->flags = ref_read(f);
 			ro->exits = ref_read(f);
 			ro->doors = ref_read(f);
@@ -607,7 +482,7 @@ object_read(FILE * f)
 	case TYPE_ENTITY:
 		{
 			ENT *eo = &o->sp.entity;
-			eo->home = object_get(prop_flag ? ref_read(f) : j);
+			eo->home = object_get(ref_read(f));
 			eo->fd = -1;
 			eo->last_observed = NULL;
 			eo->flags = ref_read(f);
@@ -617,6 +492,14 @@ object_read(FILE * f)
 			for (j = 0; j < ATTR_MAX; j++)
 				eo->attr[j] = ref_read(f);
 			eo->wtso = ref_read(f);
+			eo->sat = object_get(ref_read(f));
+			for (j = 0; j < 8; j++) {
+				struct spell *sp = &eo->spells[j];
+				struct spell_skeleton *_sp = SPELL_SKELETON(ref_read(f));
+				sp->_sp = _sp;
+				sp->val = SPELL_DMG(eo, _sp);
+				sp->cost = SPELL_COST(sp->val, _sp->y, _sp->flags & AF_BUF);
+			}
 			o->owner = o;
 			if (eo->flags & EF_PLAYER)
 				add_player(o);
@@ -682,7 +565,6 @@ object_copy(OBJ *player, OBJ *old)
 {
 	OBJ *nu = object_new();
 	nu->name = strdup(old->name);
-	nu->properties = copy_prop(old);
 	nu->contents = nu->next = nu->location = NULL;
 	nu->owner = old->owner;
         return nu;

@@ -2,7 +2,6 @@
 #include "entity.h"
 #include <math.h>
 #include "mdb.h"
-#include "props.h"
 #include "externs.h"
 #include "params.h"
 #include "view.h"

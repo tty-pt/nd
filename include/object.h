@@ -25,6 +25,7 @@ enum type {
 	TYPE_EQUIPMENT,
 	TYPE_CONSUMABLE,
 	TYPE_GARBAGE,
+	TYPE_SEAT,
 };
 
 enum object_flags {
@@ -177,19 +178,24 @@ typedef struct {
 	unsigned size;
 } PLA;
 
+typedef struct {
+	unsigned quantity;
+	unsigned capacity;
+} SEA;
+
 union specific {
 	ROO room;
 	ENT entity;
 	EQU equipment;
 	CON consumable;
 	PLA plant;
+	SEA seat;
 };
 
 typedef struct object {
         struct observer_node *first_observer;
 	const char *name, *description, *art, *avatar;
 	struct object *location, *owner, *contents, *next;
-	struct plist *properties;
 
 	unsigned char type;
 	unsigned value;

@@ -13,7 +13,6 @@
 #include <stdlib.h>
 
 #include "mdb.h"
-#include "props.h"
 #include "params.h"
 #include "defaults.h"
 #include "interface.h"

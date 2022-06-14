@@ -10,7 +10,6 @@
 #include <string.h>
 
 #include "mdb.h"
-#include "props.h"
 #include "interface.h"
 #include "params.h"
 #include "defaults.h"

@@ -31,9 +31,6 @@
 #define PLAYER_START ((dbref) 0)	/* room number of player start location */
 #define STARTING_POSITION 0x0		/* starting geographical position */
 
-/* Smatch pattern of names that cannot be used. */
-#define RESERVED_NAMES ""
-
 #define OK_ASCII_THING(name) 1
 #define OK_ASCII_OTHER(name) ok_ascii_any(name)
 

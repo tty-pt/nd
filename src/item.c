@@ -3,7 +3,6 @@
 #include <stddef.h> // offsetof
 #include "entity.h"
 #include "mcp.h"
-#include "props.h"
 #include "externs.h"
 #include "mdb.h"
 #include "interface.h"

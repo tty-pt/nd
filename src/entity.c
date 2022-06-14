@@ -10,7 +10,6 @@
 #include "defaults.h"
 #include "params.h"
 #include "match.h"
-#include "props.h"
 #include "view.h"
 #include "room.h"
 #include "equipment.h"
@@ -21,13 +20,6 @@
 #define THIRST_Y	2
 #define HUNGER_INC	(1 << (DAYTICK_Y - HUNGER_Y))
 #define THIRST_INC	(1 << (DAYTICK_Y - THIRST_Y))
-
-#define MESGPROP_SEATM	"_seat_m"
-#define GETSEATM(x)	get_property_value(x, MESGPROP_SEATM)
-
-#define MESGPROP_SEATN	"_seat_n"
-#define GETSEATN(x)	get_property_value(x, MESGPROP_SEATN)
-#define SETSEATN(x, y)	set_property_value(x, MESGPROP_SEATN, y)
 
 static const char *rarity_str[] = {
 	ANSI_BOLD ANSI_FG_BLACK "Poor" ANSI_RESET,
@@ -60,7 +52,7 @@ birth(OBJ *player)
 	EFFECT(eplayer, DMG).value = DMG_BASE(eplayer);
 	EFFECT(eplayer, DODGE).value = DODGE_BASE(eplayer);
 
-	spells_init(eplayer->spells, player);
+	memset(eplayer->spells, 0, sizeof(eplayer->spells));
 
 	int i;
 
@@ -115,6 +107,7 @@ recycle(OBJ *player, OBJ *thing)
 
 		break;
 	case TYPE_PLANT:
+	case TYPE_SEAT:
 	case TYPE_CONSUMABLE:
 	case TYPE_EQUIPMENT:
 	case TYPE_THING:
@@ -151,6 +144,7 @@ recycle(OBJ *player, OBJ *thing)
 
 			break;
 		case TYPE_PLANT:
+		case TYPE_SEAT:
 		case TYPE_CONSUMABLE:
 		case TYPE_EQUIPMENT:
 		case TYPE_THING:
@@ -340,19 +334,20 @@ sit(OBJ *player, const char *name)
 	}
 
 	OBJ *seat = ematch_near(player, name);
-	int max = GETSEATM(seat);
-	if (!max) {
+
+	if (!seat || seat->type != TYPE_SEAT) {
 		notify(eplayer, "You can't sit on that.");
 		return;
 	}
 
-	int cur = GETSEATN(seat);
-	if (cur >= max) {
+	SEA *sseat = &seat->sp.seat;
+
+	if (sseat->quantity >= sseat->capacity) {
 		notify(eplayer, "No seats available.");
 		return;
 	}
 
-	SETSEATN(seat, cur + 1);
+	sseat->quantity += 1;
 	eplayer->flags |= EF_SITTING;
 	eplayer->sat = seat;
 
@@ -370,7 +365,9 @@ stand_silent(OBJ *player)
 	OBJ *chair = eplayer->sat;
 
 	if (chair) {
-		SETSEATN(chair, GETSEATN(chair) - 1);
+		CBUG(chair->type != TYPE_SEAT);
+		SEA *schair = &chair->sp.seat;
+		schair->quantity--;
 		eplayer->sat = NULL;
 	}
 

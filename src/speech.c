@@ -8,7 +8,6 @@
 #include "match.h"
 #include "params.h"
 #include "defaults.h"
-#include "props.h"
 #include "externs.h"
 #include <ctype.h>
 #include <stdarg.h>

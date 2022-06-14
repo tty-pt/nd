@@ -49,7 +49,6 @@
 #include "command.h"
 #include "params.h"
 #include "defaults.h"
-#include "props.h"
 #include "mcp.h"
 #include "externs.h"
 #include "interp.h"
@@ -131,9 +130,6 @@ core_command_t cmds[] = {
 		.name = "owned",
 		.cb = &do_owned,
 	}, {
-		.name = "propset",
-		.cb = &do_propset,
-	}, {
 		.name = "recycle",
 		.cb = &do_recycle,
 	/* }, { */
@@ -141,12 +137,6 @@ core_command_t cmds[] = {
 	/* 	.cb = &do_restrict, */
 	/* }, { */
 		/* do_showextver(player); */
-	}, {
-		.name = "talk",
-		.cb = &do_talk,
-	}, {
-		.name = "answer",
-		.cb = &do_answer,
 	}, {
 		.name = "teleport",
 		.cb = &do_teleport,
@@ -953,8 +943,6 @@ shovechars()
                 tick = now - start;
 		objects_update();
 		st_update();
-
-		untouchprops_incremental(1);
 
 		if (shutdown_flag)
 			break;

@@ -5,7 +5,6 @@
 #include "equipment.h"
 #include "spell.h"
 #include "defaults.h"
-#include "props.h"
 #include "externs.h"
 #include "params.h"
 

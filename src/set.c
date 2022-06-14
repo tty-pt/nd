@@ -13,7 +13,6 @@
 #include "mdb.h"
 #include "params.h"
 #include "defaults.h"
-#include "props.h"
 #include "match.h"
 #include "interface.h"
 #include "externs.h"
@@ -147,106 +146,4 @@ do_chown(command_t *cmd)
 		snprintf(buf, sizeof(buf), "Owner changed to %s.", unparse(player, owner));
 		notify(eplayer, buf);
 	}
-}
-
-
-void
-do_propset(command_t *cmd)
-{
-	OBJ *player = cmd->player;
-	ENT *eplayer = &player->sp.entity;
-	const char *name = cmd->argv[1];
-	const char *prop = cmd->argv[2];
-	OBJ *thing = match_controlled(player, name),
-	    *ref;
-	char *p, *q;
-	char buf[BUFFER_LEN];
-	char *type, *pname, *value;
-	PData mydat;
-
-	/* find thing */
-	if (!thing)
-		return;
-
-	while (isspace(*prop))
-		prop++;
-	strlcpy(buf, prop, sizeof(buf));
-
-	type = p = buf;
-	while (*p && *p != PROP_DELIMITER)
-		p++;
-	if (*p)
-		*p++ = '\0';
-
-	if (*type) {
-		q = type + strlen(type) - 1;
-		while (q >= type && isspace(*q))
-			*(q--) = '\0';
-	}
-
-	pname = p;
-	while (*p && *p != PROP_DELIMITER)
-		p++;
-	if (*p)
-		*p++ = '\0';
-	value = p;
-
-	while (*pname == PROPDIR_DELIMITER || isspace(*pname))
-		pname++;
-	if (*pname) {
-		q = pname + strlen(pname) - 1;
-		while (q >= pname && isspace(*q))
-			*(q--) = '\0';
-	}
-
-	if (!*pname) {
-		notify(eplayer, "I don't know which property you want to set!");
-		return;
-	}
-
-	if (Prop_System(pname) || (!(eplayer->flags & EF_WIZARD) && (Prop_SeeOnly(pname) || Prop_Hidden(pname)))) {
-		notify(eplayer, "Permission denied. (can't set a property that's restricted against you)");
-		return;
-	}
-
-	if (!*type || string_prefix("string", type))
-		add_prop_nofetch(thing, pname, value, 0);
-	else if (string_prefix("integer", type)) {
-		if (!number(value)) {
-			notify(eplayer, "That's not an integer!");
-			return;
-		}
-		add_prop_nofetch(thing, pname, NULL, atoi(value));
-	} else if (string_prefix("float", type)) {
-		if (!ifloat(value)) {
-			notify(eplayer, "That's not a floating point number!");
-			return;
-		}
-		mydat.flags = PROP_FLTTYP;
-		mydat.data.fval = strtod(value, NULL);
-		set_property_nofetch(thing, pname, &mydat);
-	} else if (string_prefix("dbref", type)) {
-		ref = ematch_all(player, value);
-		if (!ref) {
-			notify(eplayer, NOMATCH_MESSAGE);
-			return;
-		}
-
-		mydat.flags = PROP_REFTYP;
-		mydat.data.ref = object_ref(ref);
-		set_property_nofetch(thing, pname, &mydat);
-	} else if (string_prefix("erase", type)) {
-		if (*value) {
-			notify(eplayer, "Don't give a value when erasing a property.");
-			return;
-		}
-		remove_property(thing, pname);
-		notify(eplayer, "Property erased.");
-		return;
-	} else {
-		notify(eplayer, "I don't know what type of property you want to set!");
-		notify(eplayer, "Valid types are string, integer, float, dbref, lock, and erase.");
-		return;
-	}
-	notify(eplayer, "Property set.");
 }

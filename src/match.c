@@ -8,7 +8,6 @@
 #include <ctype.h>
 
 #include "mdb.h"
-#include "props.h"
 #include "params.h"
 #include "defaults.h"
 #include "match.h"

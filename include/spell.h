@@ -36,7 +36,8 @@ enum spell_type {
 	SPELL_STONE_SKIN,
 };
 
-void spells_init(struct spell sps[8], OBJ *player);
+extern struct spell_skeleton spell_skeleton_map[];
+
 void debuf_end(ENT *player, unsigned i);
 void debufs_end(ENT *player);
 int debufs_process(OBJ *player);

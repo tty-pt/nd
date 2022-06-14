@@ -14,7 +14,6 @@
 
 #include "mdb.h"
 #include "defaults.h"
-#include "props.h"
 #include "interface.h"
 #include "match.h"
 #include "externs.h"
@@ -44,21 +43,6 @@ print_owner(OBJ *player, OBJ *thing)
 	notify(eplayer, buf);
 }
 
-long
-size_object(OBJ *obj, int load)
-{
-	long byts;
-	byts = sizeof(struct object);
-
-	if (obj->name) {
-		byts += strlen(obj->name) + 1;
-	}
-	byts += size_properties(obj, load);
-
-	return byts;
-}
-
-
 void
 do_examine(command_t *cmd)
 {
@@ -81,29 +65,17 @@ do_examine(command_t *cmd)
 	}
 	switch (thing->type) {
 	case TYPE_ROOM:
-		snprintf(buf, sizeof(buf), "%.*s (#%d) Owner: %s  Parent: ",
-				(int) (BUFFER_LEN - strlen(thing->owner->name) - 35),
-				unparse(player, thing),
-				object_ref(thing),
-				thing->owner->name);
-		strlcat(buf, unparse(player, thing->location), sizeof(buf));
-		break;
 	case TYPE_PLANT:
+	case TYPE_SEAT:
 	case TYPE_CONSUMABLE:
 	case TYPE_EQUIPMENT:
 	case TYPE_THING:
+	case TYPE_ENTITY:
 		snprintf(buf, sizeof(buf), "%.*s (#%d) Owner: %s  Value: %d",
 				(int) (BUFFER_LEN - strlen(thing->owner->name) - 35),
 				unparse(player, thing),
 				object_ref(thing),
 				thing->owner->name, thing->value);
-		break;
-	case TYPE_ENTITY:
-		snprintf(buf, sizeof(buf), "%.*s (#%d) %s: %d  ", 
-				(int) (BUFFER_LEN - strlen(CPENNIES) - 35),
-				unparse(player, thing),
-				object_ref(thing),
-				CPENNIES, thing->value);
 		break;
 	case TYPE_GARBAGE:
 		strlcpy(buf, unparse(player, thing), sizeof(buf));
@@ -115,9 +87,6 @@ do_examine(command_t *cmd)
 		notify(eplayer, thing->description);
 
 	notify(eplayer, "[ Use 'examine <object>=/' to list root properties. ]");
-
-	snprintf(buf, sizeof(buf), "Memory used: %ld bytes", size_object(thing, 1));
-	notify(eplayer, buf);
 
 	/* show him the contents */
 	if (thing->contents) {
@@ -149,6 +118,12 @@ do_examine(command_t *cmd)
 		{
 			PLA *pthing = &thing->sp.plant;
 			notifyf(eplayer, "plant plid %u size %u.", pthing->plid, pthing->size);
+		}
+		break;
+	case TYPE_SEAT:
+		{
+			SEA *sthing = &thing->sp.seat;
+			notifyf(eplayer, "seat quantity %u capacity %u.", sthing->quantity, sthing->capacity);
 		}
 		break;
 	case TYPE_THING:

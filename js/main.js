@@ -259,8 +259,6 @@ function gameReducer(state, action) {
                                                 contents: newContents
                                         }
                                 },
-                                dialog: !state.dialog || dbref == parseInt(state.dialog.npc)
-                                        ? null : state.dialog,
                         };
 
                 case 'web-auth-success':
@@ -288,30 +286,6 @@ function gameReducer(state, action) {
                         return {
                                 ...state,
                                 bars: action,
-                        };
-
-                case 'web-dialog-start':
-                        return {
-                                ...state,
-                                dialog: {
-                                        ...action,
-                                        answers: [],
-                                },
-                        };
-
-                case 'web-dialog-answer':
-                        return {
-                                ...state,
-                                dialog: {
-                                        ...state.dialog,
-                                        answers: state.dialog.answers.concat([action]),
-                                },
-                        };
-
-                case 'web-dialog-stop':
-                        return {
-                                ...state,
-                                dialog: null,
                         };
 
                 case 'web-equipment':
@@ -792,50 +766,6 @@ function PlayerBars() {
         </div>);
 }
 
-function Dialog() {
-        const { dialog, here, objects, sendMessage, dispatch } = useContext(GameContext);
-
-        if (!dialog)
-                return null;
-
-        const item = objects[here].contents[dialog.npc];
-
-        const { text } = dialog;
-
-        let answersEl = dialog.answers.map(answer => (
-                <a key={answer.id} className="ps c0 cf15" onClick={() => sendMessage("answer " + answer.id)}>
-                        { answer.text }
-                </a>
-
-        ));
-
-        if (!answersEl.length) {
-                function endDialog() {
-                        dispatch({
-                                key: "web-dialog-stop",
-                        });
-                }
-
-                answersEl = (<a key="endC"
-                        className="ps c0 cf15" onClick={endDialog}>
-                        End conversation
-                </a>);
-        }
-
-        return (<>
-                <div className="ps _s f c15 cf0">
-                        <Avatar item={item} />
-                        <div className="fg">
-                                { text }
-                        </div>
-                </div>
-                <div className="_ ps">
-                        { answersEl }
-                </div>
-        </>);
-
-}
-
 function Game() {
         const { sendMessage, session } = useContext(GameContext);
 	const [ modal, isOpen, setOpen ] = useModal(Help, {});
@@ -935,8 +865,6 @@ function Game() {
                         <PlayerBars />
 
                         <Terminal />
-
-                        <Dialog />
 
                         <input ref={input} name="cmd" className="cf"
                                 autoComplete="off" autoCapitalize="off" />

@@ -6,7 +6,6 @@
 #include "mob.h"
 
 #include "params.h"
-#include "props.h"
 /* #include "speech.h" */
 #include "externs.h"
 
@@ -154,45 +153,6 @@ enum element
 element_next(ENT *ent, register unsigned char a)
 {
 	return a ? ent->debufs[__builtin_ffs(a) - 1]._sp->element : ELM_PHYSICAL;
-}
-
-static inline void
-spell_init(
-		struct spell *sp, OBJ *player,
-		unsigned intelligence,
-		unsigned idx)
-{
-	ENT *eplayer = &player->sp.entity;
-	struct spell_skeleton *_sp = SPELL_SKELETON(idx);
-	sp->_sp = _sp;
-	sp->val = SPELL_DMG(eplayer, _sp);
-	sp->cost = SPELL_COST(sp->val, _sp->y, _sp->flags & AF_BUF);
-}
-
-void
-spells_init(struct spell sps[8], OBJ *player)
-{
-	ENT *eplayer = &player->sp.entity;
-	char const *str = GETCURSPELLS(player);
-	unsigned i = 0;
-	unsigned intelligence = eplayer->attr[ATTR_INT];
-	memset(sps, 0, sizeof(struct spell) * 8);
-
-	if (str && *str != '\0')
-		for (; i < 8; i ++) {
-			char *end;
-			spell_init(&sps[i], player, intelligence,
-			      strtoul(str, &end, 0));
-			str = end;
-			if (*str == '\0') {
-				i++;
-				break;
-			}
-			str++;
-		}
-
-	for (; i < 8; i++)
-		spell_init(&sps[i], player, intelligence, 0);
 }
 
 void

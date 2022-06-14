@@ -33,9 +33,6 @@ icon(OBJ *what)
 
 			ret.actions |= ACT_KILL;
 			ret.icon = ANSI_BOLD ANSI_FG_YELLOW "!";
-			if (dialog_exists(what)) {
-				ret.actions |= ACT_TALK;
-			}
 			if (ewhat->flags & EF_SHOP) {
 				ret.actions |= ACT_SHOP;
 				ret.icon = ANSI_BOLD ANSI_FG_GREEN "$";
@@ -72,6 +69,7 @@ icon(OBJ *what)
 		break;
 	case TYPE_EQUIPMENT:
         case TYPE_THING:
+        case TYPE_SEAT:
                 ret.actions |= ACT_GET;
                 break;
         }

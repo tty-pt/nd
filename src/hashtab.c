@@ -55,7 +55,6 @@
 
 #include "config.h"
 #include "mdb.h"
-#include "props.h"
 #include "externs.h"
 #include <string.h>
 

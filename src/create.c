@@ -9,81 +9,11 @@
 #include <string.h>
 #include <ctype.h>
 #include "mdb.h"
-#include "props.h"
 #include "params.h"
 #include "defaults.h"
 #include "interface.h"
 #include "externs.h"
 #include "match.h"
-
-/*
- * copy a single property, identified by its name, from one object to
- * another. helper routine for copy_props (below).
- */
-void
-copy_one_prop(OBJ *player, OBJ *source, OBJ *destination, char *propname, int ignore)
-{
-	PropPtr currprop;
-	PData newprop;
-
-	/* read property from old object */
-	currprop = get_property(source, propname);
-
-	if(currprop) {
-
-		/* flags can be copied. */		
-		newprop.flags = currprop->flags;
-
-		/* data, however, must be cloned in case it's a string or a
-		   lock. */
-		switch(PropType(currprop)) {
-			case PROP_STRTYP:
-				newprop.data.str = strdup((currprop->data).str);
-				break;
-			case PROP_INTTYP:
-			case PROP_FLTTYP:
-			case PROP_REFTYP:
-				newprop.data = currprop->data;
-				break;
-			case PROP_DIRTYP:
-				break;
-		}
-
-		/* now hook the new property into the destination object. */
-		set_property_nofetch(destination, propname + ignore, &newprop);
-	}
-	
-	return;
-}
-
-/*
- * copy a property (sub)tree from one object to another one. this is a
- * helper routine used by do_clone, based loosely on listprops_wildcard from
- * look.c.
- */
-void
-copy_props(OBJ *player, OBJ *source, OBJ *destination, const char *dir)
-{
-	char propname[BUFFER_LEN];
-	char buf[BUFFER_LEN];
-	PropPtr propadr, pptr;
-
-	/* loop through all properties in the current propdir */
-	propadr = first_prop(source, (char *) dir, &pptr, propname, sizeof(propname));
-	while (propadr) {
-		/* generate name for current property */
-		snprintf(buf, sizeof(buf), "%s%c%s", dir, PROPDIR_DELIMITER, propname);
-
-		/* copy this property */
-		copy_one_prop(player, source, destination, buf, 0);
-		
-		/* recursively copy this property directory */
-		copy_props(player, source, destination, buf);
-		
-		/* find next property in current dir */
-		propadr = next_prop(pptr, propadr, propname, sizeof(propname));
-	}
-}
 
 /*
  * do_clone
@@ -183,9 +113,6 @@ do_clone(command_t *cmd)
 		}
 		clone->type = thing->type;
 
-		/* copy all properties */
-		copy_props(player, thing, clone, "");
-
 		/* endow the object */
 		if (thing->value > MAX_OBJECT_ENDOWMENT)
 			thing->value = MAX_OBJECT_ENDOWMENT;
@@ -274,15 +201,4 @@ do_create(command_t *cmd)
 	/* and we're done */
 	snprintf(buf, sizeof(buf), "%s created with number %d.", name, object_ref(thing));
 	notify(eplayer, buf);
-
-	if (*rname) {
-		PData mydat;
-
-		snprintf(buf, sizeof(buf), "Registered as $%s", rname);
-		notify(eplayer, buf);
-		snprintf(buf, sizeof(buf), "_reg/%s", rname);
-		mydat.flags = PROP_REFTYP;
-		mydat.data.ref = object_ref(thing);
-		set_property_nofetch(player, buf, &mydat);
-	}
 }

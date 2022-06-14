@@ -2,7 +2,6 @@
 
 #include "params.h"
 
-#include "props.h"
 #include "externs.h"
 
 struct object_skeleton carrot = {

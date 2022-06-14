@@ -7,12 +7,10 @@
 #include "noise.h"
 #include "map.h"
 #include "entity.h"
-#include "props.h"
 #include "defaults.h"
+#include "command.h"
 
 #define PRECOVERY
-
-#define MESGPROP_MARK	"@/mark"
 
 #define GEON_RADIUS (VIEW_AROUND + 1)
 #define GEON_SIZE (GEON_RADIUS * 2 + 1)
@@ -945,32 +943,6 @@ st_teleport(OBJ *player, struct cmd_dir cd)
 }
 
 static int
-mark(OBJ *player, struct cmd_dir cd)
-{
-	pos_t pos;
-	char value[32];
-	if (cd.rep == 1)
-		map_where(pos, player->location);
-	else
-		memcpy(pos, &cd.rep, sizeof(cd.rep));
-	snprintf(value, 32, "0x%llx", MORTON_READ(pos));
-	set_property_mark(player, MESGPROP_MARK, cd.dir, value);
-	return 1;
-}
-
-static int
-recall(OBJ *player, struct cmd_dir cd)
-{
-	const char *xs = get_property_mark(player, MESGPROP_MARK, cd.dir);
-	if (!xs)
-		return 0;
-	cd.rep = strtoull(xs, NULL, 0);
-	cd.dir = '\0';
-	st_teleport(player, cd);
-	return 1;
-}
-
-static int
 pull(OBJ *player, struct cmd_dir cd)
 {
 	ENT *eplayer = &player->sp.entity;
@@ -1013,8 +985,6 @@ op_t op_map[] = {
 	['W'] = { .op.a = &unwall },
 	['x'] = { .op.b = &tell_pos, .type = 1 },
 	['X'] = { .op.b = &st_teleport, .type = 1 },
-	['m'] = { .op.b = &mark, .type = 1 },
-	['"'] = { .op.b = &recall, .type = 1 },
 	['#'] = { .op.b = &pull, .type = 1 },
 };
 

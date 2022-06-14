@@ -8,7 +8,6 @@
 
 #include "mdb.h"
 #include "externs.h"
-#include "props.h"
 #include "params.h"
 
 #define BIOME_BG(i) (NIGHT_IS \

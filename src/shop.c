@@ -3,7 +3,6 @@
 #include "mdb.h"
 #include <stddef.h>
 #include "match.h"
-#include "props.h"
 #include "externs.h"
 
 static inline OBJ *
