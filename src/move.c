@@ -9,10 +9,7 @@
 #include "interface.h"
 #include "match.h"
 #include "externs.h"
-#include "geography.h"
-#include "item.h"
 #include "mob.h"
-#include "kill.h"
 
 /* remove the first occurence of what in list headed by first */
 static inline OBJ *
@@ -173,7 +170,7 @@ object_plc(OBJ *source, OBJ *dest)
 void
 do_get(command_t *cmd)
 {
-	OBJ *player = object_get(cmd->player);
+	OBJ *player = cmd->player;
 	ENT *eplayer = &player->sp.entity;
 	const char *what = cmd->argv[1];
 	const char *obj = cmd->argv[2];
@@ -246,7 +243,7 @@ do_get(command_t *cmd)
 void
 do_drop(command_t *cmd)
 {
-	OBJ *player = object_get(cmd->player);
+	OBJ *player = cmd->player;
 	ENT *eplayer = &player->sp.entity;
 	const char *name = cmd->argv[1];
 	const char *obj = cmd->argv[2];
@@ -310,7 +307,7 @@ do_drop(command_t *cmd)
 void
 do_recycle(command_t *cmd)
 {
-	OBJ *player = object_get(cmd->player);
+	OBJ *player = cmd->player;
 	ENT *eplayer = &player->sp.entity;
 	const char *name = cmd->argv[1];
 	OBJ *thing;
@@ -326,12 +323,11 @@ do_recycle(command_t *cmd)
 	}
 
 
-#ifdef GOD_PRIV
 	if(!God(player) && God(thing->owner)) {
 		notify(eplayer, "Only God may reclaim God's property.");
 		return;
 	}
-#endif
+
 	if (!controls(player, thing)) {
 		notify(eplayer, "You can not do that.");
 	} else {

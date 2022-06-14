@@ -1,8 +1,9 @@
 #ifndef IO_H
 #define IO_H
 
-#include "mcp.h"
 #include "config.h"
+#include "object.h"
+#include "mcp.h"
 
 #ifdef CONFIG_SECURE
 #include <openssl/bio.h>
@@ -22,7 +23,7 @@ typedef struct descr_st {
 	SSL *cSSL;
 #endif
 	int fd, flags;
-	dbref player;
+	OBJ *player;
 	McpFrame mcpframe;
 } descr_t;
 
@@ -35,6 +36,7 @@ void anotifyf(OBJ *room, char *format, ...);
 void onotifyf(OBJ *player, char *format, ...);
 void notify_wts(OBJ *who, char const *a, char const *b, char *format, ...);
 void notify_wts_to(OBJ *who, OBJ *tar, char const *a, char const *b, char *format, ...);
+void notify_attack(OBJ *player, OBJ *target, struct wts wts, short val, char const *color, short mval);
 void wall(const char *msg);
 
 #endif

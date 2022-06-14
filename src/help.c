@@ -14,29 +14,14 @@
 #include <ctype.h>
 #include <string.h>
 
-/*
- * Ok, directory stuff IS a bit ugly.
- */
-#if defined(HAVE_DIRENT_H) || defined(_POSIX_VERSION)
-# include <dirent.h>
-# define NLENGTH(dirent) (strlen((dirent)->d_name))
-#else							/* not (HAVE_DIRENT_H or _POSIX_VERSION) */
-# define dirent direct
-# define NLENGTH(dirent) ((dirent)->d_namlen)
-# ifdef HAVE_SYS_NDIR_H
-#  include <sys/ndir.h>
-# endif							/* HAVE_SYS_NDIR_H */
-# ifdef HAVE_SYS_DIR_H
-#  include <sys/dir.h>
-# endif							/* HAVE_SYS_DIR_H */
-# ifdef HAVE_NDIR_H
-#  include <ndir.h>
-# endif							/* HAVE_NDIR_H */
-#endif							/* not (HAVE_DIRENT_H or _POSIX_VERSION) */
+#include <dirent.h>
+#define NLENGTH(dirent) (strlen((dirent)->d_name))
 
-#if defined(HAVE_DIRENT_H) || defined(_POSIX_VERSION) || defined(HAVE_SYS_NDIR_H) || defined(HAVE_SYS_DIR_H) || defined(HAVE_NDIR_H)
-# define DIR_AVALIBLE
-#endif
+#define HELP_FILE "data/muckhelp.txt"	/* For the 'help' command      */
+#define HELP_DIR  "data/help"	/* For 'help' subtopic files   */
+#define MAN_FILE  "data/man.txt"	/* For the 'man' command       */
+#define MAN_DIR   "data/man"	/* For 'man' subtopic files    */
+#define INFO_DIR  "data/info/"
 
 void
 spit_file_segment(OBJ *player, const char *filename, const char *seg)
@@ -175,11 +160,8 @@ show_subfile(OBJ *player, const char *dir, const char *topic, const char *seg, i
 {
 	char buf[256];
 	struct stat st;
-
-#ifdef DIR_AVALIBLE
 	DIR *df;
 	struct dirent *dp;
-#endif
 
 	if (!topic || !*topic)
 		return 0;
@@ -191,7 +173,6 @@ show_subfile(OBJ *player, const char *dir, const char *topic, const char *seg, i
 		return 0;
 
 
-#ifdef DIR_AVALIBLE
 	/* TO DO: (1) exact match, or (2) partial match, but unique */
 	*buf = 0;
 
@@ -211,10 +192,6 @@ show_subfile(OBJ *player, const char *dir, const char *topic, const char *seg, i
 		return 0;				/* no such file or directory */
 	}
 
-#else                           /* !DIR_AVAILABLE */
-	snprintf(buf, sizeof(buf), "%s/%s", dir, topic);
-#endif 
-
 	if (stat(buf, &st)) {
 		return 0;
 	} else {
@@ -228,10 +205,10 @@ show_subfile(OBJ *player, const char *dir, const char *topic, const char *seg, i
 void
 do_man(command_t *cmd)
 {
-	OBJ *player = object_get(cmd->player);
+	OBJ *player = cmd->player;
 	char *topic = cmd->argv[1];
 	char *seg = cmd->argv[2];
-	if (show_subfile(player, MAN_DIR, topic, seg, FALSE))
+	if (show_subfile(player, MAN_DIR, topic, seg, 0))
 		return;
 	index_file(player, topic, MAN_FILE);
 }
@@ -239,30 +216,18 @@ do_man(command_t *cmd)
 void
 do_help(command_t *cmd)
 {
-	OBJ *player = object_get(cmd->player);
+	OBJ *player = cmd->player;
 	char *topic = cmd->argv[1];
 	char *seg = cmd->argv[2];
-	if (show_subfile(player, HELP_DIR, topic, seg, FALSE))
+	if (show_subfile(player, HELP_DIR, topic, seg, 0))
 		return;
 	index_file(player, topic, HELP_FILE);
-}
-
-
-void
-do_news(command_t *cmd)
-{
-	OBJ *player = object_get(cmd->player);
-	char *topic = cmd->argv[1];
-	char *seg = cmd->argv[2];
-	if (show_subfile(player, NEWS_DIR, topic, seg, FALSE))
-		return;
-	index_file(player, topic, NEWS_FILE);
 }
 
 void
 do_info(command_t *cmd)
 {
-	OBJ *player = object_get(cmd->player);
+	OBJ *player = cmd->player;
 	ENT *eplayer = &player->sp.entity;
 	const char *topic = cmd->argv[1];
 	const char *seg = cmd->argv[2];
@@ -270,18 +235,14 @@ do_info(command_t *cmd)
 	int f;
 	int cols;
 	int buflen = 80;
-
-#ifdef DIR_AVALIBLE
 	DIR *df;
 	struct dirent *dp;
-#endif
 
 	if (*topic) {
-		if (!show_subfile(player, INFO_DIR, topic, seg, TRUE)) {
+		if (!show_subfile(player, INFO_DIR, topic, seg, 1)) {
 			notify(eplayer, NO_INFO_MSG);
 		}
 	} else {
-#ifdef DIR_AVALIBLE
 		buf = (char *) calloc(1, buflen);
 		(void) strlcpy(buf, "    ", buflen);
 		f = 0;
@@ -313,7 +274,6 @@ do_info(command_t *cmd)
 			notify(eplayer, "No information files are available.");
 		free(buf);
 		notify(eplayer, "Index not available on this system.");
-#endif							/* !DIR_AVALIBLE */
 	}
 }
 #else /* STANDALONE_HELP */

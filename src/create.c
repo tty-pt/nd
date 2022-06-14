@@ -38,7 +38,7 @@ copy_one_prop(OBJ *player, OBJ *source, OBJ *destination, char *propname, int ig
 		   lock. */
 		switch(PropType(currprop)) {
 			case PROP_STRTYP:
-				newprop.data.str = alloc_string((currprop->data).str);
+				newprop.data.str = strdup((currprop->data).str);
 				break;
 			case PROP_INTTYP:
 			case PROP_FLTTYP:
@@ -94,7 +94,7 @@ copy_props(OBJ *player, OBJ *source, OBJ *destination, const char *dir)
 void
 do_clone(command_t *cmd)
 {
-	OBJ *player = object_get(cmd->player);
+	OBJ *player = cmd->player;
 	ENT *eplayer = &player->sp.entity;
 	char *name = cmd->argv[1];
 	static char buf[BUFFER_LEN];
@@ -161,7 +161,7 @@ do_clone(command_t *cmd)
 		clone = object_new();
 
 		/* initialize everything */
-		clone->name = alloc_string(thing->name);
+		clone->name = strdup(thing->name);
 		clone->location = player;
 		clone->owner = player->owner;
 		clone->value = thing->value;
@@ -208,7 +208,7 @@ do_clone(command_t *cmd)
 void
 do_create(command_t *cmd)
 {
-	OBJ *player = object_get(cmd->player);
+	OBJ *player = cmd->player;
 	ENT *eplayer = &player->sp.entity;
 	char *name = cmd->argv[1];
 	char *acost = cmd->argv[2];
@@ -258,7 +258,7 @@ do_create(command_t *cmd)
 	thing = object_new();
 
 	/* initialize everything */
-	thing->name = alloc_string(name);
+	thing->name = strdup(name);
 	thing->location = player;
 	thing->owner = player->owner;
 	thing->value = OBJECT_ENDOWMENT(cost);

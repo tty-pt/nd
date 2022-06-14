@@ -1,5 +1,5 @@
-#ifndef DRINK_H
-#define DRINK_H
+#ifndef CONSUMABLE_H
+#define CONSUMABLE_H
 
 enum drink {
 	DRINK_NOTHING,

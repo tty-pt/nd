@@ -1,24 +1,13 @@
-#include "io.h"
-
 #include "mob.h"
+#include "io.h"
+#include "spacetime.h"
 #include "entity.h"
-
-#include "stat.h"
+#include "equipment.h"
 #include "spell.h"
-#include "item.h"
-#include "geography.h"
-#include "kill.h"
 #include "defaults.h"
-
 #include "props.h"
 #include "externs.h"
-
 #include "params.h"
-
-#define HUNGER_Y	4
-#define THIRST_Y	2
-#define HUNGER_INC	(1 << (DAYTICK_Y - HUNGER_Y))
-#define THIRST_INC	(1 << (DAYTICK_Y - THIRST_Y))
 
 
 #define F(x) (1<<x) // "folds" value FIXME - 1
@@ -28,6 +17,8 @@
 	.wt = PECK, .type = ELM_AIR
 #define FISH(s, d) .o = { #s, "fish/" #s, d }, \
 	.wt = BITE, .type = ELM_ICE, .biomes = (1<<BIOME_WATER)
+#define ARMORSET_LIST(s) & s ## _helmet_drop, \
+	& s ## _chest_drop, & s ## _pants_drop
 
 bodypart_t bodypart_map[] = {
 	[BP_HEAD] = {
@@ -410,38 +401,6 @@ bird_is(SENT *sk)
 	return sk->wt == PECK;
 }
 
-ENT *
-birth(OBJ *player)
-{
-	ENT *eplayer = &player->sp.entity;
-	eplayer->wts = phys_wts[eplayer->wtso];
-	eplayer->hunger = eplayer->thirst = 0;
-	eplayer->combo = 0;
-	eplayer->hp = HP_MAX(eplayer);
-	eplayer->mp = MP_MAX(eplayer);
-	eplayer->sat = eplayer->target = NULL;
-
-	EFFECT(eplayer, DMG).value = DMG_BASE(eplayer);
-	EFFECT(eplayer, DODGE).value = DODGE_BASE(eplayer);
-
-	spells_init(eplayer->spells, player);
-
-	int i;
-
-	for (i = 0; i < ES_MAX; i++) {
-		register dbref eq = EQUIP(eplayer, i);
-
-		if (eq <= 0)
-			continue;
-
-		OBJ *oeq = object_get(eq);
-		EQU *eeq = &oeq->sp.equipment;
-		CBUG(equip_affect(eplayer, eeq));
-	}
-
-        return eplayer;
-}
-
 static inline OBJ *
 mob_add(enum mob_type mid, OBJ *where, enum biome biome, long long pdn) {
 	struct object_skeleton *obj_skel = ENTITY_SKELETON(mid);
@@ -470,154 +429,3 @@ entities_add(OBJ *where, enum biome biome, long long pdn) {
 		mob_add(mid, where, biome, pdn);
 }
 
-struct object_skeleton const *
-mob_obj_random()
-{
-	int idx = random() % MOFS_END;
-	if (idx == 0 || idx == 5 || idx == 8 || idx == 9)
-		return NULL;
-	return ENTITY_SKELETON(idx);
-}
-
-void
-mobs_aggro(OBJ *player)
-{
-	ENT *eplayer = &player->sp.entity;
-	OBJ *here = player->location;
-	OBJ *tmp;
-	int klock = 0;
-
-	FOR_LIST(tmp, here->contents) {
-		if (tmp->type != TYPE_ENTITY)
-			continue;
-
-		ENT *etmp = &tmp->sp.entity;
-
-		if (etmp->flags & EF_AGGRO) {
-			etmp->target = player;
-			klock++;
-		}
-	}
-
-	eplayer->klock += klock;
-}
-
-static void
-respawn(OBJ *player)
-{
-	ENT *eplayer = &player->sp.entity;
-	OBJ *where;
-
-	onotifyf(player, "%s disappears.", player->name);
-
-	if (eplayer->flags & EF_PLAYER) {
-		struct cmd_dir cd;
-		cd.rep = STARTING_POSITION;
-		cd.dir = '\0';
-		geo_teleport(player, cd);
-		where = player->location;
-	} else {
-		where = eplayer->home;
-		/* warn("respawning %d to %d\n", who, where); */
-		object_move(player, where);
-	}
-
-	onotifyf(player, "%s appears.", player->name);
-}
-
-static inline int
-huth_notify(OBJ *player, unsigned v, unsigned char y, char const *m[4])
-{
-	ENT *eplayer = &player->sp.entity;
-
-	static unsigned const n[] = {
-		1 << (DAY_Y - 1),
-		1 << (DAY_Y - 2),
-		1 << (DAY_Y - 3)
-	};
-
-	register unsigned aux;
-
-	if (v == n[2])
-		notify(eplayer, m[0]);
-	else if (v == (aux = n[1]))
-		notify(eplayer, m[1]);
-	else if (v == (aux += n[0]))
-		notify(eplayer, m[2]);
-	else if (v == (aux += n[2]))
-		notify(eplayer, m[3]);
-	else if (v > aux) {
-		short val = -(HP_MAX(eplayer) >> 3);
-		return entity_damage(NULL, player, val);
-	}
-
-        return 0;
-}
-
-void
-entity_update(OBJ *player)
-{
-	CBUG(player->type != TYPE_ENTITY);
-	ENT *eplayer = &player->sp.entity;
-
-	static char const *thirst_msg[] = {
-		"You are thirsty.",
-		"You are very thirsty.",
-		"you are dehydrated.",
-		"You are dying of thirst."
-	};
-
-	static char const *hunger_msg[] = {
-		"You are hungry.",
-		"You are very hungry.",
-		"You are starving.",
-		"You are starving to death."
-	};
-
-	if (!(eplayer->flags & EF_PLAYER)) {
-		/* warn("%d hp %d/%d\n", player, eplayer->hp, HP_MAX(player)); */
-		if (eplayer->hp == HP_MAX(eplayer)) {
-			/* warn("%d's hp is maximum\n", player); */
-
-			if ((eplayer->flags & EF_SITTING)) {
-				/* warn("%d is sitting so they shall stand\n", player); */
-				stand(player);
-			}
-
-			if (player->location == 0) {
-				/* warn("%d is located at 0, so they shall respawn\n", player); */
-				respawn(player);
-			}
-		} else {
-			/* warn("%d's hp is not maximum\n", player); */
-			if (eplayer->target && !(eplayer->flags & EF_SITTING)) {
-				/* warn("%d is not sitting so they shall sit\n", player); */
-				sit(player, "");
-			}
-		}
-	}
-
-	if (get_tick() % 16 == 0 && (eplayer->flags & EF_SITTING)) {
-		int div = 10;
-		int max, cur;
-		entity_damage(NULL, player, HP_MAX(eplayer) / div);
-
-		max = MP_MAX(eplayer);
-		cur = eplayer->mp + (max / div);
-		eplayer->mp = cur > max ? max : cur;
-
-	}
-
-        CBUG(player->type == TYPE_GARBAGE);
-
-	if (player->location == 0)
-		return;
-
-        /* if mob dies, return */
-	if (huth_notify(player, eplayer->thirst += THIRST_INC, THIRST_Y, thirst_msg)
-                || huth_notify(player, eplayer->hunger += HUNGER_INC, HUNGER_Y, hunger_msg)
-                || debufs_process(player))
-                        return;
-
-	kill_update(player);
-}

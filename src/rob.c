@@ -11,7 +11,7 @@
 void
 do_give(command_t *cmd)
 {
-	OBJ *player = object_get(cmd->player);
+	OBJ *player = cmd->player;
 	ENT *eplayer = &player->sp.entity;
 	const char *recipient = cmd->argv[1];
 	int amount = atoi(cmd->argv[2]);

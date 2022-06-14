@@ -1,7 +1,6 @@
 #ifndef VIEW_H
 #define VIEW_H
 
-#include "geometry.h"
 #include "biome.h"
 #include "plant.h"
 

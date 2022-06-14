@@ -2,8 +2,7 @@
 #define SPELL_H
 
 #include "object.h"
-#include "geometry.h"
-#include "stat.h"
+#include "attr.h"
 #include "command.h"
 
 #define ELEMENT(idx) (&element_map[idx])
@@ -22,23 +21,6 @@ extern element_t element_map[];
 
 #define SPELL_SKELETON(idx) (&spell_skeleton_map[idx])
 #define SPELL_COST(dmg, y, no_bdmg) (no_bdmg ? 0 : dmg) + dmg / (1 << y)
-
-enum spell_affects {
-	// these are changed by bufs
-	AF_HP,
-	AF_MOV,
-	AF_MDMG,
-	AF_MDEF,
-	AF_DODGE,
-
-	// these aren't.
-	AF_DMG,
-	AF_DEF,
-
-	// these are flags, not types of buf
-	AF_NEG = 0x10,
-	AF_BUF = 0x20,
-};
 
 enum spell_type {
 	SPELL_HEAL,

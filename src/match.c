@@ -15,7 +15,6 @@
 #include "interface.h"
 #include "externs.h"
 #include "mob.h"
-#include "kill.h"
 
 OBJ *
 ematch_player(OBJ *player, const char *name)

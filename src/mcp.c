@@ -486,7 +486,7 @@ mcp_observers(OBJ *thing, void *msg)
 }
 
 void do_meme(command_t *cmd) {
-        OBJ *player = object_get(cmd->player);
+        OBJ *player = cmd->player;
         const char *url = cmd->argv[1];
 	McpMesg msg;
         // FIXME should also work in the terminal

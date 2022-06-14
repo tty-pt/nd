@@ -64,7 +64,7 @@ set_property_nofetch(OBJ *player, const char *pname, PData * dat)
 				remove_property_nofetch(player, pname);
 			}
 		} else {
-			SetPDataStr(p, alloc_string(dat->data.str));
+			SetPDataStr(p, strdup(dat->data.str));
 		}
 		break;
 	case PROP_INTTYP:
@@ -233,61 +233,6 @@ get_property(OBJ *player, const char *pname)
 
 	p = propdir_get_elem(player->properties, buf);
 	return (p);
-}
-
-
-/* checks if object has property, returning 1 if it or any of its contents has
-   the property stated                                                      */
-int
-has_property(OBJ *what, const char *pname, const char *strval,
-			 int value)
-{
-	OBJ *things;
-
-	if (has_property_strict(what, pname, strval, value))
-		return 1;
-	FOR_LIST(things, what->contents) {
-		if (has_property(things, pname, strval, value))
-			return 1;
-	}
-	return 0;
-}
-
-
-static int has_prop_recursion_limit = 2;
-/* checks if object has property, returns 1 if it has the property */
-int
-has_property_strict(OBJ *what, const char *pname, const char *strval,
-					int value)
-{
-	PropPtr p;
-	const char *str;
-	char *ptr;
-	char buf[BUFFER_LEN];
-
-	p = get_property(what, pname);
-
-	if (p) {
-		switch (PropType(p)) {
-		    case PROP_STRTYP:
-			str = DoNull(PropDataStr(p));
-
-			strlcpy(buf, str, sizeof(buf));
-			ptr = buf;
-
-			has_prop_recursion_limit++;
-			return (equalstr((char *) strval, ptr));
-
-		    case PROP_INTTYP:
-			return (value == PropDataVal(p));
-		    case PROP_FLTTYP:
-			return (value == (int) PropDataFVal(p));
-		    default:
-			/* assume other types don't match */
-			return 0;
-		}
-	}
-	return 0;
 }
 
 /* return string value of property */
@@ -574,7 +519,7 @@ displayprop(OBJ *player, OBJ *obj, const char *name, char *buf, size_t bufsiz)
 
 extern short db_conversion_flag;
 
-int
+static int
 db_get_single_prop(FILE * f, OBJ *obj, long pos, PropPtr pnode, const char *pdir)
 {
 	char getprop_buf[BUFFER_LEN * 3];
@@ -647,7 +592,7 @@ db_get_single_prop(FILE * f, OBJ *obj, long pos, PropPtr pnode, const char *pdir
 		if (!do_diskbase_propvals || pos) {
 			flg &= ~PROP_ISUNLOADED;
 			if (pnode) {
-				SetPDataStr(pnode, alloc_string(value));
+				SetPDataStr(pnode, strdup(value));
 				SetPFlagsRaw(pnode, flg);
 			} else {
 				mydat.flags = flg;
@@ -726,9 +671,9 @@ db_get_single_prop(FILE * f, OBJ *obj, long pos, PropPtr pnode, const char *pdir
 }
 
 void
-db_getprops(FILE * f, OBJ *obj, const char *pdir)
+db_getprops(FILE * f, OBJ *obj)
 {
-	while (db_get_single_prop(f, obj, 0L, (PropPtr) NULL, pdir)) ;
+	while (db_get_single_prop(f, obj, 0L, (PropPtr) NULL, NULL)) ;
 }
 
 

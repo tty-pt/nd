@@ -1,8 +1,8 @@
 #ifndef PLANT_H
 #define PLANT_H
 
-#include "command.h"
-#include "geometry.h"
+#include "object.h"
+#include "spacetime.h"
 
 #define PLANT_EXTRA 4
 #define PLANT_MASK 0x3

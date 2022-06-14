@@ -52,7 +52,7 @@ create_player(const char *name)
 	OBJ *player = object_new();
 	ENT *eplayer = &player->sp.entity;
 
-	player->name = alloc_string(name);
+	player->name = strdup(name);
 	eplayer->home = player->location = object_get(PLAYER_START);
 	player->type = TYPE_ENTITY;
 	player->owner = player;
@@ -132,7 +132,7 @@ delete_player(OBJ *who)
 				if (ren->name) {
 					free((void *) ren->name);
 				}
-				ren->name = alloc_string(namebuf);
+				ren->name = strdup(namebuf);
 				add_player(ren);
 			}
 		}
@@ -188,7 +188,7 @@ dialog_stop(OBJ *player) {
 void
 do_talk(command_t *cmd) {
         const char buf[BUFSIZ];
-        OBJ *player = object_get(cmd->player);
+        OBJ *player = cmd->player;
 	ENT *eplayer = &player->sp.entity;
         const char *npcs = cmd->argv[1];
 	OBJ *npc = *npcs ? ematch_near(player, npcs) : NULL;
@@ -211,7 +211,7 @@ do_talk(command_t *cmd) {
 	eplayer->dialog_target = npc;
         if (eplayer->dialog)
                 free((void *) eplayer->dialog);
-        eplayer->dialog = alloc_string(dialog);
+        eplayer->dialog = strdup(dialog);
 
         if (mcp_dialog_start(player, npc, dialog))
                 dialog_start(player, npc, dialog);
@@ -240,7 +240,7 @@ props_copy(OBJ *target, OBJ *what, const char *prefix, int ignore) {
 void
 do_answer(command_t *cmd) {
         const char buf[BUFSIZ];
-        OBJ *player = object_get(cmd->player);
+        OBJ *player = cmd->player;
 	ENT *eplayer = &player->sp.entity;
         OBJ *npc = eplayer->dialog_target;
         const char *dialog = eplayer->dialog;
@@ -262,7 +262,7 @@ do_answer(command_t *cmd) {
                 mcp_dialog_stop(player);
                 return;
         }
-        eplayer->dialog = alloc_string(dialog);
+        eplayer->dialog = strdup(dialog);
 
         if (mcp_dialog_start(player, npc, dialog))
                 dialog_start(player, npc, dialog);

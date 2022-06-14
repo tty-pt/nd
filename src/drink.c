@@ -1,4 +1,4 @@
-#include "drink.h"
+#include "consumable.h"
 #include "io.h"
 #include "entity.h"
 
@@ -13,7 +13,7 @@
 void
 do_consume(command_t *cmd)
 {
-	OBJ *player = object_get(cmd->player);
+	OBJ *player = cmd->player;
 	ENT *eplayer = &player->sp.entity;
 	const char *name = cmd->argv[1];
 	OBJ *vial;
@@ -57,7 +57,7 @@ do_consume(command_t *cmd)
 void
 do_fill(command_t *cmd)
 {
-	OBJ *player = object_get(cmd->player);
+	OBJ *player = cmd->player;
 	ENT *eplayer = &player->sp.entity;
 	const char *vial_s = cmd->argv[1];
 	const char *source_s = cmd->argv[2];

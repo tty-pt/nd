@@ -8,8 +8,10 @@
 #define NOTHING ((dbref) -1)
 #define FOR_ALL(var) for (var = object_get(db_top); var-- > object_get(0); )
 #define FOR_LIST(var, first) for ((var) = (first); var; (var) = var->next)
+#define PUSH(thing, locative) { thing->next = (locative); (locative) = thing; }
 
 #define GOD ((dbref) 1)
+#define God(obj) (object_ref(obj) == (GOD))
 
 typedef int dbref;
 
@@ -25,6 +27,10 @@ enum type {
 	TYPE_GARBAGE,
 };
 
+enum object_flags {
+	OF_INF = 1,
+};
+
 struct wts {
 	const char *a, *b;
 };
@@ -37,6 +43,17 @@ struct observer_node {
 enum room_flags {
 	RF_TEMP = 1,
 	RF_HAVEN = 2,
+};
+
+enum exit {
+	E_NULL = 0,
+	E_WEST = 1,
+	E_NORTH = 2,
+	E_UP = 4,
+	E_EAST = 8,
+	E_SOUTH = 16,
+	E_DOWN = 32,
+	E_ALL = 63,
 };
 
 typedef struct {
@@ -89,6 +106,23 @@ struct spell {
 	unsigned short val;
 };
 
+enum spell_affects {
+	// these are changed by bufs
+	AF_HP,
+	AF_MOV,
+	AF_MDMG,
+	AF_MDEF,
+	AF_DODGE,
+
+	// these aren't.
+	AF_DMG,
+	AF_DEF,
+
+	// these are flags, not types of buf
+	AF_NEG = 0x10,
+	AF_BUF = 0x20,
+};
+
 struct effect {
 	short value;
 	unsigned char mask;
@@ -116,6 +150,12 @@ typedef struct entity {
 
 enum equipment_flags {
 	EF_EQUIPPED = 1,
+};
+
+enum armor_type {
+	ARMOR_LIGHT,
+	ARMOR_MEDIUM,
+	ARMOR_HEAVY,
 };
 
 typedef struct {
@@ -153,10 +193,16 @@ typedef struct object {
 
 	unsigned char type;
 	unsigned value;
+	unsigned flags;
 
 	union specific sp;
 	/* int skid; */
 } OBJ;
+
+struct icon {
+	int actions;
+	char *icon;
+};
 
 extern dbref db_top;
 

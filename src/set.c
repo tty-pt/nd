@@ -17,8 +17,6 @@
 #include "match.h"
 #include "interface.h"
 #include "externs.h"
-#include "geography.h"
-
 
 static OBJ *
 match_controlled(OBJ *player, const char *name)
@@ -42,7 +40,7 @@ match_controlled(OBJ *player, const char *name)
 void
 do_name(command_t *cmd)
 {
-	OBJ *player = object_get(cmd->player);
+	OBJ *player = cmd->player;
 	ENT *eplayer = &player->sp.entity;
 	const char *name = cmd->argv[1];
 	char *newname = cmd->argv[2];
@@ -72,14 +70,14 @@ do_name(command_t *cmd)
 	if (thing->name) {
 		free((void *) thing->name);
 	}
-	thing->name = alloc_string(newname);
+	thing->name = strdup(newname);
 	notify(eplayer, "Name set.");
 }
 
 void
 do_chown(command_t *cmd)
 {
-	OBJ *player = object_get(cmd->player);
+	OBJ *player = cmd->player;
 	ENT *eplayer = &player->sp.entity;
 	const char *name = cmd->argv[1];
 	const char *newowner = cmd->argv[2];
@@ -111,12 +109,11 @@ do_chown(command_t *cmd)
 		notify(eplayer, "Only wizards can transfer ownership to others.");
 		return;
 	}
-#ifdef GOD_PRIV
+
 	if ((eplayer->flags & EF_WIZARD) && !God(player) && God(owner)) {
 		notify(eplayer, "God doesn't need an offering or sacrifice.");
 		return;
 	}
-#endif /* GOD_PRIV */
 
 	switch (thing->type) {
 	case TYPE_ROOM:
@@ -156,7 +153,7 @@ do_chown(command_t *cmd)
 void
 do_propset(command_t *cmd)
 {
-	OBJ *player = object_get(cmd->player);
+	OBJ *player = cmd->player;
 	ENT *eplayer = &player->sp.entity;
 	const char *name = cmd->argv[1];
 	const char *prop = cmd->argv[2];
@@ -253,6 +250,3 @@ do_propset(command_t *cmd)
 	}
 	notify(eplayer, "Property set.");
 }
-
-static const char *set_c_version = "$RCSfile$ $Revision: 1.31 $";
-const char *get_set_c_version(void) { return set_c_version; }

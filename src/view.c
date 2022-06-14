@@ -5,8 +5,6 @@
 
 #include "map.h"
 #include "noise.h"
-#include "geography.h"
-#include "item.h"
 
 #include "mdb.h"
 #include "externs.h"
@@ -428,5 +426,5 @@ view(OBJ *player)
 void
 do_view(command_t *cmd)
 {
-        view(object_get(cmd->player));
+        view(cmd->player);
 }

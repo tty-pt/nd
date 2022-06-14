@@ -24,22 +24,6 @@ string_prefix(register const char *string, register const char *prefix)
 }
 
 char *
-alloc_string(const char *string)
-{
-	char *s;
-
-	/* NULL, "" -> NULL */
-	if (!string || !*string)
-		return 0;
-
-	if ((s = (char *) malloc(strlen(string) + 1)) == 0) {
-		abort();
-	}
-	strcpy(s, string);  /* Guaranteed enough space. */
-	return s;
-}
-
-char *
 intostr(int i)
 {
 	static char num[16];
@@ -61,12 +45,6 @@ intostr(int i)
 	if (k < 0)
 		*ptr2-- = '-';
 	return (++ptr2);
-}
-
-int
-is_valid_pose_separator(char ch)
-{
-	return (ch == '\'') || (ch == ' ') || (ch == ',') || (ch == '-');
 }
 
 int

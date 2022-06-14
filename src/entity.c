@@ -1,15 +1,26 @@
 #include "entity.h"
+
+#include <stdio.h>
+#include <string.h>
+
 #include "io.h"
-#include "debug.h"
+#include "spacetime.h"
 #include "mcp.h"
 #include "map.h"
 #include "defaults.h"
 #include "params.h"
-#include <string.h>
 #include "match.h"
 #include "props.h"
 #include "view.h"
 #include "room.h"
+#include "equipment.h"
+#include "spell.h"
+#include "debug.h"
+
+#define HUNGER_Y	4
+#define THIRST_Y	2
+#define HUNGER_INC	(1 << (DAYTICK_Y - HUNGER_Y))
+#define THIRST_INC	(1 << (DAYTICK_Y - THIRST_Y))
 
 #define MESGPROP_SEATM	"_seat_m"
 #define GETSEATM(x)	get_property_value(x, MESGPROP_SEATM)
@@ -26,6 +37,46 @@ static const char *rarity_str[] = {
 	ANSI_BOLD ANSI_FG_GREEN "Epic" ANSI_RESET,
 	ANSI_BOLD ANSI_FG_MAGENTA "Mythical" ANSI_RESET
 };
+
+struct wts phys_wts[] = {
+	{ "punch", "punches" },
+	{ "peck", "pecks at" },
+	{ "slash", "slashes" },
+	{ "bite", "bites" },
+	{ "strike", "strikes" },
+};
+
+ENT *
+birth(OBJ *player)
+{
+	ENT *eplayer = &player->sp.entity;
+	eplayer->wts = phys_wts[eplayer->wtso];
+	eplayer->hunger = eplayer->thirst = 0;
+	eplayer->combo = 0;
+	eplayer->hp = HP_MAX(eplayer);
+	eplayer->mp = MP_MAX(eplayer);
+	eplayer->sat = eplayer->target = NULL;
+
+	EFFECT(eplayer, DMG).value = DMG_BASE(eplayer);
+	EFFECT(eplayer, DODGE).value = DODGE_BASE(eplayer);
+
+	spells_init(eplayer->spells, player);
+
+	int i;
+
+	for (i = 0; i < ES_MAX; i++) {
+		register dbref eq = EQUIP(eplayer, i);
+
+		if (eq <= 0)
+			continue;
+
+		OBJ *oeq = object_get(eq);
+		EQU *eeq = &oeq->sp.equipment;
+		CBUG(equip_affect(eplayer, eeq));
+	}
+
+        return eplayer;
+}
 
 void
 recycle(OBJ *player, OBJ *thing)
@@ -152,6 +203,29 @@ recycle(OBJ *player, OBJ *thing)
 	recyclable = thing;
 }
 
+static inline void
+entities_aggro(OBJ *player)
+{
+	ENT *eplayer = &player->sp.entity;
+	OBJ *here = player->location;
+	OBJ *tmp;
+	int klock = 0;
+
+	FOR_LIST(tmp, here->contents) {
+		if (tmp->type != TYPE_ENTITY)
+			continue;
+
+		ENT *etmp = &tmp->sp.entity;
+
+		if (etmp->flags & EF_AGGRO) {
+			etmp->target = player;
+			klock++;
+		}
+	}
+
+	eplayer->klock += klock;
+}
+
 void
 enter(OBJ *player, OBJ *loc)
 {
@@ -161,7 +235,7 @@ enter(OBJ *player, OBJ *loc)
 	object_move(player, loc);
 	room_clean(player, old);
 	onotifyf(player, "%s has arrived.", player->name);
-	mobs_aggro(player);
+	entities_aggro(player);
 	look_around(player);
 }
 
@@ -182,13 +256,11 @@ controls(OBJ *who, OBJ *what)
 
 	/* Wizard controls everything */
 	if (ewho->flags & EF_WIZARD) {
-#ifdef GOD_PRIV
 		if(God(what->owner) && !God(who))
 			/* Only God controls God's objects */
 			return 0;
 		else
-#endif
-		return 1;
+			return 1;
 	}
 
 	/* owners control their own stuff */
@@ -214,12 +286,12 @@ controls_link(OBJ *who, OBJ *what)
 	}
 }
 
-#define BUFF(...) buf_l += snprintf(&buf[buf_l], BUFFER_LEN - buf_l, __VA_ARGS__)
+#define BUFF(...) buf_l += snprintf(&buf[buf_l], BUFSIZ - buf_l, __VA_ARGS__)
 
 const char *
 unparse(OBJ *player, OBJ *loc)
 {
-	static char buf[BUFFER_LEN];
+	static char buf[BUFSIZ];
         size_t buf_l = 0;
 
 	if (player && player->type != TYPE_ENTITY)
@@ -307,6 +379,13 @@ stand_silent(OBJ *player)
 	return 0;
 }
 
+void
+stand(OBJ *player) {
+	ENT *eplayer = &player->sp.entity;
+	if (stand_silent(player))
+		notify(eplayer, "You are already standing.");
+}
+
 int
 cando(OBJ *player, OBJ *thing, const char *default_fail_msg)
 {
@@ -373,6 +452,119 @@ look_around(OBJ *player)
 	look_room(player, player->location);
 }
 
+int
+equip_affect(ENT *ewho, EQU *equ)
+{
+	register int msv = equ->msv,
+		 eqw = equ->eqw,
+		 eql = EQL(eqw),
+		 eqt = EQT(eqw);
+
+	unsigned aux = 0;
+
+	switch (eql) {
+	case ES_RHAND:
+		if (ewho->attr[ATTR_STR] < msv)
+			return 1;
+		EFFECT(ewho, DMG).value += DMG_WEAPON(equ);
+		ewho->wts = WTS_WEAPON(equ);
+		break;
+
+	case ES_HEAD:
+	case ES_PANTS:
+		aux = 1;
+	case ES_CHEST:
+
+		switch (eqt) {
+		case ARMOR_LIGHT:
+			if (ewho->attr[ATTR_DEX] < msv)
+				return 1;
+			aux += 2;
+			break;
+		case ARMOR_MEDIUM:
+			msv /= 2;
+			if (ewho->attr[ATTR_STR] < msv
+			    || ewho->attr[ATTR_DEX] < msv)
+				return 1;
+			aux += 1;
+			break;
+		case ARMOR_HEAVY:
+			if (ewho->attr[ATTR_STR] < msv)
+				return 1;
+		}
+		aux = DEF_ARMOR(equ, aux);
+		EFFECT(ewho, DEF).value += aux;
+		int pd = EFFECT(ewho, DODGE).value - DODGE_ARMOR(aux);
+		EFFECT(ewho, DODGE).value = pd > 0 ? pd : 0;
+	}
+
+	return 0;
+}
+
+int
+equip(OBJ *who, OBJ *eq)
+{
+	CBUG(who->type != TYPE_ENTITY);
+	ENT *ewho = &who->sp.entity;
+	CBUG(eq->type != TYPE_EQUIPMENT);
+	EQU *eeq = &eq->sp.equipment;
+	unsigned eql = EQL(eeq->eqw);
+
+	if (!eql || EQUIP(ewho, eql) > 0
+	    || equip_affect(ewho, eeq))
+		return 1;
+
+	EQUIP(ewho, eql) = object_ref(eq);
+	eeq->flags |= EF_EQUIPPED;
+
+	notifyf(ewho, "You equip %s.", eq->name);
+	mcp_stats(who);
+	mcp_content_out(who, eq);
+	mcp_equipment(who);
+	return 0;
+}
+
+dbref
+unequip(OBJ *player, unsigned eql)
+{
+	ENT *eplayer = &player->sp.entity;
+	dbref eq = EQUIP(eplayer, eql);
+	unsigned eqt, aux;
+
+	if (!eq)
+		return NOTHING;
+
+	OBJ *oeq = object_get(eq);
+	EQU *eeq = &oeq->sp.equipment;
+	eqt = EQT(eeq->eqw);
+	aux = 0;
+
+	switch (eql) {
+	case ES_RHAND:
+		EFFECT(eplayer, DMG).value -= DMG_WEAPON(eeq);
+		eplayer->wts = phys_wts[eplayer->wtso];
+		break;
+	case ES_PANTS:
+	case ES_HEAD:
+		aux = 1;
+	case ES_CHEST:
+		switch (eqt) {
+		case ARMOR_LIGHT: aux += 2; break;
+		case ARMOR_MEDIUM: aux += 1; break;
+		}
+		aux = DEF_ARMOR(eeq, aux);
+		EFFECT(eplayer, DEF).value -= aux;
+		EFFECT(eplayer, DODGE).value += DODGE_ARMOR(aux);
+	}
+
+	EQUIP(eplayer, eql) = NOTHING;
+	eeq->flags &= ~EF_EQUIPPED;
+	mcp_content_in(player, oeq);
+	mcp_stats(player);
+	mcp_equipment(player);
+	return eq;
+}
+
 static inline unsigned
 entity_xp(ENT *eplayer, ENT *etarget)
 {
@@ -409,7 +601,7 @@ static inline OBJ *
 entity_body(OBJ *player, OBJ *mob)
 {
 	char buf[32];
-	struct object_skeleton o = { "", "", "" };
+	struct object_skeleton o = { .name = "", .description = "", .art = "", .avatar = "" };
 	snprintf(buf, sizeof(buf), "%s's body.", mob->name);
 	o.name = buf;
 	OBJ *dead_mob = object_add(&o, mob->location);
@@ -525,7 +717,7 @@ void
 art(int fd, const char *art)
 {
 	FILE *f;
-	char buf[BUFFER_LEN];
+	char buf[BUFSIZ];
         size_t len = strlen(art);
 
         if (!strcmp(art + len - 3, "txt")) {
@@ -561,7 +753,7 @@ look_simple(ENT *eplayer, OBJ *thing)
 void
 do_look_at(command_t *cmd)
 {
-	OBJ *player = object_get(cmd->player);
+	OBJ *player = cmd->player;
 	ENT *eplayer = &player->sp.entity;
 	const char *name = cmd->argv[1];
 	OBJ *thing;
@@ -604,3 +796,234 @@ do_look_at(command_t *cmd)
 	}
 }
 
+static void
+respawn(OBJ *player)
+{
+	ENT *eplayer = &player->sp.entity;
+	OBJ *where;
+
+	onotifyf(player, "%s disappears.", player->name);
+
+	if (eplayer->flags & EF_PLAYER) {
+		struct cmd_dir cd;
+		cd.rep = STARTING_POSITION;
+		cd.dir = '\0';
+		st_teleport(player, cd);
+		where = player->location;
+	} else {
+		where = eplayer->home;
+		/* warn("respawning %d to %d\n", who, where); */
+		object_move(player, where);
+	}
+
+	onotifyf(player, "%s appears.", player->name);
+}
+
+static inline int
+huth_notify(OBJ *player, unsigned v, unsigned char y, char const *m[4])
+{
+	ENT *eplayer = &player->sp.entity;
+
+	static unsigned const n[] = {
+		1 << (DAY_Y - 1),
+		1 << (DAY_Y - 2),
+		1 << (DAY_Y - 3)
+	};
+
+	register unsigned aux;
+
+	if (v == n[2])
+		notify(eplayer, m[0]);
+	else if (v == (aux = n[1]))
+		notify(eplayer, m[1]);
+	else if (v == (aux += n[0]))
+		notify(eplayer, m[2]);
+	else if (v == (aux += n[2]))
+		notify(eplayer, m[3]);
+	else if (v > aux) {
+		short val = -(HP_MAX(eplayer) >> 3);
+		return entity_damage(NULL, player, val);
+	}
+
+        return 0;
+}
+
+// returns 1 if target dodges
+static inline int
+dodge_get(ENT *eplayer)
+{
+	OBJ *target = eplayer->target;
+	ENT *etarget = &target->sp.entity;
+	int d = RAND_MAX / 4;
+	short ad = EFFECT(eplayer, DODGE).value,
+	      dd = EFFECT(etarget, DODGE).value;
+
+	if (ad > dd)
+		d += 3 * d / (ad - dd);
+
+	return rand() <= d;
+}
+
+int
+kill_dodge(OBJ *player, struct wts wts)
+{
+	ENT *eplayer = &player->sp.entity;
+	OBJ *target = eplayer->target;
+	ENT *etarget = &target->sp.entity;
+	if (!EFFECT(etarget, MOV).value && dodge_get(eplayer)) {
+		notify_wts_to(target, player, "dodge", "dodges", "'s %s", wts.a);
+		return 1;
+	} else
+		return 0;
+}
+
+static inline short
+randd_dmg(short dmg)
+{
+	register unsigned short xx = 1 + (random() & 7);
+	return xx = dmg + ((dmg * xx * xx * xx) >> 9);
+}
+
+short
+kill_dmg(enum element dmg_type, short dmg,
+	short def, enum element def_type)
+{
+	if (dmg > 0) {
+		if (dmg_type == ELEMENT(def_type)->weakness)
+			dmg *= 2;
+		else if (ELEMENT(dmg_type)->weakness == def_type)
+			dmg /= 2;
+
+		if (dmg < def)
+			return 0;
+
+	} else
+		// heal TODO make type matter
+		def = 0;
+
+	return randd_dmg(dmg - def);
+}
+
+static inline void
+attack(OBJ *player)
+{
+	ENT *eplayer = &player->sp.entity,
+	    *etarget;
+
+	register unsigned char mask;
+
+	mask = EFFECT(eplayer, MOV).mask;
+
+	if (mask) {
+		register unsigned i = __builtin_ffs(mask) - 1;
+		debuf_notify(player, &eplayer->debufs[i], 0);
+		return;
+	}
+
+	OBJ *target = eplayer->target;
+
+	if (!target)
+		return;
+
+	etarget = &target->sp.entity;
+
+	if (!spells_cast(player, target) && !kill_dodge(player, eplayer->wts)) {
+		enum element at = ELEMENT_NEXT(eplayer, MDMG);
+		enum element dt = ELEMENT_NEXT(etarget, MDEF);
+		short aval = -kill_dmg(ELM_PHYSICAL, EFFECT(eplayer, DMG).value, EFFECT(etarget, DEF).value + EFFECT(etarget, MDEF).value, dt);
+		short bval = -kill_dmg(at, EFFECT(eplayer, MDMG).value, EFFECT(etarget, MDEF).value, dt);
+		char const *color = ELEMENT(at)->color;
+		notify_attack(player, target, eplayer->wts, aval, color, bval);
+		entity_damage(player, target, aval + bval);
+	}
+}
+
+static inline void
+kill_update(OBJ *player)
+{
+	ENT *eplayer = &player->sp.entity;
+	OBJ *target = eplayer->target;
+
+	if (!target
+            || target->type == TYPE_GARBAGE
+	    || target->location != player->location) {
+		eplayer->target = NULL;
+		return;
+	}
+
+	ENT *etarget = &target->sp.entity;
+
+	if (!etarget->target)
+		etarget->target = player;
+
+	stand_silent(player);
+	attack(player);
+}
+
+void
+entity_update(OBJ *player)
+{
+	CBUG(player->type != TYPE_ENTITY);
+	ENT *eplayer = &player->sp.entity;
+
+	static char const *thirst_msg[] = {
+		"You are thirsty.",
+		"You are very thirsty.",
+		"you are dehydrated.",
+		"You are dying of thirst."
+	};
+
+	static char const *hunger_msg[] = {
+		"You are hungry.",
+		"You are very hungry.",
+		"You are starving.",
+		"You are starving to death."
+	};
+
+	if (!(eplayer->flags & EF_PLAYER)) {
+		/* warn("%d hp %d/%d\n", player, eplayer->hp, HP_MAX(player)); */
+		if (eplayer->hp == HP_MAX(eplayer)) {
+			/* warn("%d's hp is maximum\n", player); */
+
+			if ((eplayer->flags & EF_SITTING)) {
+				/* warn("%d is sitting so they shall stand\n", player); */
+				stand(player);
+			}
+
+			if (player->location == 0) {
+				/* warn("%d is located at 0, so they shall respawn\n", player); */
+				respawn(player);
+			}
+		} else {
+			/* warn("%d's hp is not maximum\n", player); */
+			if (!eplayer->target && !(eplayer->flags & EF_SITTING)) {
+				/* warn("%d is not sitting so they shall sit\n", player); */
+				sit(player, "");
+			}
+		}
+	}
+
+	if (get_tick() % 16 == 0 && (eplayer->flags & EF_SITTING)) {
+		int div = 10;
+		int max, cur;
+		entity_damage(NULL, player, HP_MAX(eplayer) / div);
+
+		max = MP_MAX(eplayer);
+		cur = eplayer->mp + (max / div);
+		eplayer->mp = cur > max ? max : cur;
+
+	}
+
+        CBUG(player->type == TYPE_GARBAGE);
+
+	if (player->location == 0)
+		return;
+
+        /* if mob dies, return */
+	if (huth_notify(player, eplayer->thirst += THIRST_INC, THIRST_Y, thirst_msg)
+                || huth_notify(player, eplayer->hunger += HUNGER_INC, HUNGER_Y, hunger_msg)
+                || debufs_process(player))
+                        return;
+
+	kill_update(player);
+}

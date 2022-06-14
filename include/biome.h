@@ -1,7 +1,7 @@
 #ifndef BIOME_H
 #define BIOME_H
 
-#include "geometry.h" /* for struct obj */
+#include "skeleton.h"
 
 enum biome {
 	BIOME_WATER,

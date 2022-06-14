@@ -38,7 +38,7 @@ void do_meme(command_t *);
 /* from db.c */
 extern int number(const char *s);
 extern int ifloat(const char *s);
-extern void getproperties(FILE * f, OBJ *obj, const char *pdir);
+extern void getproperties(FILE * f, OBJ *obj);
 
 /* From create.c */
 extern void do_create(command_t *);
@@ -55,7 +55,6 @@ extern void kill_hash(hash_tab * table, unsigned size, int freeptrs);
 /* From help.c */
 extern void spit_file(OBJ *player, const char *filename);
 extern void do_help(command_t *);
-extern void do_news(command_t *);
 extern void do_man(command_t *);
 extern void do_motd(command_t *);
 extern void do_info(command_t *);
@@ -81,7 +80,6 @@ extern void do_fill(command_t *);
 extern void do_shop(command_t *);
 extern void do_buy(command_t *);
 extern void do_sell(command_t *);
-extern int p_vendor(dbref obj);
 
 /* from kill.c */
 extern void do_kill(command_t *);
@@ -100,7 +98,6 @@ extern void do_recycle(command_t *);
 
 /* From player.c */
 OBJ *lookup_player(const char *name);
-extern void do_password(command_t *);
 extern void add_player(OBJ *who);
 extern void delete_player(OBJ *who);
 extern void clear_players(void);
@@ -110,19 +107,14 @@ extern int dialog_exists(OBJ *what);
 extern void dialog_stop(OBJ *player);
 
 /* From predicates.c */
-extern int controls(OBJ *who, OBJ *what);
-extern int payfor(OBJ *who, int cost);
 extern int ok_ascii_any(const char *name);
 extern int ok_name(const char *name);
 
 /* From rob.c */
 extern void do_give(command_t *);
-extern void do_rob(command_t *);
 
 /* From set.c */
 extern void do_name(command_t *);
-extern void do_unlink(command_t *);
-extern void do_unlink_quiet(command_t *cmd, const char *name);
 extern void do_chown(command_t *);
 
 /* From speech.c */
@@ -132,29 +124,16 @@ extern void do_say(command_t *cmd);
 /* From stringutil.c */
 extern int string_prefix(const char *string, const char *prefix);
 extern char *intostr(int i);
-extern int prepend_string(char** before, char* start, const char* what);
 extern int is_prop_prefix(const char* Property, const char* Prefix);
 
 /* From wiz.c */
 extern void do_teleport(command_t *);
-extern void do_force(command_t *);
 extern void do_toad(command_t *);
 extern void do_boot(command_t *);
-extern void do_pcreate(command_t *);
 extern void do_usage(command_t *);
-extern void do_bless(command_t *);
-extern void do_unbless(command_t *);
 
 /* From unparse.c */
-struct icon {
-        int actions;
-        char *icon;
-};
-
 extern struct icon icon(OBJ *what);
-
-/* From smatch.c */
-extern int equalstr(char *s, char *t);
 
 /* from property.c */
 char * displayprop(OBJ *player, OBJ *obj, const char *name, char *buf, size_t bufsiz);

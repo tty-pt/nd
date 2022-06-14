@@ -1,45 +1,12 @@
-/* $Header$ */
-
 #ifndef _PARAMS_H
 #define _PARAMS_H
-
-#include "copyright.h"
 
 /* penny related stuff */
 /* amount of object endowment, based on cost */
 #define OBJECT_ENDOWMENT(cost) (((cost)-5)/5)
 #define OBJECT_GETCOST(endow) ((endow)*5+5)
-#define OBJECT_DEPOSIT(endow) ((endow)*5+4)
-
-
-/* timing stuff */
-#define TIME_MINUTE(x)  (60 * (x))	/* 60 seconds */
-#define TIME_HOUR(x)    ((x) * (TIME_MINUTE(60)))	/* 60 minutes */
-#define TIME_DAY(x)     ((x) * (TIME_HOUR(24)))	/* 24 hours   */
-
 
 #define DB_INITIAL_SIZE 100		/* initial malloc() size for the db */
-
-
-/* User interface low level commands */
-#define QUIT_COMMAND "QUIT"
-#define WHO_COMMAND "WHO"
-
-/* Turn this back on when you want MUD to set from root to some user_id */
-/* #define MUD_ID "MUCK" */
-
-/* Turn this on when you want MUCK to set to a specific group ID... */
-/* #define MUD_GID "MUCK" */
-
-/*
- * NICEVAL moved to config.h, where it belongs.
- */
-
-/* Used for breaking out of muf READs or for stopping foreground programs. */
-#define BREAK_COMMAND "@Q"
-
-#define EXIT_DELIMITER ';'		/* delimiter for lists of exit aliases  */
-#define MAX_LINKS 50			/* maximum number of destinations for an exit */
 
 #define MAX_PARENT_DEPTH 256            /* Maximum parenting depth allowed. */
 
@@ -48,11 +15,7 @@
 /* magic cookies (not chocolate chip) :) */
 
 #define ESCAPE_CHAR 27
-#define NOT_TOKEN '!'
-#define AND_TOKEN '&'
-#define OR_TOKEN '|'
 #define LOOKUP_TOKEN '*'
-#define REGISTERED_TOKEN '$'
 #define NUMBER_TOKEN '#'
 #define ARG_DELIMITER '='
 #define PROP_DELIMITER ':'
@@ -62,42 +25,6 @@
 #define PROP_PRIVATE '.'
 #define PROP_HIDDEN '@'
 #define PROP_SEEONLY '~'
-
-/* magic command cookies (oh me, oh my!) */
-
-#define SAY_TOKEN '\''
-#define POSE_TOKEN ';'
-#define OVERIDE_TOKEN '!'
-#define COMMAND_TOKEN ':'
-
-/* @edit'or stuff */
-
-#define EXIT_INSERT "."			/* character to exit from insert mode    */
-#define INSERT_COMMAND 'i'
-#define DELETE_COMMAND 'd'
-#define QUIT_EDIT_COMMAND   'q'
-#define COMPILE_COMMAND 'c'
-#define LIST_COMMAND   'l'
-#define EDITOR_HELP_COMMAND 'h'
-#define KILL_COMMAND 'k'
-#define SHOW_COMMAND 's'
-#define SHORTSHOW_COMMAND 'a'
-#define VIEW_COMMAND 'v'
-#define UNASSEMBLE_COMMAND 'u'
-#define NUMBER_COMMAND 'n'
-#define PUBLICS_COMMAND 'p'
-
-/* maximum number of arguments */
-#define MAX_ARG  2
-
-/* Usage comments:
-   Line numbers start from 1, so when an argument variable is equal to 0, it
-   means that it is non existent.
-
-   I've chosen to put the parameters before the command, because this should
-   more or less make the players get used to the idea of forth coding..     */
-
-
 
 /* ANSI attributes and color codes */
 
@@ -111,7 +38,6 @@
 #define ANSI_REVERSE	"\033[7m"
 #define ANSI_OSTRIKE	"\033[9m"
 
-/* #define ANSI_RESET_BOLD	"\033[21m" */
 #define ANSI_RESET_BOLD	ANSI_DIM
 
 #define ANSI_FG_BLACK	"\033[30m"
@@ -132,22 +58,4 @@
 #define ANSI_BG_MAGENTA	"\033[45m"
 #define ANSI_BG_WHITE	"\033[47m"
 
-/* Ignore related defines */
-
-#define IGNORE_PROP "@__sys__/ignore/def"
-
-/* Do we want MUF math operators (currently =) to work on strings? */
-#undef STRINGMATH
- 
 #endif /* _PARAMS_H */
-
-#ifdef DEFINE_HEADER_VERSIONS
-
-#ifndef paramsh_version
-#define paramsh_version
-const char *params_h_version = "$RCSfile$ $Revision: 1.18 $";
-#endif
-#else
-extern const char *params_h_version;
-#endif
-

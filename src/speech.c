@@ -19,7 +19,7 @@
 void
 do_say(command_t *cmd)
 {
-	OBJ *player = object_get(cmd->player);
+	OBJ *player = cmd->player;
 	ENT *eplayer = &player->sp.entity;
 	const char *message = cmd->argv[1];
 	char buf[BUFFER_LEN];
@@ -31,7 +31,7 @@ do_say(command_t *cmd)
 void
 do_pose(command_t *cmd)
 {
-	OBJ *player = object_get(cmd->player);
+	OBJ *player = cmd->player;
 	const char *message = cmd->argv[1];
 
 	anotifyf(player->location, "%s %s", player->name, message);
@@ -40,7 +40,7 @@ do_pose(command_t *cmd)
 void
 do_wall(command_t *cmd)
 {
-	OBJ *player = object_get(cmd->player);
+	OBJ *player = cmd->player;
 	CBUG(player->type != TYPE_ENTITY);
 	ENT *eplayer = &player->sp.entity;
 	const char *message = cmd->argv[1];
@@ -75,7 +75,7 @@ blank(const char *s)
 void
 do_page(command_t *cmd)
 {
-	OBJ *player = object_get(cmd->player);
+	OBJ *player = cmd->player;
 	ENT *eplayer = &player->sp.entity;
 	const char *arg1 = cmd->argv[1];
 	const char *arg2 = cmd->argv[2];

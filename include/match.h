@@ -3,9 +3,8 @@
 #ifndef _MATCH_H
 #define _MATCH_H
 
-#include "copyright.h"
-#include "command.h"
-#include "mdb.h"
+#include <string.h>
+#include "object.h"
 
 #define NOMATCH_MESSAGE "I don't know what you mean."
 

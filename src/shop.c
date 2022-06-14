@@ -5,8 +5,6 @@
 #include "match.h"
 #include "props.h"
 #include "externs.h"
-#include "item.h"
-#include "kill.h"
 
 static inline OBJ *
 vendor_find(OBJ *where)
@@ -29,7 +27,7 @@ vendor_find(OBJ *where)
 void
 do_shop(command_t *cmd)
 {
-	OBJ *player = object_get(cmd->player);
+	OBJ *player = cmd->player;
 	ENT *eplayer = &player->sp.entity;
 	OBJ *here = player->location;
 	OBJ *npc = vendor_find(here);
@@ -46,7 +44,7 @@ do_shop(command_t *cmd)
             return;
 
 	FOR_LIST(tmp, npc->contents) {
-		if (GETINF(tmp))
+		if (tmp->flags & OF_INF)
 			notifyf(eplayer, "%-13s %5dP (Inf)",
 				tmp->name, tmp->value);
 		else
@@ -58,7 +56,7 @@ do_shop(command_t *cmd)
 void
 do_buy(command_t *cmd)
 {
-	OBJ *player = object_get(cmd->player);
+	OBJ *player = cmd->player;
 	ENT *eplayer = &player->sp.entity;
 	OBJ *here = player->location;
 	const char *name = cmd->argv[1];
@@ -87,9 +85,9 @@ do_buy(command_t *cmd)
 	player->value -= cost;
 	npc->value += cost;
 
-        if (GETINF(item)) {
+        if (item->flags & OF_INF) {
                 OBJ *nu = object_copy(player, item);
-                USETINF(nu);
+		nu->flags &= ~OF_INF;
                 object_move(nu, player);
         } else
                 object_move(item, player);
@@ -100,7 +98,7 @@ do_buy(command_t *cmd)
 void
 do_sell(command_t *cmd)
 {
-	OBJ *player = object_get(cmd->player),
+	OBJ *player = cmd->player,
 	    *here = player->location;
 	ENT *eplayer = &player->sp.entity;
 	const char *name = cmd->argv[1];

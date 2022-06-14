@@ -1,11 +1,12 @@
 #ifndef ENTITY_H
 #define ENTITY_H
 
+#include <math.h>
 #include "object.h"
-#include "math.h"
+#include "biome.h"
 
 #define EQUIP(ent, y) ent->equipment[y]
-#define EFFECT(mob, w) mob->e[AF_ ## w]
+#define EFFECT(ent, w) ent->e[AF_ ## w]
 
 #define ELEMENT_NEXT(ent, type) \
 	element_next(ent, EFFECT(ent, type).mask)
@@ -27,34 +28,49 @@
 #define DMG_BASE(p) DMG_G(p->attr[ATTR_STR])
 #define DODGE_BASE(p) DODGE_G(p->attr[ATTR_DEX])
 
+#define EQT(x)		(x>>6)
 #define EQL(x)		(x & 15)
+
+extern struct wts phys_wts[];
+
+static inline unsigned
+xsqrtx(unsigned x)
+{
+	return x * sqrt(x);
+}
+
+ENT *birth(OBJ *player);
+int kill_dodge(OBJ *player, struct wts wts);
+short kill_dmg(enum element dmg_type,
+		short dmg, short def,
+		enum element def_type);
 
 void recycle(OBJ *player, OBJ *thing);
 void enter(OBJ *player, OBJ *loc);
 
 const char * unparse(OBJ *player, OBJ *loc);
 
+void sit(OBJ *player, char const *what);
 int stand_silent(OBJ *player);
+void stand(OBJ *who);
 
 int cando(OBJ *player, OBJ *thing, const char *default_fail_msg);
+int controls(OBJ *who, OBJ *what);
+int payfor(OBJ *who, int cost);
 
 void look_around(OBJ *player);
 
 int equip_affect(ENT *ewho, EQU *equ);
-dbref unequip(OBJ *player, unsigned eql);
 int equip(OBJ *player, OBJ *eq);
+dbref unequip(OBJ *player, unsigned eql);
 
 enum element element_next(ENT *ref, register unsigned char a);
-
-static inline unsigned
-xsqrtx(unsigned x)
-{
-	// y * x ^ 3/2
-	return x * sqrt(x);
-}
 
 void stats_init(ENT *enu, SENT *sk);
 void entity_update(OBJ *player);
 int entity_damage(OBJ *player, OBJ *target, short amt);
+
+void entities_add(OBJ *where, enum biome, long long pdn);
+
 
 #endif

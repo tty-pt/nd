@@ -4,7 +4,6 @@
 #include "entity.h"
 
 #include "mob.h"
-#include "kill.h"
 
 #include "params.h"
 #include "props.h"

@@ -1,146 +1,21 @@
-/*
- * config.h
- *
- * Tunable parameters -- Edit to you heart's content 
- *
- * Parameters that control system behavior, and tell the system
- * what resources are available (most of this is now done by
- * the configure script).
- *
- * Most of the goodies that used to be here are now in @tune.
- */
-
 #ifndef _CONFIG_H
 #define _CONFIG_H
-
-#include "copyright.h"
-#include "autoconf.h"
-
-/************************************************************************
-   Administrative Options 
-
-   Various things that affect how the muck operates and what privs
- are compiled in.
- ************************************************************************/
 
 #define STD_DB "std.db"
 #define GEO_DB "geo.db"
 
 #define CONFIG_SECURE
-
-/* Makes God (#1) immune to @force, @newpassword, and being set !Wizard.  
- */
-#define GOD_PRIV
-
-/*
- * Port where tinymuck lives -- Note: If you use a port lower than
- * 1024, then the program *must* run suid to root!
- * Port 4201 is a port with historical significance, as the original
- * TinyMUD Classic ran on that port.  It was the office number of James
- * Aspnes, who wrote TinyMUD from which TinyMUCK eventually was derived.
- */
 #define TINYPORT 4201			/* Port that players connect to */
 
-/*
- * There's a set of MUF prims that are considered dangerous.
- * Currently these include only:
- *     TOADPLAYER which can @toad players.
- * These require wizbits, but if someone finds a new way to hack the
- * system to get wizbit perms, these can cause damage that may require
- * a reversion to a previous database to fix.
- * Define this, to make these MUF prims available.
- */
-#undef SCARY_MUF_PRIMS
-
-/*
- * This is a fairly interesting one --
- * the saves are fork()ed off into the background, and the child
- * may cause I/O contention with the parent (the interactive, player-
- * connected process).  If this occurs, you can set this to a number
- * greater than 0 to make it be slightly nicer to the rest of the
- * system.  (Usually, setting it to 1 is all that's needed.)
- */
-#define NICEVAL 1
-
-/************************************************************************
-   Game Options
-
-   These are the ones players will notice. 
- ************************************************************************/
-
-/* Make the `examine' command display full names for types and flags */
-#define VERBOSE_EXAMINE
-
-/* limit on player name length */
-#define PLAYER_NAME_LIMIT 16
 #define HUMAN_BEING 1
 
-/************************************************************************
-   Various Messages 
- 
-   Printed from the server at times, esp. during login.
- ************************************************************************/
-
-/*
- * Welcome message if you don't have a welcome.txt
- */
-#define DEFAULT_WELCOME_MESSAGE "Welcome to TinyMUCK.\r\nTo connect to your existing character, enter \"connect name password\"\r\nTo create a new character, enter \"create name password\"\r\nIMPORTANT! Use the news command to get up-to-date news on program changes.\r\n\r\nYou can disconnect using the QUIT command, which must be capitalized as shown.\r\n\r\nAbusing or harrassing other players will result in expellation.\r\nUse the WHO command to find out who is currently active.\r\n"
-
-/*
- * Error messeges spewed by the help system.
- */
-#define NO_NEWS_MSG "That topic does not exist.  Type 'news topics' to list the news topics available."
-#define NO_HELP_MSG "That topic does not exist.  Type 'help index' to list the help topics available."
-#define NO_MAN_MSG "That topic does not exist.  Type 'man' to list the MUF topics available."
 #define NO_INFO_MSG "That file does not exist.  Type 'info' to get a list of the info files available."
-
-/************************************************************************
-   File locations
- 
-   Where the system looks for its datafiles.
- ************************************************************************/
-
-#define HELP_FILE "data/muckhelp.txt"	/* For the 'help' command      */
-#define HELP_DIR  "data/help"	/* For 'help' subtopic files   */
-#define NEWS_FILE "data/news.txt"	/* For the 'news' command      */
-#define NEWS_DIR  "data/news"	/* For 'news' subtopic files   */
-#define MAN_FILE  "data/man.txt"	/* For the 'man' command       */
-#define MAN_DIR   "data/man"	/* For 'man' subtopic files    */
-#define MPI_FILE  "data/mpihelp.txt"	/* For the 'mpi' command       */
-#define MPI_DIR   "data/mpihelp"	/* For 'mpi' subtopic files    */
-#define INFO_DIR  "data/info/"
-
-/************************************************************************
-  System Dependency Defines. 
-
-  You probably will not have to monkey with this unless the muck fails
- to compile for some reason.
- ************************************************************************/
-
-/* if do_usage() in wiz.c gives you problems compiling, define this */
-#undef NO_USAGE_COMMAND
-
-/* if do_memory() in wiz.c gives you problems compiling, define this */
-#undef NO_MEMORY_COMMAND
 
 /************************************************************************/
 /************************************************************************/
 /*    FOR INTERNAL USE ONLY.  DON'T CHANGE ANYTHING PAST THIS POINT.    */
 /************************************************************************/
 /************************************************************************/
-
-/*
- * When compiling as the sanity program, don't do malloc profiling.
- */
-#ifdef SANITY
-#undef CRT_DEBUG_ALSO
-#endif
-
-/*
- * Very general defines 
- */
-#define TRUE  1
-#define FALSE 0
 
 /*
  * Include all the good standard headers here.
@@ -152,107 +27,10 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-#ifdef HAVE_RANDOM
-# define SRANDOM(seed)	srandom((seed))
-# define RANDOM()	random()
-#else
-# define SRANDOM(seed)	srand((seed))
-# define RANDOM()	rand()
-#endif
+#define SRANDOM(seed)	srandom((seed))
+#define RANDOM()	random()
 
-/*
- * Time stuff.
- */
-#ifdef TIME_WITH_SYS_TIME
-# include <sys/time.h>
-# include <time.h>
-#else
-# ifdef HAVE_SYS_TIME_H
-# include <sys/time.h>
-# else
-#  include <time.h>
-# endif
-#endif
-
-/******************************************************************/
-/* System configuration stuff... Figure out who and what we are.  */
-/******************************************************************/
-
-/*
- * Try and figure out what we are.
- */
-
-#if defined(linux) || defined(__linux__) || defined(LINUX)
-# define SYS_TYPE "Linux"
-# define LINUX
-# define SYSV
-# define SYS_POSIX		/* Linux is POSIX */
-#endif
-
-#ifdef sgi
-# define SYS_TYPE "SGI"
-#endif
-
-#ifdef sun
-# define SYS_TYPE "SUN"
-# define SUN_OS
-# define BSD43
-#endif
-
-#ifdef ultrix
-# define SYS_TYPE "ULTRIX"
-# define ULTRIX
-#endif
-
-#ifdef _AIX
-# define SYS_TYPE "AIX"
-# define AIX
-# define NO_MEMORY_COMMAND
-#endif
-
-#ifdef bds4_3
-# ifndef SYS_TYPE
-#  define SYS_TYPE "BSD 4.3"
-# endif
-# define BSD43
-#endif
-
-#ifdef bds4_2
-# ifndef SYS_TYPE
-#  define SYS_TYPE "BSD 4.2"
-# endif
-#endif
-
-#if defined(SVR3)
-# ifndef SYS_TYPE
-#  define SYS_TYPE "SVR3"
-# endif
-#endif
-
-#if defined(SYSTYPE_SYSV) || defined(_SYSTYPE_SYSV)
-# ifndef SYS_TYPE
-#  define SYS_TYPE "SYSV"
-# endif
-#endif
-
-#ifndef SYS_TYPE
-# define SYS_TYPE "UNKNOWN"
-#endif
-
-/******************************************************************/
-/* Final line of defense for self configuration, systems we know  */
-/* need special treatment.                                        */
-/******************************************************************/
+#include <sys/time.h>
+#include <time.h>
 
 #endif /* _CONFIG_H */
-
-#ifdef DEFINE_HEADER_VERSIONS
-
-#ifndef configh_version
-#define configh_version
-const char *config_h_version = "$RCSfile$ $Revision: 1.35 $";
-#endif
-#else
-extern const char *config_h_version;
-#endif
-

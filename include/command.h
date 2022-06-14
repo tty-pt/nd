@@ -1,10 +1,10 @@
 #ifndef COMMAND_H
 #define COMMAND_H
 
-typedef int dbref;
+#include "object.h"
 
 typedef struct {
-	dbref player;
+	OBJ *player;
 	int fd, argc;
 	char *argv[8];
 } command_t; /* FIXME commandi_t */
@@ -16,6 +16,7 @@ enum command_flags {
 	/* CF_EOL = 2, */
         CF_NOARGS = 4,
 };
+
 typedef struct {
 	char *name;
 	/* size_t nargs; */

@@ -1,18 +1,6 @@
-/* $Header$ */
-
-
-#include "copyright.h"
-#include "config.h"
-
-#include <string.h>
-#include "mdb.h"
-#include "externs.h"
-#include "params.h"
-#include "defaults.h"
-#include "interface.h"
-#include "props.h"
-#include "item.h"
+#include "object.h"
 #include "plant.h"
+#include "params.h"
 
 enum actions {
         ACT_LOOK = 1,
@@ -89,6 +77,3 @@ icon(OBJ *what)
         }
         return ret;
 }
-
-static const char *unparse_c_version = "$RCSfile$ $Revision: 1.11 $";
-const char *get_unparse_c_version(void) { return unparse_c_version; }

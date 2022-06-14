@@ -98,12 +98,7 @@ typedef struct plist *PropPtr;
 #define SetPFlagsRaw(x,y) {(x)->flags = (short)y;}
 #define PropFlagsRaw(x) ((x)->flags)
 
-#define Prop_Blessed(obj,propname) (get_property_flags(obj, propname) & PROP_BLESSED)
-
 /* property access macros */
-#define Prop_ReadOnly(name) \
-    (Prop_Check(name, PROP_RDONLY) || Prop_Check(name, PROP_RDONLY2))
-#define Prop_Private(name) Prop_Check(name, PROP_PRIVATE)
 #define Prop_SeeOnly(name) Prop_Check(name, PROP_SEEONLY)
 #define Prop_Hidden(name) Prop_Check(name, PROP_HIDDEN)
 #define Prop_System(name) is_prop_prefix(name, "@__sys__")
@@ -146,11 +141,6 @@ void set_property_mark(OBJ *obj, const char *propstr, char mark, char *value);
 extern void remove_property_list(OBJ *player, int all);
 extern void remove_property(OBJ *player, const char *type);
 
-extern int has_property(OBJ *what, const char *type,
-						const char *strval, int value);
-extern int has_property_strict(OBJ *what, const char *type,
-							   const char *strval, int value);
-
 extern const char *get_property_class(OBJ *player, const char *type);
 extern double get_property_fvalue(OBJ *player, const char *type);
 extern int get_property_value(OBJ *player, const char *type);
@@ -182,8 +172,7 @@ extern PropPtr propdir_first_elem(PropPtr root, char *path);
 extern PropPtr propdir_next_elem(PropPtr root, char *path);
 
 extern void db_putprop(FILE * f, const char *dir, PropPtr p);
-extern int db_get_single_prop(FILE * f, OBJ *obj, long pos, PropPtr pnode, const char *pdir);
-extern void db_getprops(FILE * f, OBJ *obj, const char *pdir);
+extern void db_getprops(FILE * f, OBJ *obj);
 extern void db_dump_props(FILE * f, OBJ *obj);
 
 #endif /* _PROPS_H */

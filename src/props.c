@@ -362,7 +362,7 @@ copy_proplist(OBJ *obj, PropPtr * nu, PropPtr old)
 		SetPFlagsRaw(p, PropFlagsRaw(old));
 		switch (PropType(old)) {
 		case PROP_STRTYP:
-			SetPDataStr(p, alloc_string(PropDataStr(old)));
+			SetPDataStr(p, strdup(PropDataStr(old)));
 			break;
 		case PROP_DIRTYP:
 			SetPDataVal(p, 0);

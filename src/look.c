@@ -17,12 +17,8 @@
 #include "props.h"
 #include "interface.h"
 #include "match.h"
-#include "dbsearch.h"
 #include "externs.h"
 #include "view.h"
-
-#define EXEC_SIGNAL '@'			/* Symbol which tells us what we're looking at
-					 * is an execution order and not a message.    */
 
 /* prints owner of something */
 static void
@@ -48,53 +44,6 @@ print_owner(OBJ *player, OBJ *thing)
 	notify(eplayer, buf);
 }
 
-int
-listprops_wildcard(OBJ *player, OBJ *thing, const char *dir, const char *wild)
-{
-	ENT *eplayer = &player->sp.entity;
-	char propname[BUFFER_LEN];
-	char wld[BUFFER_LEN];
-	char buf[BUFFER_LEN];
-	char buf2[BUFFER_LEN];
-	char *ptr, *wldcrd = wld;
-	PropPtr propadr, pptr;
-	int i, cnt = 0;
-	int recurse = 0;
-
-	strlcpy(wld, wild, sizeof(wld));
-	i = strlen(wld);
-	if (i && wld[i - 1] == PROPDIR_DELIMITER)
-		strlcat(wld, "*", sizeof(wld));
-	for (wldcrd = wld; *wldcrd == PROPDIR_DELIMITER; wldcrd++) ;
-	if (!strcmp(wldcrd, "**"))
-		recurse = 1;
-
-	for (ptr = wldcrd; *ptr && *ptr != PROPDIR_DELIMITER; ptr++) ;
-	if (*ptr)
-		*ptr++ = '\0';
-
-	propadr = first_prop(thing, (char *) dir, &pptr, propname, sizeof(propname));
-	while (propadr) {
-		if (equalstr(wldcrd, propname)) {
-			snprintf(buf, sizeof(buf), "%s%c%s", dir, PROPDIR_DELIMITER, propname);
-			if (!Prop_System(buf) && ((!Prop_Hidden(buf) && !(PropFlags(propadr) & PROP_SYSPERMS))
-				|| eplayer->flags & EF_WIZARD)) {
-				if (!*ptr || recurse) {
-					cnt++;
-					displayprop(player, thing, buf, buf2, sizeof(buf2));
-					notify(eplayer, buf2);
-				}
-				if (recurse)
-					ptr = "**";
-				cnt += listprops_wildcard(player, thing, buf, ptr);
-			}
-		}
-		propadr = next_prop(pptr, propadr, propname, sizeof(propname));
-	}
-	return cnt;
-}
-
-
 long
 size_object(OBJ *obj, int load)
 {
@@ -113,13 +62,11 @@ size_object(OBJ *obj, int load)
 void
 do_examine(command_t *cmd)
 {
-	OBJ *player = object_get(cmd->player);
+	OBJ *player = cmd->player;
 	ENT *eplayer = &player->sp.entity;
 	const char *name = cmd->argv[1];
-	const char *dir = cmd->argv[2];
 	OBJ *thing, *content;
 	char buf[BUFFER_LEN];
-	int cnt;
 
 	if (*name == '\0') {
 		thing = player->location;
@@ -130,13 +77,6 @@ do_examine(command_t *cmd)
 
 	if (!controls(player, thing)) {
 		print_owner(player, thing);
-		return;
-	}
-	if (*dir) {
-		/* show him the properties */
-		cnt = listprops_wildcard(player, thing, "", dir);
-		snprintf(buf, sizeof(buf), "%d propert%s listed.", cnt, (cnt == 1 ? "y" : "ies"));
-		notify(eplayer, buf);
 		return;
 	}
 	switch (thing->type) {
@@ -243,7 +183,7 @@ do_examine(command_t *cmd)
 void
 do_score(command_t *cmd)
 {
-	OBJ *player = object_get(cmd->player);
+	OBJ *player = cmd->player;
 	ENT *eplayer = &player->sp.entity;
 	char buf[BUFFER_LEN];
 
@@ -255,7 +195,7 @@ do_score(command_t *cmd)
 void
 do_inventory(command_t *cmd)
 {
-	OBJ *player = object_get(cmd->player),
+	OBJ *player = cmd->player,
 	    *thing;
 	ENT *eplayer = &player->sp.entity;
 
@@ -274,7 +214,7 @@ do_inventory(command_t *cmd)
 	do_score(cmd);
 }
 
-void
+static void
 display_objinfo(OBJ *player, OBJ *obj, int output_type)
 {
 	ENT *eplayer = &player->sp.entity;
@@ -330,7 +270,7 @@ display_objinfo(OBJ *player, OBJ *obj, int output_type)
 void
 do_find(command_t *cmd)
 {
-	OBJ *player = object_get(cmd->player);
+	OBJ *player = cmd->player;
 	ENT *eplayer = &player->sp.entity;
 	const char *name = cmd->argv[1];
 	dbref i;
@@ -347,7 +287,7 @@ do_find(command_t *cmd)
 		for (i = 0; i < db_top; i++) {
 			OBJ *oi = object_get(i);
 			if (((eplayer->flags & EF_WIZARD) || oi->owner == player->owner) &&
-				oi->name && (!*name || equalstr(buf, (char *) oi->name))) {
+				oi->name && (!*name || !strcmp(buf, (char *) oi->name))) {
 				display_objinfo(player, oi, 0);
 				total++;
 			}
@@ -361,7 +301,7 @@ do_find(command_t *cmd)
 void
 do_owned(command_t *cmd)
 {
-	OBJ *player = object_get(cmd->player);
+	OBJ *player = cmd->player;
 	ENT *eplayer = &player->sp.entity;
 	const char *name = cmd->argv[1];
 	OBJ *victim;
@@ -395,7 +335,7 @@ do_owned(command_t *cmd)
 void
 do_contents(command_t *cmd)
 {
-	OBJ *player = object_get(cmd->player);
+	OBJ *player = cmd->player;
 	ENT *eplayer = &player->sp.entity;
 	const char *name = cmd->argv[1];
 	OBJ *oi, *thing;
@@ -419,6 +359,3 @@ do_contents(command_t *cmd)
 	notify(eplayer, "***End of List***");
 	notifyf(eplayer, "%d objects found.", total);
 }
-
-static const char *look_c_version = "$RCSfile$ $Revision: 1.29 $";
-const char *get_look_c_version(void) { return look_c_version; }

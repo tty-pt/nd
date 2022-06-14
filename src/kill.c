@@ -1,80 +1,13 @@
 #include "io.h"
 #include "entity.h"
-#include "kill.h"
 #include <math.h>
 #include "mdb.h"
 #include "props.h"
 #include "externs.h"
-#include "item.h"
 #include "params.h"
-#include "geography.h"
 #include "view.h"
 #include "spell.h"
 #include "mob.h"
-
-struct wts phys_wts[] = {
-	{ "punch", "punches" },
-	{ "peck", "pecks at" },
-	{ "slash", "slashes" },
-	{ "bite", "bites" },
-	{ "strike", "strikes" },
-};
-
-static inline short
-randd_dmg(short dmg)
-{
-	register unsigned short xx = 1 + (random() & 7);
-	return xx = dmg + ((dmg * xx * xx * xx) >> 9);
-}
-
-short
-kill_dmg(enum element dmg_type, short dmg,
-	short def, enum element def_type)
-{
-	if (dmg > 0) {
-		if (dmg_type == ELEMENT(def_type)->weakness)
-			dmg *= 2;
-		else if (ELEMENT(dmg_type)->weakness == def_type)
-			dmg /= 2;
-
-		if (dmg < def)
-			return 0;
-
-	} else
-		// heal TODO make type matter
-		def = 0;
-
-	return randd_dmg(dmg - def);
-}
-
-// returns 1 if target dodges
-static inline int
-dodge_get(ENT *eplayer)
-{
-	OBJ *target = eplayer->target;
-	ENT *etarget = &target->sp.entity;
-	int d = RAND_MAX / 4;
-	short ad = EFFECT(eplayer, DODGE).value,
-	      dd = EFFECT(etarget, DODGE).value;
-
-	if (ad > dd)
-		d += 3 * d / (ad - dd);
-
-	return rand() <= d;
-}
-
-int
-kill_dodge(OBJ *player, struct wts wts)
-{
-	ENT *eplayer = &player->sp.entity;
-	OBJ *target = eplayer->target;
-	ENT *etarget = &target->sp.entity;
-	if (!EFFECT(etarget, MOV).value && dodge_get(eplayer)) {
-		notify_wts_to(target, player, "dodge", "dodges", "'s %s", wts.a);
-		return 1;
-	} else
-		return 0;
-}
 
 void
 notify_attack(OBJ *player, OBJ *target, struct wts wts, short val, char const *color, short mval)
@@ -99,45 +32,12 @@ notify_attack(OBJ *player, OBJ *target, struct wts wts, short val, char const *c
 	notify_wts_to(player, target, wts.a, wts.b, "%s", buf);
 }
 
-static inline void
-attack(OBJ *player)
-{
-	ENT *eplayer = &player->sp.entity,
-	    *etarget;
-
-	register unsigned char mask;
-
-	mask = EFFECT(eplayer, MOV).mask;
-
-	if (mask) {
-		register unsigned i = __builtin_ffs(mask) - 1;
-		debuf_notify(player, &eplayer->debufs[i], 0);
-		return;
-	}
-
-	OBJ *target = eplayer->target;
-
-	if (!target)
-		return;
-
-	etarget = &target->sp.entity;
-
-	if (!spells_cast(player, target) && !kill_dodge(player, eplayer->wts)) {
-		enum element at = ELEMENT_NEXT(eplayer, MDMG);
-		enum element dt = ELEMENT_NEXT(etarget, MDEF);
-		short aval = -kill_dmg(ELM_PHYSICAL, EFFECT(eplayer, DMG).value, EFFECT(etarget, DEF).value + EFFECT(etarget, MDEF).value, dt);
-		short bval = -kill_dmg(at, EFFECT(eplayer, MDMG).value, EFFECT(etarget, MDEF).value, dt);
-		char const *color = ELEMENT(at)->color;
-		notify_attack(player, target, eplayer->wts, aval, color, bval);
-		entity_damage(player, target, aval + bval);
-	}
-}
 
 void
 do_kill(command_t *cmd)
 {
 	const char *what = cmd->argv[1];
-	OBJ *player = object_get(cmd->player);
+	OBJ *player = cmd->player;
 	ENT *eplayer = &player->sp.entity;
 	OBJ *here = player->location;
 	ROO *rhere = &here->sp.room;
@@ -165,31 +65,9 @@ do_kill(command_t *cmd)
 }
 
 void
-kill_update(OBJ *player)
-{
-	ENT *eplayer = &player->sp.entity;
-	OBJ *target = eplayer->target;
-
-	if (!target
-            || target->type == TYPE_GARBAGE
-	    || target->location != player->location) {
-		eplayer->target = NULL;
-		return;
-	}
-
-	ENT *etarget = &target->sp.entity;
-
-	if (!etarget->target)
-		etarget->target = player;
-
-	stand_silent(player);
-	attack(player);
-}
-
-void
 do_status(command_t *cmd)
 {
-	OBJ *player = object_get(cmd->player);
+	OBJ *player = cmd->player;
 	ENT *eplayer = &player->sp.entity;
 	// TODO optimize MOB_EV / MOB_EM
 	notifyf(eplayer, "hp %u/%u\tmp %u/%u\tstuck 0x%x\n"
@@ -208,7 +86,7 @@ void
 do_heal(command_t *cmd)
 {
 	const char *name = cmd->argv[1];
-	OBJ *player = object_get(cmd->player),
+	OBJ *player = cmd->player,
 	    *target;
 	ENT *eplayer = &player->sp.entity,
 	    *etarget;
@@ -238,7 +116,7 @@ do_heal(command_t *cmd)
 void
 do_advitam(command_t *cmd)
 {
-	OBJ *player = object_get(cmd->player);
+	OBJ *player = cmd->player;
 	ENT *eplayer = &player->sp.entity;
 	const char *name = cmd->argv[1];
 	OBJ *target = ematch_near(player, name);
@@ -256,7 +134,7 @@ do_advitam(command_t *cmd)
 
 void
 do_train(command_t *cmd) {
-	OBJ *player = object_get(cmd->player);
+	OBJ *player = cmd->player;
 	ENT *eplayer = &player->sp.entity;
 	const char *attrib = cmd->argv[1];
 	const char *amount_s = cmd->argv[2];
@@ -324,20 +202,13 @@ kill_v(OBJ *player, char const *opcs)
 void
 do_sit(command_t *cmd)
 {
-	OBJ *player = object_get(cmd->player);
+	OBJ *player = cmd->player;
 	const char *name = cmd->argv[1];
         sit(player, name);
 }
 
 void
-stand(OBJ *player) {
-	ENT *eplayer = &player->sp.entity;
-	if (stand_silent(player))
-		notify(eplayer, "You are already standing.");
-}
-
-void
 do_stand(command_t *cmd)
 {
-        stand(object_get(cmd->player));
+        stand(cmd->player);
 }

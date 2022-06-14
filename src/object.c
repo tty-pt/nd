@@ -11,7 +11,6 @@
 #include "params.h"
 #include "defaults.h"
 #include "interface.h"
-#include "geography.h"
 
 #include "externs.h"
 
@@ -24,11 +23,6 @@ OBJ *recyclable = NULL;
 #endif							/* DB_INITIAL_SIZE */
 
 dbref db_size = DB_INITIAL_SIZE;
-
-extern char *alloc_string(const char *);
-int number(const char *s);
-int ifloat(const char *s);
-void getproperties(FILE * f, OBJ *obj, const char *pdir);
 
 static inline OBJ *
 _object_parent(OBJ *obj)
@@ -212,7 +206,8 @@ object_write(FILE * f, OBJ *obj)
 	putref(f, object_ref(obj->contents));
 	putref(f, object_ref(obj->next));
 	putref(f, obj->value);
-	putref(f, obj->type);	/* write non-internal flags */
+	putref(f, obj->type);
+	putref(f, obj->flags);
 
 	props_write(f, obj);
 
@@ -298,7 +293,7 @@ objects_write(FILE * f)
 	return object_get(db_top);
 }
 
-#define STRING_READ(x) alloc_string(string_read(x))
+#define STRING_READ(x) strdup(string_read(x))
 
 /* returns true for numbers of form [ + | - ] <series of digits> */
 int
@@ -360,12 +355,8 @@ ifloat(const char *s)
 	return 1;
 }
 
-/*** CHANGED:
-was: PropPtr getproperties(FILE *f)
-now: void getproperties(FILE *f, dbref obj, const char *pdir)
-***/
 void
-getproperties(FILE * f, OBJ *obj, const char *pdir)
+getproperties(FILE * f, OBJ *obj)
 {
 	char buf[BUFFER_LEN * 3], *p;
 	int datalen;
@@ -400,7 +391,7 @@ getproperties(FILE * f, OBJ *obj, const char *pdir)
 			fgets(buf, sizeof(buf), f);
 		}
 	} else {
-		db_getprops(f, obj, pdir);
+		db_getprops(f, obj);
 	}
 }
 
@@ -542,6 +533,7 @@ object_read(FILE * f)
 	o->next = object_get(ref_read(f));
 	o->value = ref_read(f);
 	o->type = ref_read(f);
+	o->flags = ref_read(f);
 	warn("db_read_object_foxen %d %s location %d contents %d next %d type %d\n", ref, o->name,
 			object_ref(o->location),
 			object_ref(o->contents),
@@ -551,7 +543,7 @@ object_read(FILE * f)
 	c = getc(f);
 	if (c == '*') {
 
-		getproperties(f, o, NULL);
+		getproperties(f, o);
 
 		prop_flag++;
 	} else {
@@ -689,7 +681,7 @@ OBJ *
 object_copy(OBJ *player, OBJ *old)
 {
 	OBJ *nu = object_new();
-	nu->name = alloc_string(old->name);
+	nu->name = strdup(old->name);
 	nu->properties = copy_prop(old);
 	nu->contents = nu->next = nu->location = NULL;
 	nu->owner = old->owner;

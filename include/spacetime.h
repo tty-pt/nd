@@ -1,15 +1,15 @@
-#ifndef GEOMETRY_H
-#define GEOMETRY_H
+#ifndef SPACETIME_H
+#define SPACETIME_H
 
 #include <limits.h>
 #include <stdint.h>
-#include <stddef.h>
-#include <string.h>
 #include "object.h"
-#include "command.h"
 
-/* it is possible to add other coord_t (like char) but a corresponding
- * hash function must be used */
+// adds 2^DAYTICK_Y to day tick until it reaches DAYSIZE
+#define DAY_Y		16
+#define DAYTICK_Y	6
+#define DAYTICK		(1<<DAYTICK_Y)
+#define NIGHT_IS	(day_tick > (1 << (DAY_Y - 1)))
 
 #define Y_COORD 0
 #define X_COORD 1
@@ -23,10 +23,6 @@
 #define POOP register int I; for (I = 0; I < DIM; I++)
 #define POOP3D register int I; for (I = 0; I < 3; I++)
 #define POOP4D register int I; for (I = 0; I < 4; I++)
-#define POINT3D_ADD(r, a, b) { POOP3D r[I] = a[I] + b[I]; }
-
-#define DIM2 (DIM * 2)
-#define RECT_SIZE (2 * sizeof(point_t))
 
 #define OBITS(code) (code >> 48)
 
@@ -58,25 +54,9 @@ struct rect {
 	upoint_t l;
 };
 
-/* struct rect3D { */
-/* 	point3D_t s; */
-/* 	upoint3D_t l; */
-/* }; */
-
 struct rect4D {
 	point4D_t s;
 	upoint4D_t l;
-};
-
-enum exit {
-	E_NULL = 0,
-	E_WEST = 1,
-	E_NORTH = 2,
-	E_UP = 4,
-	E_EAST = 8,
-	E_SOUTH = 16,
-	E_DOWN = 32,
-	E_ALL = 63,
 };
 
 typedef struct {
@@ -87,8 +67,17 @@ typedef struct {
 	coord_t dim, dis;
 } exit_t;
 
+struct cmd_dir {
+	char dir;
+	enum exit e;
+	morton_t rep;
+};
+
+extern unsigned short day_tick;
 extern enum exit e_map[];
 extern exit_t exit_map[];
+
+time_t get_tick();
 
 morton_t pos_morton(pos_t);
 void morton_pos(pos_t p, morton_t code);
@@ -104,5 +93,9 @@ const char * e_name(enum exit e);
 const char * e_fname(enum exit e);
 const char * e_other(enum exit e);
 morton_t point_rel_idx(point_t p, point_t s, smorton_t w);
+
+void st_update(void);
+int st_v(OBJ *player, const char *dir);
+int st_teleport(OBJ *player, struct cmd_dir cd);
 
 #endif

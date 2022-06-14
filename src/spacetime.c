@@ -1,26 +1,14 @@
-#include "io.h"
-#include "entity.h"
-#include "geography.h"
-#include "mdb.h"
-#include "props.h"
-#include "match.h"
-#include "params.h"
-#include "defaults.h"
-#include "interface.h"
-#include "externs.h"
+#include "spacetime.h"
+
 #include <stdlib.h>
-#ifdef __OpenBSD__
 #include <db4/db.h>
-#else
-#include <db.h>
-#endif
-#include "kill.h"
-#include "externs.h"
-#include "map.h"
+#include "io.h"
+#include "debug.h"
 #include "noise.h"
-#include "hash.h"
-#include "view.h"
-#include "mob.h"
+#include "map.h"
+#include "entity.h"
+#include "props.h"
+#include "defaults.h"
 
 #define PRECOVERY
 
@@ -41,12 +29,307 @@ typedef struct {
 	int type;
 } op_t;
 
+enum exit e_map[] = {
+	[0 ... 254] = E_NULL,
+	['h'] = E_WEST,
+	['w'] = E_WEST,
+	['j'] = E_SOUTH,
+	['s'] = E_SOUTH,
+	['k'] = E_NORTH,
+	['n'] = E_NORTH,
+	['l'] = E_EAST,
+	['e'] = E_EAST,
+	['K'] = E_UP,
+	['u'] = E_UP,
+	['J'] = E_DOWN,
+	['d'] = E_DOWN,
+};
+
+exit_t exit_map[] = {
+	[0 ... E_ALL] = {
+		.simm = E_NULL,
+		.name = "",
+		.fname = "",
+		.other = "",
+		.dim = 5,
+	},
+	[E_EAST] = {
+		.simm = E_WEST,
+		.name = "east",
+		.fname = "e;east",
+		.other = "wnsud",
+		.dim = 1, .dis = 1,
+	},
+	[E_SOUTH] = {
+		.simm = E_NORTH,
+		.name = "south",
+		.fname = "s;south",
+		.other = "ewudn",
+		.dim = 0, .dis = 1,
+	},
+	[E_WEST] = {
+		.simm = E_EAST,
+		.name = "west",
+		.fname = "w;west",
+		.other = "nsude",
+		.dim = 1, .dis = -1,
+	}, 
+	[E_NORTH] = {
+		.simm = E_SOUTH,
+		.name = "north",
+		.fname = "n;north",
+		.other = "sewud",
+		.dim = 0, .dis = -1,
+	},
+	[E_UP] = {
+		.simm = E_DOWN,
+		.name = "up",
+		.fname = "u;up",
+		.other = "dnsew",
+		.dim = 2, .dis = 1,
+	},
+	[E_DOWN] = {
+		.simm = E_UP,
+		.name = "down",
+		.fname = "d;down",
+		.other = "nsewu",
+		.dim = 2, .dis = -1,
+	},
+};
+
 unsigned short day_tick = 0;
 
-/* }}} */
+static __inline__ ucoord_t
+unsign(coord_t n)
+{
+	ucoord_t r = ((smorton_t) n + COORD_MAX);
+
+	if (r == UCOORD_MAX)
+		return 1;
+
+	return r;
+}
+
+morton_t
+pos_morton(pos_t p)
+{
+	upoint3D_t up;
+	morton_t res = ((morton_t) p[3]) << 48;
+	int i;
+
+	POOP3D up[I] = unsign(p[I]);
+
+	for (i = 0; i < 16; i ++) {
+		POOP3D res |= ((morton_t) ((up[I] >> i) & 1)) << (I + (3 * i));
+	}
+
+	/* debug("encoded point %d %d %d %d -> x%llx", p[0], p[1], p[2], p[3], res); */
+	return res;
+}
+
+static inline coord_t
+sign(ucoord_t n)
+{
+	return (smorton_t) n - COORD_MAX;
+}
 
 void
-geo_update()
+morton_pos(pos_t p, morton_t code)
+{
+	morton_t up[3] = { 0, 0, 0 };
+	int i;
+
+	for (i = 0; i < 16; i ++) {
+		POOP3D up[I] |= ((code >> (I + 3 * i)) & 1) << i;
+	}
+
+	POOP3D p[I] = sign(up[I]);
+	p[3] = OBITS(code);
+	/* debug("decoded point x%llx -> %d %d %d %d", code, p[0], p[1], p[2], p[3]); */
+}
+
+static inline int
+rarity_get() {
+	register int r = random();
+	if (r > RAND_MAX >> 1)
+		return 0; // POOR
+	if (r > RAND_MAX >> 2)
+		return 1; // COMMON
+	if (r > RAND_MAX >> 6)
+		return 2; // UNCOMMON
+	if (r > RAND_MAX >> 10)
+		return 3; // RARE
+	if (r > RAND_MAX >> 14)
+		return 4; // EPIC
+	return 5; // MYTHICAL
+}
+
+OBJ *
+object_add(SKEL *sk, OBJ *where)
+{
+	OBJ *nu = object_new();
+	nu->name = strdup(sk->name);
+	nu->description = strdup(sk->description);
+	nu->art = strdup(sk->art);
+	nu->avatar = strdup(sk->avatar);
+	nu->location = where;
+	nu->owner = object_get(GOD);
+	nu->type = TYPE_THING;
+	if (where)
+		PUSH(nu, where->contents);
+
+	switch (sk->type) {
+	case S_TYPE_EQUIPMENT:
+		{
+			EQU *enu = &nu->sp.equipment;
+			nu->type = TYPE_EQUIPMENT;
+			enu->eqw = sk->sp.equipment.eqw;
+			enu->msv = sk->sp.equipment.msv;
+			enu->rare = rarity_get();
+			CBUG(!where || where->type != TYPE_ENTITY);
+			ENT *ewhere = &where->sp.entity;
+			if (ewhere->fd > 0 && equip(where, nu))
+				;
+		}
+
+		break;
+	case S_TYPE_CONSUMABLE:
+		{
+			CON *cnu = &nu->sp.consumable;
+			nu->type = TYPE_CONSUMABLE;
+			cnu->food = sk->sp.consumable.food;
+			cnu->drink = sk->sp.consumable.drink;
+		}
+
+		break;
+	case S_TYPE_ENTITY:
+		{
+			ENT *enu = &nu->sp.entity;
+			nu->type = TYPE_ENTITY;
+			stats_init(enu, &sk->sp.entity);
+			enu->flags = sk->sp.entity.flags;
+			enu->wtso = sk->sp.entity.wt;
+			birth(nu);
+			object_drop(nu, sk->sp.entity.drop);
+			enu->home = where;
+		}
+
+		break;
+	case S_TYPE_PLANT:
+		nu->type = TYPE_PLANT;
+		object_drop(nu, sk->sp.plant.drop);
+		nu->owner = object_get(GOD);
+		break;
+        case S_TYPE_BIOME:
+		{
+			ROO *rnu = &nu->sp.room;
+			nu->type = TYPE_ROOM;
+			rnu->exits = rnu->doors = 0;
+			rnu->dropto = NULL;
+			rnu->flags = RF_TEMP;
+		}
+
+		break;
+	case S_TYPE_OTHER:
+		break;
+	}
+
+	if (sk->type != S_TYPE_BIOME)
+		mcp_content_in(where, nu);
+
+	return nu;
+}
+
+void
+object_drop(OBJ *where, struct drop **drop)
+{
+        register int i;
+
+	for (; *drop; drop++)
+		if (random() < (RAND_MAX >> (*drop)->y)) {
+                        int yield = (*drop)->yield,
+                            yield_v = (*drop)->yield_v;
+
+                        if (!yield) {
+                                object_add((*drop)->i, where);
+                                continue;
+                        }
+
+                        yield += random() & yield_v;
+
+                        for (i = 0; i < yield; i++)
+                                object_add((*drop)->i, where);
+                }
+}
+
+int
+e_exit_can(OBJ *player, enum exit e) {
+	return e_ground(player->location, e);
+}
+
+int
+e_ground(OBJ *room, enum exit e)
+{
+	pos_t pos;
+
+	if (e & (E_UP | E_DOWN))
+		return 0;
+
+	map_where(pos, room);
+	return pos[2] == 0;
+}
+
+void
+pos_move(pos_t d, pos_t o, enum exit e) {
+	exit_t *ex = &exit_map[e];
+	POOP4D d[I] = o[I];
+	d[ex->dim] += ex->dis;
+}
+
+enum exit
+dir_e(const char dir) {
+	return e_map[(int) dir];
+}
+
+const char
+e_dir(enum exit e) {
+	return exit_map[e].name[0];
+}
+
+enum exit
+e_simm(enum exit e) {
+	return exit_map[e].simm;
+}
+
+const char *
+e_name(enum exit e) {
+	return exit_map[e].name;
+}
+
+const char *
+e_fname(enum exit e) {
+	return exit_map[e].fname;
+}
+
+const char *
+e_other(enum exit e) {
+	return exit_map[e].other;
+}
+
+morton_t
+point_rel_idx(point_t p, point_t s, smorton_t w)
+{
+	smorton_t s0 = s[Y_COORD],
+		s1 = s[X_COORD];
+	if (s0 > p[Y_COORD])
+		s0 -= UCOORD_MAX;
+	if (s1 > p[X_COORD])
+		s1 -= UCOORD_MAX;
+	return (p[Y_COORD] - s0) * w + (p[X_COORD] - s1);
+}
+
+void
+st_update()
 {
 	const char * msg = NULL;
 	dbref i;
@@ -68,37 +351,27 @@ geo_update()
 	}
 }
 
-/* OPS {{{ */
-
-/* Basic {{{ */
-
 static inline void
-geo_pos(pos_t p, OBJ *loc, enum exit e)
+st_pos(pos_t p, OBJ *loc, enum exit e)
 {
 	pos_t aux;
 	map_where(aux, loc);
 	pos_move(p, aux, e);
 	CBUG(!*e_name(e));
-	/* debug("geo_pos %s 0x%llx -> 0x%llx\n", */
+	/* debug("st_pos %s 0x%llx -> 0x%llx\n", */
 	/* 		e_name(e), */
 	/* 		* (morton_t *) aux, */
 	/* 		* (morton_t *) p); */
 }
 
-OBJ *
-geo_there(OBJ *where, enum exit e)
+static OBJ *
+st_there(OBJ *where, enum exit e)
 {
 	pos_t pos;
 	/* CBUG(!*e_name(e)); */
-	geo_pos(pos, where, e);
+	st_pos(pos, where, e);
 	return map_get(pos);
 }
-
-/* }}} */
-
-/* New room {{{ */
-
-// TODO fee -> use legacy system (and improve it)
 
 static inline void
 reward(OBJ *player, const char *msg, int amount)
@@ -137,15 +410,15 @@ wall_around(OBJ *player, enum exit e)
 	const char *s;
 	for (s = e_other(e); *s; s++) {
 		enum exit e2 = dir_e(*s);
-		OBJ *there = geo_there(here, e2);
+		OBJ *there = st_there(here, e2);
 
 		if ((rhere->exits & e2) && there)
 			rhere->exits ^= e2;
 	}
 }
 
-int
-geo_claim(OBJ *player, OBJ *room) {
+static int
+st_claim(OBJ *player, OBJ *room) {
 	ENT *eplayer = &player->sp.entity;
 	ROO *rroom = &room->sp.room;
 
@@ -176,7 +449,7 @@ exits_fix(OBJ *player, OBJ *there, enum exit e)
 
 	for (s = e_other(e); *s; s++) {
 		enum exit e2 = dir_e(*s);
-		OBJ *othere = geo_there(there, e2);
+		OBJ *othere = st_there(there, e2);
 
 		if (!othere)
 			continue;
@@ -208,7 +481,7 @@ exits_infer(OBJ *player, OBJ *here)
 
 	for (; *s; s++) {
 		enum exit e = dir_e(*s);
-		OBJ *there = geo_there(here, e);
+		OBJ *there = st_there(here, e);
 
 		if (!there) {
                         if (e != E_UP && e != E_DOWN)
@@ -254,7 +527,7 @@ others_add(OBJ *where, enum biome b, pos_t p)
 }
 
 static OBJ *
-geo_room_at(OBJ *player, pos_t pos)
+st_room_at(OBJ *player, pos_t pos)
 {
 	struct bio *bio;
 	bio = noise_point(pos);
@@ -277,7 +550,7 @@ geo_room_at(OBJ *player, pos_t pos)
 
 void
 do_bio(command_t *cmd) {
-	OBJ *player = object_get(cmd->player);
+	OBJ *player = cmd->player;
 	ENT *eplayer = &player->sp.entity;
 	struct bio *bio;
 	pos_t pos;
@@ -285,6 +558,19 @@ do_bio(command_t *cmd) {
 	bio = noise_point(pos);
 	notifyf(eplayer, "tmp %d rn %u bio %s(%d)",
 		bio->tmp, bio->rn, biomes[bio->bio_idx].name, bio->bio_idx);
+}
+
+static OBJ *
+st_room(OBJ *player, enum exit e)
+{
+	pos_t pos;
+	OBJ *here = player->location,
+	    *there;
+
+	st_pos(pos, here, e);
+	there = st_room_at(player, pos);
+
+	return there;
 }
 
 static void
@@ -313,37 +599,17 @@ e_move(OBJ *player, enum exit e) {
 		notifyf(eplayer, "You open the %s.", dwts);
 	}
 
-	dest = geo_there(loc, e);
+	dest = st_there(loc, e);
 	notifyf(eplayer, "You go %s.", e_name(e));
 
 	if (!dest)
-		dest = geo_room(player, e);
+		dest = st_room(player, e);
 
 	enter(player, dest);
 
 	if (door)
 		notifyf(eplayer, "You close the %s.", dwts);
 }
-
-// exclusively called by trigger() and carve, in vertical situations
-OBJ *
-geo_room(OBJ *player, enum exit e)
-{
-	pos_t pos;
-	OBJ *here = player->location,
-	    *there;
-
-	geo_pos(pos, here, e);
-	there = geo_room_at(player, pos);
-
-	return there;
-}
-
-/* }}} */
-
-/* OPS {{{ */
-
-/* used only on enter_room */
 
 OBJ *
 room_clean(OBJ *player, OBJ *here)
@@ -384,7 +650,7 @@ carve(OBJ *player, enum exit e)
 	int wall = 0;
 
 	if (!e_ground(here, e)) {
-		if (geo_claim(player, here))
+		if (st_claim(player, here))
 			return;
 
 		if (player->value < ROOM_COST) {
@@ -394,9 +660,9 @@ carve(OBJ *player, enum exit e)
 
 		rhere->exits |= e;
 
-		there = geo_there(here, e);
+		there = st_there(here, e);
 		if (!there)
-			there = geo_room(player, e);
+			there = st_room(player, e);
 		/* wall_around(cmd, exit); */
 		wall = 1;
 	}
@@ -407,7 +673,7 @@ carve(OBJ *player, enum exit e)
 	if (here == there)
 		return;
 
-	geo_claim(player, there);
+	st_claim(player, there);
 
 	if (wall)
 		wall_around(player, e_simm(e));
@@ -436,7 +702,7 @@ uncarve(OBJ *player, enum exit e)
                         return;
                 }
 
-		there = geo_there(here, e);
+		there = st_there(here, e);
 
 		if (!there) {
 			notify(eplayer, "No room there");
@@ -475,7 +741,7 @@ unwall(OBJ *player, enum exit e)
 
 	a = here->owner == player;
 	b = rhere->flags & RF_TEMP;
-	there = geo_there(here, e);
+	there = st_there(here, e);
 
 	ROO *rthere = &there->sp.room;
 
@@ -517,14 +783,14 @@ gexit_claim(OBJ *player, enum exit e)
 {
 	ENT *eplayer = &player->sp.entity;
 	int a, b, c, d;
-	OBJ *here = geo_there(player, e),
+	OBJ *here = st_there(player, e),
 	    *there = player->location;
 	ROO *rthere = &there->sp.room;
 
 	a = here && here->owner == player;
 	c = rthere->flags & RF_TEMP;
 	b = !c && there->owner == player;
-	d = e_ground(there, e_dir(e));
+	d = e_ground(there, e);
 
 	if (a && (b || c))
 		return 0;
@@ -533,7 +799,7 @@ gexit_claim(OBJ *player, enum exit e)
 		if (b)
 			return 0;
 		if (d || c)
-			return geo_claim(player, there);
+			return st_claim(player, there);
 	}
 
 	notify(eplayer, "You can't claim that exit");
@@ -578,7 +844,7 @@ e_wall(OBJ *player, enum exit e)
 
 	rhere->exits &= ~e_simm(e);
 
-	OBJ *there = geo_there(here, e_simm(e));
+	OBJ *there = st_there(here, e_simm(e));
 
 	if (there) {
 		ROO *rthere = &there->sp.room;
@@ -601,7 +867,7 @@ door(OBJ *player, enum exit e)
 
 	rwhere->doors |= e_simm(e);
 
-	where = geo_there(where, e_simm(e));
+	where = st_there(where, e_simm(e));
 
 	if (where) {
 		rwhere = &where->sp.room;
@@ -624,7 +890,7 @@ undoor(OBJ *player, enum exit e)
 
 	rwhere->doors &= ~e_simm(e);
 
-	where = geo_there(where, e_simm(e));
+	where = st_there(where, e_simm(e));
 
 	if (where) {
 		rwhere = &where->sp.room;
@@ -652,7 +918,7 @@ tell_pos(OBJ *player, struct cmd_dir cd) {
 }
 
 int
-geo_teleport(OBJ *player, struct cmd_dir cd)
+st_teleport(OBJ *player, struct cmd_dir cd)
 {
 	ENT *eplayer = &player->sp.entity;
 	pos_t pos;
@@ -671,7 +937,7 @@ geo_teleport(OBJ *player, struct cmd_dir cd)
 		memcpy(pos, &cd.rep, sizeof(cd.rep));
 	there = map_get(pos);
 	if (!there)
-		there = geo_room_at(player, pos);
+		there = st_room_at(player, pos);
 	CBUG(!there);
 	notifyf(eplayer, "Teleporting to 0x%llx.", cd.rep);
 	enter(player, there);
@@ -700,7 +966,7 @@ recall(OBJ *player, struct cmd_dir cd)
 		return 0;
 	cd.rep = strtoull(xs, NULL, 0);
 	cd.dir = '\0';
-	geo_teleport(player, cd);
+	st_teleport(player, cd);
 	return 1;
 }
 
@@ -724,14 +990,14 @@ pull(OBJ *player, struct cmd_dir cd)
 	    || !what
 	    || what->type != TYPE_ROOM
 	    || what->owner != player
-	    || ((there = geo_there(here, e))
+	    || ((there = st_there(here, e))
 		&& room_clean(player, there) == there))
 	{
 		notify(eplayer, "You cannot do that.");
 		return 1;
 	}
 
-	geo_pos(pos, here, e);
+	st_pos(pos, here, e);
 	map_put(pos, what, 0);
 	exits_fix(player, what, e);
 	e_move(player, e);
@@ -746,20 +1012,14 @@ op_t op_map[] = {
 	['w'] = { .op.a = &e_wall },
 	['W'] = { .op.a = &unwall },
 	['x'] = { .op.b = &tell_pos, .type = 1 },
-	['X'] = { .op.b = &geo_teleport, .type = 1 },
+	['X'] = { .op.b = &st_teleport, .type = 1 },
 	['m'] = { .op.b = &mark, .type = 1 },
 	['"'] = { .op.b = &recall, .type = 1 },
 	['#'] = { .op.b = &pull, .type = 1 },
 };
 
-/* }}} */
-
-/* }}} */
-
-/* PARSE {{{ */
-
 static int
-geo_cmd_dir(struct cmd_dir *res, const char *cmd)
+st_cmd_dir(struct cmd_dir *res, const char *cmd)
 {
 	int ofs = 0;
 	morton_t rep = 1;
@@ -778,7 +1038,7 @@ geo_cmd_dir(struct cmd_dir *res, const char *cmd)
 }
 
 int
-geo_v(OBJ *player, char const *opcs)
+st_v(OBJ *player, char const *opcs)
 {
 	struct cmd_dir cd;
 	char const *s = opcs;
@@ -788,7 +1048,7 @@ geo_v(OBJ *player, char const *opcs)
 		op_t op = op_map[(int) *s]; // the op
 		op_a_t *aop = op.type ? NULL : op.op.a; 
 		ofs += !!(aop || op.type);
-		ofs += geo_cmd_dir(&cd, s + ofs);
+		ofs += st_cmd_dir(&cd, s + ofs);
 
 		if (!(aop || op.op.b))
 			aop = &walk;
@@ -808,17 +1068,4 @@ geo_v(OBJ *player, char const *opcs)
 	}
 
 	return s - opcs;
-}
-
-/* }}} */
-
-int gexits(ROO *rwhere) {
-        int i, ret;
-        register char *s;
-        for (s = "wsnedu", ret = 0, i = 1; *s; s++, i <<= 1) {
-		if (!(rwhere->exits & dir_e(*s)))
-                        continue;
-                ret |= i;
-        }
-        return ret;
 }

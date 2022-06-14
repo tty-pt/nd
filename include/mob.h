@@ -3,7 +3,6 @@
 
 #include "biome.h"
 #include "spell.h"
-#include "item.h"
 
 /* FIXME use ref as index */
 #define ENTITY_SKELETON(mob_id) (&entity_skeleton_map[mob_id])
@@ -68,11 +67,5 @@ enum mob_type {
 	/* MOB_FIREBIRD = MOFS_FIRE, */
 	MOB_MAX,
 };
-
-void entities_add(OBJ *where, enum biome, long long pdn);
-ENT *birth(OBJ *player);
-void mobs_aggro(OBJ *player);
-struct object_skeleton const *mob_obj_random();
-void entity_update(OBJ *player);
 
 #endif

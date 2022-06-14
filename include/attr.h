@@ -1,5 +1,5 @@
-#ifndef STAT_H
-#define STAT_H
+#ifndef ATTR_H
+#define ATTR_H
 
 #include "entity.h"
 

@@ -53,11 +53,8 @@
 #include "mcp.h"
 #include "externs.h"
 #include "interp.h"
-#include "kill.h"
 #include "map.h"
 #include "view.h"
-#include "geography.h"
-#include "item.h"
 #include "mob.h"
 #include "hash.h"
 #include "ws.h"
@@ -100,9 +97,6 @@ core_command_t cmds[] = {
 	}, {
 		.name = "advitam",
 		.cb = &do_advitam,
-	}, {
-		.name = "bless",
-		.cb = &do_bless,
 	}, {
 		.name = "bio",
 		.cb = &do_bio,
@@ -160,9 +154,6 @@ core_command_t cmds[] = {
 		.name = "toad",
 		.cb = &do_toad,
 	}, {
-		.name = "unbless",
-		.cb = &do_unbless,
-	}, {
 		.name = "usage",
 		.cb = &do_usage,
 	}, {
@@ -216,9 +207,6 @@ core_command_t cmds[] = {
 	}, {
 		.name = "man",
 		.cb = &do_man,
-	}, {
-		.name = "news",
-		.cb = &do_news,
 	}, {
 		.name = "pose",
 		.cb = &do_pose,
@@ -625,8 +613,6 @@ wall(const char *msg)
 void
 welcome_user(int fd)
 {
-	descr_inband(fd, DEFAULT_WELCOME_MESSAGE);
-
 	if (optflags & OPT_WIZONLY) {
 		descr_inband(fd, "## The game is currently in maintenance mode, and only wizards will be able to connect.\r\n");
 	}
@@ -689,7 +675,7 @@ do_auth(command_t *cmd)
         }
 
 	d->flags |= DF_CONNECTED;
-	d->player = cmd->player = object_ref(player);
+	d->player = cmd->player = player;
 	CBUG(d->fd != fd);
 	ENT *eplayer = &player->sp.entity;
 	eplayer->fd = fd;
@@ -708,7 +694,7 @@ do_v(OBJ *player, char const *cmdstr)
 	char const *s = cmdstr;
 
 	for (; *s && ofs > 0; s += ofs) {
-		ofs = geo_v(player, s);
+		ofs = st_v(player, s);
 		if (ofs < 0)
 			ofs = - ofs;
 		s += ofs;
@@ -733,7 +719,7 @@ command_process(command_t *cmd)
 		return;
 	}
 
-	OBJ *player = object_get(cmd->player);
+	OBJ *player = cmd->player;
 	ENT *eplayer = &player->sp.entity;
 
 	command_debug(cmd, "command_process");
@@ -829,7 +815,7 @@ descr_new()
 	d = &descr_map[fd];
 	memset(d, 0, sizeof(descr_t));
 	d->fd = fd;
-	d->player = -1;
+	d->player = NULL;
 
 #ifdef CONFIG_SECURE
 	d->cSSL = SSL_new(sslctx);
@@ -866,18 +852,18 @@ void
 descr_close(descr_t *d)
 {
 	if (d->flags & DF_CONNECTED) {
-		OBJ *player = object_get(d->player);
+		OBJ *player = d->player;
 		ENT *eplayer = &player->sp.entity;
 
 		warn("%s(%d) disconnects on fd %d\n",
-		     player->name, d->player, d->fd);
+		     player->name, object_ref(player), d->fd);
 		OBJ *last_observed = eplayer->last_observed;
 		if (last_observed)
 			observer_remove(last_observed, player);
 
 		eplayer->fd = -1;
 		d->flags = 0;
-		d->player = NOTHING;
+		d->player = NULL;
 	} else
 		warn("%d never connected\n", d->fd);
 
@@ -966,7 +952,7 @@ shovechars()
 		now = get_now();
                 tick = now - start;
 		objects_update();
-		geo_update();
+		st_update();
 
 		untouchprops_incremental(1);
 
@@ -1020,7 +1006,7 @@ wall_wizards(const char *msg)
 	strlcat(buf, "\r\n", sizeof(buf));
 
 	DESCR_ITER(d) {
-		OBJ *player = object_get(d->player);
+		OBJ *player = d->player;
 		if (player->sp.entity.flags & EF_WIZARD)
 			descr_inband(d->fd, buf);
 	}
