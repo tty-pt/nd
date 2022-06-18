@@ -1,12 +1,11 @@
 #include "io.h"
 #include "entity.h"
-#include <math.h>
-#include "mdb.h"
-#include "externs.h"
+#include "debug.h"
+#include <ctype.h>
 #include "params.h"
-#include "view.h"
+#include "match.h"
+#include "command.h"
 #include "spell.h"
-#include "mob.h"
 
 void
 notify_attack(OBJ *player, OBJ *target, struct wts wts, short val, char const *color, short mval)

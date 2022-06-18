@@ -6,7 +6,7 @@
 #include "mdb.h"
 #include "params.h"
 #include "interface.h"
-#include "externs.h"
+#include "utils.h"
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -21,6 +21,8 @@
 #define MAN_FILE  "data/man.txt"	/* For the 'man' command       */
 #define MAN_DIR   "data/man"	/* For 'man' subtopic files    */
 #define INFO_DIR  "data/info/"
+
+#define NO_INFO_MSG "That file does not exist.  Type 'info' to get a list of the info files available."
 
 void
 spit_file_segment(OBJ *player, const char *filename, const char *seg)

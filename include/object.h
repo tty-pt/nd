@@ -74,6 +74,14 @@ enum entity_flags {
 	EF_BUILDER = 32,
 };
 
+enum wt {
+	WT_PUNCH,
+	WT_PECK,
+	WT_SLASH,
+	WT_BITE,
+	WT_STRIKE,
+};
+
 enum attribute {
 	ATTR_STR,
 	ATTR_CON,

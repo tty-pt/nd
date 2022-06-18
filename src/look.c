@@ -1,46 +1,29 @@
 #include "io.h"
 
-/* $Header$ */
-
-#include "copyright.h"
 #include "entity.h"
-#include "config.h"
-#include "params.h"
 
-/* commands which look at things */
-
-#include <ctype.h>
-#include <string.h>
-
-#include "mdb.h"
 #include "defaults.h"
-#include "interface.h"
 #include "match.h"
 #include "externs.h"
-#include "view.h"
 
 /* prints owner of something */
-static void
-print_owner(OBJ *player, OBJ *thing)
+static inline void
+print_owner(ENT *eplayer, OBJ *thing)
 {
-	ENT *eplayer = &player->sp.entity;
-	char buf[BUFFER_LEN];
-
 	switch (thing->type) {
 	case TYPE_ENTITY:
-		snprintf(buf, sizeof(buf), "%s is an entity.", thing->name);
+		notifyf(eplayer, "%s is an entity.", thing->name);
 		break;
 	case TYPE_ROOM:
 	case TYPE_CONSUMABLE:
 	case TYPE_EQUIPMENT:
 	case TYPE_THING:
-		snprintf(buf, sizeof(buf), "Owner: %s", thing->owner->name);
+		notifyf(eplayer, "Owner: %s", thing->owner->name);
 		break;
 	case TYPE_GARBAGE:
-		snprintf(buf, sizeof(buf), "%s is garbage.", thing->name);
+		notifyf(eplayer, "%s is garbage.", thing->name);
 		break;
 	}
-	notify(eplayer, buf);
 }
 
 void
@@ -60,7 +43,7 @@ do_examine(command_t *cmd)
 	}
 
 	if (!controls(player, thing)) {
-		print_owner(player, thing);
+		print_owner(eplayer, thing);
 		return;
 	}
 	switch (thing->type) {
@@ -128,10 +111,8 @@ do_examine(command_t *cmd)
 		break;
 	case TYPE_THING:
 		/* print location if player can link to it */
-		if (thing->location && controls(player, thing->location)) {
-			snprintf(buf, sizeof(buf), "Location: %s", unparse(player, thing->location));
-			notify(eplayer, buf);
-		}
+		if (thing->location && controls(player, thing->location))
+			notifyf(eplayer, "Location: %s", unparse(player, thing->location));
 		break;
 	case TYPE_ENTITY:
 		{
@@ -160,11 +141,9 @@ do_score(command_t *cmd)
 {
 	OBJ *player = cmd->player;
 	ENT *eplayer = &player->sp.entity;
-	char buf[BUFFER_LEN];
 
-	snprintf(buf, sizeof(buf), "You have %d %s.", player->value,
+	notifyf(eplayer, "You have %d %s.", player->value,
 			player->value == 1 ? PENNY : PENNIES);
-	notify(eplayer, buf);
 }
 
 void
@@ -190,57 +169,11 @@ do_inventory(command_t *cmd)
 }
 
 static void
-display_objinfo(OBJ *player, OBJ *obj, int output_type)
+display_objinfo(OBJ *player, OBJ *obj)
 {
 	ENT *eplayer = &player->sp.entity;
-	char buf[BUFFER_LEN];
-	char buf2[BUFFER_LEN];
-
-	strlcpy(buf2, unparse(player, obj), sizeof(buf2));
-
-	switch (output_type) {
-	case 1:					/* owners */
-		snprintf(buf, sizeof(buf), "%-38.512s  %.512s", buf2, unparse(player, obj->owner));
-		break;
-	case 2:					/* links */
-		switch (obj->type) {
-		case TYPE_ROOM:
-			{
-				ROO *robj = &obj->sp.room;
-				snprintf(buf, sizeof(buf), "%-38.512s  %.512s", buf2,
-						unparse(player, robj->dropto));
-			}
-
-			break;
-		case TYPE_ENTITY:
-			{
-				ENT *eobj = &obj->sp.entity;
-				snprintf(buf, sizeof(buf), "%-38.512s  %.512s", buf2, unparse(player, eobj->home));
-			}
-
-			break;
-		default:
-			snprintf(buf, sizeof(buf), "%-38.512s  %.512s", buf2, "N/A");
-			break;
-		}
-		break;
-	case 3:					/* locations */
-		snprintf(buf, sizeof(buf), "%-38.512s  %.512s", buf2,
-				unparse(player, obj->location));
-		break;
-	case 4:
-		return;
-	case 5:
-		snprintf(buf, sizeof(buf), "%-38.512s  %ld bytes.", buf2, size_object(obj, 0));
-		break;
-	case 0:
-	default:
-		strlcpy(buf, buf2, sizeof(buf));
-		break;
-	}
-	notify(eplayer, buf);
+	notifyf(eplayer, "%s", unparse(player, obj));
 }
-
 
 void
 do_find(command_t *cmd)
@@ -263,7 +196,7 @@ do_find(command_t *cmd)
 			OBJ *oi = object_get(i);
 			if (((eplayer->flags & EF_WIZARD) || oi->owner == player->owner) &&
 				oi->name && (!*name || !strcmp(buf, (char *) oi->name))) {
-				display_objinfo(player, oi, 0);
+				display_objinfo(player, oi);
 				total++;
 			}
 		}
@@ -299,7 +232,7 @@ do_owned(command_t *cmd)
 	for (i = 0; i < db_top; i++) {
 		OBJ *oi = object_get(i);
 		if (oi->owner == victim->owner) {
-			display_objinfo(player, oi, 0);
+			display_objinfo(player, oi);
 			total++;
 		}
 	}
@@ -328,7 +261,7 @@ do_contents(command_t *cmd)
 		return;
 	}
 	FOR_LIST(oi, thing->contents) {
-		display_objinfo(player, oi, 0);
+		display_objinfo(player, oi);
 		total++;
 	}
 	notify(eplayer, "***End of List***");

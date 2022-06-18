@@ -29,4 +29,5 @@ typedef struct view_tile {
 typedef view_tile_t view_t[VIEW_M];
 
 void view(OBJ *player);
+
 #endif

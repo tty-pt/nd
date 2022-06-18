@@ -4,31 +4,18 @@
 #include "copyright.h"
 #include "config.h"
 
-/* Routines for parsing arguments */
 #include <ctype.h>
+#include <stdlib.h>
 
-#include "mdb.h"
 #include "params.h"
-#include "defaults.h"
 #include "match.h"
-#include "interface.h"
-#include "externs.h"
-#include "mob.h"
+#include "utils.h"
+#include "entity.h"
 
 OBJ *
-ematch_player(OBJ *player, const char *name)
+ematch_player(const char *name)
 {
-	OBJ *match;
-	const char *p;
-
-	if (*name == LOOKUP_TOKEN && payfor(player, LOOKUP_COST)) {
-		for (p = name + 1; isspace(*p); p++) ;
-		match = lookup_player(p);
-		if (match)
-			return match;
-	}
-
-	return NULL;
+	return lookup_player(name);
 }
 
 static dbref

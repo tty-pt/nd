@@ -5,6 +5,7 @@
 
 #include <ctype.h>
 #include <string.h>
+#include <stdlib.h>
 
 #include "mdb.h"
 #include "params.h"
@@ -107,6 +108,98 @@ object_new(void)
 	/* clear it out */
 	object_clear(newobj);
 	return newobj;
+}
+
+static inline int
+rarity_get() {
+	register int r = random();
+	if (r > RAND_MAX >> 1)
+		return 0; // POOR
+	if (r > RAND_MAX >> 2)
+		return 1; // COMMON
+	if (r > RAND_MAX >> 6)
+		return 2; // UNCOMMON
+	if (r > RAND_MAX >> 10)
+		return 3; // RARE
+	if (r > RAND_MAX >> 14)
+		return 4; // EPIC
+	return 5; // MYTHICAL
+}
+
+OBJ *
+object_add(SKEL *sk, OBJ *where)
+{
+	OBJ *nu = object_new();
+	nu->name = strdup(sk->name);
+	nu->description = strdup(sk->description);
+	nu->art = strdup(sk->art);
+	nu->avatar = strdup(sk->avatar);
+	nu->location = where;
+	nu->owner = object_get(GOD);
+	nu->type = TYPE_THING;
+	if (where)
+		PUSH(nu, where->contents);
+
+	switch (sk->type) {
+	case S_TYPE_EQUIPMENT:
+		{
+			EQU *enu = &nu->sp.equipment;
+			nu->type = TYPE_EQUIPMENT;
+			enu->eqw = sk->sp.equipment.eqw;
+			enu->msv = sk->sp.equipment.msv;
+			enu->rare = rarity_get();
+			CBUG(!where || where->type != TYPE_ENTITY);
+			ENT *ewhere = &where->sp.entity;
+			if (ewhere->fd > 0 && equip(where, nu))
+				;
+		}
+
+		break;
+	case S_TYPE_CONSUMABLE:
+		{
+			CON *cnu = &nu->sp.consumable;
+			nu->type = TYPE_CONSUMABLE;
+			cnu->food = sk->sp.consumable.food;
+			cnu->drink = sk->sp.consumable.drink;
+		}
+
+		break;
+	case S_TYPE_ENTITY:
+		{
+			ENT *enu = &nu->sp.entity;
+			nu->type = TYPE_ENTITY;
+			stats_init(enu, &sk->sp.entity);
+			enu->flags = sk->sp.entity.flags;
+			enu->wtso = sk->sp.entity.wt;
+			birth(nu);
+			object_drop(nu, sk->sp.entity.drop);
+			enu->home = where;
+		}
+
+		break;
+	case S_TYPE_PLANT:
+		nu->type = TYPE_PLANT;
+		object_drop(nu, sk->sp.plant.drop);
+		nu->owner = object_get(GOD);
+		break;
+        case S_TYPE_BIOME:
+		{
+			ROO *rnu = &nu->sp.room;
+			nu->type = TYPE_ROOM;
+			rnu->exits = rnu->doors = 0;
+			rnu->dropto = NULL;
+			rnu->flags = RF_TEMP;
+		}
+
+		break;
+	case S_TYPE_OTHER:
+		break;
+	}
+
+	if (sk->type != S_TYPE_BIOME)
+		mcp_content_in(where, nu);
+
+	return nu;
 }
 
 void
@@ -236,66 +329,6 @@ objects_write(FILE * f)
 
 #define STRING_READ(x) strdup(string_read(x))
 
-/* returns true for numbers of form [ + | - ] <series of digits> */
-int
-number(const char *s)
-{
-	if (!s)
-		return 0;
-	while (isspace(*s))
-		s++;
-	if (*s == '+' || *s == '-')
-		s++;
-	if (!*s) 
-		return 0;
-	for (; *s; s++)
-		if (*s < '0' || *s > '9')
-			return 0;
-	return 1;
-}
-
-/* returns true for floats of form  [+|-]<digits>.<digits>[E[+|-]<digits>] */
-int
-ifloat(const char *s)
-{
-	const char *hold;
-
-	if (!s)
-		return 0;
-	while (isspace(*s))
-		s++;
-	if (*s == '+' || *s == '-')
-		s++;
-	hold = s;
-	while ((*s) && (*s >= '0' && *s <= '9'))
-		s++;
-	if ((!*s) || (s == hold))
-		return 0;
-	if (*s != '.')
-		return 0;
-	s++;
-	hold = s;
-	while ((*s) && (*s >= '0' && *s <= '9'))
-		s++;
-	if (hold == s)
-		return 0;
-	if (!*s)
-		return 1;
-	if ((*s != 'e') && (*s != 'E'))
-		return 0;
-	s++;
-	if (*s == '+' || *s == '-')
-		s++;
-	hold = s;
-	while ((*s) && (*s >= '0' && *s <= '9'))
-		s++;
-	if (s == hold)
-		return 0;
-	if (*s)
-		return 0;
-	return 1;
-}
-
 void
 object_free(OBJ *o)
 {
@@ -367,19 +400,7 @@ objects_free(void)
 dbref
 ref_read(FILE * f)
 {
-	static char buf[BUFFER_LEN];
-	int peekch;
-
-	/*
-	 * Compiled in with or without timestamps, Sep 1, 1990 by Fuzzy, added to
-	 * Muck by Kinomon.  Thanks Kino!
-	 */
-	peekch = getc(f);
-	ungetc(peekch, f);
-
-	if (peekch == NUMBER_TOKEN || peekch == LOOKUP_TOKEN)
-		return 0;
-
+	static char buf[BUFSIZ];
 	fgets(buf, sizeof(buf), f);
 	return (atol(buf));
 }
@@ -532,7 +553,7 @@ objects_read(FILE * f)
 			/* read it in */
 			object_read(f);
 			break;
-		case LOOKUP_TOKEN:
+		case '*':
 			special = STRING_READ(f);
 			if (strcmp(special, "**END OF DUMP***")) {
 				free((void *) special);
@@ -570,7 +591,7 @@ object_copy(OBJ *player, OBJ *old)
         return nu;
 }
 
-static void
+static inline void
 object_update(OBJ *what) {
 	if (what->type == TYPE_ENTITY)
 		entity_update(what);
@@ -583,4 +604,145 @@ objects_update()
 	dbref i;
 	for (i = db_top; i-- > 0;)
 		object_update(object_get(i));
+}
+
+static inline int
+object_llc(OBJ *source, OBJ *dest)
+{
+	unsigned int level = 0;
+	unsigned int place = 0;
+	OBJ *pstack[MAX_PARENT_DEPTH+2];
+
+	if (source == dest) {
+		return 1;
+	}
+
+	if (!dest)
+		return 0;
+
+	pstack[0] = source;
+	pstack[1] = dest;
+
+	while (level < MAX_PARENT_DEPTH) {
+		dest = dest->location;
+		if (!dest || object_ref(dest) == (dbref) 0) {   /* Reached the top of the chain. */
+			return 0;
+		}
+		/* Check to see if we've found this item before.. */
+		for (place = 0; place < (level+2); place++) {
+			if (pstack[place] == dest) {
+				return 1;
+			}
+		}
+		pstack[level+2] = dest;
+		level++;
+	}
+	return 1;
+}
+
+int
+object_plc(OBJ *source, OBJ *dest)
+{   
+	unsigned int level = 0;
+	unsigned int place = 0;
+	OBJ *pstack[MAX_PARENT_DEPTH+2];
+
+	if (object_llc(source, dest)) {
+		return 1;
+	}
+
+	if (source == dest) {
+		return 1;
+	}
+	pstack[0] = source;
+	pstack[1] = dest;
+
+	while (level < MAX_PARENT_DEPTH) {
+		dest = object_parent(dest);
+		if (!dest)
+			return 0;
+		if (object_ref(dest) == (dbref) 0) {   /* Reached the top of the chain. */
+			return 0;
+		}
+		/* Check to see if we've found this item before.. */
+		for (place = 0; place < (level+2); place++) {
+			if (pstack[place] == dest) {
+				return 1;
+			}
+		}
+		pstack[level+2] = dest;
+		level++;
+	}
+	return 1;
+}
+
+/* remove the first occurence of what in list headed by first */
+static inline OBJ *
+remove_first(OBJ *first, OBJ *what)
+{
+	OBJ *prev;
+
+	/* special case if it's the first one */
+	if (first == what) {
+		return first->next;
+	} else {
+		/* have to find it */
+		FOR_LIST(prev, first) {
+			if (prev->next == what) {
+				prev->next = what->next;
+				return first;
+			}
+		}
+		return first;
+	}
+}
+
+void
+object_move(OBJ *what, OBJ *where)
+{
+	OBJ *loc;
+
+	/* do NOT move garbage */
+	CBUG(!what);
+	CBUG(what->type == TYPE_GARBAGE);
+
+	loc = what->location;
+
+        if (loc) {
+                mcp_content_out(loc, what);
+		loc->contents = remove_first(loc->contents, what);
+        }
+
+	/* test for special cases */
+	if (!where) {
+		what->location = NULL;
+		return;
+	}
+
+	if (object_plc(what, where)) {
+		switch (what->type) {
+		case TYPE_ENTITY:
+			where = what->sp.entity.home;
+			break;
+		case TYPE_PLANT:
+		case TYPE_CONSUMABLE:
+		case TYPE_EQUIPMENT:
+		case TYPE_THING:
+		case TYPE_ROOM:
+		case TYPE_SEAT:
+			where = object_get(GLOBAL_ENVIRONMENT);
+			break;
+		}
+	}
+
+        if (what->type == TYPE_ENTITY) {
+		ENT *ewhat = &what->sp.entity;
+		if ((ewhat->flags & EF_SITTING))
+			stand(what);
+	}
+
+	/* now put what in where */
+	PUSH(what, where->contents);
+	what->location = where;
+	mcp_content_in(where, what);
 }

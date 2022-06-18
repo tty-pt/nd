@@ -63,7 +63,7 @@ struct object_skeleton dagger = {
 	.avatar = "dagger_avatar.png",
 	.type = S_TYPE_EQUIPMENT,
 	.sp = { .equipment = {
-		.eqw = EQ(ES_RHAND, SLASH),
+		.eqw = EQ(ES_RHAND, WT_SLASH),
 		.msv = 5
 	} }
 };

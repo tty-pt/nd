@@ -1,21 +1,13 @@
 #include "mob.h"
 #include "io.h"
-#include "spacetime.h"
 #include "entity.h"
 #include "equipment.h"
-#include "spell.h"
 #include "defaults.h"
 #include "externs.h"
-#include "params.h"
 
 
 #define F(x) (1<<x) // "folds" value FIXME - 1
 #define FIGHTER F(ATTR_STR) | F(ATTR_CON) | F(ATTR_DEX)
-#define MOB_DEFINE(s, de) { #s, #s, de }
-#define BIRD(s, d) .o = { #s, "bird/" #s, d }, \
-	.wt = PECK, .type = ELM_AIR
-#define FISH(s, d) .o = { #s, "fish/" #s, d }, \
-	.wt = BITE, .type = ELM_ICE, .biomes = (1<<BIOME_WATER)
 #define ARMORSET_LIST(s) & s ## _helmet_drop, \
 	& s ## _chest_drop, & s ## _pants_drop
 
@@ -75,7 +67,7 @@ struct object_skeleton entity_skeleton_map[] = {
 		.type = S_TYPE_ENTITY,
 		.sp = {
 			.entity = {
-				.wt = BITE,
+				.wt = WT_BITE,
 				.type = ELM_ICE,
 				.biomes = (1<<BIOME_WATER),
 				.y = 4,
@@ -90,7 +82,7 @@ struct object_skeleton entity_skeleton_map[] = {
 		.type = S_TYPE_ENTITY,
 		.sp = {
 			.entity = {
-				.wt = BITE,
+				.wt = WT_BITE,
 				.type = ELM_ICE,
 				.biomes = (1<<BIOME_WATER),
 				.y = 4,
@@ -105,7 +97,7 @@ struct object_skeleton entity_skeleton_map[] = {
 		.type = S_TYPE_ENTITY,
 		.sp = {
 			.entity = {
-				.wt = BITE,
+				.wt = WT_BITE,
 				.type = ELM_ICE,
 				.biomes = (1<<BIOME_WATER),
 				.y = 6,
@@ -120,7 +112,7 @@ struct object_skeleton entity_skeleton_map[] = {
 		.type = S_TYPE_ENTITY,
 		.sp = {
 			.entity = {
-				.wt = BITE,
+				.wt = WT_BITE,
 				.type = ELM_ICE,
 				.biomes = (1<<BIOME_WATER),
 				.y = 10,
@@ -135,7 +127,7 @@ struct object_skeleton entity_skeleton_map[] = {
 		.type = S_TYPE_ENTITY,
 		.sp = {
 			.entity = {
-				.wt = BITE,
+				.wt = WT_BITE,
 				.type = ELM_ICE,
 				.biomes = (1<<BIOME_WATER),
 				.y = 13,
@@ -150,7 +142,7 @@ struct object_skeleton entity_skeleton_map[] = {
 		.type = S_TYPE_ENTITY,
 		.sp = {
 			.entity = {
-				.wt = BITE,
+				.wt = WT_BITE,
 				.type = ELM_ICE,
 				.biomes = (1<<BIOME_WATER),
 				.y = 13,
@@ -168,7 +160,7 @@ struct object_skeleton entity_skeleton_map[] = {
 		.type = S_TYPE_ENTITY,
 		.sp = {
 			.entity = {
-				.wt = BITE,
+				.wt = WT_BITE,
 				.type = ELM_ICE,
 				.biomes = (1<<BIOME_WATER),
 				.y = 14,
@@ -184,7 +176,7 @@ struct object_skeleton entity_skeleton_map[] = {
 		.type = S_TYPE_ENTITY,
 		.sp = {
 			.entity = {
-				.wt = BITE,
+				.wt = WT_BITE,
 				.type = ELM_ICE,
 				.biomes = (1<<BIOME_WATER),
 				.y = 14,
@@ -200,7 +192,7 @@ struct object_skeleton entity_skeleton_map[] = {
 		.type = S_TYPE_ENTITY,
 		.sp = {
 			.entity = {
-				.wt = PECK,
+				.wt = WT_PECK,
 				.type = ELM_AIR,
 				.biomes = (1 << BIOME_PERMANENT_ICE)
 					| (1 << BIOME_TUNDRA)
@@ -222,7 +214,7 @@ struct object_skeleton entity_skeleton_map[] = {
 		.type = S_TYPE_ENTITY,
 		.sp = {
 			.entity = {
-				.wt = PECK,
+				.wt = WT_PECK,
 				.type = ELM_AIR,
 				.biomes = (1 << BIOME_TEMPERATE_RAINFOREST),
 				.y = 4,
@@ -268,7 +260,7 @@ struct object_skeleton entity_skeleton_map[] = {
 		.avatar = "swallow_avatar.png",
 		.type = S_TYPE_ENTITY,
 		.sp = { .entity = {
-			.wt = PECK,
+			.wt = WT_PECK,
 			.type = ELM_AIR,
 			.y = 4,
 			.biomes = (1 << BIOME_SHRUBLAND)
@@ -317,7 +309,7 @@ struct object_skeleton entity_skeleton_map[] = {
 		.avatar = "woodpecker_avatar.jpg",
 		.type = S_TYPE_ENTITY,
 		.sp = { .entity = {
-			.wt = PECK,
+			.wt = WT_PECK,
 			.type = ELM_AIR,
 			.y = 2,
 			.biomes = (1 << BIOME_SHRUBLAND)
@@ -336,8 +328,26 @@ struct object_skeleton entity_skeleton_map[] = {
 		.avatar = "sparrow_avatar.jpg",
 		.type = S_TYPE_ENTITY,
 		.sp = { .entity = {
-			.wt = PECK, .type = ELM_AIR,
+			.wt = WT_PECK, .type = ELM_AIR,
 			.y = 3,
+			.biomes = (1 << BIOME_SHRUBLAND)
+				| (1 << BIOME_CONIFEROUS_FOREST)
+				| (1 << BIOME_BOREAL_FOREST)
+				| (1 << BIOME_TEMPERATE_GRASSLAND)
+				| (1 << BIOME_WOODLAND)
+				| (1 << BIOME_TEMPERATE_SEASONAL_FOREST)
+				| (1 << BIOME_TEMPERATE_RAINFOREST)
+		} },
+	},
+	[MOB_OWL] = {
+		.name = "owl",
+		.art = "",
+		.description = "",
+		.avatar = "",
+		.type = S_TYPE_ENTITY,
+		.sp = { .entity = {
+			.wt = WT_PECK, .type = ELM_DARK,
+			.y = 7,
 			.biomes = (1 << BIOME_SHRUBLAND)
 				| (1 << BIOME_CONIFEROUS_FOREST)
 				| (1 << BIOME_BOREAL_FOREST)
@@ -349,13 +359,6 @@ struct object_skeleton entity_skeleton_map[] = {
 	},
 	/* [MOB_OWL] = { */
 	/* 	BIRD(owl, ""), .y = 7, .type = ELM_DARK, */
-	/* 	.biomes = (1 << BIOME_SHRUBLAND) */
-	/* 		| (1 << BIOME_CONIFEROUS_FOREST) */
-	/* 		| (1 << BIOME_BOREAL_FOREST) */
-	/* 		| (1 << BIOME_TEMPERATE_GRASSLAND) */
-	/* 		| (1 << BIOME_WOODLAND) */
-	/* 		| (1 << BIOME_TEMPERATE_SEASONAL_FOREST) */
-	/* 		| (1 << BIOME_TEMPERATE_RAINFOREST) */
 	/* }, */
 	/* [MOB_EAGLE] = { */
 	/* 	BIRD(eagle, ""), .y = 7, */
@@ -371,60 +374,4 @@ struct object_skeleton entity_skeleton_map[] = {
 	/* 	.type = ELM_FIRE, .flags = EF_AGGRO, */
 	/* } */
 };
-
-void
-stats_init(ENT *enu, SENT *sk)
-{
-	unsigned char stat = sk->stat;
-	int lvl = sk->lvl, spend, i, sp,
-	    v = sk->lvl_v ? sk->lvl_v : 0xf;
-
-	lvl += random() & v;
-
-	if (!stat)
-		stat = 0x1f;
-
-	spend = 1 + lvl;
-	for (i = 0; i < ATTR_MAX; i++)
-		if (stat & (1<<i)) {
-			sp = random() % spend;
-			enu->attr[i] = sp;
-		}
-
-	enu->lvl = lvl;
-}
-
-static inline int
-bird_is(SENT *sk)
-{
-	return sk->wt == PECK;
-}
-
-static inline OBJ *
-mob_add(enum mob_type mid, OBJ *where, enum biome biome, long long pdn) {
-	struct object_skeleton *obj_skel = ENTITY_SKELETON(mid);
-	CBUG(obj_skel->type != S_TYPE_ENTITY);
-	struct entity_skeleton *mob_skel = &obj_skel->sp.entity;
-
-	if ((bird_is(mob_skel) && !pdn)
-	    || (!NIGHT_IS && (mob_skel->type == ELM_DARK || mob_skel->type == ELM_VAMP))
-	    || random() >= (RAND_MAX >> mob_skel->y))
-		return NULL;
-
-	if (!((1 << biome) & mob_skel->biomes))
-		return NULL;
-
-	return object_add(obj_skel, where);
-}
-
-void
-entities_add(OBJ *where, enum biome biome, long long pdn) {
-	/* int o = MOFS_ICE; */
-	int o = 1;
-	unsigned mid,
-		 n = (sizeof(entity_skeleton_map) / sizeof(struct object_skeleton)) - 1;
-
-	for (mid = o; mid < o + n; mid++)
-		mob_add(mid, where, biome, pdn);
-}
 

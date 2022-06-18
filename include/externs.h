@@ -6,11 +6,6 @@
 #include "object.h"
 
 #include "mdb.h"
-/* Definition of 'McpFrame' */
-#include "mcp.h"
-/* Definition of match_data */
-#include "match.h"
-/* Auto-generated list of extern functions */
 #include "interface.h"
 
 #define warn(fmt, ...) fprintf(stderr, fmt, ## __VA_ARGS__)
@@ -19,12 +14,9 @@
 
 /* interface.c */
 enum opts {
-	OPT_NOSANITY = 1,
-	OPT_SANITY_INTERACTIVE = 2,
-	OPT_SANITY_AUTOFIX = 4,
-	OPT_DETACH = 8,
-	OPT_WIZONLY = 16,
+	OPT_DETACH = 1,
 };
+
 extern short optflags;
 
 /* from timequeue.c */
@@ -32,10 +24,6 @@ void do_pose(command_t *);
 void do_score(command_t *);
 void do_view(command_t *);
 void do_meme(command_t *);
-
-/* from db.c */
-extern int number(const char *s);
-extern int ifloat(const char *s);
 
 /* From create.c */
 extern void do_create(command_t *);
@@ -56,8 +44,6 @@ extern void do_motd(command_t *);
 extern void do_info(command_t *);
 
 /* From look.c */
-extern long size_object(OBJ *obj, int load);
-
 extern void do_look_at(command_t *cmd);
 extern void do_examine(command_t *cmd);
 extern void do_inventory(command_t *cmd);
@@ -100,10 +86,6 @@ extern void clear_players(void);
 extern void do_talk(command_t *);
 extern void do_answer(command_t *);
 
-/* From predicates.c */
-extern int ok_ascii_any(const char *name);
-extern int ok_name(const char *name);
-
 /* From rob.c */
 extern void do_give(command_t *);
 
@@ -114,10 +96,6 @@ extern void do_chown(command_t *);
 /* From speech.c */
 extern void do_wall(command_t *cmd);
 extern void do_say(command_t *cmd);
-
-/* From stringutil.c */
-extern int string_prefix(const char *string, const char *prefix);
-extern char *intostr(int i);
 
 /* From wiz.c */
 extern void do_teleport(command_t *);

@@ -1,16 +1,7 @@
-/* $Header$ */
-
 #include "io.h"
-#include "copyright.h"
 #include "entity.h"
-#include "config.h"
 
-#include <string.h>
-
-#include "mdb.h"
-#include "params.h"
 #include "defaults.h"
-#include "interface.h"
 #include "externs.h"
 
 static hash_tab player_list[PLAYER_HASH_SIZE];
@@ -100,8 +91,7 @@ delete_player(OBJ *who)
 	result = free_hash(who->name, player_list, PLAYER_HASH_SIZE);
 
 	if (result) {
-		wall_wizards
-				("## WARNING: Playername hashtable is inconsistent.  Rebuilding it.  Don't panic.");
+		wall_wizards("## WARNING: Playername hashtable is inconsistent.  Rebuilding it.  Don't panic.");
 		clear_players();
 		for (i = 0; i < db_top; i++) {
 			OBJ *oi = object_get(i);
@@ -138,8 +128,7 @@ delete_player(OBJ *who)
 		}
 		result = free_hash(who->name, player_list, PLAYER_HASH_SIZE);
 		if (result) {
-			wall_wizards
-					("## WARNING: Playername hashtable still inconsistent.  Now you can panic.");
+			wall_wizards("## WARNING: Playername hashtable still inconsistent.  Now you can panic.");
 		}
 	}
 

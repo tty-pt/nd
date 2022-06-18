@@ -1,33 +1,23 @@
-/* $Header$ */
+#include <string.h>
+#include <ctype.h>
 
 #include "io.h"
 #include "entity.h"
 #include "config.h"
+#include "utils.h"
+#include "command.h"
 
-/* Commands that create new objects */
-
-#include <string.h>
-#include <ctype.h>
-#include "mdb.h"
 #include "params.h"
 #include "defaults.h"
-#include "interface.h"
-#include "externs.h"
 #include "match.h"
 
-/*
- * do_clone
- *
- * Use this to clone an object.
- * TODO improve/remove this. use skeletons to copy objects?
- */
+/* TODO improve/remove this. use skeletons to copy objects? */
 void
 do_clone(command_t *cmd)
 {
 	OBJ *player = cmd->player;
 	ENT *eplayer = &player->sp.entity;
 	char *name = cmd->argv[1];
-	static char buf[BUFFER_LEN];
 	OBJ *thing, *clone;
 	int    cost;
 
@@ -121,10 +111,8 @@ do_clone(command_t *cmd)
 		PUSH(clone, player->contents);
 
 		/* and we're done */
-		snprintf(buf, sizeof(buf), "%s created with number %d.", thing->name, object_ref(clone));
-		notify(eplayer, buf);
+		notifyf(eplayer, "%s created with number %d.", thing->name, object_ref(clone));
 	}
-	
 }
 
 /*
@@ -142,8 +130,7 @@ do_create(command_t *cmd)
 	OBJ *thing;
 	int cost;
 
-	static char buf[BUFFER_LEN];
-	char buf2[BUFFER_LEN];
+	char buf2[BUFSIZ];
 	char *rname, *qname;
 
 	strlcpy(buf2, acost, sizeof(buf2));
@@ -163,9 +150,6 @@ do_create(command_t *cmd)
 	}
 	if (*name == '\0') {
 		notify(eplayer, "Create what?");
-		return;
-	} else if(!OK_ASCII_THING(name)) {
-		notify(eplayer, "Thing names are limited to 7-bit ASCII.");
 		return;
 	} else if (!ok_name(name)) {
 		notify(eplayer, "That's a silly name for a thing!");
@@ -199,6 +183,5 @@ do_create(command_t *cmd)
 	PUSH(thing, player->contents);
 
 	/* and we're done */
-	snprintf(buf, sizeof(buf), "%s created with number %d.", name, object_ref(thing));
-	notify(eplayer, buf);
+	notifyf(eplayer, "%s created with number %d.", name, object_ref(thing));
 }

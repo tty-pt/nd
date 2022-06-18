@@ -1,7 +1,5 @@
 #include "biome.h"
 #include "params.h"
-#include "externs.h"
-#include "mdb.h"
 
 struct object_skeleton biomes[] = {
 	[BIOME_WATER] = {

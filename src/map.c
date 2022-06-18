@@ -1,10 +1,8 @@
 #include "map.h"
 
-#ifdef __OpenBSD__
+#include <string.h>
 #include <db4/db.h>
-#else
-#include <db.h>
-#endif
+
 #include "externs.h"
 // #define PRECOVERY
 
@@ -385,4 +383,3 @@ map_delete(OBJ *what)
 	key.size = sizeof(code);
 	return pdb->del(pdb, NULL, &key, 0);
 }
-

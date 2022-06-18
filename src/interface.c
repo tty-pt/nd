@@ -7,7 +7,6 @@
 #include "copyright.h"
 #include "object.h"
 #include "config.h"
-#include "match.h"
 
 #include <sys/types.h>
 
@@ -20,7 +19,7 @@
 #include <ctype.h>
 
 # define NEED_SOCKLEN_T
-//"do not include netinet6/in6.h directly, include netinet/in.h.  see RFC2553"
+// do not include netinet6/in6.h directly, include netinet/in.h.  see RFC2553
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
@@ -51,7 +50,6 @@
 #include "defaults.h"
 #include "mcp.h"
 #include "externs.h"
-#include "interp.h"
 #include "map.h"
 #include "view.h"
 #include "mob.h"
@@ -117,9 +115,6 @@ core_command_t cmds[] = {
 	}, {
 		.name = "find",
 		.cb = &do_find,
-	/* }, { */
-	/* 	.name = "force", */
-	/* 	.cb = &do_force, */
 	}, {
 		.name = "heal",
 		.cb = &do_heal,
@@ -132,11 +127,6 @@ core_command_t cmds[] = {
 	}, {
 		.name = "recycle",
 		.cb = &do_recycle,
-	/* }, { */
-	/* 	.name = "restrict", */
-	/* 	.cb = &do_restrict, */
-	/* }, { */
-		/* do_showextver(player); */
 	}, {
 		.name = "teleport",
 		.cb = &do_teleport,
@@ -340,9 +330,7 @@ show_program_usage(char *prog)
 	fprintf(stderr, "    Options:\n");
 	fprintf(stderr, "        -C PATH   changes directory to PATH before starting up.\n");
 	fprintf(stderr, "        -d        daemon mode\n");
-	fprintf(stderr, "        -S        don't do db sanity checks at startup time.\n");
 	fprintf(stderr, "        -s        load db, then enter the interactive sanity editor.\n");
-	fprintf(stderr, "        -y        attempt to auto-fix a corrupt db after loading.\n");
 	fprintf(stderr, "        -W        only allow wizards to login.\n");
 	fprintf(stderr, "        -v        display this server's version.\n");
 	fprintf(stderr, "        -?        display this message.\n");
@@ -396,19 +384,10 @@ main(int argc, char **argv)
 
 	memset(descr_map, 0, sizeof(descr_map));
 
-	while ((c = getopt(argc, argv, "dsyvS:")) != -1) {
+	while ((c = getopt(argc, argv, "dv")) != -1) {
 		switch (c) {
 		case 'd':
 			optflags |= OPT_DETACH;
-			break;
-		case 's':
-			optflags |= OPT_SANITY_INTERACTIVE;
-			break;
-		case 'S':
-			optflags |= OPT_NOSANITY;
-			break;
-		case 'y':
-			optflags |= OPT_SANITY_AUTOFIX;
 			break;
 		case 'v':
 			printf("0.0.1\n");
@@ -601,22 +580,6 @@ wall(const char *msg)
 }
 
 void
-welcome_user(int fd)
-{
-	if (optflags & OPT_WIZONLY) {
-		descr_inband(fd, "## The game is currently in maintenance mode, and only wizards will be able to connect.\r\n");
-	}
-#if PLAYERMAX
-	else if (con_players_curr >= PLAYERMAX_LIMIT) {
-		if (PLAYERMAX_WARNMESG && *PLAYERMAX_WARNMESG) {
-			descr_inband(fd, PLAYERMAX_WARNMESG);
-			descr_inband(fd, "\r\n");
-		}
-	}
-#endif
-}
-
-void
 do_httpget(command_t *cmd)
 {
 	descr_t *d = &descr_map[cmd->fd];
@@ -779,9 +742,6 @@ descr_read(descr_t *d)
 	/* if (cmd.argc != 3) */
 	/* 	return 0; */
 
-	/* if (*cmd.argv[0] == 'c') */
-	/* 	auth(&cmd); */
-
 	return ret;
 }
 
@@ -827,7 +787,6 @@ descr_new()
 
 	mcp_frame_init(&d->mcpframe, d);
 	/* mcp_negotiation_start(&d->mcpframe); */
-	/* welcome_user(fd); */
 	return d;
 }
 
@@ -1026,6 +985,3 @@ descr_mcpframe(int fd)
 	descr_t *d = &descr_map[fd];
 	return &d->mcpframe;
 }
-
-static const char *interface_c_version = "$RCSfile$ $Revision: 1.127 $";
-const char *get_interface_c_version(void) { return interface_c_version; }

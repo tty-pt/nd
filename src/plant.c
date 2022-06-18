@@ -1,7 +1,8 @@
 #include "noise.h"
 
-#include "params.h"
+#include <string.h>
 
+#include "params.h"
 #include "externs.h"
 
 struct object_skeleton carrot = {

@@ -15,6 +15,7 @@
 #include "equipment.h"
 #include "spell.h"
 #include "debug.h"
+#include "mob.h"
 
 #define HUNGER_Y	4
 #define THIRST_Y	2
@@ -231,6 +232,22 @@ enter(OBJ *player, OBJ *loc)
 	onotifyf(player, "%s has arrived.", player->name);
 	entities_aggro(player);
 	look_around(player);
+}
+
+int
+payfor(OBJ *who, int cost)
+{
+	ENT *ewho = &who->sp.entity;
+
+	if (ewho->flags & EF_WIZARD)
+		return 1;
+
+	if (who->value >= cost) {
+		who->value -= cost;
+		return 1;
+	} else {
+		return 0;
+	}
 }
 
 int
@@ -1023,4 +1040,57 @@ entity_update(OBJ *player)
                         return;
 
 	kill_update(player);
+}
+
+void
+stats_init(ENT *enu, SENT *sk)
+{
+	unsigned char stat = sk->stat;
+	int lvl = sk->lvl, spend, i, sp,
+	    v = sk->lvl_v ? sk->lvl_v : 0xf;
+
+	lvl += random() & v;
+
+	if (!stat)
+		stat = 0x1f;
+
+	spend = 1 + lvl;
+	for (i = 0; i < ATTR_MAX; i++)
+		if (stat & (1<<i)) {
+			sp = random() % spend;
+			enu->attr[i] = sp;
+		}
+
+	enu->lvl = lvl;
+}
+
+static inline int
+bird_is(SENT *sk)
+{
+	return sk->wt == WT_PECK;
+}
+
+static inline OBJ *
+entity_add(enum mob_type mid, OBJ *where, enum biome biome, long long pdn) {
+	struct object_skeleton *obj_skel = ENTITY_SKELETON(mid);
+	CBUG(obj_skel->type != S_TYPE_ENTITY);
+	struct entity_skeleton *mob_skel = &obj_skel->sp.entity;
+
+	if ((bird_is(mob_skel) && !pdn)
+	    || (!NIGHT_IS && (mob_skel->type == ELM_DARK || mob_skel->type == ELM_VAMP))
+	    || random() >= (RAND_MAX >> mob_skel->y))
+		return NULL;
+
+	if (!((1 << biome) & mob_skel->biomes))
+		return NULL;
+
+	return object_add(obj_skel, where);
+}
+
+void
+entities_add(OBJ *where, enum biome biome, long long pdn) {
+	unsigned mid;
+
+	for (mid = 1; mid < MOB_MAX; mid++)
+		entity_add(mid, where, biome, pdn);
 }

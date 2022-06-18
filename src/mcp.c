@@ -185,7 +185,7 @@ mcp_frame_output_mesg(McpFrame * mfr, McpMesg * msg)
 
 	/* If the message is multi-line, make sure it has a _data-tag field. */
 	if (mlineflag) {
-		snprintf(datatag, sizeof(datatag), "%.8lX", (unsigned long)(RANDOM() ^ RANDOM()));
+		snprintf(datatag, sizeof(datatag), "%.8lX", (unsigned long)(random() ^ random()));
 		snprintf(out, bufrem, " %s: %s", MCP_DATATAG, datatag);
 		out += strlen(out);
 		bufrem = outbuf + sizeof(outbuf) - out;

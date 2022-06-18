@@ -57,6 +57,7 @@
 #include "mdb.h"
 #include "externs.h"
 #include <string.h>
+#include <stdlib.h>
 
 /* hash:  compute hash value for a string
  *
@@ -172,5 +173,3 @@ kill_hash(hash_tab * table, unsigned int size, int freeptrs)
 		table[i] = NULL;
 	}
 }
-static const char *hashtab_c_version = "$RCSfile$ $Revision: 1.4 $";
-const char *get_hashtab_c_version(void) { return hashtab_c_version; }

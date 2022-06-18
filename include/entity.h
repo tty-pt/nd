@@ -72,5 +72,4 @@ int entity_damage(OBJ *player, OBJ *target, short amt);
 
 void entities_add(OBJ *where, enum biome, long long pdn);
 
-
 #endif

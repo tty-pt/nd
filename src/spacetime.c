@@ -1,7 +1,9 @@
 #include "spacetime.h"
 
 #include <stdlib.h>
+#include <ctype.h>
 #include <db4/db.h>
+
 #include "io.h"
 #include "debug.h"
 #include "noise.h"
@@ -47,49 +49,42 @@ exit_t exit_map[] = {
 	[0 ... E_ALL] = {
 		.simm = E_NULL,
 		.name = "",
-		.fname = "",
 		.other = "",
 		.dim = 5,
 	},
 	[E_EAST] = {
 		.simm = E_WEST,
 		.name = "east",
-		.fname = "e;east",
 		.other = "wnsud",
 		.dim = 1, .dis = 1,
 	},
 	[E_SOUTH] = {
 		.simm = E_NORTH,
 		.name = "south",
-		.fname = "s;south",
 		.other = "ewudn",
 		.dim = 0, .dis = 1,
 	},
 	[E_WEST] = {
 		.simm = E_EAST,
 		.name = "west",
-		.fname = "w;west",
 		.other = "nsude",
 		.dim = 1, .dis = -1,
 	}, 
 	[E_NORTH] = {
 		.simm = E_SOUTH,
 		.name = "north",
-		.fname = "n;north",
 		.other = "sewud",
 		.dim = 0, .dis = -1,
 	},
 	[E_UP] = {
 		.simm = E_DOWN,
 		.name = "up",
-		.fname = "u;up",
 		.other = "dnsew",
 		.dim = 2, .dis = 1,
 	},
 	[E_DOWN] = {
 		.simm = E_UP,
 		.name = "down",
-		.fname = "d;down",
 		.other = "nsewu",
 		.dim = 2, .dis = -1,
 	},
@@ -144,98 +139,6 @@ morton_pos(pos_t p, morton_t code)
 	POOP3D p[I] = sign(up[I]);
 	p[3] = OBITS(code);
 	/* debug("decoded point x%llx -> %d %d %d %d", code, p[0], p[1], p[2], p[3]); */
-}
-
-static inline int
-rarity_get() {
-	register int r = random();
-	if (r > RAND_MAX >> 1)
-		return 0; // POOR
-	if (r > RAND_MAX >> 2)
-		return 1; // COMMON
-	if (r > RAND_MAX >> 6)
-		return 2; // UNCOMMON
-	if (r > RAND_MAX >> 10)
-		return 3; // RARE
-	if (r > RAND_MAX >> 14)
-		return 4; // EPIC
-	return 5; // MYTHICAL
-}
-
-OBJ *
-object_add(SKEL *sk, OBJ *where)
-{
-	OBJ *nu = object_new();
-	nu->name = strdup(sk->name);
-	nu->description = strdup(sk->description);
-	nu->art = strdup(sk->art);
-	nu->avatar = strdup(sk->avatar);
-	nu->location = where;
-	nu->owner = object_get(GOD);
-	nu->type = TYPE_THING;
-	if (where)
-		PUSH(nu, where->contents);
-
-	switch (sk->type) {
-	case S_TYPE_EQUIPMENT:
-		{
-			EQU *enu = &nu->sp.equipment;
-			nu->type = TYPE_EQUIPMENT;
-			enu->eqw = sk->sp.equipment.eqw;
-			enu->msv = sk->sp.equipment.msv;
-			enu->rare = rarity_get();
-			CBUG(!where || where->type != TYPE_ENTITY);
-			ENT *ewhere = &where->sp.entity;
-			if (ewhere->fd > 0 && equip(where, nu))
-				;
-		}
-
-		break;
-	case S_TYPE_CONSUMABLE:
-		{
-			CON *cnu = &nu->sp.consumable;
-			nu->type = TYPE_CONSUMABLE;
-			cnu->food = sk->sp.consumable.food;
-			cnu->drink = sk->sp.consumable.drink;
-		}
-
-		break;
-	case S_TYPE_ENTITY:
-		{
-			ENT *enu = &nu->sp.entity;
-			nu->type = TYPE_ENTITY;
-			stats_init(enu, &sk->sp.entity);
-			enu->flags = sk->sp.entity.flags;
-			enu->wtso = sk->sp.entity.wt;
-			birth(nu);
-			object_drop(nu, sk->sp.entity.drop);
-			enu->home = where;
-		}
-
-		break;
-	case S_TYPE_PLANT:
-		nu->type = TYPE_PLANT;
-		object_drop(nu, sk->sp.plant.drop);
-		nu->owner = object_get(GOD);
-		break;
-        case S_TYPE_BIOME:
-		{
-			ROO *rnu = &nu->sp.room;
-			nu->type = TYPE_ROOM;
-			rnu->exits = rnu->doors = 0;
-			rnu->dropto = NULL;
-			rnu->flags = RF_TEMP;
-		}
-
-		break;
-	case S_TYPE_OTHER:
-		break;
-	}
-
-	if (sk->type != S_TYPE_BIOME)
-		mcp_content_in(where, nu);
-
-	return nu;
 }
 
 void
@@ -302,11 +205,6 @@ e_simm(enum exit e) {
 const char *
 e_name(enum exit e) {
 	return exit_map[e].name;
-}
-
-const char *
-e_fname(enum exit e) {
-	return exit_map[e].fname;
 }
 
 const char *

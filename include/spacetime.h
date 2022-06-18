@@ -61,7 +61,6 @@ struct rect4D {
 
 typedef struct {
 	const char name[16];
-	const char fname[16];
 	const char other[16];
 	enum exit simm;
 	coord_t dim, dis;
@@ -90,7 +89,6 @@ enum exit dir_e(const char dir);
 const char e_dir(enum exit e);
 enum exit e_simm(enum exit e);
 const char * e_name(enum exit e);
-const char * e_fname(enum exit e);
 const char * e_other(enum exit e);
 morton_t point_rel_idx(point_t p, point_t s, smorton_t w);
 

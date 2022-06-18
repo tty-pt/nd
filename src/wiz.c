@@ -290,19 +290,14 @@ void
 do_usage(command_t *cmd) {
 	OBJ *player = cmd->player;
 	ENT *eplayer = &player->sp.entity;
-	int pid, psize;
 	struct rusage usage;
 
 	if (!(eplayer->flags & EF_WIZARD)) {
 		notify(eplayer, "Permission denied. (@usage is wizard-only)");
 		return;
 	}
-	pid = getpid();
-	psize = getpagesize();
 	getrusage(RUSAGE_SELF, &usage);
 
-	notifyf(eplayer, "Process ID: %d", pid);
-	notifyf(eplayer, "Max descriptors/process: %ld", sysconf(_SC_OPEN_MAX));
 	notifyf(eplayer, "Performed %d input servicings.", usage.ru_inblock);
 	notifyf(eplayer, "Performed %d output servicings.", usage.ru_oublock);
 	notifyf(eplayer, "Sent %d messages over a socket.", usage.ru_msgsnd);
@@ -315,9 +310,4 @@ do_usage(command_t *cmd) {
 	notifyf(eplayer, "Involuntarily context switched %d times.", usage.ru_nivcsw);
 	notifyf(eplayer, "User time used: %d sec.", usage.ru_utime.tv_sec);
 	notifyf(eplayer, "System time used: %d sec.", usage.ru_stime.tv_sec);
-	notifyf(eplayer, "Pagesize for this machine: %d", psize);
-	notifyf(eplayer, "Maximum resident memory: %ldk",
-			   (long) (usage.ru_maxrss * (psize / 1024)));
-	notifyf(eplayer, "Integral resident memory: %ldk",
-			   (long) (usage.ru_idrss * (psize / 1024)));
 }

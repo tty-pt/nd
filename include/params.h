@@ -15,7 +15,6 @@
 /* magic cookies (not chocolate chip) :) */
 
 #define ESCAPE_CHAR 27
-#define LOOKUP_TOKEN '*'
 #define NUMBER_TOKEN '#'
 #define ARG_DELIMITER '='
 

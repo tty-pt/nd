@@ -10,8 +10,6 @@
 
 #define BUFFER_LEN 8192
 
-enum wt { PUNCH, PECK, SLASH, BITE, STRIKE, };
-
 #define EQ(i, t)	(i | (t<<6))
 
 /* Possible data types that may be stored in a hash table */

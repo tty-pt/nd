@@ -30,20 +30,8 @@ enum bodypart {
 extern bodypart_t bodypart_map[];
 extern enum bodypart ch_bodypart_map[];
 
-enum mob_ofs {
-	MOFS_WATER = 1,
-	MOFS_ICE = 9,
-	MOFS_JUNGLE = 10,
-	MOFS_TEMPERATE = 11,
-	MOFS_TEMPERATE_DESERT = 19,
-	MOFS_DESERT = 20,
-	MOFS_FIRE = 21,
-	MOFS_END = 22,
-};
-
-/* const unsigned ofs_water = 1; */
 enum mob_type {
-	MOB_HUMAN = 0,
+	MOB_HUMAN,
 	MOB_GOLDFISH,
 	MOB_SALMON,
 	MOB_TUNA,
@@ -52,20 +40,22 @@ enum mob_type {
 	MOB_SHARK,
 	MOB_MOONFISH,
 	MOB_RAINBOWFISH,
-	MOB_ICEBIRD = MOFS_ICE,
-	MOB_PARROT = MOFS_JUNGLE,
-	MOB_BANDIT = MOFS_TEMPERATE,
+	MOB_ICEBIRD,
+	MOB_PARROT,
+	MOB_BANDIT,
 	MOB_SWALLOW,
 	/* MOB_SKELETON_, */
 	MOB_VAMPIRE_SPAWN,
 	MOB_WOODPECKER,
 	MOB_SPARROW,
-	/* MOB_OWL, */
+	MOB_OWL,
 	/* MOB_EAGLE, */
-	/* MOB_STARLING = MOFS_TEMPERATE_DESERT, */
-	/* MOB_VULTURE = MOFS_DESERT, */
-	/* MOB_FIREBIRD = MOFS_FIRE, */
+	/* MOB_STARLING, */
+	/* MOB_VULTURE, */
+	/* MOB_FIREBIRD, */
 	MOB_MAX,
 };
+
+extern struct object_skeleton entity_skeleton_map[];
 
 #endif

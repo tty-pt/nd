@@ -1,11 +1,8 @@
 #include "consumable.h"
 #include "io.h"
 #include "entity.h"
-
-#include <stddef.h>
-#include "mob.h"
-
-#include "externs.h"
+#include "command.h"
+#include "match.h"
 
 #define DRINK_VALUE (1 << 14)
 #define FOOD_VALUE(x) (1 << (16 - x->food))

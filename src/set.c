@@ -10,6 +10,7 @@
 #include <ctype.h>
 #include <string.h>
 
+#include "utils.h"
 #include "mdb.h"
 #include "params.h"
 #include "defaults.h"
@@ -55,11 +56,6 @@ do_name(command_t *cmd)
 		return;
 	}
 	/* check for renaming a player */
-	if ((thing->type == TYPE_THING && !OK_ASCII_THING(newname)) ||
-			(thing->type != TYPE_THING && !OK_ASCII_OTHER(newname)) ) {
-		notify(eplayer, "Invalid 8-bit name.");
-		return;
-	}
 	if (!ok_name(newname)) {
 		notify(eplayer, "That is not a reasonable name.");
 		return;

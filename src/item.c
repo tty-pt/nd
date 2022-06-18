@@ -1,12 +1,8 @@
 #include "io.h"
 
-#include <stddef.h> // offsetof
 #include "entity.h"
-#include "mcp.h"
-#include "externs.h"
-#include "mdb.h"
-#include "interface.h"
 #include "mob.h"
+#include "match.h"
 
 void
 do_select(command_t *cmd)

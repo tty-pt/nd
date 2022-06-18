@@ -9,7 +9,7 @@
 #define NOMATCH_MESSAGE "I don't know what you mean."
 
 OBJ *ematch_at(OBJ *player, OBJ *where, const char *name);
-OBJ *ematch_player(OBJ *player, const char *name);
+OBJ *ematch_player(const char *name);
 OBJ *ematch_absolute(const char *name);
 
 inline OBJ *
@@ -56,7 +56,7 @@ ematch_all(OBJ *player, const char *name)
 			|| (res = ematch_absolute(name))
 			|| (res = ematch_near(player, name))
 			|| (res = ematch_mine(player, name))
-			|| (res = ematch_player(player, name))
+			|| (res = ematch_player(name))
 	   )
 		return res;
 

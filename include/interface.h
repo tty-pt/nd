@@ -8,7 +8,6 @@
 
 #include "mdb.h"
 #include "mcp.h"
-#include "command.h"
 
 /* these symbols must be defined by the interface */
 extern void wall_wizards(const char *msg);
@@ -23,6 +22,5 @@ OBJ *create_player(const char *name);
 OBJ *connect_player(const char *name);
 
 extern int init_game();
-extern void panic(const char *);
 
 #endif /* _INTERFACE_H */

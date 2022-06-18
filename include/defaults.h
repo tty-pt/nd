@@ -4,17 +4,6 @@
 /* name of the monetary unit being used */
 #define PENNY "penny"
 #define PENNIES "pennies"
-#define CPENNY "Penny"
-#define CPENNIES "Pennies"
-
-/* Limit max number of players to allow connected?  (wizards are immune) */
-#define PLAYERMAX 0
-
-/* How many connections before blocking? */
-#define PLAYERMAX_LIMIT 56
-
-/* The mesg to warn users that nonwizzes can't connect due to connect limits */
-#define PLAYERMAX_WARNMESG "You likely won't be able to connect right now, since too many players are online."
 
 /* amount of object endowment, based on cost */
 #define MAX_OBJECT_ENDOWMENT 100
@@ -30,8 +19,5 @@
 
 #define PLAYER_START ((dbref) 0)	/* room number of player start location */
 #define STARTING_POSITION 0x0		/* starting geographical position */
-
-#define OK_ASCII_THING(name) 1
-#define OK_ASCII_OTHER(name) ok_ascii_any(name)
 
 #endif /* _DEFAULTS_H */
