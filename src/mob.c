@@ -3,7 +3,6 @@
 #include "entity.h"
 #include "equipment.h"
 #include "defaults.h"
-#include "externs.h"
 
 
 #define F(x) (1<<x) // "folds" value FIXME - 1

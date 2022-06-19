@@ -11,11 +11,13 @@
 #include "match.h"
 #include "utils.h"
 #include "entity.h"
+#include "player.h"
 
+/* TODO move to match.h as static inline */
 OBJ *
 ematch_player(const char *name)
 {
-	return lookup_player(name);
+	return player_get(name);
 }
 
 static dbref

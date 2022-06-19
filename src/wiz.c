@@ -12,12 +12,13 @@
 
 #include <stdlib.h>
 
-#include "mdb.h"
 #include "params.h"
 #include "defaults.h"
 #include "interface.h"
 #include "match.h"
-#include "externs.h"
+#include "player.h"
+#include "debug.h"
+#include "command.h"
 
 void
 do_teleport(command_t *cmd) {
@@ -118,14 +119,13 @@ do_boot(command_t *cmd) {
 	ENT *eplayer = &player->sp.entity;
 	const char *name = cmd->argv[1];
 	OBJ *victim;
-	char buf[BUFFER_LEN];
 
 	if (!(eplayer->flags & EF_WIZARD)) {
 		notify(eplayer, "Only a Wizard player can boot someone off.");
 		return;
 	}
 
-	victim = lookup_player(name);
+	victim = player_get(name);
 
 	if (!victim) {
 		notify(eplayer, "That player does not exist.");
@@ -148,12 +148,10 @@ do_boot(command_t *cmd) {
 			warn("BOOTED: %s(%d) by %s(%d)", victim->name,
 					   object_ref(victim), player->name, object_ref(player));
 			if (player != victim) {
-				snprintf(buf, sizeof(buf), "You booted %s off!", victim->name);
-				notify(eplayer, buf);
+				notifyf(eplayer, "You booted %s off!", victim->name);
 			}
 		} else {
-			snprintf(buf, sizeof(buf), "%s is not connected.", victim->name);
-			notify(eplayer, buf);
+			notifyf(eplayer, "%s is not connected.", victim->name);
 		}
 	}
 }
@@ -216,7 +214,7 @@ do_toad(command_t *cmd) {
 		return;
 	}
 
-	victim = lookup_player(name);
+	victim = player_get(name);
 
 	if (!victim) {
 		notify(eplayer, "That player does not exist.");
@@ -235,7 +233,7 @@ do_toad(command_t *cmd) {
 		/* FIXME: Make me a tunable parameter! */
 		recipient = object_get(GOD);
 	} else {
-		recipient = lookup_player(recip);
+		recipient = player_get(recip);
 		if (!recipient || recipient == victim) {
 			notify(eplayer, "That recipient does not exist.");
 			return;
@@ -269,11 +267,10 @@ do_toad(command_t *cmd) {
 
 		/* notify people */
 		notify(evictim, "You have been turned into a toad.");
-		snprintf(buf, sizeof(buf), "You turned %s into a toad!", victim->name);
-		notify(eplayer, buf);
+		notifyf(eplayer, "You turned %s into a toad!", victim->name);
 		warn("TOADED: %s(%d) by %s(%d)", victim->name, object_ref(victim), player->name, object_ref(player));
 		/* reset name */
-		delete_player(victim);
+		player_delete(victim);
 		snprintf(buf, sizeof(buf), "A slimy toad named %s", victim->name);
 		free((void *) victim->name);
 		victim->name = strdup(buf);

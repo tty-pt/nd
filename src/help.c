@@ -3,7 +3,6 @@
 
 /* commands for giving help */
 
-#include "mdb.h"
 #include "params.h"
 #include "interface.h"
 #include "utils.h"
@@ -14,6 +13,9 @@
 #include <string.h>
 
 #include <dirent.h>
+
+#include "command.h"
+
 #define NLENGTH(dirent) (strlen((dirent)->d_name))
 
 #define HELP_FILE "data/muckhelp.txt"	/* For the 'help' command      */

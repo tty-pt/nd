@@ -7,8 +7,9 @@
 #include <stdlib.h>
 #include <ctype.h>
 #include <string.h>
-#include "mdb.h"
-#include "externs.h"
+#include "debug.h"
+#include "io.h"
+#include "command.h"
 
 #define MCP_WEB_PKG "web"
 #define MCP_MESG_PREFIX		"#$#"
@@ -329,7 +330,7 @@ mcp_mesg_arg_append(McpMesg * msg, const char *argname, const char *argval)
 static inline McpFrame *
 mcp_frame(int descr)
 {
-	McpFrame *mfr = descr_mcpframe(descr);
+	McpFrame *mfr = &DESCR(descr)->mcpframe;
 
 	if (!mfr || !mfr->enabled)
                 return NULL;
@@ -420,7 +421,7 @@ mcp_look(OBJ *player, OBJ *loc)
 		if (thing == player)
 			continue;
 
-		struct icon ico = icon(thing);
+		struct icon ico = object_icon(thing);
 		mcp_mesg_init(&msg, MCP_WEB_PKG, "look-content");
 		mcp_mesg_arg_append(&msg, "loc", buf2);
 		snprintf(buf, sizeof(buf), "%d", object_ref(thing));
@@ -518,7 +519,7 @@ mcp_content_out(OBJ *loc, OBJ *thing) {
 
 void
 mcp_content_in(OBJ *loc, OBJ *thing) {
-	struct icon ico = icon(thing);
+	struct icon ico = object_icon(thing);
 	char buf[BUFSIZ];
 	McpMesg msg;
 
@@ -651,7 +652,7 @@ _mcp_equipment(OBJ *player, enum equipment_slot eql)
         mcp_mesg_arg_append(&msg, "eql", buf);
         mcp_mesg_arg_append(&msg, "pname", unparse(player, oeq));
         mcp_mesg_arg_append(&msg, "avatar", oeq->avatar);
-        struct icon ico = icon(oeq);
+        struct icon ico = object_icon(oeq);
         mcp_mesg_arg_append(&msg, "icon", ico.icon);
 	mcp_frame_output_mesg(mfr, &msg);
 	mcp_mesg_clear(&msg);

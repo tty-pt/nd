@@ -9,6 +9,8 @@
 #include <openssl/bio.h>
 #include <openssl/ssl.h>
 
+#define DESCR(fd) (&descr_map[fd])
+
 #define READ(cfd, to, len) \
 	SSL_read(descr_map[cfd].cSSL, to, len)
 #define WRITE(cfd, from, len) \

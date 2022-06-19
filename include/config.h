@@ -8,5 +8,6 @@
 #define TINYPORT 4201			/* Port that players connect to */
 
 #define HUMAN_BEING 1
+#define BUFFER_LEN 8192
 
 #endif

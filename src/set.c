@@ -11,12 +11,12 @@
 #include <string.h>
 
 #include "utils.h"
-#include "mdb.h"
 #include "params.h"
 #include "defaults.h"
 #include "match.h"
 #include "interface.h"
-#include "externs.h"
+#include "player.h"
+#include "command.h"
 
 static OBJ *
 match_controlled(OBJ *player, const char *name)
@@ -91,7 +91,7 @@ do_chown(command_t *cmd)
 	}
 
 	if (*newowner && strcmp(newowner, "me")) {
-		owner = lookup_player(newowner);
+		owner = player_get(newowner);
 
 		if (!owner) {
 			notify(eplayer, "I couldn't find that player.");
@@ -137,9 +137,6 @@ do_chown(command_t *cmd)
 	if (owner == player)
 		notify(eplayer, "Owner changed to you.");
 	else {
-		char buf[BUFFER_LEN];
-
-		snprintf(buf, sizeof(buf), "Owner changed to %s.", unparse(player, owner));
-		notify(eplayer, buf);
+		notifyf(eplayer, "Owner changed to %s.", unparse(player, owner));
 	}
 }

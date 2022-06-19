@@ -1,11 +1,10 @@
 #include "io.h"
 #include "entity.h"
-#include "mdb.h"
 #include "params.h"
 #include "defaults.h"
 #include "interface.h"
 #include "match.h"
-#include "externs.h"
+#include "command.h"
 
 void
 do_give(command_t *cmd)

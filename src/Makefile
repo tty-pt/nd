@@ -17,16 +17,16 @@ prochelp-obj-y := prochelp.o
 fbmuck-obj-y := object.o entity.o spacetime.o mcp.o map.o \
 	plant.o biome.o noise.o \
 	view.o item.o spell.o drink.o mob.o kill.o \
-	shop.o ws.o
+	shop.o ws.o hashtable.o
 fbmuck-obj-y += create.o \
-	hashtab.o help.o \
+	help.o \
 	look.o match.o \
 	move.o \
 	player.o \
 	utils.o \
 	rob.o set.o \
 	speech.o \
-	unparse.o wiz.o \
+	wiz.o \
 	copyright.o interface.o
 
 exe-obj-y := ${fbmuck-obj-y} ${prochelp-obj-y}

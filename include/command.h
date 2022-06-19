@@ -26,7 +26,4 @@ typedef struct {
 
 extern core_command_t cmds[];
 
-void command_debug(command_t *cmd, char *label);
-core_command_t * command_match(command_t *cmd);
-
 #endif

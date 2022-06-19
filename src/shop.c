@@ -1,9 +1,8 @@
 #include "io.h"
 #include "entity.h"
-#include "mdb.h"
 #include <stddef.h>
 #include "match.h"
-#include "externs.h"
+#include "command.h"
 
 static inline OBJ *
 vendor_find(OBJ *where)

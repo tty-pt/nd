@@ -258,6 +258,7 @@ OBJ *object_parent(OBJ *obj);
 int object_plc(OBJ *source, OBJ *dest); /* parent loop check */
 void object_move(OBJ *what, OBJ *where);
 void object_drop(OBJ *where, struct drop **drop);
+struct icon object_icon(OBJ *thing);
 void observer_add(OBJ *observable, OBJ *observer);
 int observer_remove(OBJ *observable, OBJ *observer);
 

@@ -3,7 +3,7 @@
 #include <string.h>
 
 #include "params.h"
-#include "externs.h"
+#include "debug.h"
 
 struct object_skeleton carrot = {
         .name = "carrot",

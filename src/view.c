@@ -6,9 +6,9 @@
 #include "map.h"
 #include "noise.h"
 
-#include "mdb.h"
-#include "externs.h"
 #include "params.h"
+#include "debug.h"
+#include "command.h"
 
 #define BIOME_BG(i) (NIGHT_IS \
 		? ANSI_RESET : biomes[i].sp.biome.bg)

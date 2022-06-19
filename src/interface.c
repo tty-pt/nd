@@ -43,7 +43,6 @@
 #include <db.h>
 #endif
 
-#include "mdb.h"
 #include "interface.h"
 #include "command.h"
 #include "params.h"
@@ -55,6 +54,8 @@
 #include "mob.h"
 #include "hash.h"
 #include "ws.h"
+#include "player.h"
+#include "debug.h"
 
 #define DESCR_ITER(di_d) \
 	for (di_d = &descr_map[sockfd + 1]; \
@@ -70,9 +71,7 @@ enum descr_flags {
 	DF_WEBSOCKET = 4,
 };
 
-#define CMD_HASH_SIZE 512
-
-static hash_tab cmds_hashed[CMD_HASH_SIZE];
+DB *cmdsdb = NULL;
 
 #ifdef CONFIG_SECURE
 SSL_CTX *sslctx;
@@ -112,9 +111,6 @@ core_command_t cmds[] = {
 	}, {
 		.name = "create",
 		.cb = &do_create,
-	}, {
-		.name = "find",
-		.cb = &do_find,
 	}, {
 		.name = "heal",
 		.cb = &do_heal,
@@ -247,6 +243,11 @@ command_debug(command_t *cmd, char *label)
 	warn("\n");
 }
 
+static inline core_command_t *
+command_match(command_t *cmd) {
+	return hash_get(cmdsdb, cmd->argv[0]);
+}
+
 static command_t
 command_new(descr_t *d, char *input, size_t len)
 {
@@ -297,26 +298,12 @@ cleanup:
 	return cmd;
 }
 
-core_command_t *
-command_match(command_t *cmd) {
-	hash_data *hd;
-
-	if ((hd = find_hash(cmd->argv[0], cmds_hashed, CMD_HASH_SIZE)) == NULL)
-		return NULL;
-
-	return (core_command_t *) hd->pval;
-}
-
 static void
 commands_init() {
 	int i;
 
-	for (i = 0; i < sizeof(cmds) / sizeof(core_command_t); i++) {
-		hash_data hd;
-		hd.pval = &cmds[i];
-
-		add_hash(cmds[i].name, hd, cmds_hashed, CMD_HASH_SIZE);
-	}
+	for (i = 0; i < sizeof(cmds) / sizeof(core_command_t); i++)
+		hash_put(cmdsdb, cmds[i].name, &cmds[i]);
 }
 
 int shovechars();
@@ -434,6 +421,9 @@ main(int argc, char **argv)
 		exit(1);
 	}
 
+	players_init();
+	hash_init(&cmdsdb);
+
 	if (init_game() < 0) {
 		warn("Couldn't load " STD_DB "!\n");
 		return 2;
@@ -491,7 +481,7 @@ int
 notify(ENT *eplayer, const char *msg)
 {
 	int retval = 0, fd;
-	char buf[BUFFER_LEN + 2];
+	char buf[BUFSIZ];
 	int firstpass = 1;
 	char *ptr1;
 	const char *ptr2;
@@ -524,7 +514,7 @@ void
 notifyf(ENT *eplayer, char *format, ...)
 {
 	va_list args;
-	static char bufr[BUFFER_LEN];
+	static char bufr[BUFSIZ];
 
 	va_start(args, format);
 	vsnprintf(bufr, sizeof(bufr), format, args);
@@ -548,7 +538,7 @@ void
 anotifyf(OBJ *room, char *format, ...)
 {
 	va_list args;
-	char buf[BUFFER_LEN];
+	char buf[BUFSIZ];
 	va_start(args, format);
 	vsnprintf(buf, sizeof(buf), format, args);
 	notify_except(room->contents, NULL, buf);
@@ -560,7 +550,7 @@ onotifyf(OBJ *player, char *format, ...)
 {
 	OBJ *loc = player->location;
 	va_list args;
-	char buf[BUFFER_LEN];
+	char buf[BUFSIZ];
 	va_start(args, format);
 	vsnprintf(buf, sizeof(buf), format, args);
 	notify_except(loc->contents, player, buf);
@@ -616,10 +606,10 @@ do_auth(command_t *cmd)
 
 	warn("lookup_player '%s'\n", buf);
 
-	player = lookup_player(buf);
+	player = player_get(buf);
 
 	if (!player) {
-		player = create_player(buf);
+		player = player_create(buf);
 		birth(player);
 	} else if (player->sp.entity.fd > 0) {
                 descr_inband(fd, "That player is already connected.\r\n");
@@ -716,7 +706,7 @@ descr_read(descr_t *d)
 		}
 		ret -= 1;
 	} else {
-		ret = READ(d->fd, buf, BUFFER_LEN);
+		ret = READ(d->fd, buf, sizeof(buf));
 		switch (ret) {
 		case -1:
 			if (errno == EAGAIN)
@@ -977,11 +967,4 @@ void
 boot_player_off(OBJ *player)
 {
 	boot_off(player);
-}
-
-McpFrame *
-descr_mcpframe(int fd)
-{
-	descr_t *d = &descr_map[fd];
-	return &d->mcpframe;
 }

@@ -30,6 +30,7 @@
 
 #define EQT(x)		(x>>6)
 #define EQL(x)		(x & 15)
+#define EQ(i, t)	(i | (t<<6))
 
 extern struct wts phys_wts[];
 

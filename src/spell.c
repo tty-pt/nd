@@ -7,7 +7,6 @@
 
 #include "params.h"
 /* #include "speech.h" */
-#include "externs.h"
 
 element_t element_map[] = {
 	[ELM_PHYSICAL] = {

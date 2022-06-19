@@ -30,7 +30,7 @@
 #include "noise.h"
 #include <string.h>
 #include "xxhash.h"
-#include "externs.h"
+#include "debug.h"
 
 #define HASH XXH32
 
