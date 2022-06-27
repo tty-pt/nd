@@ -16,6 +16,7 @@
 #include "spell.h"
 #include "debug.h"
 #include "mob.h"
+#include "utils.h"
 
 #define HUNGER_Y	4
 #define THIRST_Y	2
@@ -172,7 +173,7 @@ recycle(OBJ *player, OBJ *thing)
 		if (first->type == TYPE_ENTITY) {
 			ENT *efirst = &first->sp.entity;
 			if (efirst->flags & EF_PLAYER) {
-				enter(first, efirst->home);
+				enter(first, efirst->home, E_NULL);
 				if (first->location == thing) {
 					notifyf(eplayer, "Escaping teleport loop!  Going home.");
 					object_move(first, object_get(PLAYER_START));
@@ -222,12 +223,67 @@ entities_aggro(OBJ *player)
 }
 
 void
-enter(OBJ *player, OBJ *loc)
+enter_room(OBJ *player, enum exit e)
+{
+	ENT *eplayer = &player->sp.entity;
+	char contents[BIGBUFSIZ];
+	OBJ *oi;
+	int count = 0;
+
+	if (eplayer->gpt) {
+		free(eplayer->gpt);
+		eplayer->gpt = NULL;
+	}
+
+	sprintf(contents, "This is a fantasy world. This place is named '%s'. "
+			"It has the following contents:\n",
+			player->location->name);
+
+	FOR_LIST(oi, player->location->contents) {
+		if (player == oi && e != E_ALL)
+			continue;
+		count++;
+		if (oi->type == TYPE_ENTITY) {
+			ENT *ei = &oi->sp.entity;
+			if (ei->flags & EF_PLAYER)
+				sprintf(contents, "%sA player named %s", contents, oi->name);
+			else
+				sprintf(contents, "%sA %s", contents, oi->name);
+
+			if (player->description)
+				sprintf(contents, "%s, described as '%s'", contents, oi->name);
+			if (eplayer->flags & EF_SITTING)
+				sprintf(contents, "%s, who is sitting down", contents);
+
+			sprintf(contents, "%s.\n", contents);
+		} else {
+			sprintf(contents, "%sA %s.\n", contents, oi->name);
+		}
+	}
+
+	if (e != E_ALL) {
+		sprintf(contents, "%sA player named %s just ", contents, player->name);
+		if (e == E_NULL)
+			sprintf(contents, "%steleported in.\n", contents);
+		else
+			sprintf(contents, "%scame in from the %s.\n", contents, e_name(e_simm(e)));
+	}
+
+	sprintf(contents, "%s\n"
+			"Describe the scene and the events unfolding in it.\n"
+			, contents);
+
+	entity_gpt(player, 1, contents);
+}
+
+void
+enter(OBJ *player, OBJ *loc, enum exit e)
 {
 	OBJ *old = player->location;
 
 	onotifyf(player, "%s has left.", player->name);
 	object_move(player, loc);
+	enter_room(player, e);
 	room_clean(player, old);
 	onotifyf(player, "%s has arrived.", player->name);
 	entities_aggro(player);
@@ -529,7 +585,7 @@ equip(OBJ *who, OBJ *eq)
 		return 1;
 
 	EQUIP(ewho, eql) = object_ref(eq);
-	eeq->flags |= EF_EQUIPPED;
+	eeq->flags |= EQF_EQUIPPED;
 
 	notifyf(ewho, "You equip %s.", eq->name);
 	mcp_stats(who);
@@ -572,7 +628,7 @@ unequip(OBJ *player, unsigned eql)
 	}
 
 	EQUIP(eplayer, eql) = NOTHING;
-	eeq->flags &= ~EF_EQUIPPED;
+	eeq->flags &= ~EQF_EQUIPPED;
 	mcp_content_in(player, oeq);
 	mcp_stats(player);
 	mcp_equipment(player);
@@ -862,20 +918,23 @@ huth_notify(OBJ *player, unsigned v, unsigned char y, char const *m[4])
         return 0;
 }
 
+static inline unsigned char
+d20()
+{
+	return (random() % 20) + 1;
+}
+
+static unsigned char
+entity_ac(ENT *eplayer)
+{
+	return 10 + MODIFIER(eplayer, ATTR_DEX);
+}
+
 // returns 1 if target dodges
 static inline int
 dodge_get(ENT *eplayer)
 {
-	OBJ *target = eplayer->target;
-	ENT *etarget = &target->sp.entity;
-	int d = RAND_MAX / 4;
-	short ad = EFFECT(eplayer, DODGE).value,
-	      dd = EFFECT(etarget, DODGE).value;
-
-	if (ad > dd)
-		d += 3 * d / (ad - dd);
-
-	return rand() <= d;
+	return d20() < entity_ac(eplayer);
 }
 
 int
@@ -1042,6 +1101,19 @@ entity_update(OBJ *player)
 	kill_update(player);
 }
 
+int
+entity_boot(ENT *eplayer)
+{
+	int fd = eplayer->fd;
+
+	if (fd > 0) {
+		descr_close(DESCR(fd));
+		return 1;
+	}
+
+	return 0;
+}
+
 void
 stats_init(ENT *enu, SENT *sk)
 {
@@ -1093,4 +1165,77 @@ entities_add(OBJ *where, enum biome biome, long long pdn) {
 
 	for (mid = 1; mid < MOB_MAX; mid++)
 		entity_add(mid, where, biome, pdn);
+}
+
+void
+do_reroll(command_t *cmd)
+{
+	OBJ *player = cmd->player;
+	ENT *eplayer = &player->sp.entity;
+	const char *what = cmd->argv[1];
+	OBJ *thing;
+	int i;
+
+	if (
+			!(thing = ematch_me(player, what))
+			&& !(thing = ematch_near(player, what))
+			&& !(thing = ematch_mine(player, what))
+	   ) {
+		notify(eplayer, NOMATCH_MESSAGE);
+		return;
+	}
+
+	if (player != thing && !(eplayer->flags & EF_WIZARD)) {
+		notify(eplayer, "You can not do that.");
+		return;
+	}
+
+	for (i = 0; i < ATTR_MAX; i++) {
+		eplayer->attr[i] = d20();
+	}
+
+	mcp_stats(player);
+}
+
+void
+entity_gpt(OBJ *player, int echo_off, char *add_prompt)
+{
+	ENT *eplayer = &player->sp.entity;
+	int len = strlen(add_prompt);
+	char *has_previous = eplayer->gpt;
+	char *pgpt = has_previous ? eplayer->gpt : "";
+	int glen = strlen(pgpt);
+	/* char *prompt = malloc(glen + len + 3); */
+	char *prompt = malloc(glen + len + 1);
+	strcpy(prompt, pgpt);
+	strcat(prompt, add_prompt);
+	/* strcat(prompt, "\n\n"); */
+	warn("GPT prompt:\n%s\n", prompt);
+	char *result = gpt(prompt);
+	warn("GPT result:\n%s\n", result);
+	int rlen = strlen(result);
+	/* eplayer->gpt = realloc(has_previous, glen + (echo_off ? 0 : len) + rlen + 3); */
+	eplayer->gpt = realloc(has_previous, glen + len + rlen + 1);
+	if (!has_previous)
+		*eplayer->gpt = '\0';
+	/* strcpy(eplayer->gpt, pgpt); */
+	strcat(eplayer->gpt, add_prompt);
+	strcat(eplayer->gpt, result);
+	warn("Updated GPT:\n%s\n", eplayer->gpt);
+	/* if (has_previous && has_previous != eplayer->gpt) */
+	/* 	free((void *) has_previous); */
+	notifyf(eplayer, "%s", eplayer->gpt + glen + (echo_off ? len : 0));
+}
+
+void
+entity_gptcat(OBJ *player, char *str)
+{
+	ENT *eplayer = &player->sp.entity;
+	char *has_previous = eplayer->gpt;
+	char *pgpt = has_previous ? eplayer->gpt : "";
+	int glen = strlen(pgpt);
+	int len = strlen(str);
+	eplayer->gpt = realloc(has_previous, glen + len + 1);
+	strcpy(eplayer->gpt, pgpt);
+	strcat(eplayer->gpt, str);
 }

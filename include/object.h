@@ -88,6 +88,7 @@ enum attribute {
 	ATTR_DEX,
 	ATTR_INT,
 	ATTR_WIZ,
+	ATTR_CHA,
 	ATTR_MAX
 };
 
@@ -155,10 +156,11 @@ typedef struct entity {
 	unsigned lvl, spend, cxp;
 	unsigned attr[ATTR_MAX];
 	unsigned equipment[ES_MAX];
+	char *gpt;
 } ENT;
 
 enum equipment_flags {
-	EF_EQUIPPED = 1,
+	EQF_EQUIPPED = 1,
 };
 
 enum armor_type {

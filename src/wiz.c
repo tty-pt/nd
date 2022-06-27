@@ -14,7 +14,6 @@
 
 #include "params.h"
 #include "defaults.h"
-#include "interface.h"
 #include "match.h"
 #include "player.h"
 #include "debug.h"
@@ -72,7 +71,7 @@ do_teleport(command_t *cmd) {
 				break;
 			}
 			notify(evictim, "You feel a wrenching sensation...");
-			enter(victim, destination);
+			enter(victim, destination, E_NULL);
 		}
 		break;
 	case TYPE_CONSUMABLE:
@@ -144,7 +143,7 @@ do_boot(command_t *cmd) {
 
 	else {
 		notify(evictim, "You have been booted off the game.");
-		if (boot_off(victim)) {
+		if (entity_boot(evictim)) {
 			warn("BOOTED: %s(%d) by %s(%d)", victim->name,
 					   object_ref(victim), player->name, object_ref(player));
 			if (player != victim) {
@@ -275,7 +274,7 @@ do_toad(command_t *cmd) {
 		free((void *) victim->name);
 		victim->name = strdup(buf);
 
-		boot_player_off(victim); /* Disconnect the toad */
+		entity_boot(evictim);
 
 		victim->type = TYPE_THING;
 		victim->owner = player;	/* you get it */

@@ -9,5 +9,6 @@
 
 #define HUMAN_BEING 1
 #define BUFFER_LEN 8192
+#define BIGBUFSIZ 16384
 
 #endif

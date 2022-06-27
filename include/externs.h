@@ -5,14 +5,8 @@
 #include <sys/types.h>
 #include "object.h"
 
-#include "interface.h"
-
-/* interface.c */
-enum opts {
-	OPT_DETACH = 1,
-};
-
-extern short optflags;
+/* from entity.c */
+void do_reroll(command_t *);
 
 /* from timequeue.c */
 void do_pose(command_t *);
@@ -81,5 +75,7 @@ extern void do_teleport(command_t *);
 extern void do_toad(command_t *);
 extern void do_boot(command_t *);
 extern void do_usage(command_t *);
+
+extern void do_gpt(command_t *);
 
 #endif /* _EXTERNS_H */

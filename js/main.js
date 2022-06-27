@@ -479,6 +479,7 @@ function PlayerTabs() {
                                 <Stat label="dex" value={stats.dex} />
                                 <Stat label="int" value={stats.int} />
                                 <Stat label="wiz" value={stats.wiz} />
+                                <Stat label="cha" value={stats.cha} />
                         </div>
                         <div className="vs fg">
                                 <Stat label="dodge" value={stats.dodge} />

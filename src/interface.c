@@ -43,7 +43,6 @@
 #include <db.h>
 #endif
 
-#include "interface.h"
 #include "command.h"
 #include "params.h"
 #include "defaults.h"
@@ -56,6 +55,7 @@
 #include "ws.h"
 #include "player.h"
 #include "debug.h"
+#include "utils.h"
 
 #define DESCR_ITER(di_d) \
 	for (di_d = &descr_map[sockfd + 1]; \
@@ -71,6 +71,10 @@ enum descr_flags {
 	DF_WEBSOCKET = 4,
 };
 
+enum opts {
+	OPT_DETACH = 1,
+};
+
 DB *cmdsdb = NULL;
 
 #ifdef CONFIG_SECURE
@@ -80,6 +84,7 @@ SSL_CTX *sslctx;
 void do_bio(command_t *cmd);
 extern void do_auth(command_t *cmd);
 extern void do_httpget(command_t *cmd);
+extern void do_gpt(command_t *cmd);
 
 core_command_t cmds[] = {
 	{
@@ -90,6 +95,9 @@ core_command_t cmds[] = {
 		.name = "GET",
 		.cb = &do_httpget,
 		.flags = CF_NOAUTH | CF_NOARGS,
+	}, {
+		.name = "gpt",
+		.cb = &do_gpt,
 	}, {
 		.name = "advitam",
 		.cb = &do_advitam,
@@ -186,6 +194,9 @@ core_command_t cmds[] = {
 	}, {
 		.name = "pose",
 		.cb = &do_pose,
+	}, {
+		.name = "reroll",
+		.cb = &do_reroll,
 	}, {
 		.name = "say",
 		.cb = &do_say,
@@ -481,7 +492,7 @@ int
 notify(ENT *eplayer, const char *msg)
 {
 	int retval = 0, fd;
-	char buf[BUFSIZ];
+	char buf[BIGBUFSIZ];
 	int firstpass = 1;
 	char *ptr1;
 	const char *ptr2;
@@ -627,7 +638,17 @@ do_auth(command_t *cmd)
         mcp_auth_success(player);
         mcp_equipment(player);
 	look_around(player);
+	enter_room(player, E_ALL);
 	do_view(cmd);
+}
+
+void
+do_gpt(command_t *cmd)
+{
+	OBJ *player = cmd->player;
+	ENT *eplayer = &player->sp.entity;
+	char *reply = gpt(cmd->argv[1]);
+	notifyf(eplayer, "%s", reply);
 }
 
 static inline void
@@ -931,40 +952,4 @@ shovechars()
 	}
 
 	return 0;
-}
-
-void
-wall_wizards(const char *msg)
-{
-	descr_t *d;
-	char buf[BUFFER_LEN + 2];
-
-	strlcpy(buf, msg, sizeof(buf));
-	strlcat(buf, "\r\n", sizeof(buf));
-
-	DESCR_ITER(d) {
-		OBJ *player = d->player;
-		if (player->sp.entity.flags & EF_WIZARD)
-			descr_inband(d->fd, buf);
-	}
-}
-
-int
-boot_off(OBJ *player)
-{
-	ENT *eplayer = &player->sp.entity;
-	int fd = eplayer->fd;
-
-	if (fd > 0) {
-		descr_close(&descr_map[fd]);
-		return 1;
-	}
-
-	return 0;
-}
-
-void
-boot_player_off(OBJ *player)
-{
-	boot_off(player);
 }

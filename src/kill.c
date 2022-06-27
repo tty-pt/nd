@@ -144,6 +144,7 @@ do_train(command_t *cmd) {
 	case 'd': attr = ATTR_DEX; break;
 	case 'i': attr = ATTR_INT; break;
 	case 'w': attr = ATTR_WIZ; break;
+	case 'h': attr = ATTR_CHA; break;
 	default:
 		  notify(eplayer, "Invalid attribute.");
 		  return;

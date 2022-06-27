@@ -9,12 +9,12 @@
 
 #include "params.h"
 #include "defaults.h"
-#include "interface.h"
 
 #include "spell.h"
 #include "player.h"
 #include "debug.h"
 #include "plant.h"
+#include "mcp.h"
 
 enum actions {
         ACT_LOOK = 1,
@@ -518,6 +518,7 @@ object_read(FILE * f)
 			eo->home = object_get(ref_read(f));
 			eo->fd = -1;
 			eo->last_observed = NULL;
+			eo->gpt = NULL;
 			eo->flags = ref_read(f);
 			eo->lvl = ref_read(f);
 			eo->cxp = ref_read(f);
@@ -537,7 +538,7 @@ object_read(FILE * f)
 			if (eo->flags & EF_PLAYER)
 				player_put(o);
 			birth(o);
-			warn("entity!\n");
+			warn("entity! flags %d sat %d\n", eo->flags, object_ref(eo->sat));
 		}
 		break;
 	case TYPE_GARBAGE:
@@ -568,6 +569,7 @@ objects_read(FILE * f)
 		case '*':
 			special = STRING_READ(f);
 			if (strcmp(special, "**END OF DUMP***")) {
+				warn("found end of dump\n");
 				free((void *) special);
 				return NULL;
 			} else {
@@ -586,6 +588,7 @@ objects_read(FILE * f)
 			}
 			break;
 		default:
+			warn("default '%c'\n", c);
 			return NULL;
 			/* break; */
 		}
