@@ -159,7 +159,7 @@ struct object_skeleton biomes[] = {
 	},
 	[BIOME_SAVANNAH] = {
 		.name = "savannah",
-                .description = "",
+                .description = "a place that is hot and dry",
                 .art = "savannah.jpeg",
                 .avatar = "",
                 .type = S_TYPE_BIOME,

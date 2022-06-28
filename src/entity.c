@@ -235,42 +235,55 @@ enter_room(OBJ *player, enum exit e)
 		eplayer->gpt = NULL;
 	}
 
-	sprintf(contents, "This is a fantasy world. This place is named '%s'. "
-			"It has the following contents:\n",
-			player->location->name);
+	sprintf(contents, "This is a fantasy story narrated by an artificial intelligence.\n");
+	sprintf(contents, "%sIt takes place in a '%s'",
+			contents, player->location->name);
+	if (player->location->description && *player->location->description)
+		sprintf(contents, "%s that is described as '%s' and ",
+			contents, player->location->description);
+	else
+		sprintf(contents, "%s that ", contents);
+	sprintf(contents, "%shas the following contents:\n", contents);
 
 	FOR_LIST(oi, player->location->contents) {
-		if (player == oi && e != E_ALL)
-			continue;
 		count++;
-		if (oi->type == TYPE_ENTITY) {
-			ENT *ei = &oi->sp.entity;
-			if (ei->flags & EF_PLAYER)
-				sprintf(contents, "%sA player named %s", contents, oi->name);
-			else
-				sprintf(contents, "%sA %s", contents, oi->name);
+		switch (oi->type) {
+		case TYPE_ENTITY:
+			{
+				ENT *ei = &oi->sp.entity;
+				if (ei->flags & EF_PLAYER) {
+					sprintf(contents, "%sA player named %s", contents, oi->name);
+					if (e != E_ALL) {
+						sprintf(contents, "%s, who just ", contents);
+						if (e == E_NULL)
+							sprintf(contents, "%steleported in", contents);
+						else
+							sprintf(contents, "%scame in from the %s", contents, e_name(e_simm(e)));
+					}
+				} else
+					sprintf(contents, "%sA %s", contents, oi->name);
 
-			if (player->description)
-				sprintf(contents, "%s, described as '%s'", contents, oi->name);
-			if (eplayer->flags & EF_SITTING)
-				sprintf(contents, "%s, who is sitting down", contents);
+				if (player->description)
+					sprintf(contents, "%s, described as '%s'", contents, oi->name);
+				if (eplayer->flags & EF_SITTING)
+					sprintf(contents, "%s, who is sitting down", contents);
 
-			sprintf(contents, "%s.\n", contents);
-		} else {
+				sprintf(contents, "%s.\n", contents);
+			}
+			break;
+		case TYPE_PLANT:
+			sprintf(contents, "%sA plant or tree named %s.\n", contents, oi->name);
+			break;
+		default:
 			sprintf(contents, "%sA %s.\n", contents, oi->name);
 		}
 	}
 
-	if (e != E_ALL) {
-		sprintf(contents, "%sA player named %s just ", contents, player->name);
-		if (e == E_NULL)
-			sprintf(contents, "%steleported in.\n", contents);
-		else
-			sprintf(contents, "%scame in from the %s.\n", contents, e_name(e_simm(e)));
-	}
-
+	/* sprintf(contents, "%s\n" */
+	/* 		"Narrate this information as if in a fantasy novel.\n" */
+	/* 		, contents); */
 	sprintf(contents, "%s\n"
-			"Describe the scene and the events unfolding in it.\n"
+			"Describe this.\n"
 			, contents);
 
 	entity_gpt(player, 1, contents);
@@ -512,7 +525,8 @@ look_room(OBJ *player, OBJ *loc)
 	if (mcp_look(player, loc)) {
 		notify(eplayer, unparse(player, loc));
 		notify(eplayer, description);
-		look_contents(player, loc, "You see:");
+		if (!eplayer->gpt)
+			look_contents(player, loc, "You see:");
 	}
 }
 
