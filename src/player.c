@@ -7,24 +7,6 @@
 DB *playerdb = NULL;
 
 OBJ *
-player_connect(const char *qsession)
-{
-	char buf[BUFSIZ];
-	FILE *fp;
-
-	snprintf(buf, sizeof(buf), "/sessions/%s", qsession);
-	fp = fopen(buf, "r");
-
-	if (!fp)
-		return NULL;
-
-	fscanf(fp, "%s", buf);
-	fclose(fp);
-
-	return player_get(buf);
-}
-
-OBJ *
 player_create(const char *name)
 {
 	OBJ *player = object_new();

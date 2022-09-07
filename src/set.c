@@ -14,7 +14,6 @@
 #include "params.h"
 #include "defaults.h"
 #include "match.h"
-#include "interface.h"
 #include "player.h"
 #include "command.h"
 

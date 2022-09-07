@@ -2,7 +2,6 @@
 #include "entity.h"
 #include "params.h"
 #include "defaults.h"
-#include "interface.h"
 #include "match.h"
 #include "command.h"
 

@@ -43,7 +43,6 @@
 #include <db.h>
 #endif
 
-#include "interface.h"
 #include "command.h"
 #include "params.h"
 #include "defaults.h"
@@ -56,6 +55,7 @@
 #include "ws.h"
 #include "player.h"
 #include "debug.h"
+#include "utils.h"
 
 #define DESCR_ITER(di_d) \
 	for (di_d = &descr_map[sockfd + 1]; \
@@ -69,6 +69,10 @@
 enum descr_flags {
 	DF_CONNECTED = 1,
 	DF_WEBSOCKET = 4,
+};
+
+enum opts {
+	OPT_DETACH = 1,
 };
 
 DB *cmdsdb = NULL;
@@ -186,6 +190,9 @@ core_command_t cmds[] = {
 	}, {
 		.name = "pose",
 		.cb = &do_pose,
+	}, {
+		.name = "reroll",
+		.cb = &do_reroll,
 	}, {
 		.name = "say",
 		.cb = &do_say,
@@ -481,7 +488,7 @@ int
 notify(ENT *eplayer, const char *msg)
 {
 	int retval = 0, fd;
-	char buf[BUFSIZ];
+	char buf[BIGBUFSIZ];
 	int firstpass = 1;
 	char *ptr1;
 	const char *ptr2;
@@ -591,6 +598,13 @@ do_auth(command_t *cmd)
 	FILE *fp;
 	OBJ *player;
 	descr_t *d = &descr_map[fd];
+
+
+	if (!*qsession) {
+		descr_inband(fd, "Please log in.");
+		mcp_auth_fail(fd, 3);
+		return;
+	}
 
 	snprintf(buf, sizeof(buf), "/sessions/%s", qsession);
 	fp = fopen(buf, "r");
@@ -909,6 +923,9 @@ shovechars()
 				return 0;
 			case EINTR:
 				continue;
+			case EBADF:
+				descr_close(d);
+				continue;
 			}
 
 			perror("select");
@@ -931,40 +948,4 @@ shovechars()
 	}
 
 	return 0;
-}
-
-void
-wall_wizards(const char *msg)
-{
-	descr_t *d;
-	char buf[BUFFER_LEN + 2];
-
-	strlcpy(buf, msg, sizeof(buf));
-	strlcat(buf, "\r\n", sizeof(buf));
-
-	DESCR_ITER(d) {
-		OBJ *player = d->player;
-		if (player->sp.entity.flags & EF_WIZARD)
-			descr_inband(d->fd, buf);
-	}
-}
-
-int
-boot_off(OBJ *player)
-{
-	ENT *eplayer = &player->sp.entity;
-	int fd = eplayer->fd;
-
-	if (fd > 0) {
-		descr_close(&descr_map[fd]);
-		return 1;
-	}
-
-	return 0;
-}
-
-void
-boot_player_off(OBJ *player)
-{
-	boot_off(player);
 }

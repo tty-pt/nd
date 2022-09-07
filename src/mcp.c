@@ -596,6 +596,8 @@ mcp_stats(OBJ *player) {
         mcp_mesg_arg_append(&msg, "int", buf);
 	snprintf(buf, sizeof(buf), "%d", eplayer->attr[ATTR_WIZ]);
         mcp_mesg_arg_append(&msg, "wiz", buf);
+	snprintf(buf, sizeof(buf), "%d", eplayer->attr[ATTR_CHA]);
+        mcp_mesg_arg_append(&msg, "cha", buf);
 	snprintf(buf, sizeof(buf), "%d", EFFECT(eplayer, DODGE).value);
         mcp_mesg_arg_append(&msg, "dodge", buf);
 	snprintf(buf, sizeof(buf), "%d", EFFECT(eplayer, DMG).value);

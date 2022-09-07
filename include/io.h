@@ -32,6 +32,7 @@ typedef struct descr_st {
 extern descr_t descr_map[];
 
 int descr_inband(int fd, const char *s);
+void descr_close(descr_t *d);
 int notify(ENT *eplayer, const char *msg);
 void notifyf(ENT *eplayer, char *format, ...);
 void anotifyf(OBJ *room, char *format, ...);

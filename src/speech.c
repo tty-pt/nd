@@ -3,7 +3,6 @@
 #include "entity.h"
 #include "config.h"
 
-#include "interface.h"
 #include "match.h"
 #include "params.h"
 #include "defaults.h"

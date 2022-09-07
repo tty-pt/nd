@@ -172,7 +172,7 @@ recycle(OBJ *player, OBJ *thing)
 		if (first->type == TYPE_ENTITY) {
 			ENT *efirst = &first->sp.entity;
 			if (efirst->flags & EF_PLAYER) {
-				enter(first, efirst->home);
+				enter(first, efirst->home, E_NULL);
 				if (first->location == thing) {
 					notifyf(eplayer, "Escaping teleport loop!  Going home.");
 					object_move(first, object_get(PLAYER_START));
@@ -222,14 +222,20 @@ entities_aggro(OBJ *player)
 }
 
 void
-enter(OBJ *player, OBJ *loc)
+enter(OBJ *player, OBJ *loc, enum exit e)
 {
 	OBJ *old = player->location;
 
-	onotifyf(player, "%s has left.", player->name);
+	if (e == E_NULL)
+		onotifyf(player, "%s teleports out.", player->name);
+	else
+		onotifyf(player, "%s goes %s.", player->name, e_name(e));
 	object_move(player, loc);
 	room_clean(player, old);
-	onotifyf(player, "%s has arrived.", player->name);
+	if (e == E_NULL)
+		onotifyf(player, "%s teleports in.", player->name);
+	else
+		onotifyf(player, "%s comes in from the %s.", player->name, e_name(e_simm(e)));
 	entities_aggro(player);
 	look_around(player);
 }
@@ -529,7 +535,7 @@ equip(OBJ *who, OBJ *eq)
 		return 1;
 
 	EQUIP(ewho, eql) = object_ref(eq);
-	eeq->flags |= EF_EQUIPPED;
+	eeq->flags |= EQF_EQUIPPED;
 
 	notifyf(ewho, "You equip %s.", eq->name);
 	mcp_stats(who);
@@ -572,7 +578,7 @@ unequip(OBJ *player, unsigned eql)
 	}
 
 	EQUIP(eplayer, eql) = NOTHING;
-	eeq->flags &= ~EF_EQUIPPED;
+	eeq->flags &= ~EQF_EQUIPPED;
 	mcp_content_in(player, oeq);
 	mcp_stats(player);
 	mcp_equipment(player);
@@ -862,20 +868,23 @@ huth_notify(OBJ *player, unsigned v, unsigned char y, char const *m[4])
         return 0;
 }
 
+static inline unsigned char
+d20()
+{
+	return (random() % 20) + 1;
+}
+
+static unsigned char
+entity_ac(ENT *eplayer)
+{
+	return 10 + MODIFIER(eplayer, ATTR_DEX);
+}
+
 // returns 1 if target dodges
 static inline int
 dodge_get(ENT *eplayer)
 {
-	OBJ *target = eplayer->target;
-	ENT *etarget = &target->sp.entity;
-	int d = RAND_MAX / 4;
-	short ad = EFFECT(eplayer, DODGE).value,
-	      dd = EFFECT(etarget, DODGE).value;
-
-	if (ad > dd)
-		d += 3 * d / (ad - dd);
-
-	return rand() <= d;
+	return d20() < entity_ac(eplayer);
 }
 
 int
@@ -1042,6 +1051,19 @@ entity_update(OBJ *player)
 	kill_update(player);
 }
 
+int
+entity_boot(ENT *eplayer)
+{
+	int fd = eplayer->fd;
+
+	if (fd > 0) {
+		descr_close(DESCR(fd));
+		return 1;
+	}
+
+	return 0;
+}
+
 void
 stats_init(ENT *enu, SENT *sk)
 {
@@ -1093,4 +1115,36 @@ entities_add(OBJ *where, enum biome biome, long long pdn) {
 
 	for (mid = 1; mid < MOB_MAX; mid++)
 		entity_add(mid, where, biome, pdn);
+}
+
+void
+do_reroll(command_t *cmd)
+{
+	OBJ *player = cmd->player;
+	ENT *eplayer = &player->sp.entity;
+	const char *what = cmd->argv[1];
+	OBJ *thing;
+	int i;
+
+	if (
+			!(thing = ematch_me(player, what))
+			&& !(thing = ematch_near(player, what))
+			&& !(thing = ematch_mine(player, what))
+	   ) {
+		notify(eplayer, NOMATCH_MESSAGE);
+		return;
+	}
+
+	if (player != thing && !(eplayer->flags & EF_WIZARD)) {
+		notify(eplayer, "You can not do that.");
+		return;
+	}
+
+	for (i = 0; i < ATTR_MAX; i++) {
+		eplayer->attr[i] = d20();
+	}
+
+	EFFECT(eplayer, DMG).value = DMG_BASE(eplayer);
+	EFFECT(eplayer, DODGE).value = DODGE_BASE(eplayer);
+	mcp_stats(player);
 }

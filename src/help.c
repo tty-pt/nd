@@ -4,7 +4,6 @@
 /* commands for giving help */
 
 #include "params.h"
-#include "interface.h"
 #include "utils.h"
 
 #include <sys/types.h>

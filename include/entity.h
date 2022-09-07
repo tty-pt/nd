@@ -28,6 +28,8 @@
 #define DMG_BASE(p) DMG_G(p->attr[ATTR_STR])
 #define DODGE_BASE(p) DODGE_G(p->attr[ATTR_DEX])
 
+#define MODIFIER(ent, a) ((ent->attr[a] - 10) >> 1) // / 2
+
 #define EQT(x)		(x>>6)
 #define EQL(x)		(x & 15)
 #define EQ(i, t)	(i | (t<<6))
@@ -47,7 +49,8 @@ short kill_dmg(enum element dmg_type,
 		enum element def_type);
 
 void recycle(OBJ *player, OBJ *thing);
-void enter(OBJ *player, OBJ *loc);
+void enter(OBJ *player, OBJ *loc, enum exit e);
+/* void enter(OBJ *player, OBJ *loc); */
 
 const char * unparse(OBJ *player, OBJ *loc);
 
@@ -70,7 +73,9 @@ enum element element_next(ENT *ref, register unsigned char a);
 void stats_init(ENT *enu, SENT *sk);
 void entity_update(OBJ *player);
 int entity_damage(OBJ *player, OBJ *target, short amt);
+int entity_boot(ENT *eplayer);
 
 void entities_add(OBJ *where, enum biome, long long pdn);
+void enter_room(OBJ *player, enum exit e);
 
 #endif
