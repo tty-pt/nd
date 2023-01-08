@@ -111,7 +111,13 @@ endfunc
 
 func Reset()
 	!./reset.sh
-	call s:SigInt()
+	Gdb run
+	Run
+endfunc
+
+func ConfigRun()
+	Gdb handle SIGPIPE noprint nostop
+	Gdb set confirm off
 	Run
 endfunc
 
@@ -123,8 +129,7 @@ if !has('macunix')
 	File ./src/fbmuck
 	" Args \-C ./game
 	GdbStart
-	Gdb handle SIGPIPE noprint nostop
-	Run
+	DebugFocus
 endif
 
 if g:os != "OpenBSD"
@@ -138,9 +143,10 @@ nmap <leader>C :Clear<cr>
 nmap <leader>k :call Kill()<cr>
 nmap <leader>kk :call FullQuit()<cr>
 nmap <leader>q :call Quit()<cr>
-tno <esc>k <c-w>:call Kill()<cr>
-tno <esc>kk <c-w>:call FullQuit()<cr>
-tno <esc>q <c-w>:call Quit()<cr>
+tno <leader>k <c-w>:call Kill()<cr>
+tno <leader>kk <c-w>:call FullQuit()<cr>
+tno <leader>q <c-w>:call Quit()<cr>
+tno <leader>r <c-w>:call ConfigRun()<cr>
 map <leader>reset :call Reset()<cr>
 
 " jsc

@@ -242,6 +242,8 @@ object_write(FILE * f, OBJ *obj)
 {
 	int j;
 	putstring(f, obj->name);
+	putstring(f, obj->art);
+	putstring(f, obj->avatar);
 	putref(f, object_ref(obj->location));
 	putref(f, object_ref(obj->contents));
 	putref(f, object_ref(obj->next));
@@ -460,6 +462,8 @@ object_read(FILE * f)
 	objects_grow(ref + 1);
 
 	o->name = STRING_READ(f);
+	o->art = STRING_READ(f);
+	o->avatar = STRING_READ(f);
 	o->location = object_get(ref_read(f));
 	o->contents = object_get(ref_read(f));
 	o->next = object_get(ref_read(f));

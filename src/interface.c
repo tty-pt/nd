@@ -817,7 +817,6 @@ descr_close(descr_t *d)
 		d->player = NULL;
 	} else {
 		warn("%d never connected\n", d->fd);
-		shutdown_flag = 1;
 	}
 
 	shutdown(d->fd, 2);
