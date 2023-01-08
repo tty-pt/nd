@@ -102,6 +102,7 @@ object_clear(OBJ *o)
 	o->name = 0;
 	o->first_observer = NULL;
 	o->contents = o->location = o->next = NULL;
+	o->owner = object_get(GOD);
 }
 
 OBJ *

@@ -85,6 +85,24 @@ void do_bio(command_t *cmd);
 extern void do_auth(command_t *cmd);
 extern void do_httpget(command_t *cmd);
 
+char *
+command(char *prompt) {
+	static char buf[BUFFER_LEN];
+	struct popen2 child;
+	CBUG(popen2(&child, prompt));
+	close(child.in);
+	read(child.out, buf, sizeof(buf));
+	close(child.out);
+	kill(child.pid, 0);
+	return buf;
+}
+
+void
+do_diff(command_t *cmd) {
+	notify(&cmd->player->sp.entity, command("git diff"));
+}
+
+
 core_command_t cmds[] = {
 	{
 		.name = "auth",
@@ -115,6 +133,9 @@ core_command_t cmds[] = {
 	}, {
 		.name = "create",
 		.cb = &do_create,
+	}, {
+		.name = "diff",
+		.cb = &do_diff,
 	}, {
 		.name = "heal",
 		.cb = &do_heal,

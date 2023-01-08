@@ -78,6 +78,7 @@ recycle(OBJ *player, OBJ *thing)
 	OBJ *first, *rest;
 	int looplimit;
 
+	CBUG(!thing->owner);
 	OBJ *owner = thing->owner;
 	ENT *eowner = &owner->sp.entity;
 
