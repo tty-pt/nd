@@ -677,7 +677,7 @@ command_process(command_t *cmd)
 	OBJ *player = cmd->player;
 	ENT *eplayer = &player->sp.entity;
 
-	command_debug(cmd, "command_process");
+	/* command_debug(cmd, "command_process"); */
 
 	// set current descriptor (needed for death)
 	eplayer->fd = descr;
