@@ -115,18 +115,20 @@ function useSession(onOpen, onMessage, onClose) {
                 };
         };
 
+	const _onClose = useCallback(evt => onClose(evt, connect));
+
         const updateCloseHandler = () => {
                 if (!session) return;
-                session.addEventListener('close', onClose);
+                session.addEventListener('close', _onClose);
                 return () => {
-                        session.removeEventListener('close', onClose);
+                        session.removeEventListener('close', _onClose);
                 };
         };
 
         useEffect(connect, []);
         useEffect(updateOpenHandler, [session, onOpen]);
         useEffect(updateMessageHandler, [session, onMessage]);
-        useEffect(updateCloseHandler, [session, onClose]);
+        useEffect(updateCloseHandler, [session, _onClose]);
 
         function sendMessage(text) {
                 // console.log("sendMessage", text);
@@ -342,11 +344,13 @@ function GameContextProvider(props) {
 
         function onOpen() {
                 output("socket connection open");
+		sendMessage("auth " + getCookie("QSESSION"));
                 setOpen(true);
         }
 
-        function onClose() {
+        function onClose(evt, connect) {
                 output("socket connection closed");
+		connect();
         }
 
         const [ connect, sendMessage, session ] = useSession(onOpen, onMessage, onClose);
@@ -357,7 +361,6 @@ function GameContextProvider(props) {
                         session,
                         sendMessage,
                         dispatch,
-                        open,
                 }}
         >
                 { children }
@@ -899,12 +902,7 @@ function getCookie(cname) {
 }
 
 function InnerApp() {
-        const { open, sendMessage } = useContext(GameContext);
-
-	useEffect(() => {
-		if (open)
-			sendMessage("auth " + getCookie("QSESSION"));
-	}, [open]);
+        const { sendMessage } = useContext(GameContext);
 
         return (<Game />);
 }
