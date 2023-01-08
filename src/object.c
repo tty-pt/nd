@@ -185,6 +185,7 @@ object_add(SKEL *sk, OBJ *where)
 			enu->flags = sk->sp.entity.flags;
 			enu->wtso = sk->sp.entity.wt;
 			birth(nu);
+			spells_birth(nu);
 			object_drop(nu, sk->sp.entity.drop);
 			enu->home = where;
 		}
@@ -306,6 +307,7 @@ object_write(FILE * f, OBJ *obj)
 			putref(f, object_ref(roo->dropto));
 			putref(f, roo->flags);
 			putref(f, roo->exits);
+			putref(f, roo->doors);
 			putref(f, roo->floor);
 			putref(f, object_ref(obj->owner));
 		}
@@ -412,8 +414,9 @@ objects_free(void)
 dbref
 ref_read(FILE * f)
 {
-	static char buf[BUFSIZ];
-	fgets(buf, sizeof(buf), f);
+	char buf[BUFSIZ];
+	CBUG(!fgets(buf, sizeof(buf), f));
+	warn("ref_read %s", buf);
 	return (atol(buf));
 }
 
@@ -510,12 +513,14 @@ object_read(FILE * f)
 			ro->doors = ref_read(f);
 			ro->floor = ref_read(f);
 			o->owner = object_get(ref_read(f));
+			warn("ROOM\n");
 		}
 		return;
 	case TYPE_ENTITY:
 		{
 			ENT *eo = &o->sp.entity;
 			eo->home = object_get(ref_read(f));
+			/* warn("entity home\n"); */
 			eo->fd = -1;
 			eo->last_observed = NULL;
 			eo->flags = ref_read(f);
@@ -528,16 +533,19 @@ object_read(FILE * f)
 			eo->sat = object_get(ref_read(f));
 			for (j = 0; j < 8; j++) {
 				struct spell *sp = &eo->spells[j];
-				struct spell_skeleton *_sp = SPELL_SKELETON(ref_read(f));
+				int ref = ref_read(f);
+				struct spell_skeleton *_sp = SPELL_SKELETON(ref);
+				/* warn("entity! flags %d ref %d sp %p\n", eo->flags, ref); */
 				sp->_sp = _sp;
 				sp->val = SPELL_DMG(eo, _sp);
 				sp->cost = SPELL_COST(sp->val, _sp->y, _sp->flags & AF_BUF);
 			}
+			/* warn("entity! flags %d ref %d\n", eo->flags, ref_read(f)); */
 			o->owner = o;
 			if (eo->flags & EF_PLAYER)
 				player_put(o);
 			birth(o);
-			warn("entity! flags %d sat %d\n", eo->flags, object_ref(eo->sat));
+			warn("ENTITY\n");
 		}
 		break;
 	case TYPE_GARBAGE:

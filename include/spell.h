@@ -20,6 +20,7 @@ extern element_t element_map[];
 #define DEBUF_TYPE(sp) (sp->flags & DEBUF_TYPE_MASK)
 
 #define SPELL_SKELETON(idx) (&spell_skeleton_map[idx])
+#define SPELL_REF(sp) (sp - &spell_skeleton_map[0])
 #define SPELL_COST(dmg, y, no_bdmg) (no_bdmg ? 0 : dmg) + dmg / (1 << y)
 
 enum spell_type {
@@ -44,5 +45,6 @@ int debufs_process(OBJ *player);
 void debuf_notify(OBJ *player, struct debuf *d, short val);
 int spell_cast(OBJ *player, OBJ *target, unsigned slot);
 int spells_cast(OBJ *player, OBJ *target);
+void spells_birth(OBJ *object);
 
 #endif

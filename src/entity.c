@@ -53,8 +53,6 @@ birth(OBJ *player)
 	EFFECT(eplayer, DMG).value = DMG_BASE(eplayer);
 	EFFECT(eplayer, DODGE).value = DODGE_BASE(eplayer);
 
-	memset(eplayer->spells, 0, sizeof(eplayer->spells));
-
 	int i;
 
 	for (i = 0; i < ES_MAX; i++) {

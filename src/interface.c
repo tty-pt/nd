@@ -411,9 +411,6 @@ main(int argc, char **argv)
 	ERR_print_errors_fp(stderr);
 #endif
 
-	warn("INIT: TinyMUCK %s starting.", "version");
-	warn("%s PID is: %d", argv[0], getpid());
-
 	struct passwd *pw = getpwnam("www");
 	if (pw == NULL)
 		errx(1, "unknown user %s", "www");
@@ -625,6 +622,7 @@ do_auth(command_t *cmd)
 	if (!player) {
 		player = player_create(buf);
 		birth(player);
+		spells_birth(player);
 	} else if (player->sp.entity.fd > 0) {
                 descr_inband(fd, "That player is already connected.\r\n");
                 mcp_auth_fail(fd, 2);
@@ -817,8 +815,10 @@ descr_close(descr_t *d)
 		eplayer->fd = -1;
 		d->flags = 0;
 		d->player = NULL;
-	} else
+	} else {
 		warn("%d never connected\n", d->fd);
+		shutdown_flag = 1;
+	}
 
 	shutdown(d->fd, 2);
 	close(d->fd);
@@ -899,6 +899,8 @@ shovechars()
 
 	start = get_now();
 	/* And here, we do the actual player-interaction loop */
+
+	warn("Done.\n");
 
 	while (shutdown_flag == 0) {
 		/* process_commands(); */

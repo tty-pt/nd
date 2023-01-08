@@ -6,6 +6,7 @@
 #include "mob.h"
 
 #include "params.h"
+#include "debug.h"
 /* #include "speech.h" */
 
 element_t element_map[] = {
@@ -350,3 +351,15 @@ spells_cast(OBJ *player, OBJ *target)
 	return 0;
 }
 
+void
+spells_birth(OBJ *object) {
+	ENT *entity = &object->sp.entity;
+	register int j;
+	for (j = 0; j < 8; j++) {
+		struct spell *sp = &entity->spells[j];
+		struct spell_skeleton *_sp = SPELL_SKELETON(0);
+		sp->_sp = _sp;
+		sp->val = SPELL_DMG(entity, _sp);
+		sp->cost = SPELL_COST(sp->val, _sp->y, _sp->flags & AF_BUF);
+	}
+}
