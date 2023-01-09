@@ -93,8 +93,9 @@ command(char *prompt) {
 	CBUG(popen2(&child, prompt));
 	close(child.in);
 	len = read(child.out, buf, sizeof(buf));
-	CBUG(len < 2);
-	buf[len - 2] = '\0';
+	if (len >= 2) {
+		buf[len - 2] = '\0';
+	}
 	close(child.out);
 	kill(child.pid, 0);
 	return buf;
