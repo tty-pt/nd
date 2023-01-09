@@ -89,9 +89,12 @@ char *
 command(char *prompt) {
 	static char buf[BUFFER_LEN];
 	struct popen2 child;
+	ssize_t len;
 	CBUG(popen2(&child, prompt));
 	close(child.in);
-	read(child.out, buf, sizeof(buf));
+	len = read(child.out, buf, sizeof(buf));
+	CBUG(len < 2);
+	buf[len - 2] = '\0';
 	close(child.out);
 	kill(child.pid, 0);
 	return buf;
@@ -99,7 +102,7 @@ command(char *prompt) {
 
 void
 do_diff(command_t *cmd) {
-	notify(&cmd->player->sp.entity, command("git diff"));
+	descr_inband(cmd->fd, command("git diff origin/master"));
 }
 
 
