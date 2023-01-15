@@ -1,6 +1,6 @@
-#define GET_FLAG(x)	( mcp.flags & x )
-#define SET_FLAGS(x)	{ mcp.flags |= x ; }
-#define UNSET_FLAGS(x)	( mcp.flags &= ~(x) )
+function GET_FLAG(x) { return mcp.flags & x; }
+function SET_FLAGS(x) { mcp.flags |= x; }
+function UNSET_FLAGS(x) { mcp.flags &= ~(x); }
 
 let out_buf = "";
 
@@ -208,6 +208,7 @@ function mcp_proc_ch(p) {
         // alert(mcp.cache);
 }
 
+export
 function mcp_proc(data) {
         let in_i;
         mcp_arr = [];
@@ -237,3 +238,10 @@ function mcp_init() {
         mcp_reset();
         mcp_clear();
 }
+
+const export_mcp = {
+	init: mcp_init,
+	proc: mcp_proc,
+}
+
+export default export_mcp;

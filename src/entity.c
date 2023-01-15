@@ -588,6 +588,9 @@ static inline unsigned
 entity_xp(ENT *eplayer, ENT *etarget)
 {
 	// alternatively (2000/x)*y/x
+	if (!eplayer->lvl)
+		return 0;
+
 	unsigned r = 254 * etarget->lvl / (eplayer->lvl * eplayer->lvl);
 	if (r < 0)
 		return 0;
@@ -628,9 +631,9 @@ entity_body(OBJ *player, OBJ *mob)
 	unsigned n = 0;
 
 	for (; (tmp = mob->contents); ) {
-		CBUG(tmp->type != TYPE_GARBAGE);
-		/* if (object_get(tmp)->type == TYPE_GARBAGE) */
-		/* 	continue; */
+		/* CBUG(tmp->type != TYPE_GARBAGE); */
+		if (tmp->type == TYPE_GARBAGE)
+			continue;
 		if (tmp->type == TYPE_EQUIPMENT) {
 			EQU *etmp = &tmp->sp.equipment;
 			unequip(mob, EQL(etmp->eqw));

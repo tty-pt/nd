@@ -103,6 +103,14 @@ command(char *prompt) {
 
 void
 do_diff(command_t *cmd) {
+	// TODO ssh in chroot?
+	/* descr_inband(cmd->fd, command("git fetch origin master; git diff origin/master")); */
+
+	// the fetch is not needed I think if it is
+	// not updated we can do it manually or display
+	// the status or the commit. It adds a lot of overhead to
+	// fetch on every diff. Perhaps later, when the repo is
+	// local, fetch will make no sense at all
 	descr_inband(cmd->fd, command("git diff origin/master"));
 }
 
