@@ -1,3 +1,13 @@
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <ctype.h>
+#include <string.h>
+#include <dirent.h>
+#include <stdlib.h>
+#ifndef __OPEN_BSD__
+#include <bsd/string.h>
+#endif
+
 #include "io.h"
 #include "entity.h"
 
@@ -5,13 +15,6 @@
 
 #include "params.h"
 #include "utils.h"
-
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <ctype.h>
-#include <string.h>
-
-#include <dirent.h>
 
 #include "command.h"
 
@@ -160,7 +163,7 @@ index_file(OBJ *player, const char *onwhat, const char *file)
 int
 show_subfile(OBJ *player, const char *dir, const char *topic, const char *seg, int partial)
 {
-	char buf[256];
+	char buf[512];
 	struct stat st;
 	DIR *df;
 	struct dirent *dp;

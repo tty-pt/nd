@@ -2,8 +2,10 @@
 
 #include <stdlib.h>
 #include <ctype.h>
-#include <db4/db.h>
+#include <string.h>
+#include <time.h>
 
+#include "nddb.h"
 #include "io.h"
 #include "debug.h"
 #include "noise.h"

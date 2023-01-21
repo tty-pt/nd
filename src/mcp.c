@@ -11,6 +11,10 @@
 #include "io.h"
 #include "command.h"
 
+#ifndef __OPEN_BSD__
+#include <bsd/string.h>
+#endif
+
 #define MCP_WEB_PKG "web"
 #define MCP_MESG_PREFIX		"#$#"
 #define MCP_ARG_EMPTY		"\"\""

@@ -1,5 +1,6 @@
 srcdir	:= ../${srcdir}
 
+include ${srcdir}/.config
 -include Makefile
 
 uname != uname
@@ -10,9 +11,13 @@ ldflags-Darwin += -L/usr/local/opt/berkeley-db@4/lib
 cflags-Darwin += -I/usr/local/opt/openssl@3/include
 ldflags-Darwin += -L/usr/local/opt/openssl@3/lib
 
-cflags-y	+= -I/usr/local/include ${cflags-${uname}} -I${srcdir}/include --pedantic -Wall -Wno-gnu-zero-variadic-macro-arguments -Wno-gnu-designator
+ldlibs-Linux += -lbsd
+
+config	!= cat ${srcdir}/.config | sed -n '/^.*=y$$/p' | sed 's/^\(.*\)=y$$/-D\1/' | tr '\n' ' '
+cflags-y	+= ${config}
+cflags-y	+= -I/usr/local/include ${cflags-${uname}} -I${srcdir}/include -D_GNU_SOURCE -std=c99 -Wall -Wno-gnu-zero-variadic-macro-arguments -Wno-gnu-designator
 ldflags-y	+= -L/usr/local/lib ${ldflags-${uname}}
-#ldlibs-y ommited
+ldlibs-y	+= ${ldlibs-${uname}}
 
 LD := ${CC}
 CFLAGS		+= ${cflags-y}
@@ -27,18 +32,18 @@ all: ${exe}
 $(exe): ${real-obj-y} ${exe-obj-y}
 	${LINK.c} -o $@ ${real-obj-y} ${$@-obj-y} ${ldlibs-y}
 
-RELDIR=${PWD:${srcdir}/%=%}
+RELDIR=${PWD:${srcdir}/%=%}/src
 
 clean:
 	@echo rm ${RELDIR}/{ ${exe} ${exe-obj-y} ${real-obj-y} ${deps}}
 	@rm ${exe} ${exe-obj-y} ${real-obj-y} ${deps} >/dev/null 2>&1 || true
 
 deps: # ${deps}
-	@[[ -z "${real-obj-y}" ]] || \
+	@test -z "${real-obj-y}" || \
 		mkdep ${CFLAGS} ${real-obj-y:%.o=%.c}
 
 .c.o:
 	@echo CC ${@:%=${RELDIR}/%}
-	cd ${srcdir} && ${COMPILE.c} -o ${@:%=${RELDIR}/%} ${.IMPSRC:%=${RELDIR}/%}
+	cd ${srcdir} && ${COMPILE.c} -o ${@:%=${RELDIR}/%} ${<:%=${RELDIR}/%}
 
 include Makefile.common

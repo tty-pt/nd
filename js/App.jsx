@@ -1,9 +1,15 @@
-#include "mcp.js"
-#include "tty.js"
-#include "canvas.js"
-#include "vendor.js"
-
-#define CONFIG_PROTO "wss"
+import React, {
+  useState, useEffect, useRef,
+  useCallback, useReducer, useContext,
+} from "react";
+import { hot } from "react-hot-loader/root";
+import ReactDOM from "react-dom";
+import ACTIONS, { ACTIONS_LABEL } from "actions";
+import mcp from "mcp";
+import tty_proc from "tty";
+import canvas from "canvas";
+import "vim.css";
+const baseDir = process.env.CONFIG_BASEDIR || "";
 
 class Modal extends React.Component {
 	constructor(props) {
@@ -17,7 +23,7 @@ class Modal extends React.Component {
 			if (e.target == this.el)
 				this.props.setOpen(false);
 		};
-		this.el.className = 'modal abs sfv vn c fcc oh f';
+		this.el.className = 'modal abs sfv v0 c fcc oh f';
 		// this.el.classList.remove('dn');
 	}
 
@@ -65,7 +71,7 @@ const useModal = _useModal.bind(null, modal);
 
 // window.onorientationchange = scroll_reset;
 
-mcp_init();
+mcp.init();
 
 const atiles = [
         "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAQklEQVQ4jWNgGL7g4OFb/9ExWZpwYZyaiXEBhiH4NBNSA+fg8wpWW5H1ETIAl98xvEHIEJyacfmdEB8vICsdjFAAAGW58imbroFwAAAAAElFTkSuQmCC",
@@ -94,7 +100,7 @@ function useSession(onOpen, onMessage, onClose) {
         const [ session, setSession ] = useState(null);
 
         const connect = useCallback(() => {
-                const ws = new WebSocket(CONFIG_PROTO + "://" + window.location.hostname + ':4201', 'text');
+                const ws = new WebSocket(process.env.CONFIG_PROTO + "://" + window.location.hostname + ':4201', 'text');
                 ws.binaryType = 'arraybuffer';
                 setSession(ws);
         }, []);
@@ -328,7 +334,7 @@ function GameContextProvider(props) {
         );
 
         function onMessage(ev) {
-                const mcp_arr = mcp_proc(ev.data);
+                const mcp_arr = mcp.proc(ev.data);
                 for (let i = 0; i < mcp_arr.length; i++) {
                         // console.log(mcp_arr[i]);
                         dispatch(mcp_arr[i]);
@@ -344,7 +350,13 @@ function GameContextProvider(props) {
 
         function onOpen() {
                 output("socket connection open");
-		sendMessage("auth " + getCookie("QSESSION"));
+
+          if (process.env.development) {
+            sendMessage("auth test");
+          } else {
+            sendMessage("auth " + getCookie("QSESSION"));
+          }
+          
                 setOpen(true);
         }
 
@@ -389,9 +401,9 @@ function RoomTitleAndArt() {
         if (!obj)
                 return null;
 
-        const src = "/neverdark/art/" + (obj.art || "unknown.jpg");
+        const src = baseDir + "/art/" + (obj.art || "unknown.jpg");
 
-        return (<div className="vn fg f fic">
+        return (<div className="v0 fg f fic">
                 <div className="tm pxs tac">{ obj.name }</div>
                 <img className="sr2" src={src} />
         </div>);
@@ -401,13 +413,13 @@ function Tabs(props) {
         const { children } = props;
         const [ activeTab, setActiveTab ] = useState(0);
 
-        return (<div className="fg vn">
-                <div className="_n">
+        return (<div className="fg v0">
+                <div className="h0">
                         { children.map((child, idx) => {
                                 const { label } = child.props;
                                 return (<a key={idx}
                                         onClick={() => setActiveTab(idx)}
-                                        className={activeTab == idx ? 'ps c0' : 'ps'}
+                                        className={activeTab == idx ? 'p8 c0' : 'p8'}
                                 >
                                         {label}
                                 </a>);
@@ -426,8 +438,8 @@ function Tabs(props) {
 function Stat(props) {
         const { label, value } = props;
 
-        return (<div className="_s">
-                <div className="tb">{label}</div><div>{value}</div>
+        return (<div className="h8">
+                <div className="tbbold">{label}</div><div>{value}</div>
         </div>);
 }
 
@@ -459,7 +471,7 @@ function Equipment(props) {
                 return null;
 
         if (!equipment[eql])
-                return <div className="sl c0"></div>;
+                return <div className="s32 c0"></div>;
 
         return (<Avatar
                 item={equipment[eql]}
@@ -475,8 +487,8 @@ function PlayerTabs() {
                 return null;
 
         return (<Tabs>
-                <div label="stats" className="ps _s f">
-                        <div className="vs fg">
+                <div label="stats" className="p8 h8 f">
+                        <div className="v8 fg">
                                 <Stat label="str" value={stats.str} />
                                 <Stat label="con" value={stats.con} />
                                 <Stat label="dex" value={stats.dex} />
@@ -484,7 +496,7 @@ function PlayerTabs() {
                                 <Stat label="wiz" value={stats.wiz} />
                                 <Stat label="cha" value={stats.cha} />
                         </div>
-                        <div className="vs fg">
+                        <div className="v8 fg">
                                 <Stat label="dodge" value={stats.dodge} />
                                 <Stat label="dmg" value={stats.dmg} />
                                 <Stat label="mdmg" value={stats.mdmg} />
@@ -492,34 +504,34 @@ function PlayerTabs() {
                                 <Stat label="mdef" value={stats.mdef} />
                         </div>
                 </div>
-                <div label="equipment" className="ps vs">
-                        <div className="_s f">
-                                <div className="sl"></div>
-                                <div className="sl"></div>
+                <div label="equipment" className="p8 v8">
+                        <div className="h8 f">
+                                <div className="s32"></div>
+                                <div className="s32"></div>
                                 <Equipment eql={EQL_HEAD} />
-                                <div className="sl"></div>
-                                <div className="sl"></div>
+                                <div className="s32"></div>
+                                <div className="s32"></div>
                         </div>
-                        <div className="_s f">
+                        <div className="h8 f">
                                 <Equipment eql={EQL_RHAND} />
-                                <div className="sl"></div>
+                                <div className="s32"></div>
                                 <Equipment eql={EQL_NECK} />
                                 <Equipment eql={EQL_BACK} />
-                                <div className="sl"></div>
+                                <div className="s32"></div>
                         </div>
-                        <div className="_s f">
+                        <div className="h8 f">
                                 <Equipment eql={EQL_RFINGER} />
-                                <div className="sl"></div>
+                                <div className="s32"></div>
                                 <Equipment eql={EQL_CHEST} />
-                                <div className="sl"></div>
+                                <div className="s32"></div>
                                 <Equipment eql={EQL_LFINGER} />
                         </div>
-                        <div className="_s f">
-                                <div className="sl"></div>
-                                <div className="sl"></div>
+                        <div className="h8 f">
+                                <div className="s32"></div>
+                                <div className="s32"></div>
                                 <Equipment eql={EQL_PANTS} />
-                                <div className="sl"></div>
-                                <div className="sl"></div>
+                                <div className="s32"></div>
+                                <div className="s32"></div>
                         </div>
                 </div>
         </Tabs>);
@@ -528,9 +540,9 @@ function PlayerTabs() {
 function MiniMap(props) {
         const { view, target } = useContext(GameContext);
 
-        if (target)
+        if (target || !view)
                 return null;
-
+        
         return <div className="fac"><pre id="map" dangerouslySetInnerHTML={{ __html: view }}></pre></div>;
 }
 
@@ -542,7 +554,7 @@ function TargetTitleAndArt() {
 
         const obj = objects[target];
 
-        const src = "/neverdark/art/" + (obj.art || "unknown_small.jpg");
+  const src = baseDir + "/art/" + (obj.art || "unknown_small.jpg");
 
         return (<>
                 <div className="tm pxs tac">{obj.name}</div>
@@ -558,8 +570,8 @@ function Avatar(props) {
 
         if (item.avatar)
                 return <img
-                        className={"s_" + size + " sv" + size}
-                        src={"/neverdark/art/" + item.avatar}
+                        className={"sh" + size + " sv" + size}
+                        src={baseDir + "/art/" + item.avatar}
                         { ...rest }
                 />;
         else
@@ -572,7 +584,7 @@ function Avatar(props) {
 
 function ContentsItem(props) {
         const { item, onClick, activeItem, isShop } = props;
-        const className = "f fic pxs _s " + (activeItem == item.dbref ? 'c0' : "");
+        const className = "f fic pxs h8 " + (activeItem == item.dbref ? 'c0' : "");
 
         return (<a className={className} onClick={onClick}>
                 <Avatar item={item} />
@@ -600,45 +612,45 @@ function Contents(props) {
                         onClick={e => onItemClick(e, item)} />;
         });
 
-        return (<div className="vn fg oa icec">
+        return (<div className="v0 fg oa icec">
                 { contentsEl }
         </div>);
 }
 
 function RB(props) {
         const { children, onClick } = props;
-        return <a className="round tsxl ps c0" onClick={onClick}>{ children }</a>;
+        return <a className="round ts26 p8 c0" onClick={onClick}>{ children }</a>;
 }
 
 function RBT(props) {
-        return <a className="round tsxl ps"></a>;
+        return <a className="round ts26 p8"></a>;
 }
 
 function RBI(props) {
         const { onClick, src } = props;
-        return (<a className="round ps c0" onClick={onClick}>
-                <img className="svl s_l" src={atiles[src]} />
+        return (<a className="round ts26 p8 c0" onClick={onClick}>
+                <img className="svl shl" src={atiles[src]} />
         </a>);
 }
 
 function Directions() {
         const { sendMessage } = useContext(GameContext);
 
-        return (<div className="vn tar tnow abs al">
-                <div className="_n">
+        return (<div className="v0 tar tnow abs ar">
+                <div className="h0 f">
                         <RBT />
                         <RB onClick={() => sendMessage("k")}>&uarr;</RB>
-                        <RBI onClick={() => sendMessage("K")} src={ACT_K} />
+                        <RBI onClick={() => sendMessage("K")} src={ACTIONS.K} />
                 </div>
-                <div className="_n">
+                <div className="h0 f">
                         <RB onClick={() => sendMessage("h")}>&larr;</RB>
                         <RBT />
                         <RB onClick={() => sendMessage("l")}>&rarr;</RB>
                 </div>
-                <div className="_n">
+                <div className="h0 f">
                         <RBT />
                         <RB onClick={() => sendMessage("j")}>&darr;</RB>
-                        <RBI onClick={() => sendMessage("J")} src={ACT_J} />
+                        <RBI onClick={() => sendMessage("J")} src={ACTIONS.J} />
                 </div>
         </div>);
 }
@@ -656,38 +668,38 @@ function ContentsAndActions(props) {
                                 if (!(parseInt(item.actions) & (1 << p)))
                                         continue;
 
-                                let id = actions_lbl[p];
+                                let id = ACTIONS_LABEL[p];
                                 newActions.push([p, function () {
                                         sendMessage(id + " #" + item.dbref);
                                 }]);
                         }
                 } else if (item.loc == me) {
-                        // action_add(ACT_PUT, function () {
+                        // action_add(ACTIONS.PUT, function () {
                         //         output("\nPUT is not implemented yet!");
                         // });
 
-                        newActions.push([ACT_EQUIP, function () {
+                        newActions.push([ACTIONS.EQUIP, function () {
                                 sendMessage("equip #" + item.dbref);
                         }]);
 
-                        newActions.push([ACT_DROP, function () {
+                        newActions.push([ACTIONS.DROP, function () {
                                 sendMessage("drop #" + item.dbref);
                         }]);
 
-                        newActions.push([ACT_EAT, function () {
+                        newActions.push([ACTIONS.EAT, function () {
                                 sendMessage("eat #" + item.dbref);
                         }]);
 
-                        newActions.push([ACT_SHOP, function () {
+                        newActions.push([ACTIONS.SHOP, function () {
                                 sendMessage("sell #" + item.dbref);
                         }]);
 
                 } else if (objects[item.loc].shop) {
-                        newActions.push([ACT_SHOP, function () {
+                        newActions.push([ACTIONS.SHOP, function () {
                                 sendMessage("buy #" + item.dbref);
                         }]);
                 } else {
-                        newActions.push([ACT_GET, function () {
+                        newActions.push([ACTIONS.GET, function () {
                                 sendMessage("get #" + target + "=#" + item.dbref);
                         }]);
                 }
@@ -703,7 +715,7 @@ function ContentsAndActions(props) {
         return (<>
                 <Contents onItemClick={onItemClick} activeItem={activeItem} />
 
-                <div className="_n icec">
+                <div className="h0 icec">
                         { actionsEl }
                 </div>
         </>);
@@ -764,7 +776,7 @@ function PlayerBars() {
 
         const { hp, hpMax, mp, mpMax } = bars;
 
-        return (<div className="_s f ps">
+        return (<div className="h8 f p8">
                 <Bar value={hp} max={hpMax} color="1" />
                 <Bar value={mp} max={mpMax} color="12" />
         </div>);
@@ -853,15 +865,15 @@ function Game() {
         }
 
         return (<>
-                <span className="vn f">
+                <span className="v0 f">
                         {/* <RB onClick={disconnect}>X</RB> */}
                         <RB onClick={toggle_help}>?</RB>
-                        <RBI onClick={() => sendMessage('inventory')} src={ACT_OPEN} />
-                        <RBI onClick={() => sendMessage('look')} src={ACT_LOOK} />
+                        <RBI onClick={() => sendMessage('inventory')} src={ACTIONS.OPEN} />
+                        <RBI onClick={() => sendMessage('look')} src={ACTIONS.LOOK} />
                 </span>
 
-                <form className="vn f fg s_f oa" onSubmit={onSubmit}>
-                        <div className="_n f">
+                <form className="v0 f fg shf oa" onSubmit={onSubmit}>
+                        <div className="h0 f">
                                 <PlayerTabs />
                                 <RoomTitleAndArt />
                         </div>
@@ -874,7 +886,7 @@ function Game() {
                                 autoComplete="off" autoCapitalize="off" />
                 </form>
 
-                <div className="vn f fg s_33">
+                <div className="v0 f fg sh33">
                         <MiniMap />
                         <TargetTitleAndArt />
                         <Directions />
@@ -889,7 +901,7 @@ function getCookie(cname) {
 	let name = cname + "=";
 	let decodedCookie = decodeURIComponent(document.cookie);
 	let ca = decodedCookie.split(';');
-	for(let i = 0; i <ca.length; i++) {
+	for(let i = 0; i < ca.length; i++) {
 		let c = ca[i];
 		while (c.charAt(0) == ' ') {
 			c = c.substring(1);
@@ -902,15 +914,15 @@ function getCookie(cname) {
 }
 
 function InnerApp() {
-        const { sendMessage } = useContext(GameContext);
+        // const { sendMessage } = useContext(GameContext);
 
         return (<Game />);
 }
 
-function App() {
+
+export default
+hot(function App() {
         return (<GameContextProvider>
                 <InnerApp />
         </GameContextProvider>);
-}
-
-ReactDOM.render(<App />, document.getElementById('main'));
+});

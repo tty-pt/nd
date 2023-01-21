@@ -1,3 +1,4 @@
+<!DOCTYPE html>
 <html lang="en">
 	<head>
 		<meta charset="utf8"/>
@@ -5,21 +6,15 @@
 		<meta name="viewport" content="width=device-width, user-scalable=no viewport-fit=cover">
 		<meta name="mobile-web-app-capable" content="yes">
 		<meta name="apple-mobile-web-app-capable" content="yes">
-		<link rel="manifest" href="/neverdark/manifest.json">
-		<link rel="stylesheet"  href="/neverdark/vim.css" />
-		<link rel="stylesheet" href="/neverdark/styles.css" />
-		<link rel="preload" href="/neverdark/art/tilemap.png" as="image" />
-		<!-- <script src="./lib/text.min.js"></script> -->
-		<link rel="shortcut icon" type="image/png" href="/neverdark/nd256.png"/>
-                <script crossorigin src="https://unpkg.com/react@17/umd/react.development.js"></script>
-                <script crossorigin src="https://unpkg.com/react-dom@17/umd/react-dom.development.js"></script>
-                <script crossorigin src="https://unpkg.com/react-router-dom@5.1.2/umd/react-router-dom.js"></script>
+		<link rel="manifest" href="$CONFIG_BASEDIR/manifest.json">
+		<link rel="preload" href="$CONFIG_BASEDIR/art/tilemap.png" as="image" />
+		<link rel="shortcut icon" type="image/png" href="$CONFIG_BASEDIR/nd256.png"/>
 	</head>
-	<body class="cf cb sfv vn f">
-		<div id="main" class="_n f fg oh">
+	<body class="cf cb svf v0 f">
+		<div id="main" class="svf h0 f fg oh">
                         <canvas height=16 width=16></canvas>
 		</div>
-		<div class="modal abs sfv vn c f fcc oh dn">
+		<div class="modal abs svf v0 c f fcc oh dn">
 		</div>
 		<!-- DEPS -->
 	</body>

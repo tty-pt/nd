@@ -4,6 +4,12 @@
 
 #include "io.h"
 
+#include <string.h>
+#ifndef __OPEN_BSD__
+#include <bsd/string.h>
+#endif
+
+
 #include "copyright.h"
 #include "object.h"
 #include "config.h"
@@ -36,13 +42,9 @@
 #include <sys/socket.h>
 #endif
 #include <pwd.h>
+#include <grp.h>
 
-#ifdef __OpenBSD__
-#include <db4/db.h>
-#else
-#include <db.h>
-#endif
-
+#include "nddb.h"
 #include "command.h"
 #include "params.h"
 #include "defaults.h"
@@ -378,7 +380,7 @@ close_sockets(const char *msg) {
 
 void sig_shutdown(int i)
 {
-	warn("SHUTDOWN: via SIGNAL");
+	warn("SHUTDOWN: via SIGNAL\n");
 	shutdown_flag = 1;
 }
 
@@ -388,7 +390,7 @@ init_game()
 	FILE *f = fopen(STD_DB, "rb");
 
 	if (f == NULL) {
-                warn("No such file");
+                warn("No such file\n");
                 return -1;
         }
 
@@ -430,9 +432,6 @@ main(int argc, char **argv)
 		}
 	}
 
-	if (geteuid())
-		errx(1, "need root privileges");
-
 #ifdef CONFIG_SECURE
 	SSL_load_error_strings();
 	SSL_library_init();
@@ -444,9 +443,18 @@ main(int argc, char **argv)
 	ERR_print_errors_fp(stderr);
 #endif
 
-	struct passwd *pw = getpwnam("www");
+
+#ifdef CONFIG_ROOT
+	if (geteuid())
+		errx(1, "need root privileges");
+#endif
+
+#ifdef CONFIG_CHROOT
+	char *user = "www";
+	struct passwd *pw = getpwnam(user);
+
 	if (pw == NULL)
-		errx(1, "unknown user %s", "www");
+		errx(1, "unknown user %s", user);
 
 	if (chroot("/var/www") != 0 || chdir("/htdocs/neverdark/game") != 0)
 		err(1, "%s", "/var/www");
@@ -454,9 +462,13 @@ main(int argc, char **argv)
 	if (setgroups(1, &pw->pw_gid) ||
 			setresgid(pw->pw_gid, pw->pw_gid, pw->pw_gid) ||
 			setresuid(pw->pw_uid, pw->pw_uid, pw->pw_uid)) {
-		fprintf(stderr, "%s: cannot drop privileges", __func__);
+		fprintf(stderr, "%s: cannot drop privileges\n", __func__);
 		exit(1);
 	}
+#else
+	if (chdir("./game") != 0)
+		err(1, "No dir ./game");
+#endif
 
 	players_init();
 	hash_init(&cmdsdb);

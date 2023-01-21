@@ -1,3 +1,4 @@
+include .config
 #!/bin/make -f
 
 srcdir := ${PWD}
@@ -13,18 +14,16 @@ js-src != find js -type f
 art-y != find art -type f
 art-y += nd256.png
 
-pre.js: ${js-src}
-	${GCC_JS} -o $@ ./js/main.js
+./build/main.js: ${js-src}
+	npm run build
 
 ./node_modules/:
 	npm install
 
-main.js: ./node_modules/ pre.js
-	./node_modules/.bin/babel pre.js > $@
+js-$(production) := ./build/main.js
 
-inline-js := main.js
-index.html: pre-index.html ${inline-js}
-	${scripts}/html_tool.sh pre-index.html ${inline-js} > $@
+index.html: pre-index.html ${js-y}
+	${scripts}/html_tool.sh pre-index.html ${js-y} > $@
 
 vim.css: vss/
 
@@ -33,9 +32,6 @@ $(subdirs-cleaner):
 	${MAKE} -C ${@:%-cleaner=%} cleaner
 cleaner: ${subdirs-cleaner}
 	rm config.status config.cache config.log
-
-web: src
-	${srcdir}/src/ws-server
 
 game/data/: src/ vss/
 
@@ -69,4 +65,4 @@ install: ${artdir} ${art-install}
 run: all
 	./src/fbmuck -C ./game
 
-.PHONY: cleaner ${subdirs-cleaner} web backup run
+.PHONY: cleaner ${subdirs-cleaner} backup run

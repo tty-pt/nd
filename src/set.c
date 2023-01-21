@@ -1,15 +1,11 @@
-/* $Header$ */
-#include "io.h"
-
-
-#include "copyright.h"
-#include "entity.h"
-
-/* commands which set parameters */
 #include <stdio.h>
 #include <ctype.h>
 #include <string.h>
+#include <stdlib.h>
 
+#include "io.h"
+#include "copyright.h"
+#include "entity.h"
 #include "utils.h"
 #include "params.h"
 #include "defaults.h"

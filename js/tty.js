@@ -82,7 +82,7 @@ esc_state_0(tty, ch) {
                 return 2;
 	// case '\\':
 	// case '/':
-                tty.output += "\\";
+                // tty.output += "\\";
 	}
 
         tty.output += ch;
@@ -187,3 +187,5 @@ function tty_proc(input) {
 
         return tty.output;
 }
+
+export default tty_proc;

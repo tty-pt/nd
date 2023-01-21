@@ -1,7 +1,8 @@
+#include <stdlib.h>
+#include <ctype.h>
 #include "io.h"
 #include "entity.h"
 #include "debug.h"
-#include <ctype.h>
 #include "params.h"
 #include "match.h"
 #include "command.h"

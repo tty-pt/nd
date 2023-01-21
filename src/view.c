@@ -10,6 +10,10 @@
 #include "debug.h"
 #include "command.h"
 
+#ifndef __OPEN_BSD__
+#include "bsd/string.h"
+#endif
+
 #define BIOME_BG(i) (NIGHT_IS \
 		? ANSI_RESET : biomes[i].sp.biome.bg)
 

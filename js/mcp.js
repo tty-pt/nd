@@ -36,7 +36,6 @@ function mcp_clear() {
         mcp.args = [];
         mcp.name = mcp.cache = "";
         mcp.args_l = 0;
-        mcp_cache_i = 0;
         mcp.flags = 0;
         mcp.state = 1;
 }
@@ -226,14 +225,14 @@ function mcp_proc(data) {
 	return mcp_arr;
 }
 
-function mcp_reset() {
-        last_i = out_i = 0;
-        // out_buf += "[";
-        out_i ++;
-}
-
 function mcp_init() {
         mcp.state = 1;
-        mcp_reset();
         mcp_clear();
 }
+
+const mcp_export = {
+  init: mcp_init,
+  proc: mcp_proc,
+};
+
+export default mcp_export;

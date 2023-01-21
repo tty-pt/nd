@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <string.h>
-/* #include <strings.h> */
+#ifndef __OPEN_BSD__
+#include <bsd/string.h>
+#endif
 #include <ctype.h>
 #include <stdlib.h>
 
@@ -25,7 +27,6 @@
 #define HTML_IDXGROUP_ENTRY	"    <td nowrap> &nbsp; <a href=\"#%s\">%s</a> &nbsp; </td>\n"
 #define HTML_IDXGROUP_NEWROW	"  </tr>\n  <tr>\n"
 #define HTML_IDXGROUP_END		"  </tr>\n</table></blockquote>\n\n"
-#define HTML_INDEX_END		""
 
 #define HTML_TOPICHEAD		"<hr><h4><a name=\"%s\">"
 #define HTML_TOPICHEAD_BREAK	"<br>\n"
@@ -279,7 +280,6 @@ print_sections(FILE * f, FILE * hf, int cols)
 	char sectname[256];
 	char *osectptr;
 	char *sectptr;
-	char buf[256];
 	char buf3[256];
 	char buf4[256];
 	char *currsect;
@@ -296,7 +296,6 @@ print_sections(FILE * f, FILE * hf, int cols)
 	}
 	for (sptr = secthead; sptr; sptr = sptr->next) {
 		currsect = sptr->section;
-		buf[0] = '\0';
 		strlcpy(sectname, currsect, sizeof(sectname));
 		sectptr = index(sectname, '|');
 		if (sectptr) {
@@ -414,7 +413,6 @@ print_topics(FILE * f, FILE * hf)
 			fprintf(hf, HTML_IDXGROUP_END);
 		}
 	}
-	fprintf(hf, HTML_INDEX_END);
 	fprintf(f, " \nUse '%s <topicname>' to get more information on a topic.\n", doccmd);
 }
 

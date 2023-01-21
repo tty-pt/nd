@@ -1,10 +1,18 @@
+#/bin/sh
+
 parse() {
         while read st cmd arg nd; do
-		if [[ "$st" == "<!--" ]]; then
+		if test "$st" = "<!--"; then
 			case $cmd in
 			CAT) cat $arg ;;
 			STYLE) echo "<style>" ; cat $arg ; echo "</style>" ;;
-			DEPS) echo '<script>' ; cat $@ ; echo '</script>' ;;
+			DEPS)
+				if test $# -ge 1; then
+					echo '<script>'
+					cat $@
+					echo '</script>'
+				fi
+				;;
 			esac
 		else
 			echo $st $cmd $arg $nd
@@ -15,4 +23,4 @@ parse() {
 file=$1
 shift
 
-cat $file | parse $@
+cat $file | envsubst | parse $@

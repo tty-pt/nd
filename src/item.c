@@ -1,3 +1,4 @@
+#include <stdlib.h>
 #include "io.h"
 
 #include "entity.h"

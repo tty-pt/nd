@@ -1,35 +1,8 @@
 let canvas = document.querySelector("canvas");
 let ctx = canvas.getContext('2d');
 let tilemap = document.createElement("img");
-tilemap.src = "/neverdark/art/tilemap.png";
+tilemap.src = process.env.CONFIG_BASEDIR + "/art/tilemap.png";
 tilemap.classList.add("dn");
-
-const ACT_LOOK = 0;
-const ACT_KILL = 1;
-const ACT_SHOP = 2;
-const ACT_DRINK = 3;
-const ACT_OPEN = 4;
-const ACT_CHOP = 5;
-const ACT_FILL = 6;
-const ACT_GET = 7;
-const ACT_TALK = 8;
-const ACT_PUT = 9;
-const ACT_EQUIP = 10;
-const ACT_DROP = 11;
-const ACT_EAT = 12;
-const ACT_13 = 13;
-const ACT_INVENTORY = 14;
-const ACT_K = 15;
-const ACT_J = 16;
-
-let actions_lbl = [
-	"look", "kill", "shop",
-	"drink", "open", "chop",
-	"fill", "get", "talk",
-        "put", "equip", "drop",
-        "eat", "reserved", "inventory",
-        "K", "J",
-];
 
 let actions_tiles = [];
 

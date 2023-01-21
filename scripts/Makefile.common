@@ -12,10 +12,10 @@ MFLAGS := srcdir=${srcdir} -I${srcdir}/scripts \
 	-f ${srcdir}/scripts/Makefile.build
 
 $(subdirs): FORCE
-	${MAKE} -C $@ ${MFLAGS}
+	${MAKE} -C $@ ${MFLAGS} all
 	cd ..
 
-subdirs-clean != [[ -z "${subdirs}" ]] || echo ${subdirs:%=%-clean}
+subdirs-clean != test -z "${subdirs}" || echo ${subdirs:%=%-clean}
 
 $(subdirs-clean): FORCE
 	${Q}${MAKE} -C ${@:%-clean=%} ${MFLAGS} clean
@@ -24,7 +24,7 @@ clean: ${subdirs-clean}
 
 .PHONY: clean
 
-subdirs-deps != [[ -z "${subdirs}" ]] || echo ${subdirs:%=%-deps}
+subdirs-deps != test -z "${subdirs}" || echo ${subdirs:%=%-deps}
 
 $(subdirs-deps): FORCE
 	${MAKE} -C ${@:-deps=} ${MFLAGS} deps

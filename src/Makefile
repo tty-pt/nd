@@ -11,7 +11,7 @@ ldlibs-$(CONFIG_SSL) += -lssl -lcrypto
 cflags-y := -g -Wall -Wno-initializer-overrides
 
 exe := fbmuck prochelp
-src = ChangeLog COPYING ${real-obj-y:%.o=%.c}
+src = ${real-obj-y:%.o=%.c}
 
 prochelp-obj-y := prochelp.o
 fbmuck-obj-y := object.o entity.o spacetime.o mcp.o map.o \
@@ -32,21 +32,13 @@ fbmuck-obj-y += create.o \
 exe-obj-y := ${fbmuck-obj-y} ${prochelp-obj-y}
 
 HELPFILES := man.txt help.txt mpihelp.txt
-
-version.o: version.h version.c
-
-version.h:
-	{ \
-		DATE=`date` ; git=${srcdir}/.git ; \
-		HASH=`git branch -v | head -n1 | awk '{ print $$3 }'` ; \
-		printf "#define HASH \"$$HASH\"\n#define DATE \"$$DATE\"\n" ; \
-	} > $@
+CTAGS ?= ctags
 
 tags: ${src}
 	${CTAGS} --c-types=-m ${src} ../include/*.h
 
-.depend: ${obj-y:%.o=%.c}
-	mkdep ${CFLAGS} -I../include ${obj-y:%.o=%.c}
+# .depend: ${obj-y:%.o=%.c}
+# 	mkdep ${CFLAGS} -I../include ${obj-y:%.o=%.c}
 
 cleaner: clean
 	-rm config.status config.cache config.log ${INCLUDE}/autoconf.h ${exe} prochelp

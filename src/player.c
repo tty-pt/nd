@@ -1,3 +1,5 @@
+#include <string.h>
+
 #include "player.h"
 #include "io.h"
 #include "entity.h"

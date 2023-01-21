@@ -1,10 +1,10 @@
-#include "io.h"
+#include <string.h>
+#include <stdlib.h>
 
+#include "io.h"
 #include "spell.h"
 #include "entity.h"
-
 #include "mob.h"
-
 #include "params.h"
 #include "debug.h"
 /* #include "speech.h" */
@@ -292,8 +292,8 @@ spell_cast(OBJ *player, OBJ *target, unsigned slot)
 
 	unsigned mana = eplayer->mp;
 	char a[BUFSIZ]; // FIXME way too big?
-	char b[BUFSIZ];
-	char c[BUFSIZ];
+	char b[BUFSIZ + 32];
+	char c[BUFSIZ + 32];
 	struct wts wts = { a, b };
 
 	char const *color = sp_color(_sp);

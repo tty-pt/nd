@@ -1,5 +1,5 @@
-#ifndef NOISE_H
-#define NOISE_H
+#ifndef ND_NOISE_H
+#define ND_NOISE_H
 
 #include "biome.h"
 #include "plant.h"

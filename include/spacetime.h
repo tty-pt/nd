@@ -3,6 +3,7 @@
 
 #include <limits.h>
 #include <stdint.h>
+#include <time.h>
 #include "object.h"
 
 // adds 2^DAYTICK_Y to day tick until it reaches DAYSIZE

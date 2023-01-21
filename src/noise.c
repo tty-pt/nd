@@ -28,6 +28,8 @@
  * */
 
 #include "noise.h"
+#define NOISE_IMPLEMENTATION
+#include "nd/noise.h"
 #include <string.h>
 #include "xxhash.h"
 #include "debug.h"
@@ -38,22 +40,16 @@
 #define CHUNK_SIZE (1 << CHUNK_Y)
 #define CHUNK_M (CHUNK_SIZE * CHUNK_SIZE)
 
-/* gets a mask for use with get_s */
-#define COORDMASK_LSHIFT(x) (ucoord_t) ((((ucoord_t) -1) << x))
-
 #define PLANTS_SEED 5
 
 #define NOISE_OCT(to, x, seed) \
-	noise_oct(to, s, sizeof(x) / sizeof(octave_t), x, seed)
-
-typedef struct { unsigned x, w; } octave_t;
+	noise_oct(to, s, sizeof(x) / sizeof(octave_t), x, seed, CHUNK_Y, 2)
 
 struct tilemap {
 	struct rect r;
 	struct bio *bio;
 };
 
-static size_t v_total = (1<<(DIM+1)) - 1;
 static struct bio chunks_bio_raw[CHUNK_M * 4],
 		  chunks_bio[CHUNK_M * 4],
 		  *bio;
@@ -114,249 +110,6 @@ temp(ucoord_t obits, noise_t he, noise_t tm, coord_t pos_y) // fahrenheit * 10
 
 /* }}} */
 /* }}} */
-
-/* gets a (deterministic) random value for point p */
-
-static inline noise_t
-r(point_t p, unsigned seed, unsigned w)
-{
-	register noise_t v = HASH(p, sizeof(point_t), seed);
-	return ((long long unsigned) v) >> w;
-}
-
-/* generate values at quad vertices. */
-
-static inline void
-get_v(noise_t v[1 << DIM], point_t s, ucoord_t x, unsigned w, unsigned seed)
-{
-	const coord_t d = 1 << x;
-	const point_t va[] = {
-		{ s[0], s[1] },
-		{ s[0], s[1] + d },
-		{ s[0] + d, s[1] },
-		{ s[0] + d, s[1] + d }
-	};
-	int i;
-
-	for (i = 0; i < (1 << DIM); i++)
-		v[i] = r((coord_t *) va[i], seed, w);
-}
-
-static inline void
-calc_steps(snoise_t *st,
-	   noise_t *v,
-	   ucoord_t z,
-	   ucoord_t vl,
-	   unsigned y)
-{
-	int n;
-	for (n = 0; n < vl; n ++)
-		// FIXME FIND PARENS
-		st[n] = ((long) v[n + vl] - v[n]) >> z << y;
-}
-
-static inline void
-step(noise_t *v, snoise_t *st, ucoord_t vl, ucoord_t mul)
-{
-	int n;
-	for (n = 0; n < vl; n++)
-		v[n] = (long) v[n] + ((long) st[n] * mul);
-}
-
-/* Given a set of vertices,
- * fade between them and set target values acoordingly
- */
-
-static inline void
-noise_quad(noise_t *c, noise_t *vc, unsigned z, unsigned w)
-{
-	ucoord_t ndim = DIM - 1;
-	ucoord_t tvl = 1<<ndim; // length of input values
-	snoise_t st[(tvl<<1) - 1], *stc = st;
-	noise_t *ce_p[DIM], *vt;
-	size_t cd = 1 << CHUNK_Y * ndim; /* (2^y)^ndim */
-
-	goto start;
-
-	do {
-		do {
-			// PUSH
-			cd >>= CHUNK_Y; ndim--; vc = vt; stc += tvl; tvl >>= 1;
-
-start:			ce_p[ndim] = c + (cd<<z);
-			vt = vc + (tvl<<1);
-
-			calc_steps(stc, vc, z, tvl, 0);
-			memcpy(vt, vc, tvl * sizeof(noise_t));
-		} while (ndim);
-
-		for (; c < ce_p[0]; c+=cd, vt[0]+=*stc)
-			*c += vt[0];
-
-		do {
-			// POP
-			++ndim;
-			if (ndim >= DIM)
-				return;
-			c -= cd << z; cd <<= CHUNK_Y; vt = vc;
-			tvl <<= 1; stc -= tvl; vc -= (tvl<<1);
-
-			step(vt, stc, tvl, 1);
-			c += cd;
-		} while (c >= ce_p[ndim]);
-	} while (1);
-}
-
-#if 0
-
-static inline void
-_noise_mr(noise_t *c, noise_t *v, unsigned x, point_t qs, ucoord_t ndim, unsigned w, unsigned seed) {
-	int i = DIM - 1 - ndim;
-	ucoord_t ced = (1<<(CHUNK_Y*(ndim+1))), cd;
-	noise_t *ce = c + ced;
-
-	ced >>= CHUNK_Y;
-	cd = ced << x;
-
-	for (; c < ce; qs[i] += (1<<x), c += cd)
-		if (ndim == 0) {
-			get_v(v, qs, x, w, seed);
-			noise_quad(c, v, x, w);
-		} else
-			_noise_mr(c, v, x, qs, ndim - 1, w, seed);
-
-	qs[i] -= 1 << CHUNK_Y; // reset
-}
-
-static inline void
-_noise_m(noise_t *c, noise_t *v, unsigned x, point_t qs, unsigned w, unsigned seed)
-{
-	_noise_mr(c, v, x, qs, DIM - 1, w, seed);
-}
-
-#else
-
-static inline void
-_noise_m(noise_t *c, noise_t *v, unsigned x, point_t qs, unsigned w, unsigned seed) {
-	noise_t *ce_p[DIM];
-	noise_t ced = 1<<(CHUNK_Y * DIM);
-	coord_t *qsc = qs; // quad coordinate
-	ucoord_t ndim = DIM - 1;
-
-	goto start;
-
-	do {
-		do { // PUSH
-			qsc++; ndim--;
-start:			ce_p[ndim] = c + ced;
-			ced >>= CHUNK_Y;
-		} while (ndim);
-
-		do {
-			get_v(v, qs, x, w, seed);
-			noise_quad(c, v, x, w);
-			*qsc += 1<<x;
-			c += ced<<x;
-		} while (c < ce_p[ndim]);
-
-		do { // POP
-			*qsc -= 1 << CHUNK_Y;
-			ced <<= CHUNK_Y;
-			c += (ced<<x) - ced; // reset and inc
-			qsc--; ndim++;
-			*qsc += 1<<x;
-		} while (c >= ce_p[ndim]);
-	} while (ndim < DIM);
-}
-
-#endif
-
-/* fixes v (vertex values)
- * when noise quad starts before matrix quad aka x > y aka d > l.
- * assumes ndim to be at least 1
- * vl = 1 << ndim
- */
-
-static inline void
-__fix_v(noise_t *v, snoise_t *st, coord_t *ms, coord_t *qs, unsigned x, ucoord_t vl) {
-	register noise_t *vn = v + vl;
-	register ucoord_t dd = (*ms - *qs) >> CHUNK_Y;
-
-	// TODO make this more efficient
-	calc_steps(st, v, x, vl, CHUNK_Y);
-
-	if (dd) /* ms > qs */
-		step(v, st, vl, dd);
-
-	memcpy(vn, v, sizeof(noise_t) * vl); // COPY to opposite values
-	step(vn, st, vl, 1); // STEP by side length of M
-}
-
-// yes this does work fine a bit of a hack but ok i guess
-static inline void
-fix_v(noise_t *v,
-       coord_t *qs,
-       coord_t *ms,
-       unsigned x)
-{
-	ucoord_t vl = 1 << DIM;
-	snoise_t st[vl - 1], *stc = st;
-	int ndim = DIM - 1;
-	int first = 1;
-	vl >>= 1;
-
-	for (;;) {
-		__fix_v(v, stc, ms, qs, x, vl);
-
-		if (ndim) {
-			ndim--; qs++; ms++; vl>>=1; stc+=vl; // PUSH
-		} else if (first) {
-			v += vl<<1;
-			first = 0;
-		} else break;
-	}
-}
-
-static inline void
-get_s(point_t s, point_t p, ucoord_t mask) {
-	POOP s[I] = ((coord_t) p[I]) & mask;
-}
-
-/* Fills in matrix "mat" with deterministic noise.
- * "ms" is the matrix's min point in the world;
- * "x" 2^x = side length of noise quads;
- * "y" 2^y = side length of matrix "mat".
- * */
-
-static inline void
-noise_m(noise_t *mat, point_t ms, unsigned x,
-	unsigned w, unsigned seed)
-{
-	noise_t v[v_total];
-
-	if (CHUNK_Y > x)
-		_noise_m(mat, v, x, ms, w, seed);
-	else {
-		point_t qs;
-
-		get_s(qs, ms, COORDMASK_LSHIFT(x));
-		get_v(v, qs, x, w, seed);
-		if (x > CHUNK_Y)
-			fix_v(v, qs, ms, x);
-
-		noise_quad(mat, v, CHUNK_Y, w); }
-}
-
-static inline void
-noise_oct(noise_t *m, point_t s, size_t oct_n, octave_t *oct, unsigned seed)
-{
-	octave_t *oe;
-
-	memset(m, 0, sizeof(noise_t) * CHUNK_M);
-
-	for (oe = oct + oct_n; oct < oe; oct++)
-		noise_m(m, s, oct->x, oct->w, seed);
-}
 
 static inline unsigned
 bio_idx(ucoord_t rn, coord_t tmp)
@@ -471,7 +224,7 @@ noise_chunks(point_t pos)
 		pos[1] - VIEW_AROUND
 	};
 
-	get_s(r.s, vprs, COORDMASK_LSHIFT(CHUNK_Y));
+	noise_get_s(r.s, vprs, COORDMASK_LSHIFT(CHUNK_Y), 2);
 
 	POOP {
 		n[I] = ((VIEW_SIZE + vprs[I] - r.s[I]) >> CHUNK_Y) + 1;

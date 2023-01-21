@@ -1,5 +1,10 @@
 #include <string.h>
 #include <ctype.h>
+#include <stdlib.h>
+
+#ifndef __OPEN_BSD__
+#include <bsd/string.h>
+#endif
 
 #include "io.h"
 #include "entity.h"

@@ -13,6 +13,59 @@
 #include "entity.h"
 #include "player.h"
 
+OBJ *
+ematch_me(OBJ *player, const char *str)
+{
+	if (!strcmp(str, "me"))
+		return player;
+	else
+		return NULL;
+}
+
+OBJ *
+ematch_here(OBJ *player, const char *str)
+{
+	if (!strcmp(str, "here"))
+		return player->location;
+	else
+		return NULL;
+}
+
+OBJ *
+ematch_mine(OBJ *player, const char *str)
+{
+	return ematch_at(player, player, str);
+}
+
+OBJ *
+ematch_near(OBJ *player, const char *str)
+{
+	return ematch_at(player, player->location, str);
+}
+
+/* all ematch
+ * (not found by the linker if it is not static?)
+ */
+OBJ *
+ematch_all(OBJ *player, const char *name)
+{
+	OBJ *res;
+
+	if (
+			(res = ematch_me(player, name))
+			|| (res = ematch_here(player, name))
+			|| (res = ematch_absolute(name))
+			|| (res = ematch_near(player, name))
+			|| (res = ematch_mine(player, name))
+			|| (res = ematch_player(name))
+	   )
+		return res;
+
+	else
+		return NULL;
+}
+
+
 /* TODO move to match.h as static inline */
 OBJ *
 ematch_player(const char *name)

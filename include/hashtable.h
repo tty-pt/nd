@@ -1,7 +1,7 @@
 #ifndef HASHTABLE_H
 #define HASHTABLE_H
 
-#include <db4/db.h>
+#include "nddb.h"
 
 void hash_init(DB **db);
 void hash_put(DB *db, const char *key, void *data);
