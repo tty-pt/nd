@@ -1,7 +1,10 @@
+packadd qgdb
+
 let s:muckb = 0
 let s:muckw = 0
 let s:muckO = 0
 let g:gdb_sudo = 1
+let g:sudo_prog = "doas"
 
 func s:Continue()
 	if s:muckb == 0 && s:muckO == 1
@@ -34,8 +37,6 @@ let g:Stop = function('s:nothing')
 let g:Run = function("s:nothing")
 let g:GdbQuit = function("Quit")
 let g:GdbOut = function('s:GdbOut')
-
-packadd qgdb
 
 func MuckBuffer()
 	if s:muckw != 0
