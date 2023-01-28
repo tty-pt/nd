@@ -1,4 +1,5 @@
 #/bin/sh
+export $(xargs < .config)
 
 parse() {
         while read st cmd arg nd; do
