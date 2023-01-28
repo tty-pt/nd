@@ -44,6 +44,8 @@ void
 noise_oct(noise_t *m, int16_t *s, size_t oct_n,
 	  octave_t *oct, unsigned seed, unsigned cy, uint8_t dim);
 
+#endif
+
 #ifdef NOISE_IMPLEMENTATION
 
 #include <string.h>
@@ -139,7 +141,7 @@ start:			ce_p[ndim] = c + (cd << z);
 }
 
 // FIXME there is a memory leak on the non recursive version on linux
-#ifndef __OPEN_BSD__
+#ifndef __OpenBSD__
 static inline void
 _noise_mr(noise_t *c, noise_t *v, unsigned x, int16_t *qs, uint16_t ndim, unsigned w, unsigned seed, unsigned cy, uint8_t dim) {
 	int i = dim - 1 - ndim;
@@ -285,7 +287,5 @@ noise_oct(noise_t *m, int16_t *s, size_t oct_n,
 	for (oe = oct + oct_n; oct < oe; oct++)
 		noise_m(m, s, oct->x, oct->w, seed, cy, dim);
 }
-
-#endif
 
 #endif

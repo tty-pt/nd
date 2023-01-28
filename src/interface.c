@@ -5,7 +5,7 @@
 #include "io.h"
 
 #include <string.h>
-#ifndef __OPEN_BSD__
+#ifndef __OpenBSD__
 #include <bsd/string.h>
 #endif
 

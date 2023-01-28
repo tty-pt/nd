@@ -1,7 +1,7 @@
 #include "map.h"
 
 #include <string.h>
-#include "db.h"
+#include "nddb.h"
 #include "debug.h"
 
 // #define PRECOVERY

@@ -2,7 +2,7 @@
 #include <ctype.h>
 #include <stdlib.h>
 
-#ifndef __OPEN_BSD__
+#ifndef __OpenBSD__
 #include <bsd/string.h>
 #endif
 

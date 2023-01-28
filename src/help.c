@@ -4,7 +4,7 @@
 #include <string.h>
 #include <dirent.h>
 #include <stdlib.h>
-#ifndef __OPEN_BSD__
+#ifndef __OpenBSD__
 #include <bsd/string.h>
 #endif
 

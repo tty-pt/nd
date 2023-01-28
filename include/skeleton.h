@@ -3,9 +3,6 @@
 
 #include "stdint.h"
 
-typedef int16_t coord_t;
-typedef uint16_t ucoord_t;
-
 enum element {
 	ELM_PHYSICAL,
 	ELM_FIRE,
@@ -31,8 +28,8 @@ typedef struct entity_skeleton {
 
 struct plant_skeleton {
 	char const *pre, small, big, *post;
-	coord_t tmp_min, tmp_max;
-	ucoord_t rn_min, rn_max;
+	int16_t tmp_min, tmp_max;
+	uint16_t rn_min, rn_max;
 	struct drop *drop[32];
 	unsigned y;
 };

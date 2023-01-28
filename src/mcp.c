@@ -11,7 +11,7 @@
 #include "io.h"
 #include "command.h"
 
-#ifndef __OPEN_BSD__
+#ifndef __OpenBSD__
 #include <bsd/string.h>
 #endif
 

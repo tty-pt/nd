@@ -1,14 +1,10 @@
 #ifndef ND_NOISE_H
 #define ND_NOISE_H
 
+#include "nd/noise.h"
 #include "biome.h"
 #include "plant.h"
 #include "hash.h"
-
-#define NOISE_MAX ((noise_t) -1)
-
-typedef uint32_t noise_t;
-typedef int32_t snoise_t;
 
 struct bio {
 	coord_t tmp;

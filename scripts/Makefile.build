@@ -32,7 +32,10 @@ all: ${exe}
 $(exe): ${real-obj-y} ${exe-obj-y}
 	${LINK.c} -o $@ ${real-obj-y} ${$@-obj-y} ${ldlibs-y}
 
-RELDIR=${PWD:${srcdir}/%=%}/src
+reldir-OpenBSD := ${PWD:${srcdir}/%=%}
+reldir-Darwin := ${reldir-OpenBSD}
+reldir-Linux := ${reldir-OpenBSD}/src
+RELDIR=${reldir-${uname}}
 
 clean:
 	@echo rm ${RELDIR}/{ ${exe} ${exe-obj-y} ${real-obj-y} ${deps}}
