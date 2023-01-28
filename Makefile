@@ -8,9 +8,11 @@ include scripts/Makefile.common
 
 GCC_JS := ${CC} -E -P -nostdinc -undef -x c
 
-all: index.html main.js vim.css
-
 js-src != find js -type f
+js-$(production) := ./build/main.js
+
+all: index.html main.js vim.css ${js-y}
+
 art-y != find art -type f
 art-y += nd256.png
 
@@ -20,10 +22,8 @@ art-y += nd256.png
 ./node_modules/:
 	npm install
 
-js-$(production) := ./build/main.js
-
-index.html: pre-index.html ${js-y}
-	${scripts}/html_tool.sh pre-index.html ${js-y} > $@
+index.html: pre-index.html
+	${scripts}/html_tool.sh pre-index.html > $@
 
 vim.css: vss/
 
