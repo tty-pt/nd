@@ -29,11 +29,11 @@
     "@babel/preset-react": "^7.16.0",
     "@hot-loader/react-dom": "^16.14.0",
     "@tty-pt/scripts": "0.0.1-81",
+    "@tty-pt/styles": "0.0.3-19",
     "webpack": "^5.75.0"
   },
   "dependencies": {
     "@material-ui/core": "^4.12.4",
-    "@tty-pt/styles": "^0.0.3-2",
     "process": "^0.11.10",
     "prop-types": "^15.8.1",
     "react": "^16.14.0",

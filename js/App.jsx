@@ -8,7 +8,7 @@ import ACTIONS, { ACTIONS_LABEL } from "actions";
 import mcp from "mcp";
 import tty_proc from "tty";
 import canvas from "canvas";
-import useCast from "@tty-pt/styles";
+import { useCast } from "@tty-pt/styles";
 import "vim.css";
 const baseDir = process.env.CONFIG_BASEDIR || "";
 
