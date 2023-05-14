@@ -1,6 +1,5 @@
 #include "ws.h"
 #include "io.h"
-#include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
@@ -194,13 +193,25 @@ error:	ws_close_policy(cfd);
 }
 
 int
-wsdprintf(int fd, char *format, ...)
+wsdprintf(int fd, const char *format, va_list ap)
 {
-	char buf[BUFSIZ];
+	static char buf[BUFSIZ];
+	ssize_t len;
+	len = vsnprintf(buf, sizeof(buf), format, ap);
+	ws_write(fd, buf, len);
+	return len;
+}
+
+int
+wsprintf(int fd, const char *format, ...)
+{
+	static char buf[BUFSIZ];
+	ssize_t len;
 	va_list args;
 	va_start(args, format);
-	vsnprintf(buf, sizeof(buf), format, args);
-	snprintf(buf, sizeof(buf), "\r\n");
+	len = wsdprintf(fd, format, args);
 	va_end(args);
+	ws_write(fd, buf, len);
+	return len;
 }
 

@@ -34,7 +34,7 @@ extern descr_t descr_map[];
 int descr_inband(int fd, const char *s);
 void descr_close(descr_t *d);
 int notify(ENT *eplayer, const char *msg);
-void notifyf(ENT *eplayer, char *format, ...);
+void notifyf(ENT *eplayer, const char *format, ...);
 void anotifyf(OBJ *room, char *format, ...);
 void onotifyf(OBJ *player, char *format, ...);
 void notify_wts(OBJ *who, char const *a, char const *b, char *format, ...);

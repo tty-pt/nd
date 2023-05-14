@@ -2,6 +2,7 @@
 #define WS_H
 
 #include <unistd.h>
+#include <stdarg.h>
 
 int
 ws_handshake(int cfd, char *buf);
@@ -13,6 +14,7 @@ int
 ws_write(int cfd, const void *data, size_t n);
 
 int
-wsdprintf(int cfd, char *format, ...);
+wsdprintf(int cfd, const char *format, va_list ap);
+int wsprintf(int fd, const char *format, ...);
 
 #endif

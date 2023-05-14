@@ -746,7 +746,8 @@ look_room(OBJ *player, OBJ *loc)
 
 	if (mcp_look(player, loc)) {
 		notify(eplayer, unparse(player, loc));
-		notify(eplayer, description);
+		if (*description && description)
+			notify(eplayer, description);
 		look_contents(player, loc, "You see:");
 	}
 }

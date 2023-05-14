@@ -538,6 +538,7 @@ pprintf(OBJ *player, char *format, ...)
 	va_start(args, format);
 	vdprintf(eplayer->fd, format, args);
 	va_end(args);
+	return 0;
 }
 
 int
@@ -545,27 +546,58 @@ notify(ENT *eplayer, const char *msg)
 {
 	descr_t *d = &descr_map[eplayer->fd];
 	if (d->flags & DF_WEBSOCKET) {
-		wsdprintf(eplayer->fd, "%s", msg);
+		wsprintf(eplayer->fd, msg);
 	} else {
-		dprintf(eplayer->fd, msg);
+		dprintf(eplayer->fd, msg, "");
 		dprintf(eplayer->fd, "\r\n");
 	}
+	return 0;
 }
 
 void
-notifyf(ENT *eplayer, char *format, ...)
+notifyf(ENT *eplayer, const char *format, ...)
 {
 	descr_t *d = &descr_map[eplayer->fd];
 	va_list args;
 	va_start(args, format);
-	if (d->flags & DF_WEBSOCKET)
+	if (d->flags & DF_WEBSOCKET) {
 		wsdprintf(eplayer->fd, format, args);
-	else {
+		va_end(args);
+	} else {
 		vdprintf(eplayer->fd, format, args);
+		va_end(args);
 		dprintf(eplayer->fd, "\r\n");
 	}
-	va_end(args);
 }
+
+static inline void
+vnotifyfe(OBJ *first, OBJ *exception, const char *format, va_list va)
+{
+	FOR_LIST(first, first) {
+		if (first->type == TYPE_ENTITY && first != exception) {
+			ENT *efirst = &first->sp.entity;
+			descr_t *d = &descr_map[efirst->fd];
+			if (d->flags & DF_WEBSOCKET) {
+				wsdprintf(efirst->fd, format, va);
+			} else
+				vdprintf(efirst->fd, format, va);
+		}
+	}
+}
+
+static inline void
+netnotifyfe(OBJ *first, OBJ *exception, const char *format, va_list va)
+{
+	FOR_LIST(first, first) {
+		if (first->type == TYPE_ENTITY && first != exception) {
+			ENT *efirst = &first->sp.entity;
+			descr_t *d = &descr_map[efirst->fd];
+			if (!(d->flags & DF_WEBSOCKET))
+				vdprintf(efirst->fd, format, va);
+		}
+	}
+}
+
 
 static inline void
 notify_except(OBJ *first, OBJ *exception, const char *msg)
@@ -594,11 +626,13 @@ onotifyf(OBJ *player, char *format, ...)
 {
 	OBJ *loc = player->location;
 	va_list args;
-	char buf[BUFSIZ];
+	/* char buf[BUFSIZ]; */
 	va_start(args, format);
-	vsnprintf(buf, sizeof(buf), format, args);
-	notify_except(loc->contents, player, buf);
+	/* vsnprintf(buf, sizeof(buf), format, args); */
+	/* notify_except(loc->contents, player, buf); */
+	vnotifyfe(loc->contents, player, format, args);
 	va_end(args);
+	netnotifyfe(loc->contents, player, "\n", args);
 }
 
 void

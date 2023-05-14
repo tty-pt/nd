@@ -180,7 +180,7 @@ struct object_skeleton biomes[] = {
 	[BIOME_TROPICAL_RAINFOREST] = {
 		.name = "tropical rainforest",
                 .description = "",
-                .art = "tropical_rainforest.png",
+                .art = "tropical_rainforest.jpeg",
                 .avatar = "",
                 .type = S_TYPE_BIOME,
                 .sp = { .biome = {

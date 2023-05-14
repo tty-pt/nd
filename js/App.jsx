@@ -2,7 +2,7 @@ import React, {
 	useState, useEffect, useRef,
 	useCallback, useReducer, useContext,
 } from "react";
-import { withMagic } from "@tty-pt/styles";
+import { useMagic, withMagic, makeMagic } from "@tty-pt/styles";
 import ReactDOM from "react-dom";
 import ACTIONS, { ACTIONS_LABEL } from "./actions";
 import mcp from "./mcp";
@@ -10,6 +10,15 @@ import tty_proc from "./tty";
 // import canvas from "./canvas";
 import "./vim.css";
 const baseDir = process.env.CONFIG_BASEDIR || "";
+
+makeMagic({
+  "?pre": {
+    margin: 0,
+  },
+  opacity2: {
+    opacity: 0.2,
+  },
+});
 
 class Modal extends React.Component {
 	constructor(props) {
@@ -372,31 +381,50 @@ function GameContextProvider(props) {
 }
 
 function Terminal() {
-	const { terminal } = useContext(GameContext);
+	const { terminal, objects, here } = useContext(GameContext);
 	const ref = useRef(null);
 
 	useEffect(() => {
-		ref.current.scrollTop = ref.current.scrollHeight;
+    if (ref.current)
+      ref.current.scrollTop = ref.current.scrollHeight;
 	}, [terminal]);
 
+  const obj = objects[here];
+
+  const bgClass = useBgImg(obj);
+
 	// console.log(context);
-	return (<pre id="term" ref={ref} className="flex-grow overflow"
-		dangerouslySetInnerHTML={{ __html: terminal }}>
-	</pre>)
+  return (<div className="relative flex-grow">
+    <div className={"absolute opacity-2 position-left-0 position-right-0 position-top-0 position-bottom-0 " + bgClass} />
+    <pre id="term" ref={ref} className="absolute position-left-0 position-right-0 position-top-0 position-bottom-0 overflow"
+      dangerouslySetInnerHTML={{ __html: terminal }}>
+    </pre>
+  </div>)
+}
+
+function useBgImg(obj = {}) {
+  const bsrc = obj.art || "unknown.jpg";
+	const src = baseDir + "/art/" + bsrc;
+  const bname = bsrc.substring(bsrc.indexOf(".") + 1);
+
+  useMagic(() => ({
+    ["!bg-img-" + bname]: {
+      background: "url(" + src + ")",
+      backgroundSize: "cover",
+      backgroundPositon: "50% 50%",
+    },
+  }));
+
+  return "bg-img-" + bname;
 }
 
 function RoomTitleAndArt() {
 	const { here, objects } = useContext(GameContext);
-	const obj = objects[here];
-
-	if (!obj)
-		return null;
-
-	const src = baseDir + "/art/" + (obj.art || "unknown.jpg");
-
-	return (<div className="vertical-0 flex-grow align-items">
-		<div className="tm pxs tac">{ obj.name }</div>
-		<img className="sr2" src={src} />
+  const obj = objects[here];
+  const bgClass = useBgImg(obj);
+	return (<div className={"relative vertical-0 flex-grow align-items"}>
+    <div className={"absolute position-top-0 position-bottom-0 position-left-0 position-right-0 " + bgClass} />
+    <div className="absolute position-top-0 tm pxs tac">{ obj?.name ?? "Unnamed" }</div>
 	</div>);
 }
 
@@ -548,9 +576,9 @@ function TargetTitleAndArt() {
 	const src = baseDir + "/art/" + (obj.art || "unknown_small.jpg");
 
 	return (<>
-	<div className="tm pxs tac">{obj.name}</div>
-	<img className="sr1 fac" src={src} />
-</>);
+    <div className="tm pxs tac">{obj.name}</div>
+    <img className="sr1 fac" src={src} />
+  </>);
 }
 
 function Avatar(props) {
