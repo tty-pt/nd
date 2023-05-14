@@ -17,6 +17,7 @@
 #include "spell.h"
 #include "debug.h"
 #include "mob.h"
+#include "utils.h"
 
 #define HUNGER_Y	4
 #define THIRST_Y	2
@@ -220,6 +221,290 @@ entities_aggro(OBJ *player)
 
 	eplayer->klock += klock;
 }
+
+#if 0
+void
+enter_room(OBJ *player, enum exit e)
+{
+	ENT *eplayer = &player->sp.entity;
+	char contents[BIGBUFSIZ];
+	OBJ *oi;
+	int count = 0;
+
+	if (eplayer->gpt) {
+		free(eplayer->gpt);
+		eplayer->gpt = NULL;
+	}
+
+	sprintf(contents, "This is a fantasy story narrated by an artificial intelligence.\n");
+	sprintf(contents, "%sIt takes place in a '%s'",
+			contents, player->location->name);
+	if (player->location->description && *player->location->description)
+		sprintf(contents, "%s that is described as '%s' and ",
+			contents, player->location->description);
+	else
+		sprintf(contents, "%s that ", contents);
+	sprintf(contents, "%shas the following contents:\n", contents);
+
+	FOR_LIST(oi, player->location->contents) {
+		count++;
+		switch (oi->type) {
+		case TYPE_ENTITY:
+			{
+				ENT *ei = &oi->sp.entity;
+				if (ei->flags & EF_PLAYER) {
+					sprintf(contents, "%sA player named %s", contents, oi->name);
+					if (e != E_ALL) {
+						sprintf(contents, "%s, who just ", contents);
+						if (e == E_NULL)
+							sprintf(contents, "%steleported in", contents);
+						else
+							sprintf(contents, "%scame in from the %s", contents, e_name(e_simm(e)));
+					}
+				} else
+					sprintf(contents, "%sA %s", contents, oi->name);
+
+				if (player->description)
+					sprintf(contents, "%s, described as '%s'", contents, oi->name);
+				if (eplayer->flags & EF_SITTING)
+					sprintf(contents, "%s, who is sitting down", contents);
+
+				sprintf(contents, "%s.\n", contents);
+			}
+			break;
+		case TYPE_PLANT:
+			sprintf(contents, "%sA plant or tree named %s.\n", contents, oi->name);
+			break;
+		default:
+			sprintf(contents, "%sA %s.\n", contents, oi->name);
+		}
+	}
+
+	/* sprintf(contents, "%s\n" */
+	/* 		"Narrate this information as if in a fantasy novel.\n" */
+	/* 		, contents); */
+	sprintf(contents, "%s\n"
+			"Describe this.\n"
+			, contents);
+
+	entity_gpt(player, 1, contents);
+}
+
+enum SPEAK {
+	ME = 1,
+	OTHER = 2,
+	BOTH = 3,
+};
+
+/* struct speech { */
+/* 	OBJ *player; */
+/* 	char *me, *other; */
+/* 	size_t me_rem, other_rem; */
+/* } */
+
+/* void */
+/* speak(struct *speech, int flags, char *fmt_str, ...) { */
+/* 	va_list args; */
+/* 	va_start(args, format); */
+/* 	if (flags & ME) */
+/* 		vsnprintf(speech->me, me_rem, format, args); */
+/* 	else if (flags & OTHER) */
+/* 		vsnprintf(speech->other, other_rem, format, args); */
+/* 	va_end(args); */
+/* } */
+
+/* void */
+/* tell(struct *speech, char *fmt_str, ...) { */
+/* 	va_list args; */
+/* 	va_start(args, format); */
+/* 	if (flags & ME) { */
+/* 		char *name = "you"; */
+/* 		vsnprintf(speech->me, speech->me_rem, format, name, args); */
+/* 	} else if (flags & OTHER) { */
+/* 		char *name = speech->player->name; */
+/* 		vsnprintf(speech->other, speech->other_rem, format, name, args); */
+/* 	} */
+/* 	va_end(args); */
+/* } */
+
+/* void */
+/* verb(struct *speech, char *verb) { */
+/* 	// there could be an fd that writes to all players or all players in that location */
+/* 	fprintf(fd */
+/* 	vsnprintf(speech->me, speech->me_rem, format, name, args); */
+/* } */
+
+enum word_type {
+	WOT_VERB = 0,
+	WOT_NOUN = 1,
+	WOT_ADJECTIVE = 2,
+	WOT_ADVERB = 3,
+	WOT_PRONOUN = 4,
+	WOT_PREPOSITION = 5,
+	WOT_CONJUNCTION = 6,
+	WOT_INTERJECTION = 7,
+	WOT_SPECIAL = 8,
+};
+
+struct core_word {
+	char *str;
+	enum word_type type;
+	char *antonym;
+	/* char *replacer(OBJ *player, char *word); */
+};
+
+/* enum verb_tense = { */
+/* 	VT_PRESENT = 0; */
+/* }; */
+	/* union { */
+	/* 	enum verb_tense; */
+	/* } sp; */
+
+struct core_word core_words[] = {
+	/* { */
+	/* 	.str = "me", */
+	/* 	.type = WOT_SPECIAL, replace_me */
+	/* }, */
+	{
+		.str = "teleport",
+		.type = WOT_VERB,
+	},
+	{
+		.str = "go",
+		.antonym = "come",
+		.type = WOT_VERB
+	},
+	{
+		.str = "come",
+		.antonym = "go",
+		.type = WOT_VERB
+	},
+	{
+		.str = "out",
+		.antonym = "in",
+		.type = WOT_PREPOSITION
+	},
+	{
+		.str = "in",
+		.antonym = "out",
+		.type = WOT_PREPOSITION
+	},
+	{
+		.str = "from",
+		.antonym = "into",
+		.type = WOT_PREPOSITION
+	},
+	{
+		.str = "into",
+		.antonym = "from",
+		.type = WOT_PREPOSITION
+	},
+	{
+		.str = "the",
+		.type = WOT_PREPOSITION
+	},
+};
+
+char *third[] = { "ss", "sh", "ch", " x", " z" };
+
+DB *words_db = NULL;
+
+static inline struct core_word *word_get(char *word) {
+	return hash_get(words_db, word);
+}
+
+// keep a notion of who the players are in the client
+static inline word_process(OBJ *player, int flags, char *word) {
+	ENT *eplayer = &player->sp.entity;
+	struct core_word *core_word = word_get(word);
+	size_t len = strlen(word);
+
+	switch (core_word->type) {
+		case (WOT_VERB) {
+			if (flags & ME) {
+				const ch = eplayer->proc->final ? 'Y' : 'y';
+				dprintf(eplayer->proc->fd, "%cou %s", ch, word);
+			} else if (flags & OTHER) {
+				char last[3] = { len > 1 ? word[len - 2] : ' ', word[len - 1], '\0' };
+				dprintf(player->location->proc->fd, "%s %s%ss", player->name, word, hash_get(third_db, last) ? "e" : "");
+			}
+		}
+	}
+}
+
+static inline text_process(OBJ *player, int flags, char *text) {
+	struct speech *speech = flags & ME ? player->speech : player->location->speech;
+	char word[32], *w = word;
+
+	do {
+		switch (*text) {
+			case '\0': break;
+			case ' ':
+				*text = '\0';
+				word_process(player, flags, word);
+				w = word;
+				text++;
+				continue;
+			case '.':
+			case ';':
+				player->speech->final = 1;
+				continue;
+			default:
+				player->speech->final = 0;
+				*w++ = *text++;
+		}
+		break;
+	} while (true);
+}
+
+void proc(OBJ *player, char *fmt, ...) {
+	ENT *eplayer = &player->sp.entity;
+	va_list args;
+	/* if (flags & ME) { */
+		/* char *name = "you"; */
+		va_start(args, format);
+		dprintf(eplayer->proc->fd, format, args);
+		va_end(args);
+	/* } else if (flags & OTHER) { */
+		/* char *other_name = speech->player->name; */
+		va_start(args, format);
+		dprintf(player->location->proc->fd, format, args);
+		va_end(args);
+	/* } */
+	va_end(args);
+}
+
+void
+enter(OBJ *player, OBJ *loc, enum exit e)
+{
+	OBJ *old = player->location;
+
+	/* if (eplayer->gpt) { */
+	/* 	free(eplayer->gpt); */
+	/* 	eplayer->gpt = NULL; */
+	/* } */
+
+	if (e == E_NULL)
+		proc(player, "%d teleport out", object_ref(player));
+	else
+		proc(player, "%d go %s", object_ref(player), e_name(e));
+
+	object_move(player, loc);
+	room_clean(player, old);
+
+	if (e == E_NULL)
+		proc(player, "%d teleport in", object_ref(player)); // invalidated by the above
+	else
+		proc(player, "%d come in from the %s", object_ref(player), e_name(e)); // invalidated by the above
+
+	proc(player, "into %s.%s", player->location->name, player->location->description);
+	flush(player);
+
+	entities_aggro(player);
+	look_around(player);
+}
+
+#endif
 
 void
 enter(OBJ *player, OBJ *loc, enum exit e)
@@ -1151,3 +1436,46 @@ do_reroll(command_t *cmd)
 	EFFECT(eplayer, DODGE).value = DODGE_BASE(eplayer);
 	mcp_stats(player);
 }
+
+/* void */
+/* entity_gpt(OBJ *player, int echo_off, char *add_prompt) */
+/* { */
+/* 	ENT *eplayer = &player->sp.entity; */
+/* 	int len = strlen(add_prompt); */
+/* 	char *has_previous = eplayer->gpt; */
+/* 	char *pgpt = has_previous ? eplayer->gpt : ""; */
+/* 	int glen = strlen(pgpt); */
+/* 	/1* char *prompt = malloc(glen + len + 3); *1/ */
+/* 	char *prompt = malloc(glen + len + 1); */
+/* 	strcpy(prompt, pgpt); */
+/* 	strcat(prompt, add_prompt); */
+/* 	/1* strcat(prompt, "\n\n"); *1/ */
+/* 	warn("GPT prompt:\n%s\n", prompt); */
+/* 	char *result = gpt(prompt); */
+/* 	warn("GPT result:\n%s\n", result); */
+/* 	int rlen = strlen(result); */
+/* 	/1* eplayer->gpt = realloc(has_previous, glen + (echo_off ? 0 : len) + rlen + 3); *1/ */
+/* 	eplayer->gpt = realloc(has_previous, glen + len + rlen + 1); */
+/* 	if (!has_previous) */
+/* 		*eplayer->gpt = '\0'; */
+/* 	/1* strcpy(eplayer->gpt, pgpt); *1/ */
+/* 	strcat(eplayer->gpt, add_prompt); */
+/* 	strcat(eplayer->gpt, result); */
+/* 	warn("Updated GPT:\n%s\n", eplayer->gpt); */
+/* 	/1* if (has_previous && has_previous != eplayer->gpt) *1/ */
+/* 	/1* 	free((void *) has_previous); *1/ */
+/* 	notifyf(eplayer, "%s", eplayer->gpt + glen + (echo_off ? len : 0)); */
+/* } */
+
+/* void */
+/* entity_gptcat(OBJ *player, char *str) */
+/* { */
+/* 	ENT *eplayer = &player->sp.entity; */
+/* 	char *has_previous = eplayer->gpt; */
+/* 	char *pgpt = has_previous ? eplayer->gpt : ""; */
+/* 	int glen = strlen(pgpt); */
+/* 	int len = strlen(str); */
+/* 	eplayer->gpt = realloc(has_previous, glen + len + 1); */
+/* 	strcpy(eplayer->gpt, pgpt); */
+/* 	strcat(eplayer->gpt, str); */
+/* } */

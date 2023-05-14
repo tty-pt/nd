@@ -76,4 +76,6 @@ extern void do_toad(command_t *);
 extern void do_boot(command_t *);
 extern void do_usage(command_t *);
 
+/* extern void do_gpt(command_t *); */
+
 #endif /* _EXTERNS_H */

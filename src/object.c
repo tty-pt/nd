@@ -528,6 +528,7 @@ object_read(FILE * f)
 			/* warn("entity home\n"); */
 			eo->fd = -1;
 			eo->last_observed = NULL;
+			eo->gpt = NULL;
 			eo->flags = ref_read(f);
 			eo->lvl = ref_read(f);
 			eo->cxp = ref_read(f);

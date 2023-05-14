@@ -86,6 +86,7 @@ SSL_CTX *sslctx;
 void do_bio(command_t *cmd);
 extern void do_auth(command_t *cmd);
 extern void do_httpget(command_t *cmd);
+/* extern void do_gpt(command_t *cmd); */
 
 char *
 command(char *prompt) {
@@ -126,6 +127,9 @@ core_command_t cmds[] = {
 		.name = "GET",
 		.cb = &do_httpget,
 		.flags = CF_NOAUTH | CF_NOARGS,
+	/* }, { */
+	/* 	.name = "gpt", */
+	/* 	.cb = &do_gpt, */
 	}, {
 		.name = "advitam",
 		.cb = &do_advitam,
@@ -527,48 +531,39 @@ descr_inband(int fd, const char *s)
 }
 
 int
+pprintf(OBJ *player, char *format, ...)
+{
+	ENT *eplayer = &player->sp.entity;
+	va_list args;
+	va_start(args, format);
+	vdprintf(eplayer->fd, format, args);
+	va_end(args);
+}
+
+int
 notify(ENT *eplayer, const char *msg)
 {
-	int retval = 0, fd;
-	char buf[BIGBUFSIZ];
-	int firstpass = 1;
-	char *ptr1;
-	const char *ptr2;
-
-	fd = eplayer->fd;
-	if (fd <= 0)
-		return 0;
-
-	ptr2 = msg;
-	while (ptr2 && *ptr2) {
-		ptr1 = buf;
-		while (ptr2 && *ptr2 && *ptr2 != '\r')
-			*(ptr1++) = *(ptr2++);
-		*(ptr1++) = '\r';
-		*(ptr1++) = '\n';
-		*(ptr1++) = '\0';
-		if (*ptr2 == '\r')
-			ptr2++;
-
-		descr_inband(fd, buf);
-		if (firstpass)
-			retval++;
-
-		firstpass = 0;
+	descr_t *d = &descr_map[eplayer->fd];
+	if (d->flags & DF_WEBSOCKET) {
+		wsdprintf(eplayer->fd, "%s", msg);
+	} else {
+		dprintf(eplayer->fd, msg);
+		dprintf(eplayer->fd, "\r\n");
 	}
-	return retval;
 }
 
 void
 notifyf(ENT *eplayer, char *format, ...)
 {
+	descr_t *d = &descr_map[eplayer->fd];
 	va_list args;
-	static char bufr[BUFSIZ];
-
 	va_start(args, format);
-	vsnprintf(bufr, sizeof(bufr), format, args);
-	bufr[sizeof(bufr)-1] = '\0';
-	notify(eplayer, bufr);
+	if (d->flags & DF_WEBSOCKET)
+		wsdprintf(eplayer->fd, format, args);
+	else {
+		vdprintf(eplayer->fd, format, args);
+		dprintf(eplayer->fd, "\r\n");
+	}
 	va_end(args);
 }
 
@@ -684,8 +679,20 @@ do_auth(command_t *cmd)
         mcp_auth_success(player);
         mcp_equipment(player);
 	look_around(player);
+	/* enter_room(player, E_ALL); */
 	do_view(cmd);
 }
+
+#if 0
+void
+do_gpt(command_t *cmd)
+{
+	OBJ *player = cmd->player;
+	ENT *eplayer = &player->sp.entity;
+	char *reply = gpt(cmd->argv[1]);
+	notifyf(eplayer, "%s", reply);
+}
+#endif
 
 static inline void
 do_v(OBJ *player, char const *cmdstr)

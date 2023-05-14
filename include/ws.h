@@ -12,4 +12,7 @@ ws_read(int cfd, char *data, size_t len);
 int
 ws_write(int cfd, const void *data, size_t n);
 
+int
+wsdprintf(int cfd, char *format, ...);
+
 #endif

@@ -498,7 +498,8 @@ e_move(OBJ *player, enum exit e) {
 	}
 
 	dest = st_there(loc, e);
-	notifyf(eplayer, "You go %s.", e_name(e));
+	if (!eplayer->gpt)
+		notifyf(eplayer, "You go %s.", e_name(e));
 
 	if (!dest)
 		dest = st_room(player, e);
@@ -837,7 +838,8 @@ st_teleport(OBJ *player, struct cmd_dir cd)
 	if (!there)
 		there = st_room_at(player, pos);
 	CBUG(!there);
-	notifyf(eplayer, "Teleporting to 0x%llx.", cd.rep);
+	if (!eplayer->gpt)
+		notifyf(eplayer, "Teleporting to 0x%llx.", cd.rep);
 	enter(player, there, E_NULL);
 	return ret;
 }

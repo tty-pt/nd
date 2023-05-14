@@ -59,3 +59,21 @@ popen2(struct popen2 *child, const char *cmdline)
 	close(pipe_stdout[1]);
 	return 0;
 }
+
+#if 0
+char *
+gpt(char *prompt)
+{
+	static char buf[BUFFER_LEN];
+	struct popen2 child;
+
+	CBUG(popen2(&child, "/gpt3.sh"));
+	write(child.in, prompt, strlen(prompt));
+	close(child.in);
+	memset(buf, 0, sizeof(buf));
+	read(child.out, buf, sizeof(buf));
+	close(child.out);
+	kill(child.pid, 0);
+	return buf;
+}
+#endif

@@ -24,15 +24,30 @@ do_say(command_t *cmd)
 
 	notifyf(eplayer, "You say, \"%s\"", message);
 	onotifyf(player, "%s says, \"%s\"", player->name, message);
+	/* if (eplayer->gpt) { */
+	/* 	char contents[BUFFER_LEN]; */
+	/* 	sprintf(contents, "%s says: %s\n\n", player->name, message); */
+	/* 	entity_gpt(player, 0, contents); */
+	/* } else { */
+	/* 	notifyf(eplayer, "You say, \"%s\"", message); */
+	/* 	onotifyf(player, "%s says, \"%s\"", player->name, message); */
+	/* } */
 }
 
 void
 do_pose(command_t *cmd)
 {
 	OBJ *player = cmd->player;
+	/* ENT *eplayer = &player->sp.entity; */
 	const char *message = cmd->argv[1];
 
 	anotifyf(player->location, "%s %s", player->name, message);
+	/* if (eplayer->gpt) { */
+	/* 	char contents[BUFFER_LEN]; */
+	/* 	sprintf(contents, "Describe %s %s.\n\n", player->name, message); */
+	/* 	entity_gpt(player, 1, contents); */
+	/* } else */
+	/* 	anotifyf(player->location, "%s %s", player->name, message); */
 }
 
 void

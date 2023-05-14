@@ -50,7 +50,6 @@ short kill_dmg(enum element dmg_type,
 
 void recycle(OBJ *player, OBJ *thing);
 void enter(OBJ *player, OBJ *loc, enum exit e);
-/* void enter(OBJ *player, OBJ *loc); */
 
 const char * unparse(OBJ *player, OBJ *loc);
 
@@ -74,6 +73,7 @@ void stats_init(ENT *enu, SENT *sk);
 void entity_update(OBJ *player);
 int entity_damage(OBJ *player, OBJ *target, short amt);
 int entity_boot(ENT *eplayer);
+/* void entity_gpt(OBJ *player, int echo_off, char *add_prompt); */
 
 void entities_add(OBJ *where, enum biome, long long pdn);
 void enter_room(OBJ *player, enum exit e);

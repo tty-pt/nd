@@ -156,6 +156,7 @@ typedef struct entity {
 	unsigned lvl, spend, cxp;
 	unsigned attr[ATTR_MAX];
 	unsigned equipment[ES_MAX];
+	char *gpt;
 } ENT;
 
 enum equipment_flags {

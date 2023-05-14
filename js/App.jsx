@@ -2,14 +2,13 @@ import React, {
 	useState, useEffect, useRef,
 	useCallback, useReducer, useContext,
 } from "react";
-import { hot } from "react-hot-loader/root";
+import { withMagic } from "@tty-pt/styles";
 import ReactDOM from "react-dom";
-import ACTIONS, { ACTIONS_LABEL } from "actions";
-import mcp from "mcp";
-import tty_proc from "tty";
-import canvas from "canvas";
-import { useCast } from "@tty-pt/styles";
-import "vim.css";
+import ACTIONS, { ACTIONS_LABEL } from "./actions";
+import mcp from "./mcp";
+import tty_proc from "./tty";
+// import canvas from "./canvas";
+import "./vim.css";
 const baseDir = process.env.CONFIG_BASEDIR || "";
 
 class Modal extends React.Component {
@@ -381,7 +380,7 @@ function Terminal() {
 	}, [terminal]);
 
 	// console.log(context);
-	return (<pre id="term" ref={ref} className="fg oa"
+	return (<pre id="term" ref={ref} className="flex-grow overflow"
 		dangerouslySetInnerHTML={{ __html: terminal }}>
 	</pre>)
 }
@@ -389,14 +388,13 @@ function Terminal() {
 function RoomTitleAndArt() {
 	const { here, objects } = useContext(GameContext);
 	const obj = objects[here];
-	const c = useCast();
 
 	if (!obj)
 		return null;
 
 	const src = baseDir + "/art/" + (obj.art || "unknown.jpg");
 
-	return (<div className={c("vertical0 flexGrow alignItemsCenter")}>
+	return (<div className="vertical-0 flex-grow align-items">
 		<div className="tm pxs tac">{ obj.name }</div>
 		<img className="sr2" src={src} />
 	</div>);
@@ -406,13 +404,13 @@ function Tabs(props) {
 	const { children } = props;
 	const [ activeTab, setActiveTab ] = useState(0);
 
-	return (<div className="fg v0">
+	return (<div className="flex-grow vertical-0">
 		<div className="h0">
 			{ children.map((child, idx) => {
 				const { label } = child.props;
 				return (<a key={idx}
 					onClick={() => setActiveTab(idx)}
-					className={activeTab == idx ? 'p8 c0' : 'p8'}
+					className={activeTab == idx ? 'pad-small c0' : 'pad-small'}
 				>
 					{label}
 				</a>);
@@ -431,7 +429,7 @@ function Tabs(props) {
 function Stat(props) {
 	const { label, value } = props;
 
-	return (<div className="h8">
+	return (<div className="horizontal-small">
 		<div className="tbbold">{label}</div><div>{value}</div>
 	</div>);
 }
@@ -755,7 +753,7 @@ function Bar(props) {
 		width: (100 * value / max) + "%",
 		};
 
-	return (<div className="fg svs b0">
+	return (<div className="flex-grow svs b0">
 		<div className={"svf c" + color} style={style}></div>
 	</div>);
 }
@@ -768,7 +766,7 @@ function PlayerBars() {
 
 	const { hp, hpMax, mp, mpMax } = bars;
 
-	return (<div className="h8 f p8">
+	return (<div className="horizontal-small pad-small">
 		<Bar value={hp} max={hpMax} color="1" />
 		<Bar value={mp} max={mpMax} color="12" />
 	</div>);
@@ -912,7 +910,7 @@ function InnerApp() {
 
 
 export default
-hot(function App() {
+withMagic(function App() {
 	return (<GameContextProvider>
 		<InnerApp />
 	</GameContextProvider>);
