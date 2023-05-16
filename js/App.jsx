@@ -2,6 +2,7 @@ import React, {
 	useState, useEffect, useRef,
 	useCallback, useReducer, useContext,
 } from "react";
+import { usePopper } from 'react-popper';
 import { useMagic, withMagic, makeMagic } from "@tty-pt/styles";
 import ReactDOM from "react-dom";
 import ACTIONS, { ACTIONS_LABEL } from "./actions";
@@ -11,12 +12,82 @@ import tty_proc from "./tty";
 import "./vim.css";
 const baseDir = process.env.CONFIG_BASEDIR || "";
 
+function easySub(defaultData) {
+  const subs = new Map();
+  const valueMap = { value: defaultData };
+
+  function update(obj) {
+    valueMap.value = obj;
+    let allPromises = [];
+    for (const [sub] of subs)
+      allPromises.push(sub(obj));
+    return Promise.all(allPromises);
+  }
+
+  function subscribe(sub) {
+    subs.set(sub, true);
+    return () => {
+      subs.delete(sub);
+    };
+  }
+
+  function easyEmit(cb = a => a) {
+    return async (...args) => update(await cb(...args));
+  }
+
+  return { update, subscribe, data: valueMap, easyEmit };
+}
+
+function useSub(sub, defaultData = null) {
+  const [data, setData] = useState(sub.data.value ?? defaultData);
+  useEffect(() => sub.subscribe(setData), []);
+  return data;
+}
+
 makeMagic({
   "?pre": {
     margin: 0,
   },
   opacity2: {
     opacity: 0.2,
+  },
+  target: {
+    minWidth: "300px",
+    minHeight: "33vh",
+  },
+  "?#map": {
+    marginLeft: "-1rem",
+    marginBottom: "-1rem",
+  },
+  deepShadow: {
+    textShadow: "2px 2px 3px black, -2px 2px 3px black, -2px -2px 3px black, 2px -2px 3px black",
+  },
+  round: {
+    lineHeight: "32px",
+    width: "calc(32px + 2 * 8px)",
+    height: "calc(32px + 2 * 8px)",
+    fontWeight: 900,
+    "& > img": {
+      width: "32px",
+      height: "32px",
+      imageRendering: "pixelated",
+    },
+  },
+  backgroundSemi: {
+    backgroundColor: "color-mix(in srgb, #3c403c, transparent 50%)",
+  },
+  modal: {
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  sizeSuper: {
+    width: "256px",
+    height: "256px",
+  },
+  focus: {
+    border: "solid thin #9589c5 !important",
   },
 });
 
@@ -32,7 +103,7 @@ class Modal extends React.Component {
 			if (e.target == this.el)
 				this.props.setOpen(false);
 		};
-		this.el.className = 'modal abs sfv v0 c fcc oh f';
+		this.el.className = 'modal abs vertical-0 align-items c fcc oh f';
 		// this.el.classList.remove('dn');
 	}
 
@@ -49,7 +120,7 @@ class Modal extends React.Component {
 		return ReactDOM.createPortal((<span
 			onKeyDown={e => this.onKeyDown(e)}
 			onClick={e => e.stopPropagation()}
-			className="r c0 p oa"
+			className="r bo0 focus background-semi p oa"
 		>
 			{ this.props.children }
 		</span>), this.el);
@@ -102,251 +173,158 @@ const atiles = [
 
 const GameContext = React.createContext({});
 
+const wsSub = easySub({
+  ws: null,
+  unsubscribe: () => {},
+});
+
+const connect = wsSub.easyEmit((onOpen, onMessage, onClose) => {
+  const ws = new WebSocket(process.env.CONFIG_PROTO + "://" + window.location.hostname + ':4201', 'text');
+  ws.binaryType = 'arraybuffer';
+  function _onClose(evt) {
+    onClose(evt, connect);
+  }
+  ws.addEventListener('open', onOpen);
+  ws.addEventListener('message', onMessage);
+  ws.addEventListener('close', _onClose);
+  return {
+    ws,
+    unsubscribe: () => {
+			ws.removeEventListener('open', onOpen);
+      ws.removeEventListener('message', onMessage);
+      ws.removeEventListener('close', _onClose);
+    }
+  }
+});
+
+function sendMessage(text) {
+  wsSub.data.value.ws.send(text + "\n");
+}
+
 function useSession(onOpen, onMessage, onClose) {
-	const [ session, setSession ] = useState(null);
-
-	const connect = useCallback(() => {
-		const ws = new WebSocket(process.env.CONFIG_PROTO + "://" + window.location.hostname + ':4201', 'text');
-		ws.binaryType = 'arraybuffer';
-		setSession(ws);
-	}, []);
-
-	const updateOpenHandler = () => {
-		if (!session) return;
-		session.addEventListener('open', onOpen);
-		return () => {
-			session.removeEventListener('open', onOpen);
-		};
-	};
-
-	const updateMessageHandler = () => {
-		if (!session) return;
-		session.addEventListener('message', onMessage);
-		return () => {
-		session.removeEventListener('message', onMessage);
-		};
-	};
-
-	const _onClose = useCallback(evt => onClose(evt, connect));
-
-	const updateCloseHandler = () => {
-		if (!session) return;
-		session.addEventListener('close', _onClose);
-		return () => {
-		session.removeEventListener('close', _onClose);
-		};
-	};
-
-	useEffect(connect, []);
-	useEffect(updateOpenHandler, [session, onOpen]);
-	useEffect(updateMessageHandler, [session, onMessage]);
-	useEffect(updateCloseHandler, [session, _onClose]);
-
-	function sendMessage(text) {
-		// console.log("sendMessage", text);
-		session.send(text + "\n");
-	}
-
-	return [connect, sendMessage, session];
+  useEffect(() => connect(onOpen, onMessage, onClose), []);
+	return useSub(wsSub).ws;
 }
 
-function webLookReducer(state, action) {
-	const dbref = parseInt(action.dbref);
-	const { room } = action;
+const terminalSub = easySub("");
+const terminalEmit = terminalSub.easyEmit((text) => {
+  return terminalSub.data.value + text;
+});
+const hereSub = easySub({ dbref: null, contents: {} });
+const hereEmit = hereSub.easyEmit();
+const targetSub = easySub(null);
+const targetEmit = targetSub.easyEmit();
+const dbSub = easySub({});
+const dbEmit = dbSub.easyEmit((dbref, obj) => ({
+  ...dbSub.data.value,
+  [dbref]: {
+    contents: {},
+    ...obj,
+  },
+}));
+const dbSubEmit = dbSub.easyEmit(obj => {
+  const loc = parseInt(obj.loc);
+  const dbref = parseInt(obj.dbref);
 
-	const ret = {
-		...state,
-		...(room ? {
-			here: dbref,
-			target: null,
-		} : {
-			target: dbref,
-		}),
-		objects: {
-			...state.objects,
-			[dbref]: {
-				...action,
-				contents: {},
-			},
-		},
-		terminal: state.terminal + (action.description ? "\nYou see: " + action.description : ""),
-	};
+  if (!dbSub.data.value[loc]) {
+      console.warn("web-in: actionable of loc", loc, "is not available");
+      return dbSub.data.value;
+  }
 
-	// console.log("WEB-LOOK", state, action, ret);
+  return {
+    ...dbSub.data.value,
+    [loc]: {
+      ...dbSub.data.value[loc],
+      contents: {
+        ...dbSub.data.value[loc].contents,
+        [dbref]: {
+          ...obj,
+          icon: tty_proc(obj.icon),
+          pname: tty_proc(obj.pname),
+        },
+      }
+    },
+  };
+});
+const viewSub = easySub("");
+const viewEmit = viewSub.easyEmit(data => tty_proc(data));
+const equipmentSub = easySub({});
+const equipmentEmit = equipmentSub.easyEmit(item => ({
+  ...equipmentSub.data.value,
+  [parseInt(item.eql)]: {
+    ...item,
+    pname: tty_proc(item.pname),
+    icon: tty_proc(item.icon),
+  },
+}));
+const authSub = easySub({ me: null, authFail: true });
+const authEmit = authSub.easyEmit((player, authFail) => ({
+  me: parseInt(player),
+  authFail,
+}));
+const statsSub = easySub({});
+const statsEmit = statsSub.easyEmit();
+const barsSub = easySub({ hp: 1, mp: 1 });
+const barsEmit = barsSub.easyEmit();
 
-	return ret;
-}
+const mcp_map = {
+  'inband': action => {
+    if (action.data != "\n\r")
+      terminalEmit(tty_proc(action.data))
+  },
+  "web-view": action => viewEmit(action.data),
+  "web-look": action => {
+    const dbref = parseInt(action.dbref);
+    dbEmit(dbref, action);
 
-function webLookContentReducer(state, action) {
-	const dbref = parseInt(action.dbref);
-	const loc = parseInt(action.loc);
-	return {
-		...state,
-		objects: {
-			...state.objects,
-			[loc]: {
-				...state.objects[loc],
-				contents: {
-					...state.objects[loc].contents,
-					[dbref]: {
-						...action,
-						icon: tty_proc(action.icon),
-						pname: tty_proc(action.pname),
-					},
-				},
-			},
-		}
-	};
-}
+    if (action.room) {
+      hereEmit({
+        dbref,
+        contents: {},
+      });
+      targetEmit(null);
+    } else
+      targetEmit(dbref);
 
-function webInReducer(state, action) {
-	const dbref = parseInt(action.dbref);
-	const loc = parseInt(action.loc);
-
-	if (!state.objects[loc]) {
-		console.warn("web-in: actionable of loc", loc, "is not available");
-		return state;
-	}
-
-	return {
-		...state,
-		objects: {
-			...state.objects,
-			[loc]: {
-				...state.objects[loc],
-				contents: {
-					...state.objects[loc].contents,
-					[dbref]: {
-						...action,
-						icon: tty_proc(action.icon),
-						pname: tty_proc(action.pname),
-					},
-				}
-			}
-		}
-	};
-}
-
-function gameReducer(state, action) {
-	// console.log(action, state);
-
-	switch (action.key) {
-	case 'inband':
-		if (action.data != "\n\r")
-			return {
-				...state,
-				terminal: state.terminal + tty_proc(action.data),
-			}
-		break;
-	case 'web-view':
-		return {
-			...state,
-			view: tty_proc(action.data),
-		}
-	case 'web-look':
-		return webLookReducer(state, action);
-
-	case 'web-look-content':
-		return webLookContentReducer(state, action);
-
-	case 'web-in':
-		return webInReducer(state, action);
-
-	case 'web-out':
+    terminalEmit(action.description ? "\nYou see: " + action.description : "");
+  },
+  "web-look-content": dbSubEmit,
+  "web-in": dbSubEmit,
+  "web-out": action => {
 		const dbref = parseInt(action.dbref);
 		const loc = parseInt(action.loc);
 
-		if (!state.objects[loc])
-			return state;
+		if (!dbSub.data.value[loc])
+      return;
 
-		let newContents = { ...state.objects[loc].contents };
+		let newContents = { ...dbSub.data.value[loc].contents };
 		delete newContents[dbref];
 
-		return {
-			...state,
-			objects: {
-				...state.objects,
-				[loc]: {
-					...state.objects[loc],
-					contents: newContents
-				}
-			},
-		};
-
-	case 'web-auth-success':
-		return {
-			...state,
-			me: parseInt(action.player),
-			authFail: null,
-			};
-
-	case 'web-auth-fail':
-		return {
-			...state,
-			me: parseInt(action.player),
-			authFail: true,
-		};
-
-
-	case 'web-stats':
-		return {
-			...state,
-			stats: action,
-		};
-
-	case 'web-bars':
-		return {
-			...state,
-			bars: action,
-		};
-
-	case 'web-equipment':
-		return {
-			...state,
-			equipment: {},
-		};
-
-	case 'web-equipment-item':
-		return {
-			...state,
-			equipment: {
-				...(state.equipment || {}),
-				[parseInt(action.eql)]: {
-					...action,
-					pname: tty_proc(action.pname),
-					icon: tty_proc(action.icon),
-				},
-			},
-		};
-	}
-
-	return state;
-}
+    dbEmit(loc, { ...dbSub.data.value[loc], contents: newContents });
+  },
+  "web-auth-success": action => authEmit(action.player),
+  "web-auth-fail": action => authEmit(action.player, true),
+  "web-stats": statsEmit,
+  "web-bars": barsEmit,
+  "web-equipment-item": equipmentEmit,
+};
 
 function GameContextProvider(props) {
 	const [ open, setOpen ] = useState(false);
 	const { children } = props;
 
-	const [state, dispatch] = useReducer(gameReducer, {
-		terminal: "",
-		objects: {},
-		target: null,
-		here: null,
-	});
-
 	function onMessage(ev) {
 		const mcp_arr = mcp.proc(ev.data);
 		for (let i = 0; i < mcp_arr.length; i++) {
-			// console.log(mcp_arr[i]);
-			dispatch(mcp_arr[i]);
-		}
+      const item = mcp_arr[i];
+      if (mcp_map[item.key])
+        mcp_map[item.key](item);
+    }
 	}
 
 	function output(text) {
-		dispatch({
-			key: "inband", 
-			data: "\n" + text,
-		});
+		if (text != "\n\r")
+      terminalEmit("\n" + text);
 	}
 
 	function onOpen() {
@@ -366,22 +344,17 @@ function GameContextProvider(props) {
 		connect();
 	}
 
-	const [ connect, sendMessage, session ] = useSession(onOpen, onMessage, onClose);
+	const session = useSession(onOpen, onMessage, onClose);
 
 	return (<GameContext.Provider
-		value={{
-			...state, 
-			session,
-			sendMessage,
-			dispatch,
-		}}
+		value={{ session }}
 	>
 		{ children }
 	</GameContext.Provider>);
 }
 
 function Terminal() {
-	const { terminal, objects, here } = useContext(GameContext);
+  const terminal = useSub(terminalSub);
 	const ref = useRef(null);
 
 	useEffect(() => {
@@ -389,23 +362,19 @@ function Terminal() {
       ref.current.scrollTop = ref.current.scrollHeight;
 	}, [terminal]);
 
-  const obj = objects[here];
-
-  const bgClass = useBgImg(obj);
-
 	// console.log(context);
-  return (<div className="relative flex-grow">
-    <div className={"absolute opacity-2 position-left-0 position-right-0 position-top-0 position-bottom-0 " + bgClass} />
-    <pre id="term" ref={ref} className="absolute position-left-0 position-right-0 position-top-0 position-bottom-0 overflow"
+  return (
+    <pre id="term" ref={ref} className="flex-grow overflow"
       dangerouslySetInnerHTML={{ __html: terminal }}>
     </pre>
-  </div>)
+  );
 }
 
 function useBgImg(obj = {}) {
-  const bsrc = obj.art || "unknown.jpg";
+  const bsrc = obj.art ?? obj.avatar ?? "unknown.jpg";
 	const src = baseDir + "/art/" + bsrc;
-  const bname = bsrc.substring(bsrc.indexOf(".") + 1);
+  const bname = bsrc.substring(0, bsrc.indexOf("."));
+  console.log("useBgImg", bsrc, bname);
 
   useMagic(() => ({
     ["!bg-img-" + bname]: {
@@ -416,16 +385,6 @@ function useBgImg(obj = {}) {
   }));
 
   return "bg-img-" + bname;
-}
-
-function RoomTitleAndArt() {
-	const { here, objects } = useContext(GameContext);
-  const obj = objects[here];
-  const bgClass = useBgImg(obj);
-	return (<div className={"relative vertical-0 flex-grow align-items"}>
-    <div className={"absolute position-top-0 position-bottom-0 position-left-0 position-right-0 " + bgClass} />
-    <div className="absolute position-top-0 tm pxs tac">{ obj?.name ?? "Unnamed" }</div>
-	</div>);
 }
 
 function Tabs(props) {
@@ -484,7 +443,7 @@ const eql_label = {
 
 function Equipment(props) {
 	const { eql } = props;
-	const { equipment, sendMessage } = useContext(GameContext);
+  const equipment = useSub(equipmentSub);
 
 	if (!equipment)
 		return null;
@@ -494,70 +453,15 @@ function Equipment(props) {
 
 	return (<Avatar
 		item={equipment[eql]}
+    square
 		size="l"
 		onClick={() => sendMessage("unequip " + eql_label[eql])}
 	/>);
 }
 
-function PlayerTabs() {
-	const { me, stats } = useContext(GameContext);
-
-	if (!me)
-		return null;
-
-	return (<Tabs>
-		<div label="stats" className="p8 h8 f">
-			<div className="v8 fg">
-				<Stat label="str" value={stats.str} />
-				<Stat label="con" value={stats.con} />
-				<Stat label="dex" value={stats.dex} />
-				<Stat label="int" value={stats.int} />
-				<Stat label="wiz" value={stats.wiz} />
-				<Stat label="cha" value={stats.cha} />
-			</div>
-			<div className="v8 fg">
-				<Stat label="dodge" value={stats.dodge} />
-				<Stat label="dmg" value={stats.dmg} />
-				<Stat label="mdmg" value={stats.mdmg} />
-				<Stat label="def" value={stats.def} />
-				<Stat label="mdef" value={stats.mdef} />
-			</div>
-		</div>
-		<div label="equipment" className="p8 v8">
-			<div className="h8 f">
-				<div className="s32"></div>
-				<div className="s32"></div>
-				<Equipment eql={EQL_HEAD} />
-				<div className="s32"></div>
-				<div className="s32"></div>
-			</div>
-			<div className="h8 f">
-				<Equipment eql={EQL_RHAND} />
-				<div className="s32"></div>
-				<Equipment eql={EQL_NECK} />
-				<Equipment eql={EQL_BACK} />
-				<div className="s32"></div>
-			</div>
-			<div className="h8 f">
-				<Equipment eql={EQL_RFINGER} />
-				<div className="s32"></div>
-				<Equipment eql={EQL_CHEST} />
-				<div className="s32"></div>
-				<Equipment eql={EQL_LFINGER} />
-			</div>
-			<div className="h8 f">
-				<div className="s32"></div>
-				<div className="s32"></div>
-				<Equipment eql={EQL_PANTS} />
-				<div className="s32"></div>
-				<div className="s32"></div>
-			</div>
-		</div>
-	</Tabs>);
-}
-
 function MiniMap(props) {
-	const { view, target } = useContext(GameContext);
+  const view = useSub(viewSub);
+  const target = useSub(targetSub);
 
 	if (target || !view)
 		return null;
@@ -566,47 +470,39 @@ function MiniMap(props) {
 }
 
 function TargetTitleAndArt() {
-	const { target, objects } = useContext(GameContext);
-
-	if (!target)
-		return null;
-
+  const objects = useSub(dbSub);
+  const target = useSub(targetSub);
 	const obj = objects[target];
+  const bgClass = useBgImg(obj);
+  if (!obj)
+    return null;
 
-	const src = baseDir + "/art/" + (obj.art || "unknown_small.jpg");
-
-	return (<>
-    <div className="tm pxs tac">{obj.name}</div>
-    <img className="sr1 fac" src={src} />
-  </>);
+	return (<div className={"relative vertical-0 size-super align-items"}>
+    <div className={"absolute position-top-0 position-bottom-0 position-left-0 position-right-0 " + bgClass} />
+    <div className="absolute position-top-0 position-bottom-0 position-left-0 position-right-0 deep-shadow text-align tm pxs">{ obj?.name ?? "Unnamed" }</div>
+	</div>);
 }
 
 function Avatar(props) {
-	const { item, size = "xl", ...rest } = props;
+	const { className, item, square, size = "xl", ...rest } = props;
 
 	if (!item)
 		return null;
 
-	if (item.avatar)
-		return <img
-			className={"sh" + size + " sv" + size}
-			src={baseDir + "/art/" + item.avatar}
-			{ ...rest }
-		/>;
-	else
-		return <span
-			className={"s" + size + " t" + size + " tcv"}
-			dangerouslySetInnerHTML={{ __html: item.icon }}
-			{ ...rest }
-		/>;
+  return <span
+    className={className + " s" + size + " t" + size + " tcv size-biggest deep-shadow" + (square ? "" : " round")}
+    dangerouslySetInnerHTML={{ __html: item.icon }}
+    { ...rest }
+  />;
 }
 
 function ContentsItem(props) {
 	const { item, onClick, activeItem, isShop } = props;
-	const className = "f fic pxs h8 " + (activeItem == item.dbref ? 'c0' : "");
+	const className = "horizontal align-items " + (activeItem == item.dbref ? 'c0' : "");
+  const bgClass = useBgImg(item);
 
-	return (<a className={className} onClick={onClick}>
-		<Avatar item={item} />
+	return (<a className={className + " round-pad pad display relative"} onClick={onClick}>
+		<Avatar item={item} className={bgClass} />
 		<span dangerouslySetInnerHTML={{
 			__html: item.pname + (isShop ? " " + item.price + "P" : ""),
 		}}></span>
@@ -615,8 +511,9 @@ function ContentsItem(props) {
 
 function Contents(props) {
 	const { onItemClick, activeItem } = props;
-	const { target, here, objects } = useContext(GameContext);
-
+  const target = useSub(targetSub);
+  const { dbref: here } = useSub(hereSub);
+  const objects = useSub(dbSub);
 	const obj = target ? objects[target] : objects[here];
 
 	if (!here)
@@ -631,7 +528,7 @@ function Contents(props) {
 			onClick={e => onItemClick(e, item)} />;
 	});
 
-	return (<div className="v0 fg oa icec">
+	return (<div className="vertical-0 flex-grow overflow icec">
 		{ contentsEl }
 	</div>);
 }
@@ -646,41 +543,39 @@ function RBT(props) {
 }
 
 function RBI(props) {
-	const { onClick, src } = props;
-	return (<a className="round ts26 p8 c0" onClick={onClick}>
-		<img className="svl shl" src={atiles[src]} />
+	const { className = "", onClick, src } = props;
+	return (<a className={"round p8 c0 " + className} onClick={onClick}>
+		<img className="svl shl" src={atiles[src] ?? src} />
 	</a>);
 }
 
-function Directions() {
-	const { sendMessage } = useContext(GameContext);
-
-	return (<div className="v0 tar tnow abs ar">
-		<div className="h0 f">
-			<RBT />
-			<RB onClick={() => sendMessage("k")}>&uarr;</RB>
-			<RBI onClick={() => sendMessage("K")} src={ACTIONS.K} />
-		</div>
-		<div className="h0 f">
-			<RB onClick={() => sendMessage("h")}>&larr;</RB>
-			<RBT />
-			<RB onClick={() => sendMessage("l")}>&rarr;</RB>
-		</div>
-		<div className="h0 f">
-			<RBT />
-			<RB onClick={() => sendMessage("j")}>&darr;</RB>
-			<RBI onClick={() => sendMessage("J")} src={ACTIONS.J} />
-		</div>
-	</div>);
-}
-
-function ContentsAndActions(props) {
-	const { sendMessage, here, me, target, objects } = useContext(GameContext);
+function ContentsAndActions() {
+  const targetState = useState(null);
+  const { dbref: here } = useSub(hereSub);
+  const { me } = useSub(authSub);
+  const objects = useSub(dbSub);
+  const [referenceElement, setReferenceElement] = useState(null);
+  const [popperElement, setPopperElement] = useState(null);
 	const [ actions, setActions ] = useState([]);
-	const [ activeItem, setActiveItem ] = useState(null);
+
+  function unselect() {
+      setActions([]);
+      targetState[1](null);
+      setReferenceElement(null);
+  }
 
 	function onItemClick(ev, item) {
+    let target = ev.target;
+
+    while (target.tagName !== "A")
+      target = target.parentElement;
+
+    console.log("onItemClick", target);
+
 		let newActions = [];
+
+    if (targetState[0] === item.dbref)
+      return unselect();
 
 		if (item.loc == here) {
 			for (let p = 0; p < 9; p++) {
@@ -690,6 +585,7 @@ function ContentsAndActions(props) {
 				let id = ACTIONS_LABEL[p];
 				newActions.push([p, function () {
 					sendMessage(id + " #" + item.dbref);
+          return unselect();
 				}]);
 			}
 		} else if (item.loc == me) {
@@ -699,43 +595,66 @@ function ContentsAndActions(props) {
 
 			newActions.push([ACTIONS.EQUIP, function () {
 				sendMessage("equip #" + item.dbref);
+        return unselect();
 			}]);
 
 			newActions.push([ACTIONS.DROP, function () {
 				sendMessage("drop #" + item.dbref);
+        return unselect();
 			}]);
 
 			newActions.push([ACTIONS.EAT, function () {
 				sendMessage("eat #" + item.dbref);
+        return unselect();
 			}]);
 
 			newActions.push([ACTIONS.SHOP, function () {
 				sendMessage("sell #" + item.dbref);
+        return unselect();
 			}]);
 
 		} else if (objects[item.loc].shop) {
 			newActions.push([ACTIONS.SHOP, function () {
 				sendMessage("buy #" + item.dbref);
+        return unselect();
 			}]);
 		} else {
 			newActions.push([ACTIONS.GET, function () {
 				sendMessage("get #" + target + "=#" + item.dbref);
+        return unselect();
 			}]);
 		}
 
 		setActions(newActions);
-		setActiveItem(item.dbref);
+		targetState[1](item.dbref);
+    setReferenceElement(target);
+    ev.stopPropagation();
 	}
 
+  function clickHandler(e) {
+    return unselect();
+  };
+
+  useEffect(() => {
+    window.addEventListener('click', clickHandler);
+    return () => window.removeEventListener('click', clickHandler);
+  }, []);
+
+  const { styles, attributes } = usePopper(referenceElement, popperElement, {
+    placement: "left",
+  });
+
 	const actionsEl = actions.map(([p, cb]) => (
-		<RBI key={p} onClick={cb} src={p} />
+		<RBI key={p} onClick={cb} src={p} className="c0" />
 	));
 
 	return (<>
-		<Contents onItemClick={onItemClick} activeItem={activeItem} />
-		<div className="h0 icec">
-			{ actionsEl }
-		</div>
+		<Contents onItemClick={onItemClick} activeItem={targetState[0]} />
+    <div ref={setPopperElement} className="margin-right-small" style={styles.popper} {...attributes.popper}>
+      <div className="horizontal-small flex-wrap icec">
+        { actionsEl }
+      </div>
+    </div>
 	</>);
 }
 
@@ -800,10 +719,88 @@ function PlayerBars() {
 	</div>);
 }
 
+function StatsModal() {
+	const stats = useSub(statsSub);
+
+  return (<div label="stats" className="p8 h8 f">
+    <div className="v8 fg">
+      <Stat label="str" value={stats.str} />
+      <Stat label="con" value={stats.con} />
+      <Stat label="dex" value={stats.dex} />
+      <Stat label="int" value={stats.int} />
+      <Stat label="wiz" value={stats.wiz} />
+      <Stat label="cha" value={stats.cha} />
+    </div>
+    <div className="v8 fg">
+      <Stat label="dodge" value={stats.dodge} />
+      <Stat label="dmg" value={stats.dmg} />
+      <Stat label="mdmg" value={stats.mdmg} />
+      <Stat label="def" value={stats.def} />
+      <Stat label="mdef" value={stats.mdef} />
+    </div>
+  </div>);
+}
+
+function StatsButton() {
+	const [ modal, isOpen, setOpen ] = useModal(StatsModal, {});
+
+  return (<>
+    <RB onClick={() => setOpen(true)}>s</RB>
+    { isOpen ? modal : null }
+  </>);
+}
+
+function EquipmentModal() {
+  return (<div label="equipment" className="p8 v8 c">
+    <div className="h8 f">
+      <div className="s32"></div>
+      <div className="s32"></div>
+      <Equipment eql={EQL_HEAD} />
+      <div className="s32"></div>
+      <div className="s32"></div>
+    </div>
+    <div className="h8 f">
+      <Equipment eql={EQL_RHAND} />
+      <div className="s32"></div>
+      <Equipment eql={EQL_NECK} />
+      <Equipment eql={EQL_BACK} />
+      <div className="s32"></div>
+    </div>
+    <div className="h8 f">
+      <Equipment eql={EQL_RFINGER} />
+      <div className="s32"></div>
+      <Equipment eql={EQL_CHEST} />
+      <div className="s32"></div>
+      <Equipment eql={EQL_LFINGER} />
+    </div>
+    <div className="h8 f">
+      <div className="s32"></div>
+      <div className="s32"></div>
+      <Equipment eql={EQL_PANTS} />
+      <div className="s32"></div>
+      <div className="s32"></div>
+    </div>
+  </div>);
+}
+
+function EquipmentButton() {
+	const [ modal, isOpen, setOpen ] = useModal(EquipmentModal, {});
+
+  return (<>
+    <RBI onClick={() => setOpen(true)} src={ACTIONS.EQUIP} />
+    { isOpen ? modal : null }
+  </>);
+}
+
 function Game() {
-	const { sendMessage, session } = useContext(GameContext);
+	const { session } = useContext(GameContext);
+  const { dbref: here } = useSub(hereSub);
+  const objects = useSub(dbSub);
 	const [ modal, isOpen, setOpen ] = useModal(Help, {});
+  const [ referenceElement, setReferenceElement ] = useState(null);
 	const input = useRef(null);
+  const obj = objects[here];
+  const bgClass = useBgImg(obj);
 
 	function keyDownHandler(e) {
 		if (document.activeElement == input.current) {
@@ -879,37 +876,67 @@ function Game() {
 		const fd = new FormData(e.target);
 		sendMessage(fd.get("cmd"));
 		input.current.value = "";
-		input.current.blur();
+    // input.current.blur();
 	}
 
+  function clickHandler(e) {
+    setReferenceElement(null);
+  };
+
+  useEffect(() => {
+    window.addEventListener('click', clickHandler);
+    return () => window.removeEventListener('click', clickHandler);
+  }, []);
+
 	return (<>
-		<span className="v0 f">
-			{/* <RB onClick={disconnect}>X</RB> */}
-			<RB onClick={toggle_help}>?</RB>
-			<RBI onClick={() => sendMessage('inventory')} src={ACTIONS.OPEN} />
-			<RBI onClick={() => sendMessage('look')} src={ACTIONS.LOOK} />
-		</span>
+    <div className={"absolute opacity-2 position-left-0 position-right-0 position-top-0 position-bottom-0 " + bgClass} />
+    <div className="pad-small horizontal-small absolute position-left-0 position-right-0 position-top-0 position-bottom-0">
+      <form className="vertical-small flex-grow shf overflow" onSubmit={onSubmit}>
+        <div className="tm text-align">{ obj?.name ?? "Unnamed" }</div>
 
-		<form className="v0 f fg shf oa" onSubmit={onSubmit}>
-			<div className="h0 f">
-				<PlayerTabs />
-				<RoomTitleAndArt />
-			</div>
+        <PlayerBars />
 
-			<PlayerBars />
+        <Terminal />
 
-			<Terminal />
+        <input ref={input} autoFocus name="cmd" className="pad background-semi cf"
+          autoComplete="off" autoCapitalize="off" />
+      </form>
 
-			<input ref={input} name="cmd" className="cf"
-				autoComplete="off" autoCapitalize="off" />
-		</form>
-
-		<div className="v0 f fg sh33">
-			<MiniMap />
-			<TargetTitleAndArt />
-			<Directions />
-			<ContentsAndActions />
-		</div>
+      <div className="vertical-small flex-grow align-items sh33">
+        <MiniMap />
+        <TargetTitleAndArt />
+        <ContentsAndActions />
+        { referenceElement ? (
+        <div className="vertical-0 tar tnow">
+          <div className="horizontal-0">
+            <RBT />
+            <RB onClick={() => sendMessage("k")}>&uarr;</RB>
+            <RBI onClick={() => sendMessage("K")} src={ACTIONS.K} />
+          </div>
+          <div className="horizontal-0">
+            <RB onClick={() => sendMessage("h")}>&larr;</RB>
+            <RBT />
+            <RB onClick={() => sendMessage("l")}>&rarr;</RB>
+          </div>
+          <div className="horizontal-0">
+            <RBT />
+            <RB onClick={() => sendMessage("j")}>&darr;</RB>
+            <RBI onClick={() => sendMessage("J")} src={ACTIONS.J} />
+          </div>
+        </div>
+        ) : (
+        <div className="horizontal-small flex-wrap justify-content">
+          {/* <RB onClick={disconnect}>X</RB> */}
+          <RB onClick={toggle_help}>?</RB>
+          <StatsButton />
+          <EquipmentButton />
+          <RBI onClick={() => sendMessage('inventory')} src={ACTIONS.OPEN} />
+          <RBI onClick={() => sendMessage('look')} src={ACTIONS.LOOK} />
+          <RBI onClick={(ev) => { setReferenceElement(ev.target); ev.stopPropagation(); }} src="art/walking.png" />
+        </div>
+        ) }
+      </div>
+    </div>
 
 		{ modal }
 	</>);
@@ -931,15 +958,9 @@ function getCookie(cname) {
 	return "";
 }
 
-function InnerApp() {
-	// const { sendMessage } = useContext(GameContext);
-	return (<Game />);
-}
-
-
 export default
 withMagic(function App() {
 	return (<GameContextProvider>
-		<InnerApp />
+		<Game />
 	</GameContextProvider>);
 });

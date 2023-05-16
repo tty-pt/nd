@@ -205,13 +205,10 @@ wsdprintf(int fd, const char *format, va_list ap)
 int
 wsprintf(int fd, const char *format, ...)
 {
-	static char buf[BUFSIZ];
 	ssize_t len;
 	va_list args;
 	va_start(args, format);
 	len = wsdprintf(fd, format, args);
 	va_end(args);
-	ws_write(fd, buf, len);
 	return len;
 }
-

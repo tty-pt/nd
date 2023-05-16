@@ -545,10 +545,10 @@ int
 notify(ENT *eplayer, const char *msg)
 {
 	descr_t *d = &descr_map[eplayer->fd];
-	if (d->flags & DF_WEBSOCKET) {
+	if (d->flags & DF_WEBSOCKET)
 		wsprintf(eplayer->fd, msg);
-	} else {
-		dprintf(eplayer->fd, msg, "");
+	else {
+		dprintf(eplayer->fd, "%s", msg);
 		dprintf(eplayer->fd, "\r\n");
 	}
 	return 0;
@@ -571,17 +571,54 @@ notifyf(ENT *eplayer, const char *format, ...)
 }
 
 static inline void
+vnotifyfa(OBJ *first, const char *format, va_list va)
+{
+	FOR_LIST(first, first) {
+		if (first->type != TYPE_ENTITY)
+			continue;
+
+		ENT *efirst = &first->sp.entity;
+		if (efirst->fd <= 0)
+			continue;
+		descr_t *d = &descr_map[efirst->fd];
+		if (d->flags & DF_WEBSOCKET) {
+			wsdprintf(efirst->fd, format, va);
+		} else
+			vdprintf(efirst->fd, format, va);
+	}
+}
+
+static inline void
 vnotifyfe(OBJ *first, OBJ *exception, const char *format, va_list va)
 {
 	FOR_LIST(first, first) {
-		if (first->type == TYPE_ENTITY && first != exception) {
-			ENT *efirst = &first->sp.entity;
-			descr_t *d = &descr_map[efirst->fd];
-			if (d->flags & DF_WEBSOCKET) {
-				wsdprintf(efirst->fd, format, va);
-			} else
-				vdprintf(efirst->fd, format, va);
-		}
+		if (first->type != TYPE_ENTITY || first == exception)
+			continue;
+
+		ENT *efirst = &first->sp.entity;
+		if (efirst->fd <= 0)
+			continue;
+		descr_t *d = &descr_map[efirst->fd];
+		if (d->flags & DF_WEBSOCKET) {
+			wsdprintf(efirst->fd, format, va);
+		} else
+			vdprintf(efirst->fd, format, va);
+	}
+}
+
+static inline void
+netnotifyfa(OBJ *first, const char *format, va_list va)
+{
+	FOR_LIST(first, first) {
+		if (first->type != TYPE_ENTITY)
+			continue;
+
+		ENT *efirst = &first->sp.entity;
+		if (efirst->fd <= 0)
+			continue;
+		descr_t *d = &descr_map[efirst->fd];
+		if (!(d->flags & DF_WEBSOCKET))
+			vdprintf(efirst->fd, format, va);
 	}
 }
 
@@ -589,12 +626,15 @@ static inline void
 netnotifyfe(OBJ *first, OBJ *exception, const char *format, va_list va)
 {
 	FOR_LIST(first, first) {
-		if (first->type == TYPE_ENTITY && first != exception) {
-			ENT *efirst = &first->sp.entity;
-			descr_t *d = &descr_map[efirst->fd];
-			if (!(d->flags & DF_WEBSOCKET))
-				vdprintf(efirst->fd, format, va);
-		}
+		if (first->type != TYPE_ENTITY || first == exception)
+			continue;
+
+		ENT *efirst = &first->sp.entity;
+		if (efirst->fd <= 0)
+			continue;
+		descr_t *d = &descr_map[efirst->fd];
+		if (!(d->flags & DF_WEBSOCKET))
+			vdprintf(efirst->fd, format, va);
 	}
 }
 
@@ -603,10 +643,14 @@ static inline void
 notify_except(OBJ *first, OBJ *exception, const char *msg)
 {
 	FOR_LIST(first, first) {
-		if (first->type == TYPE_ENTITY && first != exception) {
-			ENT *efirst = &first->sp.entity;
-			notify(efirst, msg);
-		}
+		if (first->type != TYPE_ENTITY || first == exception)
+			continue;
+
+		ENT *efirst = &first->sp.entity;
+		if (efirst->fd <= 0)
+			continue;
+
+		notify(efirst, msg);
 	}
 }
 
@@ -614,11 +658,10 @@ void
 anotifyf(OBJ *room, char *format, ...)
 {
 	va_list args;
-	char buf[BUFSIZ];
 	va_start(args, format);
-	vsnprintf(buf, sizeof(buf), format, args);
-	notify_except(room->contents, NULL, buf);
+	vnotifyfa(room->contents, format, args);
 	va_end(args);
+	netnotifyfa(room->contents, "\n", args);
 }
 
 void
@@ -626,10 +669,7 @@ onotifyf(OBJ *player, char *format, ...)
 {
 	OBJ *loc = player->location;
 	va_list args;
-	/* char buf[BUFSIZ]; */
 	va_start(args, format);
-	/* vsnprintf(buf, sizeof(buf), format, args); */
-	/* notify_except(loc->contents, player, buf); */
 	vnotifyfe(loc->contents, player, format, args);
 	va_end(args);
 	netnotifyfe(loc->contents, player, "\n", args);
