@@ -517,7 +517,7 @@ function Contents(props) {
 	const obj = target ? objects[target] : objects[here];
 
 	if (!here)
-		return null;
+    return <div className="flex-grow" />;
 
 	const contentsEl = Object.keys(obj.contents).map(k => {
 		const item = obj.contents[k];

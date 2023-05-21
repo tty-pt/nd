@@ -199,7 +199,7 @@ recycle(OBJ *player, OBJ *thing)
 	recyclable = thing;
 }
 
-static inline void
+static inline int
 entities_aggro(OBJ *player)
 {
 	ENT *eplayer = &player->sp.entity;
@@ -220,6 +220,7 @@ entities_aggro(OBJ *player)
 	}
 
 	eplayer->klock += klock;
+	return klock;
 }
 
 #if 0
@@ -521,8 +522,6 @@ enter(OBJ *player, OBJ *loc, enum exit e)
 		onotifyf(player, "%s teleports in.", player->name);
 	else
 		onotifyf(player, "%s comes in from the %s.", player->name, e_name(e_simm(e)));
-	entities_aggro(player);
-	look_around(player);
 }
 
 int
@@ -704,7 +703,7 @@ cando(OBJ *player, OBJ *thing, const char *default_fail_msg)
 	CBUG(player->type != TYPE_ENTITY);
 
 	if (eplayer->klock) {
-		notify(eplayer, "You can not do that right now.");
+		notify(eplayer, "Not while being targeted.");
 		return 0;
 	}
 
@@ -742,7 +741,6 @@ look_room(OBJ *player, OBJ *loc)
 	ENT *eplayer = &player->sp.entity;
 	char const *description = "";
 	CBUG(loc->type != TYPE_ROOM);
-	cando(player, loc, 0);
 
 	if (mcp_look(player, loc)) {
 		notify(eplayer, unparse(player, loc));

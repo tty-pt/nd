@@ -836,3 +836,18 @@ object_icon(OBJ *what)
         }
         return ret;
 }
+
+OBJ *
+object_get(register dbref ref)
+{
+	return ref == NOTHING ? NULL : &db[ref];
+}
+
+dbref
+object_ref(register OBJ *obj)
+{
+	if (obj)
+		return (dbref) (obj - db);
+	else
+		return NOTHING;
+}

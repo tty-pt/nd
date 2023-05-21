@@ -156,6 +156,8 @@ typedef struct entity {
 	unsigned lvl, spend, cxp;
 	unsigned attr[ATTR_MAX];
 	unsigned equipment[ES_MAX];
+	enum exit going_e;
+	unsigned going_n;
 	char *gpt;
 } ENT;
 
@@ -224,20 +226,8 @@ extern dbref db_top;
 
 extern struct object *db;
 
-static inline OBJ *
-object_get(register dbref ref)
-{
-	return ref == NOTHING ? NULL : &db[ref];
-}
-
-static inline dbref
-object_ref(register OBJ *obj)
-{
-	if (obj)
-		return (dbref) (obj - db);
-	else
-		return NOTHING;
-}
+OBJ * object_get(register dbref ref);
+dbref object_ref(register OBJ *obj);
 
 static inline int
 object_item(register OBJ *obj)

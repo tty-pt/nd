@@ -472,6 +472,25 @@ st_room(OBJ *player, enum exit e)
 }
 
 static void
+e_flush(ENT *eplayer) {
+	if (!eplayer->going_e)
+		return;
+
+	if (eplayer->going_n > 1)
+		notifyf(eplayer, "You go %s (x%u).", e_name(eplayer->going_e), eplayer->going_n);
+
+	if (eplayer->going_n == 1)
+		notifyf(eplayer, "You go %s.", e_name(eplayer->going_e), eplayer->going_n);
+}
+
+static void
+e_fflush(OBJ *player) {
+	ENT *eplayer = &player->sp.entity;
+	e_flush(eplayer);
+	eplayer->going_e = eplayer->going_n = 0;
+}
+
+static void
 e_move(OBJ *player, enum exit e) {
 	ENT *eplayer = &player->sp.entity;
 	OBJ *loc = player->location,
@@ -479,6 +498,11 @@ e_move(OBJ *player, enum exit e) {
 	ROO *rloc = &loc->sp.room;
 	char const *dwts = "door";
 	int door = 0;
+
+	if (eplayer->klock) {
+		notify(eplayer, "You can't move while being targeted.");
+		return;
+	}
 
 	if (!(rloc->exits & e)) {
 		notify(eplayer, "You can't go that way.");
@@ -498,8 +522,16 @@ e_move(OBJ *player, enum exit e) {
 	}
 
 	dest = st_there(loc, e);
-	if (!eplayer->gpt)
-		notifyf(eplayer, "You go %s.", e_name(e));
+	if (eplayer->going_e != e) {
+		if (eplayer->going_e)
+			e_flush(eplayer);
+		eplayer->going_e = e;
+		eplayer->going_n = 1;
+	} else {
+		eplayer->going_n++;
+	}
+	/* if (!eplayer->gpt) */
+	/* notifyf(eplayer, "You go %s.", e_name(e)); */
 
 	if (!dest)
 		dest = st_room(player, e);
@@ -939,5 +971,7 @@ st_v(OBJ *player, char const *opcs)
 		s += ofs;
 	}
 
+	e_fflush(player);
+	look_around(player);
 	return s - opcs;
 }
