@@ -178,31 +178,58 @@ const wsSub = easySub({
   unsubscribe: () => {},
 });
 
-const connect = wsSub.easyEmit((onOpen, onMessage, onClose) => {
-  const ws = new WebSocket(process.env.CONFIG_PROTO + "://" + window.location.hostname + ':4201', 'text');
-  ws.binaryType = 'arraybuffer';
-  function _onClose(evt) {
-    onClose(evt, connect);
-  }
-  ws.addEventListener('open', onOpen);
-  ws.addEventListener('message', onMessage);
-  ws.addEventListener('close', _onClose);
-  return {
-    ws,
-    unsubscribe: () => {
-			ws.removeEventListener('open', onOpen);
-      ws.removeEventListener('message', onMessage);
-      ws.removeEventListener('close', _onClose);
-    }
-  }
-});
-
 function sendMessage(text) {
   wsSub.data.value.ws.send(text + "\n");
 }
 
-function useSession(onOpen, onMessage, onClose) {
-  useEffect(() => connect(onOpen, onMessage, onClose), []);
+function onOpen() {
+  if (process.env.development) {
+    sendMessage("auth test");
+  } else {
+    sendMessage("auth " + getCookie("QSESSION"));
+  }
+}
+
+function onMessage(ev) {
+  const mcp_arr = mcp.proc(ev.data);
+  for (let i = 0; i < mcp_arr.length; i++) {
+    const item = mcp_arr[i];
+    if (mcp_map[item.key])
+      mcp_map[item.key](item);
+  }
+}
+
+const url = process.env.CONFIG_PROTO + "://" + window.location.hostname + ':4201';
+const connect = wsSub.easyEmit(() => {
+  let ws = null;
+
+  function onClose() {
+    return wsSub.update(init());
+  }
+
+  function init() {
+    ws = new WebSocket(url, 'text');
+
+    ws.binaryType = 'arraybuffer';
+    ws.addEventListener('open', onOpen);
+    ws.addEventListener('message', onMessage);
+    ws.addEventListener('close', onClose);
+
+    return {
+      ws,
+      unsubscribe: () => {
+        ws.removeEventListener('open', onOpen);
+        ws.removeEventListener('message', onMessage);
+        ws.removeEventListener('close', onClose);
+      }
+    };
+  }
+
+  return init();
+});
+
+function useSession() {
+  useEffect(() => connect().unsubscribe, []);
 	return useSub(wsSub).ws;
 }
 
@@ -310,41 +337,8 @@ const mcp_map = {
 };
 
 function GameContextProvider(props) {
-	const [ open, setOpen ] = useState(false);
 	const { children } = props;
-
-	function onMessage(ev) {
-		const mcp_arr = mcp.proc(ev.data);
-		for (let i = 0; i < mcp_arr.length; i++) {
-      const item = mcp_arr[i];
-      if (mcp_map[item.key])
-        mcp_map[item.key](item);
-    }
-	}
-
-	function output(text) {
-		if (text != "\n\r")
-      terminalEmit("\n" + text);
-	}
-
-	function onOpen() {
-		output("socket connection open");
-
-		if (process.env.development) {
-			sendMessage("auth test");
-		} else {
-			sendMessage("auth " + getCookie("QSESSION"));
-		}
-
-		setOpen(true);
-	}
-
-	function onClose(evt, connect) {
-		output("socket connection closed");
-		connect();
-	}
-
-	const session = useSession(onOpen, onMessage, onClose);
+	const session = useSession();
 
 	return (<GameContext.Provider
 		value={{ session }}

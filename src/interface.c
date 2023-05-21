@@ -105,6 +105,11 @@ command(char *prompt) {
 }
 
 void
+do_man(command_t *cmd) {
+	descr_inband(cmd->fd, command("man man"));
+}
+
+void
 do_diff(command_t *cmd) {
 	// TODO ssh in chroot?
 	/* descr_inband(cmd->fd, command("git fetch origin master; git diff origin/master")); */
@@ -279,7 +284,7 @@ command_debug(command_t *cmd, char *label)
 {
 	char **arg;
 
-	warn("command_debug '%s' %d", label, cmd->argc);
+	warn("acommand_debug '%s' %d", label, cmd->argc);
 	for (arg = cmd->argv;
 	     arg < cmd->argv + cmd->argc;
 	     arg++)

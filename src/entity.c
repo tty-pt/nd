@@ -514,14 +514,10 @@ enter(OBJ *player, OBJ *loc, enum exit e)
 
 	if (e == E_NULL)
 		onotifyf(player, "%s teleports out.", player->name);
-	else
-		onotifyf(player, "%s goes %s.", player->name, e_name(e));
 	object_move(player, loc);
 	room_clean(player, old);
 	if (e == E_NULL)
 		onotifyf(player, "%s teleports in.", player->name);
-	else
-		onotifyf(player, "%s comes in from the %s.", player->name, e_name(e_simm(e)));
 }
 
 int

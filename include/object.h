@@ -156,8 +156,6 @@ typedef struct entity {
 	unsigned lvl, spend, cxp;
 	unsigned attr[ATTR_MAX];
 	unsigned equipment[ES_MAX];
-	enum exit going_e;
-	unsigned going_n;
 	char *gpt;
 } ENT;
 

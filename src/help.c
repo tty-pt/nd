@@ -207,16 +207,16 @@ show_subfile(OBJ *player, const char *dir, const char *topic, const char *seg, i
 
 
 #if !defined(STANDALONE_HELP)
-void
-do_man(command_t *cmd)
-{
-	OBJ *player = cmd->player;
-	char *topic = cmd->argv[1];
-	char *seg = cmd->argv[2];
-	if (show_subfile(player, MAN_DIR, topic, seg, 0))
-		return;
-	index_file(player, topic, MAN_FILE);
-}
+/* void */
+/* do_man(command_t *cmd) */
+/* { */
+/* 	OBJ *player = cmd->player; */
+/* 	char *topic = cmd->argv[1]; */
+/* 	char *seg = cmd->argv[2]; */
+/* 	if (show_subfile(player, MAN_DIR, topic, seg, 0)) */
+/* 		return; */
+/* 	index_file(player, topic, MAN_FILE); */
+/* } */
 
 void
 do_help(command_t *cmd)
