@@ -904,10 +904,10 @@ static inline OBJ *
 entity_body(OBJ *player, OBJ *mob)
 {
 	char buf[32];
-	struct object_skeleton o = { .name = "", .description = "", .art = "", .avatar = "" };
+	struct object_skeleton o = { .name = "", .description = "" };
 	snprintf(buf, sizeof(buf), "%s's body.", mob->name);
 	o.name = buf;
-	OBJ *dead_mob = object_add(&o, mob->location);
+	OBJ *dead_mob = object_add(&o, mob->location, NULL);
 	OBJ *tmp;
 	unsigned n = 0;
 
@@ -1017,40 +1017,39 @@ entity_damage(OBJ *player, OBJ *target, short amt)
 }
 
 void
-art(int fd, const char *art)
+art(int fd, OBJ *thing)
 {
-	FILE *f;
-	char buf[BUFSIZ];
-        size_t len = strlen(art);
+	char art[BUFSIZ];
+	size_t rem = sizeof(art);
 
-        if (!strcmp(art + len - 3, "txt")) {
-                snprintf(buf, sizeof(buf), "../art/%s", art);
+	rem -= snprintf(art, rem, "../art/");
 
-                if ((f = fopen(buf, "rb")) == NULL) 
-                        return;
+	switch (thing->type) {
+	case TYPE_ROOM:
+		rem -= snprintf(art, rem, "biome/%s/1.jpeg", thing->name);
+		break;
+	case TYPE_PLANT:
+		rem -= snprintf(art, rem, "plant/%s/1.jpeg", thing->name);
+		break;
+	case TYPE_ENTITY:
+		rem -= snprintf(art, rem, "entity/%s/1.jpeg", thing->name);
+		break;
+	default:
+		rem -= snprintf(art, rem, "unknown.jpeg");
+		break;
 
-                while (fgets(buf, sizeof(buf) - 3, f))
-                        descr_inband(fd, buf);
+	}
 
-                fclose(f);
-                descr_inband(fd, "\r\n");
-        } else
-                mcp_art(fd, art);
+	mcp_art(fd, art);
 }
 
 static void
 look_simple(ENT *eplayer, OBJ *thing)
 {
-	char const *art_str = thing->art;
+	art(eplayer->fd, thing);
 
-	if (art_str)
-		art(eplayer->fd, art_str);
-
-	if (thing->description) {
+	if (thing->description)
 		notify(eplayer, thing->description);
-	} else if (!art_str) {
-		notify(eplayer, "You see nothing special.");
-	}
 }
 
 void
@@ -1389,7 +1388,7 @@ entity_add(enum mob_type mid, OBJ *where, enum biome biome, long long pdn) {
 	if (!((1 << biome) & mob_skel->biomes))
 		return NULL;
 
-	return object_add(obj_skel, where);
+	return object_add(obj_skel, where, NULL);
 }
 
 void

@@ -14,6 +14,7 @@
 #include "player.h"
 #include "debug.h"
 #include "plant.h"
+#include "noise.h"
 #include "mcp.h"
 
 enum actions {
@@ -140,14 +141,108 @@ rarity_get() {
 	return 5; // MYTHICAL
 }
 
+ucoord_t biome_rain_floor[16] = {
+	0, 0, 0, 0,
+	128, 128, 128, 128,
+	256, 256, 256, 256,
+	384, 384, 384, 384,
+};
+
+ucoord_t biome_rain_ceil[16] = {
+	128, 128, 128, 128,
+	256, 256, 256, 256,
+	384, 384, 384, 384,
+	512, 512, 512, 512,    
+};
+
+coord_t biome_temp_floor[16] = {
+	-41, -41, -41, -41,
+	11, 11, 11, 11,
+	64, 64, 64, 64,
+	117, 117, 117, 117,
+};
+
+coord_t biome_temp_ceil[16] = {
+	11, 11, 11, 11,
+	64, 64, 64, 64,
+	117, 117, 117, 117,
+	170, 170, 170, 170,
+};
+
+static inline unsigned
+biome_art_idx(struct bio *bio) {
+	return 1 + _bio_idx(biome_rain_floor[bio->bio_idx],
+		biome_rain_ceil[bio->bio_idx],
+		biome_temp_floor[bio->bio_idx],
+		biome_temp_ceil[bio->bio_idx],
+		bio->rn,
+		bio->tmp);
+}
+
+struct core_art {
+	unsigned max;
+	char *name;
+};
+
+struct core_art core_art[] = {
+	// ENTITIES
+	{ 1, "dolphin" },
+	{ 6, "eagle" },
+	{ 5, "firebird" },
+	{ 2, "goldfish" },
+	{ 1, "icebird" },
+	{ 3, "koifish" },
+	{ 9, "owl" },
+	{ 8, "parrot" },
+	{ 6, "rainbowfish" },
+	{ 6, "salmon" },
+	{ 7, "shark" },
+	{ 15, "sparrow" },
+	{ 16, "starling" },
+	{ 9, "swallow" },
+	{ 13, "tuna" },
+	{ 2, "vulture" },
+	{ 6, "wolf" },
+	{ 7, "woodpecker" },
+
+	// PLANTS
+	{ 10, "abies alba" },
+	{ 12, "acacia senegal" },
+	{ 14, "betula pendula" },
+	{ 15, "daucus carota" },
+	{ 19, "pinus sylvestris" },
+	{ 21, "pseudotsuga menziesii" },
+	{ 9, "arthrocereus rondonianus" },
+	{ 11, "solanum lycopersicum" },
+
+	// MINERALS
+	{ 17, "stone" },
+};
+
+DB *art_db = NULL;
+
+#define HASH_INIT(db, arr, n) { \
+	hash_init(&db); \
+	int hash_i = 0; \
+	for (; hash_i < n; hash_i++) hash_put(db, arr[hash_i].name, &arr[hash_i]); \
+}
+
+static inline unsigned art_max(char const *name) {
+	struct core_art *core_art_item = (struct core_art *) hash_get(art_db, name);
+	return core_art_item->max;
+}
+
+static inline unsigned
+art_idx(OBJ *obj) {
+	return 1 + (random() % art_max(obj->name));
+}
+
 OBJ *
-object_add(SKEL *sk, OBJ *where)
+object_add(SKEL *sk, OBJ *where, void *arg)
 {
 	OBJ *nu = object_new();
 	nu->name = strdup(sk->name);
 	nu->description = strdup(sk->description);
-	nu->art = strdup(sk->art);
-	nu->avatar = strdup(sk->avatar);
 	nu->location = where;
 	nu->owner = object_get(GOD);
 	nu->type = TYPE_THING;
@@ -189,24 +284,41 @@ object_add(SKEL *sk, OBJ *where)
 			spells_birth(nu);
 			object_drop(nu, sk->sp.entity.drop);
 			enu->home = where;
+			nu->art_id = art_idx(nu);
 		}
 
 		break;
 	case S_TYPE_PLANT:
-		nu->type = TYPE_PLANT;
-		object_drop(nu, sk->sp.plant.drop);
-		nu->owner = object_get(GOD);
+		{
+			noise_t v = * (noise_t *) arg;
+			nu->type = TYPE_PLANT;
+			object_drop(nu, sk->sp.plant.drop);
+			nu->owner = object_get(GOD);
+			nu->art_id = 1 + (v & 0xf) % art_max(nu->name);
+		}
+
 		break;
         case S_TYPE_BIOME:
 		{
+			struct bio *bio = arg;
 			ROO *rnu = &nu->sp.room;
 			nu->type = TYPE_ROOM;
 			rnu->exits = rnu->doors = 0;
 			rnu->dropto = NULL;
 			rnu->flags = RF_TEMP;
+			nu->art_id = biome_art_idx(bio);
 		}
 
 		break;
+	case S_TYPE_MINERAL:
+		{
+			noise_t v = * (noise_t *) arg;
+			nu->type = TYPE_MINERAL;
+			nu->art_id = 1 + (v & 0xf) % art_max(nu->name);
+		}
+
+		break;
+
 	case S_TYPE_OTHER:
 		break;
 	}
@@ -215,6 +327,36 @@ object_add(SKEL *sk, OBJ *where)
 		mcp_content_in(where, nu);
 
 	return nu;
+}
+
+char *
+object_art(OBJ *thing)
+{
+	static char art[BUFSIZ];
+	size_t rem = sizeof(art);
+
+	rem -= snprintf(art, rem, "../art/");
+
+	switch (thing->type) {
+	case TYPE_ROOM:
+		rem -= snprintf(art, rem, "biome/%s/%u.jpeg", thing->name, thing->art_id);
+		break;
+	case TYPE_PLANT:
+		rem -= snprintf(art, rem, "plant/%s/%u.jpeg", thing->name, thing->art_id);
+		break;
+	case TYPE_ENTITY:
+		rem -= snprintf(art, rem, "entity/%s/%u.jpeg", thing->name, thing->art_id);
+		break;
+	case TYPE_MINERAL:
+		rem -= snprintf(art, rem, "mineral/%s/%u.jpeg", thing->name, thing->art_id);
+		break;
+	default:
+		rem -= snprintf(art, rem, "unknown.jpeg");
+		break;
+
+	}
+
+	return art;
 }
 
 void
@@ -243,14 +385,13 @@ object_write(FILE * f, OBJ *obj)
 {
 	int j;
 	putstring(f, obj->name);
-	putstring(f, obj->art);
-	putstring(f, obj->avatar);
 	putref(f, object_ref(obj->location));
 	putref(f, object_ref(obj->contents));
 	putref(f, object_ref(obj->next));
 	putref(f, obj->value);
 	putref(f, obj->type);
 	putref(f, obj->flags);
+	putref(f, obj->art_id);
 
 	switch (obj->type) {
 	case TYPE_ENTITY:
@@ -356,12 +497,6 @@ object_free(OBJ *o)
 	if (o->description)
 		free((void *) o->description);
 
-	if (o->art)
-		free((void *) o->art);
-
-	if (o->avatar)
-		free((void *) o->avatar);
-
 	if (o->type != TYPE_ROOM) {
 		struct observer_node *obs, *aux;
 		for (obs = o->first_observer; obs; obs = aux) {
@@ -419,7 +554,6 @@ ref_read(FILE * f)
 {
 	char buf[BUFSIZ];
 	CBUG(!fgets(buf, sizeof(buf), f));
-	warn("ref_read %s", buf);
 	return (atol(buf));
 }
 
@@ -463,19 +597,18 @@ object_read(FILE * f)
 	objects_grow(ref + 1);
 
 	o->name = STRING_READ(f);
-	o->art = STRING_READ(f);
-	o->avatar = STRING_READ(f);
 	o->location = object_get(ref_read(f));
 	o->contents = object_get(ref_read(f));
 	o->next = object_get(ref_read(f));
 	o->value = ref_read(f);
 	o->type = ref_read(f);
 	o->flags = ref_read(f);
-	warn("db_read_object_foxen %d %s location %d contents %d next %d type %d\n", ref, o->name,
-			object_ref(o->location),
-			object_ref(o->contents),
-			object_ref(o->next),
-			o->type);
+	o->art_id = ref_read(f);
+	/* warn("db_read_object_foxen %d %s location %d contents %d next %d type %d\n", ref, o->name, */
+	/* 		object_ref(o->location), */
+	/* 		object_ref(o->contents), */
+	/* 		object_ref(o->next), */
+	/* 		o->type); */
 
 	switch (o->type) {
 	case TYPE_PLANT:
@@ -518,7 +651,6 @@ object_read(FILE * f)
 			ro->doors = ref_read(f);
 			ro->floor = ref_read(f);
 			o->owner = object_get(ref_read(f));
-			warn("ROOM\n");
 		}
 		return;
 	case TYPE_ENTITY:
@@ -551,7 +683,7 @@ object_read(FILE * f)
 			if (eo->flags & EF_PLAYER)
 				player_put(o);
 			birth(o);
-			warn("ENTITY\n");
+			/* warn("ENTITY\n"); */
 		}
 		break;
 	case TYPE_GARBAGE:
@@ -567,6 +699,7 @@ objects_read(FILE * f)
 	const char *special;
 	char c;
 
+	HASH_INIT(art_db, core_art, sizeof(core_art) / sizeof(struct core_art));
 	/* Parse the header */
 	grow = ref_read(f);
 	objects_grow( grow );

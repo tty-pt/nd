@@ -111,6 +111,30 @@ temp(ucoord_t obits, noise_t he, noise_t tm, coord_t pos_y) // fahrenheit * 10
 /* }}} */
 /* }}} */
 
+/**
+ * gives you an index from 0 to 15 that maps in 2D:
+ *
+ * 	  cold
+ *      0  1  2  3
+ *      4  5  6  7
+ * dry  8  9 10 11 wet
+ *     12 13 14 15
+ * 	   hot
+ */
+unsigned
+_bio_idx(
+	coord_t tmp_floor,
+	coord_t tmp_ceil,
+	ucoord_t rn_floor,
+	ucoord_t rn_ceil,
+	coord_t tmp,
+	ucoord_t rn)
+{
+	ucoord_t rn_bit = (4 * (rn - rn_floor) / (rn_ceil - rn_floor)) & 3;
+	coord_t tmp_bit = (4 * (tmp - tmp_floor) / (tmp_ceil - tmp_floor)) & 3;
+	return rn_bit + (tmp_bit << 2);
+}
+
 static inline unsigned
 bio_idx(ucoord_t rn, coord_t tmp)
 {
@@ -118,11 +142,7 @@ bio_idx(ucoord_t rn, coord_t tmp)
 		return BIOME_PERMANENT_ICE;
 	else if (tmp >= tmp_max)
 		return BIOME_VOLCANIC;
-
-	ucoord_t rn_bit = (4 * rn / rn_max) & 3;
-	coord_t tmp_bit = (4 * (tmp - tmp_min) / (tmp_max - tmp_min)) & 3;
-	unsigned result = 2 + rn_bit + (tmp_bit << 2);
-	return result;
+	return 2 + _bio_idx(tmp_min, tmp_max, 0, rn_max, tmp, rn);
 }
 
 static inline void

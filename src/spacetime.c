@@ -12,6 +12,7 @@
 #include "map.h"
 #include "entity.h"
 #include "defaults.h"
+#include "params.h"
 #include "command.h"
 
 #define PRECOVERY
@@ -154,14 +155,14 @@ object_drop(OBJ *where, struct drop **drop)
                             yield_v = (*drop)->yield_v;
 
                         if (!yield) {
-                                object_add((*drop)->i, where);
+                                object_add((*drop)->i, where, NULL);
                                 continue;
                         }
 
                         yield += random() & yield_v;
 
                         for (i = 0; i < yield; i++)
-                                object_add((*drop)->i, where);
+                                object_add((*drop)->i, where, NULL);
                 }
 }
 
@@ -399,29 +400,28 @@ exits_infer(OBJ *player, OBJ *here)
 // TODO make more add functions similar and easy to insert here
 
 static inline void
-stones_add(OBJ *where, enum biome b, pos_t p) {
+stones_add(OBJ *where, struct bio *bio, pos_t p) {
 	noise_t v = uhash((const char *) p, sizeof(pos_t), 0);
 	unsigned char n = v & 0x3, i;
 	static struct object_skeleton stone = {
                 .name = "stone",
-                .art = "stones.jpg",
                 .description = "Solid stone(s)",
-                .avatar = "stones_avatar.jpg"
+		.type = S_TYPE_MINERAL,
+		.sp = {
+			.mineral = { 0 } 
+		},
         };
-	if (b == BIOME_WATER)
+
+	if (bio->bio_idx == BIOME_WATER)
 		return;
 
         if (!(n && (v & 0x18) && (v & 0x20)))
                 return;
 
-        for (i = 0; i < n; i++)
-                object_add(&stone, where);
-}
+	noise_t v2 = uhash((const char *) p, sizeof(pos_t), 0);
 
-static inline void
-others_add(OBJ *where, enum biome b, pos_t p)
-{
-        stones_add(where, b, p);
+        for (i = 0; i < n; i++, v2 >>= 4)
+                object_add(&stone, where, &v2);
 }
 
 static OBJ *
@@ -429,7 +429,7 @@ st_room_at(OBJ *player, pos_t pos)
 {
 	struct bio *bio;
 	bio = noise_point(pos);
-        OBJ *there = object_add(&biomes[bio->bio_idx], NULL);
+        OBJ *there = object_add(&biomes[bio->bio_idx], NULL, bio);
 	ROO *rthere = &there->sp.room;
 	map_put(pos, there, DB_NOOVERWRITE);
 	exits_infer(player, there);
@@ -439,10 +439,8 @@ st_room_at(OBJ *player, pos_t pos)
 
 	rthere->floor = bio->bio_idx;
 	entities_add(there, bio->bio_idx, bio->pd.n);
-	others_add(there, bio->bio_idx, pos);
-	plants_add(there,
-			&bio->pd, bio->ty,
-			bio->tmp, bio->rn);
+        stones_add(there, bio, pos);
+	plants_add(there, bio, pos);
 	return there;
 }
 
@@ -502,7 +500,7 @@ e_move(OBJ *player, enum exit e) {
 		notifyf(eplayer, "You open the %s.", dwts);
 	}
 
-	notifyf(eplayer, "You go %s.", e_name(e));
+	notifyf(eplayer, "You go %s%s%s.", ANSI_FG_BLUE ANSI_BOLD, e_name(e), ANSI_RESET);
 	onotifyf(player, "%s goes %s.", player->name, e_name(e));
 
 	dest = st_there(loc, e);

@@ -26,6 +26,7 @@ enum type {
 	TYPE_CONSUMABLE,
 	TYPE_GARBAGE,
 	TYPE_SEAT,
+	TYPE_MINERAL,
 };
 
 enum object_flags {
@@ -193,6 +194,10 @@ typedef struct {
 	unsigned capacity;
 } SEA;
 
+typedef struct {
+	short unsigned unused;
+} MIN;
+
 union specific {
 	ROO room;
 	ENT entity;
@@ -200,13 +205,15 @@ union specific {
 	CON consumable;
 	PLA plant;
 	SEA seat;
+	MIN mineral;
 };
 
 typedef struct object {
         struct observer_node *first_observer;
-	const char *name, *description, *art, *avatar;
+	const char *name, *description;
 	struct object *location, *owner, *contents, *next;
 
+	unsigned art_id;
 	unsigned char type;
 	unsigned value;
 	unsigned flags;
@@ -236,7 +243,8 @@ object_item(register OBJ *obj)
 }
 
 OBJ *object_new(void);
-OBJ *object_add(SKEL *o, OBJ *where);
+OBJ *object_add(SKEL *o, OBJ *where, void *arg);
+char *object_art(OBJ *obj);
 void object_clear(OBJ *obj);
 void object_free(OBJ *obj);
 OBJ *objects_write(FILE *f);

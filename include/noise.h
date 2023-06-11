@@ -15,6 +15,7 @@ struct bio {
 };
 
 struct bio * noise_point(pos_t p);
+unsigned _bio_idx(coord_t tmp_f, coord_t tmp_c, ucoord_t rain_f, ucoord_t rain_c, coord_t tmp, ucoord_t rain);
 void noise_view(struct bio to[VIEW_M], pos_t pos);
 
 #endif

@@ -2,8 +2,6 @@
 	struct object_skeleton s ## _helmet = { \
 		.name = #s " armor helmet", \
 		.description = "", \
-		.art = #s "_armor_helmet.png", \
-		.avatar = #s "_armor_helmet_avatar.png", \
 		.type = S_TYPE_EQUIPMENT, \
 		.sp = { .equipment = { \
 			.eqw = EQ(ES_HEAD, _type), \
@@ -16,8 +14,6 @@
 	struct object_skeleton s ## _chest = { \
 		.name = #s " armor chest", \
 		.description = "", \
-		.art = #s "_armor_chest.png", \
-		.avatar = #s "_armor_chest_avatar.png", \
 		.type = S_TYPE_EQUIPMENT, \
 		.sp = { .equipment = { \
 			.eqw = EQ(ES_CHEST, _type), \
@@ -30,8 +26,6 @@
 	struct object_skeleton  s ## _pants = { \
 		.name = #s " armor leggings", \
 		.description = "", \
-		.art = #s "_armor_greaves.png", \
-		.avatar = #s "_armor_greaves_avatar.png", \
 		.type = S_TYPE_EQUIPMENT, \
 		.sp = { .equipment = { \
 			.eqw = EQ(ES_PANTS, _type), \
@@ -59,8 +53,6 @@ ARMORSET_HEAVY(chainmail, 15, 5)
 struct object_skeleton dagger = {
 	.name = "dagger",
 	.description = "",
-	.art = "dagger.png",
-	.avatar = "dagger_avatar.png",
 	.type = S_TYPE_EQUIPMENT,
 	.sp = { .equipment = {
 		.eqw = EQ(ES_RHAND, WT_SLASH),

@@ -7,9 +7,7 @@
 
 struct object_skeleton carrot = {
         .name = "carrot",
-        .art = "carrot.png",
         .description = "",
-	.avatar = "carrot_avatar.png",
         .type = S_TYPE_CONSUMABLE,
         .sp = { .consumable = { .food = 3 } },
 };
@@ -21,9 +19,7 @@ struct drop carrot_drop = {
 
 struct object_skeleton stick = {
         .name = "stick",
-        .art = "stick.png",
         .description = "",
-	.avatar = "stick_avatar.png",
         .type = S_TYPE_OTHER,
 };
 
@@ -38,9 +34,7 @@ struct drop stick_drop = {
 struct object_skeleton plant_skeleton_map[] = {{
 	// taiga
 	.name = "pinus sylvestris",
-	.art = "pinus_sylvestris.png",
 	.description = "",
-	.avatar = "pinus_sylvestris_avatar.png",
 	.type = S_TYPE_PLANT,
 	.sp = { .plant = {
 		.pre = ANSI_BOLD ANSI_FG_GREEN,
@@ -56,9 +50,7 @@ struct object_skeleton plant_skeleton_map[] = {{
 	} },
 }, {	// temperate rainforest
 	.name = "pseudotsuga menziesii",
-	.art = "pseudotsuga_menziesii.jpg",
 	.description = "",
-	.avatar = "pseudotsuga_menziesii_avatar.jpg",
 	.type = S_TYPE_PLANT,
 	.sp = { .plant = {
 		ANSI_BOLD ANSI_FG_GREEN, 't', 'T', ANSI_RESET_BOLD,
@@ -68,9 +60,7 @@ struct object_skeleton plant_skeleton_map[] = {{
 	} },
 }, {	// woodland / grassland / shrubland
 	.name = "betula pendula",
-	.art = "betula_pendula.jpg",
 	.description = "",
-	.avatar = "betula_pendula_avatar.jpg",
 	.type = S_TYPE_PLANT,
 	.sp = { .plant = {
 		ANSI_FG_YELLOW, 'x', 'X', "",
@@ -80,9 +70,7 @@ struct object_skeleton plant_skeleton_map[] = {{
 	} },
 }, {
 	.name = "linum usitatissimum",
-	.art = "flax.jpg",
 	.description = "",
-	.avatar = "flax_avatar.jpg",
 	.type = S_TYPE_PLANT,
 	.sp = { .plant = {
 		ANSI_FG_YELLOW, 'x', 'X', "",
@@ -93,8 +81,6 @@ struct object_skeleton plant_skeleton_map[] = {{
 }, {	// woodland / grassland?
 	.name = "betula pubescens",
 	.description = "", 
-	.art = "",
-	.avatar = "",
 	.type = S_TYPE_PLANT,
 	.sp = { .plant = {
 		ANSI_FG_WHITE, 'x', 'X', "",
@@ -104,9 +90,7 @@ struct object_skeleton plant_skeleton_map[] = {{
 	} },
 }, {	// temperate forest
 	.name = "abies alba",
-	.art = "abies_alba.jpg",
 	.description = "",
-	.avatar = "abies_alba_avatar.jpg",
 	.type = S_TYPE_PLANT,
 	.sp = { .plant = {
 		ANSI_BOLD ANSI_FG_GREEN, 'a', 'A', ANSI_RESET_BOLD,
@@ -117,8 +101,6 @@ struct object_skeleton plant_skeleton_map[] = {{
 }, {	// desert
 	.name = "arthrocereus rondonianus",
 	.description = "",
-	.art = "",
-	.avatar = "",
 	.type = S_TYPE_PLANT,
 	.sp = { .plant = {
 		ANSI_BOLD ANSI_FG_GREEN, 'i', 'I', "",
@@ -127,9 +109,7 @@ struct object_skeleton plant_skeleton_map[] = {{
 	} },
 }, {	// savannah
 	.name = "acacia senegal",
-	.art = "acacia_senegal.jpg",
 	.description = "",
-	.avatar = "acacia_senegal_avatar.jpg",
 	.type = S_TYPE_PLANT,
 	.sp = { .plant = {
 		ANSI_BOLD ANSI_FG_GREEN, 't', 'T', "",
@@ -139,9 +119,7 @@ struct object_skeleton plant_skeleton_map[] = {{
 	} },
 }, {
 	.name = "daucus carota",
-	.art = "daucus_carota.png",
 	.description = "",
-	.avatar = "daucus_carota_avatar.png",
 	.type = S_TYPE_PLANT,
 	.sp = { .plant = {
 		ANSI_FG_WHITE, 'x', 'X', "",
@@ -150,9 +128,7 @@ struct object_skeleton plant_skeleton_map[] = {{
 	} },
 }, {
 	.name = "solanum lycopersicum",
-	.art = "",
 	.description = "",
-	.avatar = "",
 	.type = S_TYPE_PLANT,
 	.sp = { .plant = {
 		ANSI_FG_RED, 'x', 'X', "", 
@@ -242,34 +218,35 @@ plants_shuffle(struct plant_data *pd, morton_t v)
 }
 
 static inline void
-_plants_add(OBJ *where, struct plant_data *pd, coord_t tmp)
+_plants_add(OBJ *where, struct bio *bio, pos_t pos)
 {
 	register int i, n;
+	noise_t v = uhash((const char *) pos, sizeof(pos_t), 1);
 
-        for (i = 0; i < 3; i++) {
-                n = PLANT_N(pd->n, i);
+        for (i = 0; i < 3; i++, v >>= 4) {
+                n = PLANT_N(bio->pd.n, i);
 
 		if (!n)
 			continue;
 
-                struct object_skeleton *obj_skel = PLANT_SKELETON(pd->id[i]);
-                OBJ *plant = object_add(obj_skel, where);
+                struct object_skeleton *obj_skel = PLANT_SKELETON(bio->pd.id[i]);
+                OBJ *plant = object_add(obj_skel, where, &v);
 		PLA *pplant = &plant->sp.plant;
-		pplant->plid = pd->id[i];
+		pplant->plid = bio->pd.id[i];
 		pplant->size = n;
         }
 }
 
 void
-plants_add(OBJ *where,
-		struct plant_data *pd,
-		morton_t ty, coord_t tmp,
-		ucoord_t rn)
+plants_add(OBJ *where, void *arg, pos_t pos)
 {
+	struct bio *bio = arg;
+	/* &bio->pd, bio->ty, */
+	/* bio->tmp, bio->rn); */
 	/* struct plant_data epd; */
 
-        if (pd->n)
-                _plants_add(where, pd, tmp);
+        if (bio->pd.n)
+                _plants_add(where, bio, pos);
 
 	/* plants_noise(&epd, ty, tmp, rn, PLANT_EXTRA); */
 

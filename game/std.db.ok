@@ -1,14 +1,13 @@
 2
 #1
 One
-
-
 0 location
 -1 contents
 -1 next
 1600 value
 3 type
 0 flags
+1 art_id
 0 home
 49 entity flags
 0 lvl
@@ -32,14 +31,13 @@ One
 0 spell
 #0
 Room Zero
-
-
--1
-1
--1
-80
-0
-0
+-1 location
+1 contents
+-1 next
+80 value
+0 type
+0 flags
+1 art_id
 -1
 0
 0

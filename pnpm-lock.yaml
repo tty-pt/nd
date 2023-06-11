@@ -25,6 +25,15 @@ dependencies:
   xterm-addon-fit:
     specifier: ^0.7.0
     version: 0.7.0(xterm@5.1.0)
+  xterm-addon-image:
+    specifier: ^0.4.0
+    version: 0.4.0(xterm@5.1.0)
+  xterm-addon-web-links:
+    specifier: ^0.8.0
+    version: 0.8.0(xterm@5.1.0)
+  xterm-addon-webgl:
+    specifier: ^0.14.0
+    version: 0.14.0(xterm@5.1.0)
 
 devDependencies:
   '@babel/cli':
@@ -11538,6 +11547,30 @@ packages:
 
   /xterm-addon-fit@0.7.0(xterm@5.1.0):
     resolution: {integrity: sha512-tQgHGoHqRTgeROPnvmtEJywLKoC/V9eNs4bLLz7iyJr1aW/QFzRwfd3MGiJ6odJd9xEfxcW36/xRU47JkD5NKQ==}
+    peerDependencies:
+      xterm: ^5.0.0
+    dependencies:
+      xterm: 5.1.0
+    dev: false
+
+  /xterm-addon-image@0.4.0(xterm@5.1.0):
+    resolution: {integrity: sha512-3wumCJo4WTzxvecSMxJ7XtpVQeFe4gE2cdHCyUdo7zagVkS18YXJacGx6DjlAIccdJn6/LhGuD99xOSSvYx9Gw==}
+    peerDependencies:
+      xterm: ~5.1.0
+    dependencies:
+      xterm: 5.1.0
+    dev: false
+
+  /xterm-addon-web-links@0.8.0(xterm@5.1.0):
+    resolution: {integrity: sha512-J4tKngmIu20ytX9SEJjAP3UGksah7iALqBtfTwT9ZnmFHVplCumYQsUJfKuS+JwMhjsjH61YXfndenLNvjRrEw==}
+    peerDependencies:
+      xterm: ^5.0.0
+    dependencies:
+      xterm: 5.1.0
+    dev: false
+
+  /xterm-addon-webgl@0.14.0(xterm@5.1.0):
+    resolution: {integrity: sha512-zcxL4RVVjeS7NNFeKe5HHQI8OUEx3wZpE4EqLoTVipa2UrTR+qLsigo16UEp/yVcYBMhK7tsJ/AJokoEe/f0mw==}
     peerDependencies:
       xterm: ^5.0.0
     dependencies:

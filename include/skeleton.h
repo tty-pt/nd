@@ -41,13 +41,12 @@ enum object_skeleton_type {
         S_TYPE_ENTITY,
 	S_TYPE_PLANT,
 	S_TYPE_BIOME,
+	S_TYPE_MINERAL,
 };
 
 typedef struct object_skeleton {
 	char const *name;
-	char const *art;
 	char const *description;
-        char const *avatar;
 
         enum object_skeleton_type type;
 
@@ -64,6 +63,9 @@ typedef struct object_skeleton {
                 struct {
                         const char *bg;
                 } biome;
+                struct {
+                        short unsigned unused;
+                } mineral;
         } sp;
 } SKEL;
 

@@ -408,7 +408,7 @@ mcp_look(OBJ *player, OBJ *loc)
 		observer_add(loc, player);
 	}
 
-        mcp_mesg_arg_append(&msg, "art", loc->art);
+        mcp_mesg_arg_append(&msg, "art", object_art(loc));
         mcp_mesg_arg_append(&msg, "name", loc->name);
         mcp_mesg_arg_append(&msg, "pname", unparse(player, loc));
 	if (loc->description)
@@ -422,8 +422,8 @@ mcp_look(OBJ *player, OBJ *loc)
 
 	// use callbacks for mcp like this versus telnet
         FOR_LIST(thing, loc->contents) {
-		if (thing == player)
-			continue;
+		/* if (thing == player) */
+		/* 	continue; */
 
 		struct icon ico = object_icon(thing);
 		mcp_mesg_init(&msg, MCP_WEB_PKG, "look-content");
@@ -436,7 +436,7 @@ mcp_look(OBJ *player, OBJ *loc)
 		snprintf(buf, sizeof(buf), "%d", thing->value);
 		mcp_mesg_arg_append(&msg, "price", buf);
 		snprintf(buf, sizeof(buf), "%d", ico.actions);
-		mcp_mesg_arg_append(&msg, "avatar", thing->avatar);
+		mcp_mesg_arg_append(&msg, "avatar", object_art(thing));
 		mcp_mesg_arg_append(&msg, "actions", buf);
 		mcp_frame_output_mesg(mfr, &msg);
 		mcp_mesg_clear(&msg);
@@ -536,7 +536,7 @@ mcp_content_in(OBJ *loc, OBJ *thing) {
 	mcp_mesg_arg_append(&msg, "pname", unparse(object_get(HUMAN_BEING), thing));
 	mcp_mesg_arg_append(&msg, "icon", ico.icon);
 	snprintf(buf, sizeof(buf), "%d", ico.actions);
-        mcp_mesg_arg_append(&msg, "avatar", thing->avatar);
+        mcp_mesg_arg_append(&msg, "avatar", object_art(thing));
 	mcp_mesg_arg_append(&msg, "actions", buf);
 
 	if (loc->type == TYPE_ROOM)
@@ -657,7 +657,7 @@ _mcp_equipment(OBJ *player, enum equipment_slot eql)
 	snprintf(buf, sizeof(buf), "%d", eql);
         mcp_mesg_arg_append(&msg, "eql", buf);
         mcp_mesg_arg_append(&msg, "pname", unparse(player, oeq));
-        mcp_mesg_arg_append(&msg, "avatar", oeq->avatar);
+        mcp_mesg_arg_append(&msg, "avatar", object_art(oeq));
         struct icon ico = object_icon(oeq);
         mcp_mesg_arg_append(&msg, "icon", ico.icon);
 	mcp_frame_output_mesg(mfr, &msg);

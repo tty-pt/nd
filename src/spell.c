@@ -46,65 +46,65 @@ element_t element_map[] = {
 
 struct spell_skeleton spell_skeleton_map[] = {
 	[SPELL_HEAL] = {
-		{"Heal", "", "" },
+		{"Heal", "", },
 		ELM_PHYSICAL, 3, 1, 2, AF_HP,
 	},
 
 	[SPELL_FOCUS] = {
-		{"Focus", "", "" },
+		{"Focus", "", },
 		ELM_PHYSICAL, 15, 3, 1,
 		AF_MDMG | AF_BUF,
 	},
 
 	[SPELL_FIRE_FOCUS] = {
-		{"Fire Focus", "", "" },
+		{"Fire Focus", "", },
 		ELM_FIRE, 15, 3, 1,
 		AF_MDMG | AF_BUF,
 	},
 
 	[SPELL_CUT] = {
-		{"Cut", "", "" },
+		{"Cut", "", },
 		ELM_PHYSICAL, 15, 1, 2,
 		AF_NEG,
 	},
 
 	[SPELL_FIREBALL] = {
-		{"Fireball", "", "" },
+		{"Fireball", "", },
 		ELM_FIRE, 3, 1, 2,
 		AF_NEG,
 	}, // 1/4 chance of burning
 
 	[SPELL_WEAKEN] = {
-		{"Weaken", "", "" },
+		{"Weaken", "", },
 		ELM_PHYSICAL, 15, 3, 1,
 		AF_MDMG | AF_BUF | AF_NEG,
 	},
 
 	[SPELL_DISTRACT] = {
-		{"Distract", "", "" },
+		{"Distract", "", },
 		ELM_PHYSICAL, 15, 3, 1,
 		AF_MDEF | AF_BUF | AF_NEG,
 	},
 
 	[SPELL_FREEZE] = {
-		{"Freeze", "", "" },
+		{"Freeze", "", },
 		ELM_ICE, 10, 2, 4,
 		AF_MOV | AF_NEG,
 	},
 
 	[SPELL_LAVA_SHIELD] = {
-		{"Lava Shield", "", "" },
+		{"Lava Shield", "", },
 		ELM_FIRE, 15, 3, 1,
 		AF_MDEF | AF_BUF,
 	},
 
 	[SPELL_WIND_VEIL] = {
-		{"Wind Veil", "", "" },
+		{"Wind Veil", "", },
 		.flags = AF_DODGE,
 	},
 
 	[SPELL_STONE_SKIN] = {
-		{"Stone Skin", "", "" },
+		{"Stone Skin", "", },
 		.flags = AF_DEF,
 	},
 };

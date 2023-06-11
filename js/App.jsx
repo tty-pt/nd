@@ -2,6 +2,11 @@ import React, {
 	useState, useEffect, useRef,
 	useCallback, useReducer, useContext,
 } from "react";
+import { Terminal as XTerm } from 'xterm';
+// import { WebglAddon } from 'xterm-addon-webgl';
+import { FitAddon } from 'xterm-addon-fit';
+import { WebLinksAddon } from 'xterm-addon-web-links';
+// import { OverlayAddon } from './addons/overlay';
 import { usePopper } from 'react-popper';
 import { useMagic, withMagic, makeMagic } from "@tty-pt/styles";
 import ReactDOM from "react-dom";
@@ -9,6 +14,7 @@ import ACTIONS, { ACTIONS_LABEL } from "./actions";
 import mcp from "./mcp";
 import tty_proc from "./tty";
 // import canvas from "./canvas";
+import 'xterm/css/xterm.css';
 import "./vim.css";
 const baseDir = process.env.CONFIG_BASEDIR || "";
 
@@ -43,6 +49,57 @@ function useSub(sub, defaultData = null) {
   useEffect(() => sub.subscribe(setData), []);
   return data;
 }
+
+const fitAddon = new FitAddon();
+// const overlayAddon = new OverlayAddon();
+
+const termSub = easySub(null);
+
+const termEmit = termSub.easyEmit((parent) => {
+  const term = new XTerm({
+    fontSize: 13,
+    fontFamily: 'Consolas,Liberation Mono,Menlo,Courier,monospace',
+    theme: {
+      foreground: '#637d75',
+      background: 'rgba(0, 0, 0, 0.2)',
+      cursor: '#73fa91',
+      black: '#112616',
+      red: '#7f2b27',
+      green: '#2f7e25',
+      yellow: '#717f24',
+      blue: '#2f6a7f',
+      magenta: '#47587f',
+      cyan: '#327f77',
+      white: '#647d75',
+      brightBlack: '#3c4812',
+      brightRed: '#e08009',
+      brightGreen: '#18e000',
+      brightYellow: '#bde000',
+      brightBlue: '#00aae0',
+      brightMagenta: '#0058e0',
+      brightCyan: '#00e0c4',
+      brightWhite: '#73fa91',
+    },
+    allowProposedApi: true,
+  });
+
+  term.loadAddon(fitAddon);
+  term.loadAddon(new WebLinksAddon());
+  term.open(parent);
+  term.inputBuf = "";
+  term.onKey(event => {
+    if (event.key === "\r") {
+      term.write("\r\n");
+      sendMessage(term.inputBuf);
+      term.inputBuf = "";
+    } else {
+      term.write(event.key);
+      term.inputBuf += event.key;
+    }
+  });
+  fitAddon.fit();
+  return term;
+});
 
 makeMagic({
   "?pre": {
@@ -296,8 +353,11 @@ const barsEmit = barsSub.easyEmit();
 
 const mcp_map = {
   'inband': action => {
-    if (action.data != "\n\r")
-      terminalEmit(tty_proc(action.data))
+    if (action.data != "\n\r") {
+      console.log("output", action.data.substring(1), action.data.charAt(0));
+      termSub.data.value.write(action.data.substring(1) + "\r\n");
+      // terminalEmit(tty_proc(action.data));
+    }
   },
   "web-view": action => viewEmit(action.data),
   "web-look": action => {
@@ -313,7 +373,8 @@ const mcp_map = {
     } else
       targetEmit(dbref);
 
-    terminalEmit(action.description ? "\nYou see: " + action.description : "");
+    // terminalEmit(action.description ? "\nYou see: " + action.description : "");
+    termSub.data.value.write(action.description ? "You see: " + action.description + "\r\n" : "");
   },
   "web-look-content": dbSubEmit,
   "web-in": dbSubEmit,
@@ -352,12 +413,15 @@ function Terminal() {
 	const ref = useRef(null);
 
 	useEffect(() => {
-    if (ref.current)
+    if (ref.current) {
       ref.current.scrollTop = ref.current.scrollHeight;
+      termEmit(ref.current);
+    }
 	}, [terminal]);
 
 	// console.log(context);
   return (
+    
     <pre id="term" ref={ref} className="flex-grow overflow"
       dangerouslySetInnerHTML={{ __html: terminal }}>
     </pre>
@@ -367,14 +431,14 @@ function Terminal() {
 function useBgImg(obj = {}) {
   const bsrc = obj.art ?? obj.avatar ?? "unknown.jpg";
 	const src = baseDir + "/art/" + bsrc;
-  const bname = bsrc.substring(0, bsrc.indexOf("."));
+  const bname = bsrc.substring(0, bsrc.indexOf(".")).replaceAll("/", "-").replaceAll(" ", "-");
   console.log("useBgImg", bsrc, bname);
 
   useMagic(() => ({
     ["!bg-img-" + bname]: {
-      background: "url(" + src + ")",
+      background: "url(" + src.replaceAll(" ", "\\ ") + ")",
       backgroundSize: "cover",
-      backgroundPositon: "50% 50%",
+      backgroundPosition: "50% 50%",
     },
   }));
 
@@ -656,7 +720,6 @@ function Help() {
 	return (<>
 		<b>Help</b><br />
 		<br />
-		Use "a" to focus the textbox input.<br />
 		Input "X" to teleport to the starting position.<br />
 
 		<br />
@@ -792,57 +855,26 @@ function Game() {
   const objects = useSub(dbSub);
 	const [ modal, isOpen, setOpen ] = useModal(Help, {});
   const [ referenceElement, setReferenceElement ] = useState(null);
-	const input = useRef(null);
   const obj = objects[here];
   const bgClass = useBgImg(obj);
 
 	function keyDownHandler(e) {
-		if (document.activeElement == input.current) {
-			switch (e.keyCode) {
-				case 27:
-					input.current.blur();
-				break;
-				case 85: // u
-					if (e.ctrlKey)
-					input.current.value = "";
-				break;
-			}
-			return;
-		}
-
 		switch (e.keyCode) {
-			case 83: // s
-				if (e.shiftKey)
-					sendMessage("sit");
-				else {
-					input.current.value = "say ";
-					input.current.focus();
-					e.preventDefault();
-				}
-				break;
-			case 65: // a
-				input.current.focus();
-				e.preventDefault();
-				break;
-			case 75: // k
 			case 38: // ArrowUp
 				if (e.shiftKey)
 					sendMessage("K");
 				else
 					sendMessage("k");
 				break;
-			case 74: // j
 			case 40: // ArrowDown
 				if (e.shiftKey)
 					sendMessage("J");
 				else
 					sendMessage("j");
 				break;
-			case 72: // h
 			case 37: // ArrowLeft
 				sendMessage("h");
 				break;
-			case 76: // l
 			case 39: // ArrowRight
 				sendMessage("l");
 				break;
@@ -865,14 +897,6 @@ function Game() {
 		setOpen(!isOpen);
 	}
 
-	function onSubmit(e) {
-		e.preventDefault();
-		const fd = new FormData(e.target);
-		sendMessage(fd.get("cmd"));
-		input.current.value = "";
-    // input.current.blur();
-	}
-
   function clickHandler(e) {
     setReferenceElement(null);
   };
@@ -885,16 +909,13 @@ function Game() {
 	return (<>
     <div className={"absolute opacity-2 position-left-0 position-right-0 position-top-0 position-bottom-0 " + bgClass} />
     <div className="pad-small horizontal-small absolute position-left-0 position-right-0 position-top-0 position-bottom-0">
-      <form className="vertical-small flex-grow shf overflow" onSubmit={onSubmit}>
+      <div className="vertical-small flex-grow shf overflow">
         <div className="tm text-align">{ obj?.name ?? "Unnamed" }</div>
 
         <PlayerBars />
 
         <Terminal />
-
-        <input ref={input} autoFocus name="cmd" className="pad background-semi cf"
-          autoComplete="off" autoCapitalize="off" />
-      </form>
+      </div>
 
       <div className="vertical-small flex-grow align-items sh33">
         <MiniMap />
