@@ -4,7 +4,8 @@
   "description": "This is TinyMUCK 2.2fb6.00 (FuzzBall 6.00), a programmable, player expandable, multi-user adventure game.  Please see the CHANGES file for a list of changes from the previous version.",
   "main": "main.js",
   "@tty-pt/scripts": {
-    "entry": "./js/index.jsx"
+    "entry": "./js/index.jsx",
+    "parser": "babel"
   },
   "directories": {
     "doc": "docs"
@@ -30,7 +31,7 @@
     "@babel/cli": "^7.16.0",
     "@babel/core": "^7.16.0",
     "@babel/preset-react": "^7.16.0",
-    "@tty-pt/scripts": "0.1.2",
+    "@tty-pt/scripts": "0.1.4",
     "@tty-pt/styles": "0.1.3",
     "webpack": "^5.75.0"
   },
