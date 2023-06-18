@@ -209,11 +209,12 @@ struct core_art core_art[] = {
 	{ 10, "abies alba" },
 	{ 12, "acacia senegal" },
 	{ 14, "betula pendula" },
-	{ 15, "daucus carota" },
+	{ 6, "daucus carota" },
 	{ 19, "pinus sylvestris" },
 	{ 21, "pseudotsuga menziesii" },
 	{ 9, "arthrocereus rondonianus" },
 	{ 11, "solanum lycopersicum" },
+	{ 7, "linum usitatissimum" },
 
 	// MINERALS
 	{ 17, "stone" },
