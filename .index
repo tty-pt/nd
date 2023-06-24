@@ -1,0 +1,11 @@
+if [[ $# -ge 1 ]]; then
+	path=$DOCUMENT_URI
+	[[ -f "$path" ]] || NotFound
+	echo Status 200: Ok
+	echo
+	cat "$path"
+	exit
+fi
+
+Normal 200 
+Scat index

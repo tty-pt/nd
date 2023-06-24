@@ -115,6 +115,7 @@ makeMagic({
   "?#map": {
     marginLeft: "-1rem",
     marginBottom: "-1rem",
+    maxWidth: "none",
   },
   deepShadow: {
     textShadow: "2px 2px 3px black, -2px 2px 3px black, -2px -2px 3px black, 2px -2px 3px black",
@@ -947,7 +948,7 @@ function Game() {
           <EquipmentButton />
           <RBI onClick={() => sendMessage('inventory')} src={ACTIONS.OPEN} />
           <RBI onClick={() => sendMessage('look')} src={ACTIONS.LOOK} />
-          <RBI onClick={(ev) => { setReferenceElement(ev.target); ev.stopPropagation(); }} src="art/walking.png" />
+          <RBI onClick={(ev) => { setReferenceElement(ev.target); ev.stopPropagation(); }} src={baseDir + "/art/walking.png"} />
         </div>
         ) }
       </div>

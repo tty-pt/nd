@@ -2,6 +2,7 @@
 #define _CONFIG_H
 
 #define STD_DB "std.db"
+#define STD_DB_OK "std.db.ok"
 #define GEO_DB "geo.db"
 
 #ifdef __OpenBSD__

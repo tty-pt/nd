@@ -2,7 +2,7 @@ const makeConfig = require("@tty-pt/scripts/webpack.config");
 const webpack = require("webpack");
 
 module.exports = function (env) {
-	const CONFIG_BASEDIR = env.development ? "." : "/neverdark";
+	const CONFIG_BASEDIR = env.development ? "." : "/nd";
 	const CONFIG_PROTO = env.development ? "ws" : "wss";
 
 	const config = makeConfig({

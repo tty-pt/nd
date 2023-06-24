@@ -1326,7 +1326,7 @@ entity_update(OBJ *player)
 
         /* if mob dies, return */
 	if (huth_notify(player, eplayer->thirst += THIRST_INC, THIRST_Y, thirst_msg)
-                || huth_notify(player, eplayer->hunger += HUNGER_INC, HUNGER_Y, hunger_msg)
+		|| huth_notify(player, eplayer->hunger += HUNGER_INC, HUNGER_Y, hunger_msg)
                 || debufs_process(player))
                         return;
 

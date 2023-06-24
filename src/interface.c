@@ -396,7 +396,13 @@ void sig_shutdown(int i)
 int
 init_game()
 {
-	FILE *f = fopen(STD_DB, "rb");
+	const char *name = "std.db";
+	FILE *f;
+
+	if (access(STD_DB, F_OK) != 0)
+		name = STD_DB_OK;
+
+	f = fopen(name, "rb");
 
 	if (f == NULL) {
                 warn("No such file\n");
@@ -465,7 +471,7 @@ main(int argc, char **argv)
 	if (pw == NULL)
 		errx(1, "unknown user %s", user);
 
-	if (chroot("/var/www") != 0 || chdir("/htdocs/neverdark/game") != 0)
+	if (chroot("/var/www") != 0 || chdir("/nd/game") != 0)
 		err(1, "%s", "/var/www");
 
 	if (setgroups(1, &pw->pw_gid) ||
@@ -547,50 +553,49 @@ pprintf(OBJ *player, char *format, ...)
 }
 
 int
-notify(ENT *eplayer, const char *msg)
+writel(int fd, const char *line, size_t len)
 {
-	descr_t *d = &descr_map[eplayer->fd];
-	if (d->flags & DF_WEBSOCKET)
-		wsprintf(eplayer->fd, msg);
-	else {
-		dprintf(eplayer->fd, "%s", msg);
-		dprintf(eplayer->fd, "\r\n");
-	}
-	return 0;
+	static char buf[BUFSIZ];
+	if (!len)
+		len = strlen(line);
+	memcpy(buf, line, len);
+	memcpy(buf + len, "\r\n", 3);
+	return WRITE(fd, buf, len + 2);
 }
 
-void
+int
+dwritelf(int fd, const char *format, va_list args)
+{
+	static char buf[BUFSIZ];
+	ssize_t len;
+	len = vsnprintf(buf, sizeof(buf), format, args);
+	return writel(fd, buf, len);
+}
+
+int
+notify(ENT *eplayer, const char *msg)
+{
+	if (eplayer->fd <= 0)
+		return 0;
+	descr_t *d = &descr_map[eplayer->fd];
+	return (d->flags & DF_WEBSOCKET)
+		? wsprintf(eplayer->fd, msg)
+		: writel(eplayer->fd, msg, 0);
+}
+
+int
 notifyf(ENT *eplayer, const char *format, ...)
 {
+	if (eplayer->fd <= 0)
+		return 0;
 	descr_t *d = &descr_map[eplayer->fd];
 	va_list args;
 	va_start(args, format);
-	if (d->flags & DF_WEBSOCKET) {
-		wsdprintf(eplayer->fd, format, args);
-		va_end(args);
-	} else {
-		vdprintf(eplayer->fd, format, args);
-		va_end(args);
-		dprintf(eplayer->fd, "\r\n");
-	}
-}
-
-static inline void
-vnotifyfa(OBJ *first, const char *format, va_list va)
-{
-	FOR_LIST(first, first) {
-		if (first->type != TYPE_ENTITY)
-			continue;
-
-		ENT *efirst = &first->sp.entity;
-		if (efirst->fd <= 0)
-			continue;
-		descr_t *d = &descr_map[efirst->fd];
-		if (d->flags & DF_WEBSOCKET) {
-			wsdprintf(efirst->fd, format, va);
-		} else
-			vdprintf(efirst->fd, format, va);
-	}
+	int ret = (d->flags & DF_WEBSOCKET)
+		? wsdprintf(eplayer->fd, format, args)
+		: dwritelf(eplayer->fd, format, args);
+	va_end(args);
+	return ret;
 }
 
 static inline void
@@ -604,27 +609,17 @@ vnotifyfe(OBJ *first, OBJ *exception, const char *format, va_list va)
 		if (efirst->fd <= 0)
 			continue;
 		descr_t *d = &descr_map[efirst->fd];
-		if (d->flags & DF_WEBSOCKET) {
+		if (d->flags & DF_WEBSOCKET)
 			wsdprintf(efirst->fd, format, va);
-		} else
-			vdprintf(efirst->fd, format, va);
+		else
+			dwritelf(efirst->fd, format, va);
 	}
 }
 
 static inline void
-netnotifyfa(OBJ *first, const char *format, va_list va)
+vnotifyfa(OBJ *first, const char *format, va_list va)
 {
-	FOR_LIST(first, first) {
-		if (first->type != TYPE_ENTITY)
-			continue;
-
-		ENT *efirst = &first->sp.entity;
-		if (efirst->fd <= 0)
-			continue;
-		descr_t *d = &descr_map[efirst->fd];
-		if (!(d->flags & DF_WEBSOCKET))
-			vdprintf(efirst->fd, format, va);
-	}
+	return vnotifyfe(first, NULL, format, va);
 }
 
 static inline void
@@ -633,30 +628,20 @@ netnotifyfe(OBJ *first, OBJ *exception, const char *format, va_list va)
 	FOR_LIST(first, first) {
 		if (first->type != TYPE_ENTITY || first == exception)
 			continue;
-
 		ENT *efirst = &first->sp.entity;
 		if (efirst->fd <= 0)
 			continue;
 		descr_t *d = &descr_map[efirst->fd];
-		if (!(d->flags & DF_WEBSOCKET))
-			vdprintf(efirst->fd, format, va);
+		if (d->flags & DF_WEBSOCKET)
+			continue;
+		dwritelf(efirst->fd, format, va);
 	}
 }
 
-
 static inline void
-notify_except(OBJ *first, OBJ *exception, const char *msg)
+netnotifyfa(OBJ *first, const char *format, va_list va)
 {
-	FOR_LIST(first, first) {
-		if (first->type != TYPE_ENTITY || first == exception)
-			continue;
-
-		ENT *efirst = &first->sp.entity;
-		if (efirst->fd <= 0)
-			continue;
-
-		notify(efirst, msg);
-	}
+	netnotifyfe(first, NULL, format, va);
 }
 
 void

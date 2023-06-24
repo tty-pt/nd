@@ -41,19 +41,12 @@ let s:config = s:read_env(".config")
 
 packadd qgdb
 
-let g:os = substitute(system('uname'), '\n', '', '')
-
 let s:muckb = 0
 let s:muckw = 0
 let s:muckO = 0
 
-let g:gdb_prog = 'gdb' " FIXME default linux?
-
 if s:config.CONFIG_ROOT == "y"
 	let g:gdb_sudo = 1
-	if os == "OpenBSD"
-		let g:sudo_prog = "doas"
-	endif
 else
 	let g:gdb_sudo = 0
 endif
@@ -104,6 +97,10 @@ func MuckBuffer()
 	belowr split
 endfunc
 
+call inputsave()
+let s:sessionId = inputsecret("Session ID: ")
+call inputrestore()
+
 func s:Connect()
 	let id = win_getid()
 	call MuckBuffer()
@@ -118,7 +115,7 @@ func s:Connect()
 					\ "curwin": 1,
 					\ })
 	endif
-	call term_sendkeys(muckt, "auth jqdyeivwu4q3d5fwxhgitusyq9ycpkeoanvqpo-frlc\<cr>")
+	call term_sendkeys(muckt, "auth " . s:sessionId . "\<cr>")
 	let s:muckw = win_getid()
 	let s:muckb = bufnr('%')
 	call win_gotoid(id)

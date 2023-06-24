@@ -9,14 +9,14 @@ include scripts/Makefile.common
 GCC_JS := ${CC} -E -P -nostdinc -undef -x c
 
 js-src != find js -type f
-js-$(production) := ./build/main.js
+js-$(production) := ./build/static/js/main.js
 
-all: index.html main.js vim.css ${js-y}
+all: index.html vim.css ${js-y}
 
 art-y != find art -type f
 art-y += nd256.png
 
-./build/main.js: ${js-src}
+js-$(production): ${js-src}
 	npm run build
 
 ./node_modules/:
