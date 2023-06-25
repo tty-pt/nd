@@ -218,6 +218,9 @@ struct core_art core_art[] = {
 
 	// MINERALS
 	{ 17, "stone" },
+
+	// OTHER
+	{ 14, "stick" },
 };
 
 DB *art_db = NULL;
@@ -321,6 +324,12 @@ object_add(SKEL *sk, OBJ *where, void *arg)
 		break;
 
 	case S_TYPE_OTHER:
+		{
+			noise_t v = * (noise_t *) arg;
+			nu->type = TYPE_THING;
+			nu->art_id = 1 + (v & 0xf) % art_max(nu->name);
+		}
+
 		break;
 	}
 
@@ -334,29 +343,17 @@ char *
 object_art(OBJ *thing)
 {
 	static char art[BUFSIZ];
-	size_t rem = sizeof(art);
-
-	rem -= snprintf(art, rem, "../art/");
+	char *type = NULL;
 
 	switch (thing->type) {
-	case TYPE_ROOM:
-		rem -= snprintf(art, rem, "biome/%s/%u.jpeg", thing->name, thing->art_id);
-		break;
-	case TYPE_PLANT:
-		rem -= snprintf(art, rem, "plant/%s/%u.jpeg", thing->name, thing->art_id);
-		break;
-	case TYPE_ENTITY:
-		rem -= snprintf(art, rem, "entity/%s/%u.jpeg", thing->name, thing->art_id);
-		break;
-	case TYPE_MINERAL:
-		rem -= snprintf(art, rem, "mineral/%s/%u.jpeg", thing->name, thing->art_id);
-		break;
-	default:
-		rem -= snprintf(art, rem, "unknown.jpeg");
-		break;
-
+	case TYPE_ROOM: type = "biome"; break;
+	case TYPE_PLANT: type = "plant"; break;
+	case TYPE_ENTITY: type = "entity"; break;
+	case TYPE_MINERAL: type = "mineral"; break;
+	default: type = "other"; break;
 	}
 
+	snprintf(art, sizeof(art), "%s/%s/%u.jpeg", type, thing->name, thing->art_id);
 	return art;
 }
 

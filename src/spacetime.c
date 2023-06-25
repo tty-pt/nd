@@ -147,22 +147,28 @@ morton_pos(pos_t p, morton_t code)
 void
 object_drop(OBJ *where, struct drop **drop)
 {
+	pos_t pos;
         register int i;
+
+	map_where(pos, where->location);
 
 	for (; *drop; drop++)
 		if (random() < (RAND_MAX >> (*drop)->y)) {
+			noise_t v2 = uhash((const char *) pos, sizeof(pos_t), 3);
                         int yield = (*drop)->yield,
                             yield_v = (*drop)->yield_v;
 
                         if (!yield) {
-                                object_add((*drop)->i, where, NULL);
+                                object_add((*drop)->i, where, &v2);
                                 continue;
                         }
 
                         yield += random() & yield_v;
 
-                        for (i = 0; i < yield; i++)
-                                object_add((*drop)->i, where, NULL);
+                        for (i = 0; i < yield; i++) {
+				v2 = uhash((const char *) pos, sizeof(pos_t), 4 + i);
+                                object_add((*drop)->i, where, &v2);
+			}
                 }
 }
 
