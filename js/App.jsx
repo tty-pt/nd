@@ -433,15 +433,14 @@ function useBgImg(obj = {}) {
   const bsrc = obj.art ?? obj.avatar ?? "unknown.jpg";
 	const src = baseDir + "/art/" + bsrc;
   const bname = bsrc.substring(0, bsrc.indexOf(".")).replaceAll("/", "-").replaceAll(" ", "-");
-  console.log("useBgImg", bsrc, bname);
 
   useMagic(() => ({
-    ["!bg-img-" + bname]: {
+    "?": {
       background: "url(" + src.replaceAll(" ", "\\ ") + ")",
       backgroundSize: "cover",
       backgroundPosition: "50% 50%",
     },
-  }));
+  }), "bg-img-" + bname);
 
   return "bg-img-" + bname;
 }
@@ -629,8 +628,6 @@ function ContentsAndActions() {
 
     while (target.tagName !== "A")
       target = target.parentElement;
-
-    console.log("onItemClick", target);
 
 		let newActions = [];
 
