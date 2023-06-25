@@ -608,10 +608,7 @@ unparse(OBJ *player, OBJ *loc)
 		}
 	}
 
-	BUFF("%s", loc->name);
-
-	if (!player || controls_link(player, loc))
-		BUFF("(#%d)", object_ref(loc));
+	BUFF("%s(#%d)", loc->name, object_ref(loc));
 
 	buf[buf_l] = '\0';
 	return buf;

@@ -611,6 +611,7 @@ function RBI(props) {
 function ContentsAndActions() {
   const targetState = useState(null);
   const { dbref: here } = useSub(hereSub);
+  const rtarget = useSub(targetSub);
   const { me } = useSub(authSub);
   const objects = useSub(dbSub);
   const [referenceElement, setReferenceElement] = useState(null);
@@ -679,7 +680,7 @@ function ContentsAndActions() {
 			}]);
 		} else {
 			newActions.push([ACTIONS.GET, function () {
-				sendMessage("get #" + target + "=#" + item.dbref);
+				sendMessage("get #" + rtarget + "=#" + item.dbref);
         return unselect();
 			}]);
 		}
