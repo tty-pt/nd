@@ -15,7 +15,6 @@ do_get(command_t *cmd)
 	const char *what = cmd->argv[1];
 	const char *obj = cmd->argv[2];
 	OBJ *thing, *cont;
-	int can;
 
 	if (
 			!(thing = ematch_near(player, what))

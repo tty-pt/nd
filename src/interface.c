@@ -85,6 +85,7 @@ SSL_CTX *sslctx;
 
 void do_bio(command_t *cmd);
 extern void do_auth(command_t *cmd);
+extern void do_avatar(command_t *cmd);
 extern void do_httpget(command_t *cmd);
 /* extern void do_gpt(command_t *cmd); */
 
@@ -128,6 +129,9 @@ core_command_t cmds[] = {
 		.name = "auth",
 		.cb = &do_auth,
 		.flags = CF_NOAUTH,
+	}, {
+		.name = "avatar",
+		.cb = &do_avatar,
 	}, {
 		.name = "GET",
 		.cb = &do_httpget,
@@ -690,6 +694,12 @@ do_httpget(command_t *cmd)
 	d->mcpframe.enabled = 1;
 }
 
+static inline void
+avatar(OBJ *player) {
+	ENT *eplayer = &player->sp.entity;
+	player->art_id = 1 + (random() % art_max("avatar"));
+}
+
 void
 do_auth(command_t *cmd)
 {
@@ -727,6 +737,7 @@ do_auth(command_t *cmd)
 		player = player_create(buf);
 		birth(player);
 		spells_birth(player);
+		avatar(player);
 	} else if (player->sp.entity.fd > 0) {
                 descr_inband(fd, "That player is already connected.\r\n");
                 mcp_auth_fail(fd, 2);
@@ -745,6 +756,15 @@ do_auth(command_t *cmd)
 	look_around(player);
 	/* enter_room(player, E_ALL); */
 	do_view(cmd);
+}
+
+void
+do_avatar(command_t *cmd)
+{
+	OBJ *player = cmd->player;
+	ENT *eplayer = &player->sp.entity;
+	avatar(player);
+	notifyf(eplayer, "Selected avatar %u", player->art_id);
 }
 
 #if 0

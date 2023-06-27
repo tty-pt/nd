@@ -204,6 +204,7 @@ struct core_art core_art[] = {
 	{ 2, "vulture" },
 	{ 6, "wolf" },
 	{ 7, "woodpecker" },
+	{ 300, "avatar" },
 
 	// PLANTS
 	{ 10, "abies alba" },
@@ -231,7 +232,7 @@ DB *art_db = NULL;
 	for (; hash_i < n; hash_i++) hash_put(db, arr[hash_i].name, &arr[hash_i]); \
 }
 
-static inline unsigned art_max(char const *name) {
+unsigned art_max(char const *name) {
 	struct core_art *core_art_item = (struct core_art *) hash_get(art_db, name);
 	return core_art_item->max;
 }
@@ -346,9 +347,12 @@ object_art(OBJ *thing)
 	char *type = NULL;
 
 	switch (thing->type) {
+	case TYPE_ENTITY:
+		type = "entity";
+		snprintf(art, sizeof(art), "%s/%s/%u.jpeg", type, thing->art_id && thing->sp.entity.flags & EF_PLAYER ? "avatar" : thing->name, thing->art_id);
+		return art;
 	case TYPE_ROOM: type = "biome"; break;
 	case TYPE_PLANT: type = "plant"; break;
-	case TYPE_ENTITY: type = "entity"; break;
 	case TYPE_MINERAL: type = "mineral"; break;
 	default: type = "other"; break;
 	}

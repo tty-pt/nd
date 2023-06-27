@@ -979,22 +979,28 @@ void
 art(int fd, OBJ *thing)
 {
 	char art[BUFSIZ];
-	size_t rem = sizeof(art);
-
-	rem -= snprintf(art, rem, "../art/");
+	warn("art-1\n");
+	fprintf(stderr, "art-1\n");
+	warn("art0 %s\n", thing->name);
 
 	switch (thing->type) {
 	case TYPE_ROOM:
-		rem -= snprintf(art, rem, "biome/%s/1.jpeg", thing->name);
+		snprintf(art, sizeof(art), "biome/%s/1.jpeg", thing->name);
 		break;
 	case TYPE_PLANT:
-		rem -= snprintf(art, rem, "plant/%s/1.jpeg", thing->name);
+		snprintf(art, sizeof(art), "plant/%s/1.jpeg", thing->name);
 		break;
-	case TYPE_ENTITY:
-		rem -= snprintf(art, rem, "entity/%s/1.jpeg", thing->name);
+	case TYPE_ENTITY: {
+		char const *art_name = thing->name;
+		warn("art %u %u %u %s\n", thing->art_id, thing->sp.entity.flags, thing->sp.entity.flags & EF_PLAYER, art_name);
+		if (thing->art_id && (thing->sp.entity.flags & EF_PLAYER))
+			art_name = "avatar";
+		warn("art %u %u %u %s\n", thing->art_id, thing->sp.entity.flags, thing->sp.entity.flags & EF_PLAYER, art_name);
+		snprintf(art, sizeof(art), "entity/%s/1.jpeg", art_name);
 		break;
+	}
 	default:
-		rem -= snprintf(art, rem, "unknown.jpeg");
+		snprintf(art, sizeof(art), "unknown.jpeg");
 		break;
 
 	}
