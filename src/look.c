@@ -46,29 +46,17 @@ do_examine(command_t *cmd)
 		print_owner(eplayer, thing);
 		return;
 	}
-	switch (thing->type) {
-	case TYPE_ROOM:
-	case TYPE_PLANT:
-	case TYPE_SEAT:
-	case TYPE_CONSUMABLE:
-	case TYPE_EQUIPMENT:
-	case TYPE_THING:
-	case TYPE_ENTITY:
-	case TYPE_MINERAL:
+
+	if (thing->type == TYPE_GARBAGE)
+		notifyf(eplayer, "%s", unparse(player, thing));
+	else
 		notifyf(eplayer, "%s (#%d) Owner: %s  Value: %d",
 				unparse(player, thing),
 				object_ref(thing),
 				thing->owner->name, thing->value);
-		break;
-	case TYPE_GARBAGE:
-		notifyf(eplayer, "%s", unparse(player, thing));
-		break;
-	}
 
 	if (thing->description)
 		notify(eplayer, thing->description);
-
-	notify(eplayer, "[ Use 'examine <object>=/' to list root properties. ]");
 
 	/* show him the contents */
 	if (thing->contents) {

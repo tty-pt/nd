@@ -52,32 +52,28 @@ do_get(command_t *cmd)
 		return;
 	}
 	switch (thing->type) {
-	case TYPE_CONSUMABLE:
-	case TYPE_EQUIPMENT:
-	case TYPE_THING:
 	case TYPE_ENTITY:
 	case TYPE_PLANT:
+		if (God(player)) {
+			object_move(thing, player);
+			notify(eplayer, "Taken.");
+		} else
+			notify(eplayer, "You can't pick that up.");
+		break;
 	case TYPE_SEAT:
-	case TYPE_MINERAL:
-		if (obj && *obj) {
-			can = 1;
-		} else {
-			if (thing->owner != player
-					&& (thing->type == TYPE_ENTITY || thing->type == TYPE_PLANT || thing->type == TYPE_SEAT))
-			{
-				notify(eplayer, "You can't pick that up.");
-				break;
-			}
-
-			can = cando(player, thing, "You can't pick that up.");
-		}
-		if (can) {
+		if (thing->owner != player)
+			notify(eplayer, "You can't pick that up.");
+		else {
 			object_move(thing, player);
 			notify(eplayer, "Taken.");
 		}
 		break;
-	default:
+	case TYPE_ROOM:
 		notify(eplayer, "You can't take that!");
+		break;
+	default:
+		object_move(thing, player);
+		notify(eplayer, "Taken.");
 		break;
 	}
 }

@@ -879,26 +879,14 @@ object_move(OBJ *what, OBJ *where)
 	}
 
 	if (object_plc(what, where)) {
-		switch (what->type) {
-		case TYPE_ENTITY:
+		if (what->type == TYPE_ENTITY) {
 			where = what->sp.entity.home;
-			break;
-		case TYPE_PLANT:
-		case TYPE_CONSUMABLE:
-		case TYPE_EQUIPMENT:
-		case TYPE_THING:
-		case TYPE_ROOM:
-		case TYPE_SEAT:
-		case TYPE_MINERAL:
-			where = object_get(GLOBAL_ENVIRONMENT);
-			break;
+			ENT *ewhat = &what->sp.entity;
+			if ((ewhat->flags & EF_SITTING))
+				stand(what);
 		}
-	}
-
-        if (what->type == TYPE_ENTITY) {
-		ENT *ewhat = &what->sp.entity;
-		if ((ewhat->flags & EF_SITTING))
-			stand(what);
+		else
+			where = object_get(GLOBAL_ENVIRONMENT);
 	}
 
 	/* now put what in where */
@@ -960,10 +948,7 @@ object_icon(OBJ *what)
 			ret.icon = buf;
 		}
 		break;
-	case TYPE_EQUIPMENT:
-        case TYPE_THING:
-        case TYPE_SEAT:
-        case TYPE_MINERAL:
+	default:
                 ret.actions |= ACT_GET;
                 break;
         }

@@ -566,25 +566,6 @@ controls(OBJ *who, OBJ *what)
 	return (who == what->owner);
 }
 
-static inline int
-controls_link(OBJ *who, OBJ *what)
-{
-	switch (what->type) {
-	case TYPE_ROOM:
-		if (controls(who, what->sp.room.dropto))
-			return 1;
-		return 0;
-
-	case TYPE_ENTITY:
-		if (controls(who, what->sp.entity.home))
-			return 1;
-		return 0;
-
-	default:
-		return 0;
-	}
-}
-
 #define BUFF(...) buf_l += snprintf(&buf[buf_l], BUFSIZ - buf_l, __VA_ARGS__)
 
 const char *
@@ -685,28 +666,6 @@ stand(OBJ *player) {
 		notify(eplayer, "You are already standing.");
 }
 
-int
-cando(OBJ *player, OBJ *thing, const char *default_fail_msg)
-{
-	ENT *eplayer = &player->sp.entity;
-
-	if (!thing) {
-		notify(eplayer, default_fail_msg);
-		return 0;
-	}
-
-	CBUG(player->type != TYPE_ENTITY);
-
-	if (eplayer->klock) {
-		notify(eplayer, "Not while being targeted.");
-		return 0;
-	}
-
-	stand_silent(player);
-
-	return 1;
-}
-
 static void
 look_contents(OBJ *player, OBJ *loc, const char *contents_name)
 {
@@ -748,7 +707,8 @@ look_room(OBJ *player, OBJ *loc)
 void
 look_around(OBJ *player)
 {
-	look_room(player, player->location);
+	if (player->location->type == TYPE_ROOM)
+		look_room(player, player->location);
 }
 
 int

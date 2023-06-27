@@ -321,6 +321,11 @@ _map_where(dbref room)
 	return * (morton_t *) data.data;
 }
 
+int
+map_has(OBJ *room) {
+	return _map_where(object_ref(room)) != 130056652770671ULL;
+}
+
 void
 map_where(pos_t p, OBJ *room)
 {

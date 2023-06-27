@@ -57,7 +57,6 @@ void sit(OBJ *player, char const *what);
 int stand_silent(OBJ *player);
 void stand(OBJ *who);
 
-int cando(OBJ *player, OBJ *thing, const char *default_fail_msg);
 int controls(OBJ *who, OBJ *what);
 int payfor(OBJ *who, int cost);
 

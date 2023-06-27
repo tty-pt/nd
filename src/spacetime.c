@@ -489,7 +489,7 @@ e_move(OBJ *player, enum exit e) {
 		return;
 	}
 
-	if (!(rloc->exits & e)) {
+	if (!map_has(loc) || !(rloc->exits & e)) {
 		notify(eplayer, "You can't go that way.");
 		return;
 	}
