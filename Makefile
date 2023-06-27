@@ -13,7 +13,7 @@ js-$(production) := ./build/static/js/main.js
 
 all: index.html vim.css ${js-y}
 
-art-y != find art -type f
+art-y != find art -type f | tr ' ' '\\ '
 art-y += nd256.png
 
 js-$(production): ${js-src}
