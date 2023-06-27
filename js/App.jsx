@@ -147,7 +147,8 @@ makeMagic({
     marginLeft: "-1rem",
     marginBottom: "-1rem",
     maxWidth: "none",
-    width: "203px",
+    width: "236px",
+    fontFamily: "monospace",
   },
   deepShadow: {
     textShadow: "2px 2px 3px black, -2px 2px 3px black, -2px -2px 3px black, 2px -2px 3px black",
