@@ -94,6 +94,11 @@ const termEmit = termSub.easyEmit((parent) => {
   term.element.addEventListener("focusout", () => {
     term.focused = false;
   });
+  term.element.addEventListener("input", function (event) {
+    term.inputBuf = event.data;
+    term.lastInput = true;
+    return true;
+  });
   term.onKey(event => {
     console.log("term.onKey", event, event.key);
     if (event.key === "\u001b")
@@ -111,13 +116,17 @@ const termEmit = termSub.easyEmit((parent) => {
     else if (event.key === "\u001b[C")
       sendMessage("l");
     else if (event.key === "\r") {
-      term.write("\r\n");
+      if (term.lastInput)
+        term.write(term.inputBuf + "\r\n");
+      else
+        term.write("\r\n");
       sendMessage(term.inputBuf);
       term.inputBuf = "";
     } else {
       term.write(event.key);
       term.inputBuf += event.key;
     }
+    term.lastInput = false;
   });
   fitAddon.fit();
   return term;
