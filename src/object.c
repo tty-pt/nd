@@ -324,11 +324,11 @@ object_add(SKEL *sk, OBJ *where, void *arg)
 		break;
 
 	case S_TYPE_OTHER:
-		{
+		if (arg) {
 			noise_t v = * (noise_t *) arg;
-			nu->type = TYPE_THING;
 			nu->art_id = 1 + (v & 0xf) % art_max(nu->name);
 		}
+		nu->type = TYPE_THING;
 
 		break;
 	}
