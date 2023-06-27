@@ -666,7 +666,7 @@ onotifyf(OBJ *player, char *format, ...)
 	va_start(args, format);
 	vnotifyfe(loc->contents, player, format, args);
 	va_end(args);
-	netnotifyfe(loc->contents, player, "\n", args);
+	/* netnotifyfe(loc->contents, player, "\n", args); */
 }
 
 void
@@ -696,7 +696,6 @@ do_httpget(command_t *cmd)
 
 static inline void
 avatar(OBJ *player) {
-	ENT *eplayer = &player->sp.entity;
 	player->art_id = 1 + (random() % art_max("avatar"));
 }
 
@@ -938,10 +937,10 @@ SendText(McpFrame * mfr, const char *text)
 void
 descr_close(descr_t *d)
 {
-	if (d->flags & DF_CONNECTED) {
-		OBJ *player = d->player;
-		ENT *eplayer = &player->sp.entity;
+	OBJ *player = d->player;
+	ENT *eplayer = &player->sp.entity;
 
+	if (d->flags & DF_CONNECTED) {
 		warn("%s(%d) disconnects on fd %d\n",
 		     player->name, object_ref(player), d->fd);
 		OBJ *last_observed = eplayer->last_observed;
@@ -952,6 +951,9 @@ descr_close(descr_t *d)
 		d->flags = 0;
 		d->player = NULL;
 	} else {
+		eplayer->fd = -1;
+		d->flags = 0;
+		d->player = NULL;
 		warn("%d never connected\n", d->fd);
 	}
 
