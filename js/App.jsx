@@ -1,6 +1,6 @@
 import React, {
 	useState, useEffect, useRef,
-	useCallback, useReducer, useContext,
+	useContext,
 } from "react";
 import { Terminal as XTerm } from 'xterm';
 // import { WebglAddon } from 'xterm-addon-webgl';
@@ -87,8 +87,30 @@ const termEmit = termSub.easyEmit((parent) => {
   term.loadAddon(new WebLinksAddon());
   term.open(parent);
   term.inputBuf = "";
+
+  term.element.addEventListener("focusin", () => {
+    term.focused = true;
+  });
+  term.element.addEventListener("focusout", () => {
+    term.focused = false;
+  });
   term.onKey(event => {
-    if (event.key === "\r") {
+    console.log("term.onKey", event, event.key);
+    if (event.key === "\u001b")
+      term.blur();
+    else if (event.key === "\u001b[A")
+      sendMessage("k");
+    else if (event.key === "\u001b[1;2A")
+      sendMessage("K");
+    else if (event.key === "\u001b[B")
+      sendMessage("j");
+    else if (event.key === "\u001b[1;2B")
+      sendMessage("J");
+    else if (event.key === "\u001b[D")
+      sendMessage("h");
+    else if (event.key === "\u001b[C")
+      sendMessage("l");
+    else if (event.key === "\r") {
       term.write("\r\n");
       sendMessage(term.inputBuf);
       term.inputBuf = "";
@@ -726,9 +748,9 @@ function Help() {
 		<br />
 		<b>More details: Normal mode:</b><br />
 		<p>
-			<b>s</b> To chat.<br />
-			<b>a</b> to send commands.<br />
 			<b>i</b> to access your inventory.<br />
+			<b>I</b> to enter Input mode.<br />
+			<b>o</b> to look "out".<br />
 			<b>Left</b> or <b>h</b> to move west.<br />
 			<b>Right</b> or <b>l</b> to move east.<br />
 			<b>Up</b> or <b>k</b> to move north.<br />
@@ -739,9 +761,13 @@ function Help() {
 		<b>Input mode:</b><br />
 		<p>
 			<b>Esc</b> to go back to normal mode.<br />
-			<b>Up</b> to travel up in history.<br />
-			<b>Down</b> to travel down in history.<br />
-			<b>Ctrl+u</b> to delete input text.<br />
+			<b>Left</b> to move west.<br />
+			<b>Right</b> to move east.<br />
+			<b>Up</b> to move north.<br />
+			<b>Down</b> to move south.<br />
+			<b>Shift+Up</b> to move up.<br />
+			<b>Shift+Down</b> to move down.<br />
+			other terminal bindings.<br />
 		</p>
 		<br />
 		You can check out the code <a href="https://github.com/tty-pt/neverdark">here</a>.<br />
@@ -859,39 +885,48 @@ function Game() {
   const obj = objects[here];
   const bgClass = useBgImg(obj);
 
-	function keyDownHandler(e) {
-		switch (e.keyCode) {
-			case 38: // ArrowUp
-				if (e.shiftKey)
-					sendMessage("K");
-				else
-					sendMessage("k");
-				break;
-			case 40: // ArrowDown
-				if (e.shiftKey)
-					sendMessage("J");
-				else
-					sendMessage("j");
-				break;
-			case 37: // ArrowLeft
-				sendMessage("h");
-				break;
-			case 39: // ArrowRight
-				sendMessage("l");
-				break;
-			case 73: // i
-				sendMessage("inventory");
-				break;
-			case 79: // o
-				sendMessage("look");
-				break;
-			default:
-				console.log(e);
-			}
-		}
+	function keyUpHandler(e) {
+    if (termSub.data.value.focused)
+      return;
+    switch (e.keyCode) {
+    case 75: // k
+    case 38: // ArrowUp
+      if (e.shiftKey)
+        sendMessage("K");
+      else
+        sendMessage("k");
+      break;
+    case 74: // j
+    case 40: // ArrowDown
+      if (e.shiftKey)
+        sendMessage("J");
+      else
+        sendMessage("j");
+      break;
+    case 72: // h
+    case 37: // ArrowLeft
+      sendMessage("h");
+      break;
+    case 76: // l
+    case 39: // ArrowRight
+      sendMessage("l");
+      break;
+    case 73: // i
+      if (e.shiftKey)
+        termSub.data.value.focus();
+      else
+        sendMessage("inventory");
+      break;
+    case 79: // o
+      sendMessage("look");
+      break;
+    default:
+      console.log(e);
+    }
+  }
 	useEffect(() => {
-		window.addEventListener('keydown', keyDownHandler);
-		return () => window.removeEventListener('keydown', keyDownHandler);
+		window.addEventListener('keyup', keyUpHandler);
+		return () => window.removeEventListener('keyup', keyUpHandler);
 	}, [session]);
 
 	function toggle_help() {
