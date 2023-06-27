@@ -963,6 +963,7 @@ descr_close(descr_t *d)
 	shutdown(d->fd, 2);
 	close(d->fd);
 	FD_CLR(d->fd, &activefds);
+	FD_CLR(d->fd, &readfds);
 	d->fd = -1;
 	if (d)
 		memset(d, 0, sizeof(descr_t));
