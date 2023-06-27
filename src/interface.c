@@ -938,9 +938,9 @@ void
 descr_close(descr_t *d)
 {
 	OBJ *player = d->player;
-	ENT *eplayer = &player->sp.entity;
 
 	if (d->flags & DF_CONNECTED) {
+		ENT *eplayer = &player->sp.entity;
 		warn("%s(%d) disconnects on fd %d\n",
 		     player->name, object_ref(player), d->fd);
 		OBJ *last_observed = eplayer->last_observed;
@@ -951,7 +951,10 @@ descr_close(descr_t *d)
 		d->flags = 0;
 		d->player = NULL;
 	} else {
-		eplayer->fd = -1;
+		if (player) {
+			ENT *eplayer = &player->sp.entity;
+			eplayer->fd = -1;
+		}
 		d->flags = 0;
 		d->player = NULL;
 		warn("%d never connected\n", d->fd);
@@ -960,6 +963,7 @@ descr_close(descr_t *d)
 	shutdown(d->fd, 2);
 	close(d->fd);
 	FD_CLR(d->fd, &activefds);
+	d->fd = -1;
 	if (d)
 		memset(d, 0, sizeof(descr_t));
 }
@@ -1063,7 +1067,6 @@ shovechars()
 			case EINTR:
 				continue;
 			case EBADF:
-				descr_close(d);
 				continue;
 			}
 

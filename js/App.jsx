@@ -138,6 +138,7 @@ makeMagic({
     marginLeft: "-1rem",
     marginBottom: "-1rem",
     maxWidth: "none",
+    width: "203px",
   },
   deepShadow: {
     textShadow: "2px 2px 3px black, -2px 2px 3px black, -2px -2px 3px black, 2px -2px 3px black",
