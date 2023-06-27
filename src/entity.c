@@ -113,6 +113,7 @@ recycle(OBJ *player, OBJ *thing)
 	case TYPE_CONSUMABLE:
 	case TYPE_EQUIPMENT:
 	case TYPE_THING:
+	case TYPE_MINERAL:
 		if (!(eowner->flags & EF_WIZARD))
 			owner->value += thing->value;
 
@@ -150,6 +151,7 @@ recycle(OBJ *player, OBJ *thing)
 		case TYPE_CONSUMABLE:
 		case TYPE_EQUIPMENT:
 		case TYPE_THING:
+		case TYPE_MINERAL:
 			if (rest->owner == thing)
 				rest->owner = object_get(GOD);
 			break;

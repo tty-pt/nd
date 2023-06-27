@@ -889,6 +889,7 @@ object_move(OBJ *what, OBJ *where)
 		case TYPE_THING:
 		case TYPE_ROOM:
 		case TYPE_SEAT:
+		case TYPE_MINERAL:
 			where = object_get(GLOBAL_ENVIRONMENT);
 			break;
 		}
@@ -962,6 +963,7 @@ object_icon(OBJ *what)
 	case TYPE_EQUIPMENT:
         case TYPE_THING:
         case TYPE_SEAT:
+        case TYPE_MINERAL:
                 ret.actions |= ACT_GET;
                 break;
         }

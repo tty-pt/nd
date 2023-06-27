@@ -645,42 +645,44 @@ function ContentsAndActions() {
           return unselect();
 				}]);
 			}
-		} else if (item.loc == me) {
-			// action_add(ACTIONS.PUT, function () {
-			// output("\nPUT is not implemented yet!");
-			// });
+      } else {
+        if (item.loc == me) {
+          newActions.push([ACTIONS.EQUIP, function () {
+            sendMessage("equip #" + item.dbref);
+            return unselect();
+          }]);
 
-			newActions.push([ACTIONS.EQUIP, function () {
-				sendMessage("equip #" + item.dbref);
-        return unselect();
-			}]);
+          newActions.push([ACTIONS.DROP, function () {
+            sendMessage("drop #" + item.dbref);
+            return unselect();
+          }]);
 
-			newActions.push([ACTIONS.DROP, function () {
-				sendMessage("drop #" + item.dbref);
-        return unselect();
-			}]);
+          newActions.push([ACTIONS.EAT, function () {
+            sendMessage("eat #" + item.dbref);
+            return unselect();
+          }]);
 
-			newActions.push([ACTIONS.EAT, function () {
-				sendMessage("eat #" + item.dbref);
-        return unselect();
-			}]);
+          newActions.push([ACTIONS.SHOP, function () {
+            sendMessage("sell #" + item.dbref);
+            return unselect();
+          }]);
+        } else if (objects[item.loc].shop)
+          newActions.push([ACTIONS.SHOP, function () {
+            sendMessage("buy #" + item.dbref);
+            return unselect();
+          }]);
 
-			newActions.push([ACTIONS.SHOP, function () {
-				sendMessage("sell #" + item.dbref);
-        return unselect();
-			}]);
+        else
+          newActions.push([ACTIONS.GET, function () {
+            sendMessage("get #" + rtarget + "=#" + item.dbref);
+            return unselect();
+          }]);
 
-		} else if (objects[item.loc].shop) {
-			newActions.push([ACTIONS.SHOP, function () {
-				sendMessage("buy #" + item.dbref);
-        return unselect();
-			}]);
-		} else {
-			newActions.push([ACTIONS.GET, function () {
-				sendMessage("get #" + rtarget + "=#" + item.dbref);
-        return unselect();
-			}]);
-		}
+        newActions.push([ACTIONS.LOOK, function () {
+          sendMessage("look #" + item.dbref);
+          return unselect();
+        }]);
+      }
 
 		setActions(newActions);
 		targetState[1](item.dbref);

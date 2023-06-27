@@ -58,6 +58,7 @@ do_get(command_t *cmd)
 	case TYPE_ENTITY:
 	case TYPE_PLANT:
 	case TYPE_SEAT:
+	case TYPE_MINERAL:
 		if (obj && *obj) {
 			can = 1;
 		} else {

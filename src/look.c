@@ -54,6 +54,7 @@ do_examine(command_t *cmd)
 	case TYPE_EQUIPMENT:
 	case TYPE_THING:
 	case TYPE_ENTITY:
+	case TYPE_MINERAL:
 		notifyf(eplayer, "%s (#%d) Owner: %s  Value: %d",
 				unparse(player, thing),
 				object_ref(thing),
