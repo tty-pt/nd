@@ -90,30 +90,16 @@ extern void do_avatar(command_t *cmd);
 extern void do_httpget(command_t *cmd);
 /* extern void do_gpt(command_t *cmd); */
 
-char *
-command(char *prompt) {
-	static char buf[SUPERBIGSIZ];
-	struct popen2 child;
-	ssize_t len = 0, res;
-	CBUG(popen2(&child, prompt));
-	close(child.in);
-	while ((res = read(child.out, buf + len, sizeof(buf) - len)) > 0)
-		len += res;
-	if (len >= 1)
-		buf[len - 2] = '\0';
-	close(child.out);
-	kill(child.pid, 0);
-	return buf;
-}
-
-char *
-carriage_return(char *input) {
-	static char buf[SUPERBIGSIZ];
-	char *s = buf, *i = input;
+int
+carriage_return(char *output, char *input) {
+	char *s = output, *i = input;
+	int ret = 0;
 
 	while (*i) {
-		if (*i == '\n')
+		if (*i == '\n') {
 			*s++ = '\r';
+			ret ++;
+		}
 		*s = *i;
 		s++;
 		i++;
@@ -121,13 +107,37 @@ carriage_return(char *input) {
 
 	*s = '\0';
 
+	return ret;
+}
+
+int writel(int fd, const char *line, size_t len);
+
+char *
+command(ENT *eplayer, char *prompt) {
+	descr_t *d = &descr_map[eplayer->fd];
+	static char buf[BIGBUFSIZ];
+	static char carr[BIGBUFSIZ * 2];
+	struct popen2 child;
+	ssize_t len = 0;
+	int ws = d->flags & DF_WEBSOCKET;
+	CBUG(popen2(&child, prompt));
+	close(child.in);
+	while ((len = read(child.out, buf, sizeof(buf))) > 0) {
+		*(buf + len + 1) = '\0';
+		int cr = carriage_return(carr, buf);
+		if (ws)
+			ws_write(eplayer->fd, carr, len + cr);
+		else
+			writel(eplayer->fd, carr, len + cr);
+	}
+	close(child.out);
+	kill(child.pid, 0);
 	return buf;
 }
 
 void
 do_man(command_t *cmd) {
 	char buf[BUFSIZ], *s;
-	char *res;
 
 	for (s = cmd->argv[1]; *s; s++) {
 		if (isalnum(*s))
@@ -142,8 +152,9 @@ do_man(command_t *cmd) {
 	snprintf(buf, sizeof(buf), "man %s", cmd->argv[1]);
 #endif
 	warn("executing man '%s'\n", buf);
-	res = carriage_return(command(buf));
-	notify(&cmd->player->sp.entity, res);
+	command(&cmd->player->sp.entity, buf);
+	/* res = carriage_return(command(buf)); */
+	/* notify(&cmd->player->sp.entity, res); */
 }
 
 void
@@ -156,7 +167,7 @@ do_diff(command_t *cmd) {
 	// the status or the commit. It adds a lot of overhead to
 	// fetch on every diff. Perhaps later, when the repo is
 	// local, fetch will make no sense at all
-	descr_inband(cmd->fd, command("git diff origin/master"));
+	command(&cmd->player->sp.entity, "git diff origin/master");
 }
 
 
@@ -595,12 +606,19 @@ pprintf(OBJ *player, char *format, ...)
 int
 writel(int fd, const char *line, size_t len)
 {
-	static char buf[SUPERBIGSIZ];
+	const char *p = line;
+	size_t max_len = BIGBUFSIZ / 8;
 	if (!len)
 		len = strlen(line);
-	memcpy(buf, line, len);
-	memcpy(buf + len, "\r\n", 3);
-	return WRITE(fd, buf, len + 2);
+	while (len >= max_len) {
+		WRITE(fd, p, max_len);
+		len -= max_len;
+		p += max_len;
+	}
+	if (len)
+		WRITE(fd, p, len);
+	WRITE(fd, "\r\n", 2);
+	return 0;
 }
 
 int

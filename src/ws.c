@@ -105,7 +105,7 @@ ws_handshake(int cfd, char *buf) {
 }
 
 int
-ws_write(int cfd, const void *data, size_t n)
+_ws_write(int cfd, const void *data, size_t n)
 {
 	unsigned char head[2] = { 0x81, 0x00 };
 
@@ -192,6 +192,22 @@ error:	ws_close_policy(cfd);
 }
 
 int
+ws_write(int cfd, const void *data, size_t n)
+{
+	const char *p = data;
+	size_t max_len = BIGBUFSIZ / 2;
+	while (n >= max_len) {
+		_ws_write(cfd, p, max_len);
+		n -= max_len;
+		p += max_len;
+	}
+	if (n)
+		_ws_write(cfd, p, n);
+	return 0;
+
+}
+
+int
 wsdprintf(int fd, const char *format, va_list ap)
 {
 #if 0
@@ -202,14 +218,14 @@ wsdprintf(int fd, const char *format, va_list ap)
 	llen = len = vsnprintf(buf, sizeof(buf), format, ap);
 #if 0
 	while (llen >= max_len) {
-		ws_write(fd, p, max_len);
+		_ws_write(fd, p, max_len);
 		llen -= max_len;
 		p += max_len;
 	}
 	if (llen)
-		ws_write(fd, p, llen);
+		_ws_write(fd, p, llen);
 #else
-	ws_write(fd, p, llen);
+	_ws_write(fd, p, llen);
 #endif
 	return len;
 }

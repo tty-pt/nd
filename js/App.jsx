@@ -118,7 +118,10 @@ const termEmit = termSub.easyEmit((parent) => {
       sendMessage("h");
     else if (event.key === "\u001b[C")
       sendMessage("l");
-    else if (event.key === "\r") {
+    else if (event.key === "\u007f") {
+      term.write("\b \b");
+      term.inputBuf = term.inputBuf.slice(0, term.inputBuf.length - 1);
+    } else if (event.key === "\r") {
       if (term.lastInput)
         term.write(term.inputBuf + "\r\n");
       else
@@ -127,7 +130,8 @@ const termEmit = termSub.easyEmit((parent) => {
       console.log("sending", term.inputBuf);
       term.inputBuf = "";
     } else {
-      term.write(event.key);
+      if (!term.lastInput)
+        term.write(event.key);
       term.inputBuf += event.key;
     }
     term.lastInput = false;
