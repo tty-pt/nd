@@ -88,6 +88,7 @@ const termEmit = termSub.easyEmit((parent) => {
   term.loadAddon(new WebLinksAddon());
   term.open(parent);
   term.inputBuf = "";
+  term.perm = "";
 
   term.element.addEventListener("focusin", () => {
     term.focused = true;
@@ -97,8 +98,19 @@ const termEmit = termSub.easyEmit((parent) => {
   });
   if (isMobile) {
     term.element.addEventListener("input", function (event) {
-      term.inputBuf = event.data;
-      console.log("input", term.inputBuf);
+      switch (event.inputType) {
+        case "deleteContentBackward":
+          term.inputBuf = term.inputBuf.slice(0, term.inputBuf.length - 2);
+          return true;
+        case "deleteContentForward":
+        case "deleteByCut":
+          return true;
+      }
+      if (event.data !== " ")
+        term.inputBuf = event.data;
+      else
+        term.perm = term.inputBuf;
+      // console.log("input", term.inputBuf);
       term.lastInput = true;
       return true;
     });
@@ -123,12 +135,16 @@ const termEmit = termSub.easyEmit((parent) => {
       term.write("\b \b");
       term.inputBuf = term.inputBuf.slice(0, term.inputBuf.length - 1);
     } else if (event.key === "\r") {
-      if (isMobile)
-        term.write(term.inputBuf + "\r\n");
-      else
+      if (isMobile) {
+        const msg = (term.perm ? term.perm + " " : "") + term.inputBuf;
+        term.write(msg + "\r\n");
+        sendMessage(msg);
+        term.perm = "";
+        term.inputBuf = "";
+      } else {
         term.write("\r\n");
-      sendMessage(term.inputBuf);
-      console.log("sending", term.inputBuf);
+        sendMessage(term.inputBuf);
+      }
       term.inputBuf = "";
     } else {
       if (!isMobile)
@@ -291,7 +307,6 @@ function onOpen() {
 }
 
 function onMessage(ev) {
-  console.log("onMessage", ev.data);
   const mcp_arr = mcp.proc(ev.data);
   for (let i = 0; i < mcp_arr.length; i++) {
     const item = mcp_arr[i];
@@ -389,7 +404,7 @@ const barsEmit = barsSub.easyEmit();
 const mcp_map = {
   'inband': action => {
     if (action.data != "\n\r") {
-      console.log("output", action.data.substring(1), action.data.charAt(0));
+      // console.log("output", action.data.substring(1), action.data.charAt(0));
       termSub.data.value.write(action.data.substring(1) + "\r\n");
     }
   },
@@ -444,7 +459,6 @@ function GameContextProvider(props) {
 
 function Terminal() {
 	const ref = useRef(null);
-  console.log("Terminal");
 
 	useEffect(() => {
     if (ref.current) {
