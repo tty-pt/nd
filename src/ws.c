@@ -194,10 +194,13 @@ error:	ws_close_policy(cfd);
 int
 wsdprintf(int fd, const char *format, va_list ap)
 {
+#if 0
 	size_t max_len = BUFFER_LEN * 10000;
-	static char buf[BUFFER_LEN * 30000], *p = buf;
+#endif
+	static char buf[BUFSIZ], *p = buf;
 	ssize_t len, llen;
 	llen = len = vsnprintf(buf, sizeof(buf), format, ap);
+#if 0
 	while (llen >= max_len) {
 		ws_write(fd, p, max_len);
 		llen -= max_len;
@@ -205,6 +208,9 @@ wsdprintf(int fd, const char *format, va_list ap)
 	}
 	if (llen)
 		ws_write(fd, p, llen);
+#else
+	ws_write(fd, p, llen);
+#endif
 	return len;
 }
 

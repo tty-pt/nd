@@ -13,5 +13,6 @@
 #define HUMAN_BEING 1
 #define BUFFER_LEN 8192
 #define BIGBUFSIZ 32768
+#define SUPERBIGSIZ 70000 * 8192
 
 #endif

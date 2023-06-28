@@ -90,24 +90,8 @@ extern void do_httpget(command_t *cmd);
 /* extern void do_gpt(command_t *cmd); */
 
 char *
-commandvp(char * const args[]) {
-	static char buf[BUFFER_LEN * 10];
-	struct popen2 child;
-	ssize_t len;
-	CBUG(popen2vp(&child, args));
-	close(child.in);
-	len = read(child.out, buf, sizeof(buf));
-	if (len >= 2) {
-		buf[len - 2] = '\0';
-	}
-	close(child.out);
-	kill(child.pid, 0);
-	return buf;
-}
-
-char *
 command(char *prompt) {
-	static char buf[BUFFER_LEN * 30000];
+	static char buf[SUPERBIGSIZ];
 	struct popen2 child;
 	ssize_t len = 0, res;
 	CBUG(popen2(&child, prompt));
@@ -118,6 +102,24 @@ command(char *prompt) {
 		buf[len - 2] = '\0';
 	close(child.out);
 	kill(child.pid, 0);
+	return buf;
+}
+
+char *
+carriage_return(char *input) {
+	static char buf[SUPERBIGSIZ];
+	char *s = buf, *i = input;
+
+	while (*i) {
+		if (*i == '\n')
+			*s++ = '\r';
+		*s = *i;
+		s++;
+		i++;
+	}
+
+	*s = '\0';
+
 	return buf;
 }
 
@@ -134,12 +136,12 @@ do_man(command_t *cmd) {
 	}
 
 #ifdef __OpenBSD__
-	snprintf(buf, sizeof(buf), "man -c %s | sed 's/$/\r/'", cmd->argv[1]);
+	snprintf(buf, sizeof(buf), "man -c %s", cmd->argv[1]);
 #else
-	snprintf(buf, sizeof(buf), "man %s | sed 's/$/\r/'", cmd->argv[1]);
+	snprintf(buf, sizeof(buf), "man %s", cmd->argv[1]);
 #endif
 	warn("executing man '%s'\n", buf);
-	res = command(buf);
+	res = carriage_return(command(buf));
 	notify(&cmd->player->sp.entity, res);
 }
 
@@ -592,7 +594,7 @@ pprintf(OBJ *player, char *format, ...)
 int
 writel(int fd, const char *line, size_t len)
 {
-	static char buf[BUFFER_LEN * 30000];
+	static char buf[SUPERBIGSIZ];
 	if (!len)
 		len = strlen(line);
 	memcpy(buf, line, len);
