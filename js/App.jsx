@@ -54,6 +54,7 @@ const fitAddon = new FitAddon();
 // const overlayAddon = new OverlayAddon();
 
 const termSub = easySub(null);
+const isMobile = window.navigator.maxTouchPoints > 1;
 
 const termEmit = termSub.easyEmit((parent) => {
   const term = new XTerm({
@@ -94,7 +95,7 @@ const termEmit = termSub.easyEmit((parent) => {
   term.element.addEventListener("focusout", () => {
     term.focused = false;
   });
-  if (window.navigator.maxTouchPoints > 1) {
+  if (isMobile) {
     term.element.addEventListener("input", function (event) {
       term.inputBuf = event.data;
       console.log("input", term.inputBuf);
@@ -122,7 +123,7 @@ const termEmit = termSub.easyEmit((parent) => {
       term.write("\b \b");
       term.inputBuf = term.inputBuf.slice(0, term.inputBuf.length - 1);
     } else if (event.key === "\r") {
-      if (term.lastInput)
+      if (isMobile)
         term.write(term.inputBuf + "\r\n");
       else
         term.write("\r\n");
@@ -130,7 +131,7 @@ const termEmit = termSub.easyEmit((parent) => {
       console.log("sending", term.inputBuf);
       term.inputBuf = "";
     } else {
-      if (!term.lastInput)
+      if (!isMobile)
         term.write(event.key);
       term.inputBuf += event.key;
     }
@@ -290,6 +291,7 @@ function onOpen() {
 }
 
 function onMessage(ev) {
+  console.log("onMessage", ev.data);
   const mcp_arr = mcp.proc(ev.data);
   for (let i = 0; i < mcp_arr.length; i++) {
     const item = mcp_arr[i];
