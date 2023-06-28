@@ -31,6 +31,36 @@ string_prefix(register const char *string, register const char *prefix)
 }
 
 int
+popen2vp(struct popen2 *child, char * const args[])
+{
+	pid_t p;
+	int pipe_stdin[2], pipe_stdout[2];
+
+	if (pipe(pipe_stdin) || pipe(pipe_stdout))
+		return -1;
+
+	p = fork();
+	if (p < 0)
+		return p;
+
+	if(p == 0) { /* child */
+		close(pipe_stdin[1]);
+		dup2(pipe_stdin[0], 0);
+		close(pipe_stdout[0]);
+		dup2(pipe_stdout[1], 1);
+		execvp(args[0], args + 1);
+		perror("execvp"); exit(99);
+	}
+
+	child->pid = p;
+	child->in = pipe_stdin[1];
+	child->out = pipe_stdout[0];
+	close(pipe_stdin[0]);
+	close(pipe_stdout[1]);
+	return 0;
+}
+
+int
 popen2(struct popen2 *child, const char *cmdline)
 {
 	pid_t p;

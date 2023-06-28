@@ -90,11 +90,11 @@ extern void do_httpget(command_t *cmd);
 /* extern void do_gpt(command_t *cmd); */
 
 char *
-command(char *prompt) {
-	static char buf[BUFFER_LEN];
+commandvp(char * const args[]) {
+	static char buf[BUFFER_LEN * 10];
 	struct popen2 child;
 	ssize_t len;
-	CBUG(popen2(&child, prompt));
+	CBUG(popen2vp(&child, args));
 	close(child.in);
 	len = read(child.out, buf, sizeof(buf));
 	if (len >= 2) {
@@ -105,9 +105,42 @@ command(char *prompt) {
 	return buf;
 }
 
+char *
+command(char *prompt) {
+	static char buf[BUFFER_LEN * 30000];
+	struct popen2 child;
+	ssize_t len = 0, res;
+	CBUG(popen2(&child, prompt));
+	close(child.in);
+	while ((res = read(child.out, buf + len, sizeof(buf) - len)) > 0)
+		len += res;
+	if (len >= 1)
+		buf[len - 2] = '\0';
+	close(child.out);
+	kill(child.pid, 0);
+	return buf;
+}
+
 void
 do_man(command_t *cmd) {
-	descr_inband(cmd->fd, command("man man"));
+	char buf[BUFSIZ], *s;
+	char *res;
+
+	for (s = cmd->argv[1]; *s; s++) {
+		if (isalnum(*s))
+			continue;
+		notify(&cmd->player->sp.entity, "Hacking is invalid\n");
+		return;
+	}
+
+#ifdef __OpenBSD__
+	snprintf(buf, sizeof(buf), "man -c %s | sed 's/$/\r/'", cmd->argv[1]);
+#else
+	snprintf(buf, sizeof(buf), "man %s | sed 's/$/\r/'", cmd->argv[1]);
+#endif
+	warn("executing man '%s'\n", buf);
+	res = command(buf);
+	notify(&cmd->player->sp.entity, res);
 }
 
 void
@@ -559,7 +592,7 @@ pprintf(OBJ *player, char *format, ...)
 int
 writel(int fd, const char *line, size_t len)
 {
-	static char buf[BUFSIZ];
+	static char buf[BUFFER_LEN * 30000];
 	if (!len)
 		len = strlen(line);
 	memcpy(buf, line, len);
@@ -583,7 +616,7 @@ notify(ENT *eplayer, const char *msg)
 		return 0;
 	descr_t *d = &descr_map[eplayer->fd];
 	return (d->flags & DF_WEBSOCKET)
-		? wsprintf(eplayer->fd, msg)
+		? ws_write(eplayer->fd, msg, strlen(msg))
 		: writel(eplayer->fd, msg, 0);
 }
 
@@ -812,7 +845,7 @@ command_process(command_t *cmd)
 	OBJ *player = cmd->player;
 	ENT *eplayer = &player->sp.entity;
 
-	/* command_debug(cmd, "command_process"); */
+	command_debug(cmd, "command_process");
 
 	// set current descriptor (needed for death)
 	eplayer->fd = descr;
@@ -937,9 +970,8 @@ SendText(McpFrame * mfr, const char *text)
 void
 descr_close(descr_t *d)
 {
-	OBJ *player = d->player;
-
 	if (d->flags & DF_CONNECTED) {
+		OBJ *player = d->player;
 		ENT *eplayer = &player->sp.entity;
 		warn("%s(%d) disconnects on fd %d\n",
 		     player->name, object_ref(player), d->fd);
@@ -951,10 +983,6 @@ descr_close(descr_t *d)
 		d->flags = 0;
 		d->player = NULL;
 	} else {
-		if (player) {
-			ENT *eplayer = &player->sp.entity;
-			eplayer->fd = -1;
-		}
 		d->flags = 0;
 		d->player = NULL;
 		warn("%d never connected\n", d->fd);

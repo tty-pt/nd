@@ -94,11 +94,14 @@ const termEmit = termSub.easyEmit((parent) => {
   term.element.addEventListener("focusout", () => {
     term.focused = false;
   });
-  term.element.addEventListener("input", function (event) {
-    term.inputBuf = event.data;
-    term.lastInput = true;
-    return true;
-  });
+  if (window.navigator.maxTouchPoints > 1) {
+    term.element.addEventListener("input", function (event) {
+      term.inputBuf = event.data;
+      console.log("input", term.inputBuf);
+      term.lastInput = true;
+      return true;
+    });
+  }
   term.onKey(event => {
     console.log("term.onKey", event, event.key);
     if (event.key === "\u001b")
@@ -121,6 +124,7 @@ const termEmit = termSub.easyEmit((parent) => {
       else
         term.write("\r\n");
       sendMessage(term.inputBuf);
+      console.log("sending", term.inputBuf);
       term.inputBuf = "";
     } else {
       term.write(event.key);

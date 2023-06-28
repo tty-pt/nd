@@ -1,5 +1,6 @@
 #include "ws.h"
 #include "io.h"
+#include "debug.h"
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
@@ -108,8 +109,6 @@ ws_write(int cfd, const void *data, size_t n)
 {
 	unsigned char head[2] = { 0x81, 0x00 };
 
-        /* warn("ws_write %lu %s\n", n, data); */
-
 	if (n < 126) {
 		head[1] |= n;
 		if (WRITE(cfd, head, sizeof(head)) < sizeof(head))
@@ -195,10 +194,17 @@ error:	ws_close_policy(cfd);
 int
 wsdprintf(int fd, const char *format, va_list ap)
 {
-	static char buf[BUFSIZ];
-	ssize_t len;
-	len = vsnprintf(buf, sizeof(buf), format, ap);
-	ws_write(fd, buf, len);
+	size_t max_len = BUFFER_LEN * 10000;
+	static char buf[BUFFER_LEN * 30000], *p = buf;
+	ssize_t len, llen;
+	llen = len = vsnprintf(buf, sizeof(buf), format, ap);
+	while (llen >= max_len) {
+		ws_write(fd, p, max_len);
+		llen -= max_len;
+		p += max_len;
+	}
+	if (llen)
+		ws_write(fd, p, llen);
 	return len;
 }
 
