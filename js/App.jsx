@@ -323,15 +323,6 @@ const connect = wsSub.easyEmit(() => {
   return init();
 });
 
-function useSession() {
-  useEffect(() => connect().unsubscribe, []);
-	return useSub(wsSub).ws;
-}
-
-const terminalSub = easySub("");
-const terminalEmit = terminalSub.easyEmit((text) => {
-  return terminalSub.data.value + text;
-});
 const hereSub = easySub({ dbref: null, contents: {} });
 const hereEmit = hereSub.easyEmit();
 const targetSub = easySub(null);
@@ -394,7 +385,6 @@ const mcp_map = {
     if (action.data != "\n\r") {
       console.log("output", action.data.substring(1), action.data.charAt(0));
       termSub.data.value.write(action.data.substring(1) + "\r\n");
-      // terminalEmit(tty_proc(action.data));
     }
   },
   "web-view": action => viewEmit(action.data),
@@ -411,7 +401,6 @@ const mcp_map = {
     } else
       targetEmit(dbref);
 
-    // terminalEmit(action.description ? "\nYou see: " + action.description : "");
     termSub.data.value.write(action.description ? "You see: " + action.description + "\r\n" : "");
   },
   "web-look-content": dbSubEmit,
@@ -437,7 +426,8 @@ const mcp_map = {
 
 function GameContextProvider(props) {
 	const { children } = props;
-	const session = useSession();
+  useEffect(() => connect().unsubscribe, []);
+	const session = useSub(wsSub).ws;
 
 	return (<GameContext.Provider
 		value={{ session }}
@@ -447,23 +437,18 @@ function GameContextProvider(props) {
 }
 
 function Terminal() {
-  const terminal = useSub(terminalSub);
 	const ref = useRef(null);
+  console.log("Terminal");
 
 	useEffect(() => {
     if (ref.current) {
       ref.current.scrollTop = ref.current.scrollHeight;
       termEmit(ref.current);
     }
-	}, [terminal]);
+	}, []);
 
 	// console.log(context);
-  return (
-    
-    <pre id="term" ref={ref} className="flex-grow overflow"
-      dangerouslySetInnerHTML={{ __html: terminal }}>
-    </pre>
-  );
+  return <pre id="term" ref={ref} className="flex-grow overflow"/>;
 }
 
 function useBgImg(obj = {}) {
