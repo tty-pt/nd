@@ -763,7 +763,6 @@ object_update(OBJ *what) {
 void
 objects_update()
 {
-	
 	dbref i;
 	for (i = db_top; i-- > 0;)
 		object_update(object_get(i));

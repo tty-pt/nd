@@ -19,6 +19,7 @@
 #include <sys/file.h>
 #include <sys/ioctl.h>
 #include <sys/wait.h>
+#include <sys/time.h>
 
 #include <fcntl.h>
 #include <errno.h>
@@ -309,7 +310,7 @@ core_command_t cmds[] = {
 	},
 };
 
-time_t start, now, tick;
+long long mstart, mnow, mlast, dt, macc = 0;
 
 fd_set readfds, activefds, writefds;
 
@@ -457,7 +458,7 @@ init_game()
 }
 
 time_t get_tick() {
-	return now - start;
+	return (mnow - mstart) / 1000;
 }
 
 int
@@ -1043,6 +1044,15 @@ make_socket(int port)
 	return sockfd;
 }
 
+long long current_timestamp() {
+	struct timeval te;
+	gettimeofday(&te, NULL); // get current time
+	long long milliseconds = te.tv_sec*1000LL + te.tv_usec/1000; // calculate milliseconds
+								     // printf("milliseconds: %lld\n", milliseconds);
+	return milliseconds;
+}
+
+
 time_t get_now() {
 	time_t now;
 	time(&now);
@@ -1069,17 +1079,22 @@ shovechars()
 	if ((optflags & OPT_DETACH) && daemon(1, 1) != 0)
 		_exit(0);
 
-	start = get_now();
+	mstart = mnow = current_timestamp();
 	/* And here, we do the actual player-interaction loop */
 
 	warn("Done.\n");
 
 	while (shutdown_flag == 0) {
 		/* process_commands(); */
-		now = get_now();
-                tick = now - start;
-		objects_update();
-		st_update();
+		mlast = mnow;
+		mnow = current_timestamp();
+		dt = mnow - mlast;
+		macc += dt;
+		if (macc > 1000) {
+			objects_update();
+			st_update();
+			macc -= 1000;
+		}
 
 		if (shutdown_flag)
 			break;
