@@ -146,7 +146,7 @@ do_man(command_t *cmd) {
 	char buf[BUFSIZ], *s;
 
 	for (s = cmd->argv[1]; *s; s++) {
-		if (isalnum(*s))
+		if (isalnum(*s) || *s == '_')
 			continue;
 		notify(&cmd->player->sp.entity, "Hacking is invalid\n");
 		return;
