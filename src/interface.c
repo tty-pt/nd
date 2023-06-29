@@ -121,15 +121,19 @@ command(ENT *eplayer, char *prompt) {
 	static char carr[BUFSIZ * 2];
 	struct popen2 child;
 	ssize_t len = 0;
+	int start = 1, cont = 0;
 	CBUG(popen2(&child, prompt));
 	close(child.in);
-	if (descr_map[eplayer->fd].flags & DF_WEBSOCKET)
+	if (descr_map[eplayer->fd].flags & DF_WEBSOCKET) {
 		while ((len = read(child.out, buf, sizeof(buf) - 1)) > 0) {
 			buf[len] = '\0';
 			int cr = carriage_return(carr, buf);
-			ws_write(eplayer->fd, carr, len + cr);
+			_ws_write(eplayer->fd, carr, len + cr - 1, start, cont, 0);
+			start = 0;
+			cont = 1;
 		}
-	else
+		_ws_write(eplayer->fd, "", 0, start, cont, 1);
+	} else
 		while ((len = read(child.out, buf, sizeof(buf) - 1)) > 0) {
 			/* warn("READ %lu bytes\n", len); */
 			buf[len] = '\0';
@@ -282,9 +286,6 @@ core_command_t cmds[] = {
 	}, {
 		.name = "view",
 		.cb = &do_view,
-	}, {
-		.name = "meme",
-		.cb = &do_meme,
 	}, {
 		.name = "man",
 		.cb = &do_man,
@@ -991,13 +992,6 @@ descr_new()
 	mcp_frame_init(&d->mcpframe, d);
 	/* mcp_negotiation_start(&d->mcpframe); */
 	return d;
-}
-
-void
-SendText(McpFrame * mfr, const char *text)
-{
-	descr_t *d = mfr->descriptor;
-	descr_inband(d->fd, text);
 }
 
 void

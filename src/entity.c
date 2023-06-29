@@ -975,44 +975,9 @@ entity_damage(OBJ *player, OBJ *target, short amt)
 	return ret;
 }
 
-void
-art(int fd, OBJ *thing)
-{
-	char art[BUFSIZ];
-	warn("art-1\n");
-	fprintf(stderr, "art-1\n");
-	warn("art0 %s\n", thing->name);
-
-	switch (thing->type) {
-	case TYPE_ROOM:
-		snprintf(art, sizeof(art), "biome/%s/1.jpeg", thing->name);
-		break;
-	case TYPE_PLANT:
-		snprintf(art, sizeof(art), "plant/%s/1.jpeg", thing->name);
-		break;
-	case TYPE_ENTITY: {
-		char const *art_name = thing->name;
-		warn("art %u %u %u %s\n", thing->art_id, thing->sp.entity.flags, thing->sp.entity.flags & EF_PLAYER, art_name);
-		if (thing->art_id && (thing->sp.entity.flags & EF_PLAYER))
-			art_name = "avatar";
-		warn("art %u %u %u %s\n", thing->art_id, thing->sp.entity.flags, thing->sp.entity.flags & EF_PLAYER, art_name);
-		snprintf(art, sizeof(art), "entity/%s/1.jpeg", art_name);
-		break;
-	}
-	default:
-		snprintf(art, sizeof(art), "unknown.jpeg");
-		break;
-
-	}
-
-	mcp_art(fd, art);
-}
-
 static void
 look_simple(ENT *eplayer, OBJ *thing)
 {
-	art(eplayer->fd, thing);
-
 	if (thing->description)
 		notify(eplayer, thing->description);
 }

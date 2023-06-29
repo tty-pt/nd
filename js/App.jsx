@@ -1,7 +1,4 @@
-import React, {
-	useState, useEffect, useRef,
-	useContext,
-} from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Terminal as XTerm } from 'xterm';
 // import { WebglAddon } from 'xterm-addon-webgl';
 import { FitAddon } from 'xterm-addon-fit';
@@ -11,12 +8,16 @@ import { usePopper } from 'react-popper';
 import { useMagic, withMagic, makeMagic } from "@tty-pt/styles";
 import ReactDOM from "react-dom";
 import ACTIONS, { ACTIONS_LABEL } from "./actions";
-import mcp from "./mcp";
 import tty_proc from "./tty";
 // import canvas from "./canvas";
 import 'xterm/css/xterm.css';
 import "./vim.css";
 const baseDir = process.env.CONFIG_BASEDIR || "";
+
+function echo(...args) {
+  console.log(...args);
+  return args[args.length - 1];
+}
 
 function easySub(defaultData) {
   const subs = new Map();
@@ -61,7 +62,7 @@ const termEmit = termSub.easyEmit((parent) => {
     fontSize: 13,
     fontFamily: 'Consolas,Liberation Mono,Menlo,Courier,monospace',
     theme: {
-      foreground: '#637d75',
+      foreground: '#93ada5',
       background: 'rgba(0, 0, 0, 0.2)',
       cursor: '#73fa91',
       black: '#112616',
@@ -169,11 +170,10 @@ makeMagic({
     minHeight: "33vh",
   },
   "?#map": {
-    marginLeft: "-1rem",
-    marginBottom: "-1rem",
     maxWidth: "none",
-    width: "236px",
+    width: "200px",
     fontFamily: "monospace",
+    whiteSpace: "pre",
   },
   deepShadow: {
     textShadow: "2px 2px 3px black, -2px 2px 3px black, -2px -2px 3px black, 2px -2px 3px black",
@@ -264,8 +264,6 @@ const useModal = _useModal.bind(null, modal);
 
 // window.onorientationchange = scroll_reset;
 
-mcp.init();
-
 const atiles = [
 	"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAQklEQVQ4jWNgGL7g4OFb/9ExWZpwYZyaiXEBhiH4NBNSA+fg8wpWW5H1ETIAl98xvEHIEJyacfmdEB8vICsdjFAAAGW58imbroFwAAAAAElFTkSuQmCC",
 	"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAWElEQVQ4jWNgoAY4ePjW/4OHb/0nWw+MQ6whWNUTawhedYQMIcoSXIpI8ia6YlLDCMMQcmKJdGdTxQW4/IyNT7KziXYJMemAoBewOROfHG5BAi4lRT1OAAA/Xu7MVtQQRgAAAABJRU5ErkJggg==",
@@ -306,12 +304,154 @@ function onOpen() {
   }
 }
 
+function ab2str(arr) {
+  return String.fromCharCode.apply(null, arr);
+}
+
+function read_16(arr, start) {
+  return ((arr[start + 1] << 8) | arr[start]) << 32;
+}
+
+function read_32(arr, start) {
+  return ((arr[start + 3] << 24) | (arr[start + 2] << 16) | (arr[start + 1] << 8) | arr[start]) << 32;
+}
+
+function read_u32(arr, start) {
+  return read_32(arr, start) >>> 0;
+}
+
+// function read_64(arr, start) {
+//   return ((arr[start + 7] << 56) | (arr[start + 6] << 48) | (arr[start + 5] << 40) | (arr[start + 4] << 32) | (arr[start + 3] << 24) | (arr[start + 2] << 16) | (arr[start + 1] << 8) | arr[start]);
+// }
+
+function read_string(arr, start, ret = {}) {
+  const slice = arr.slice(start);
+  let len = 0;
+
+  for (const item of slice) {
+    if (item === 0)
+      break;
+    len ++;
+  }
+
+  const rret = String.fromCharCode.apply(null, slice.slice(0, len));
+
+  ret[start] = len;
+  return rret;
+}
+
 function onMessage(ev) {
-  const mcp_arr = mcp.proc(ev.data);
-  for (let i = 0; i < mcp_arr.length; i++) {
-    const item = mcp_arr[i];
-    if (mcp_map[item.key])
-      mcp_map[item.key](item);
+  const arr = new Uint8Array(ev.data);
+  if (String.fromCharCode(arr[0]) == "#" && String.fromCharCode(arr[1]) == "b") {
+    const iden = arr[2];
+    switch (iden) {
+      case 1: // BCP_BARS
+        barsEmit({
+          hp: read_32(arr, aux = 3),
+          hpMax: read_32(arr, aux += 4),
+          mp: read_32(arr, aux += 4),
+          mpMax: read_32(arr, aux += 4),
+        });
+        return;
+
+      case 1: // BCP_EQUIPMENT
+        barsEmit({
+          head: read_32(arr, aux = 3),
+          neck: read_32(arr, aux += 4),
+          chest: read_32(arr, aux += 4),
+          back: read_32(arr, aux += 4),
+          rhand: read_32(arr, aux += 4),
+          lfinger: read_32(arr, aux += 4),
+          rfinger: read_32(arr, aux += 4),
+        });
+        return;
+
+      case 3: {// BCP_STATS
+        let aux;
+        statsEmit({
+          str: read_32(arr, aux = 3),
+          con: read_32(arr, aux += 4),
+          dex: read_32(arr, aux += 4),
+          int: read_32(arr, aux += 4),
+          wiz: read_32(arr, aux += 4),
+          cha: read_32(arr, aux += 4),
+          hp: read_16(arr, aux += 4),
+          mov: read_16(arr, aux += 2),
+          mdmg: read_16(arr, aux += 2),
+          mdef: read_16(arr, aux += 2),
+          dodge: read_16(arr, aux += 2),
+          dmg: read_16(arr, aux += 2),
+          def: read_16(arr, aux += 2),
+        });
+        return;
+
+      } case 4: // BCP_ITEM
+        let aux, base, ret = {};
+
+        base = {
+          dbref: read_32(arr, aux = 3),
+          loc: read_32(arr, aux += 4),
+          dynflags: arr[aux += 4],
+          type: arr[aux += 1],
+          actions: read_32(arr, aux += 1),
+          name: read_string(arr, aux += 4, ret),
+          pname: read_string(arr, aux += ret[aux] + 1, ret),
+          icon: read_string(arr, aux += ret[aux] + 1, ret),
+          art: read_string(arr, aux += ret[aux] + 1, ret),
+        };
+
+        switch (base.type) {
+          case 0: // TYPE_ROOM
+            base.exits = read_32(arr, aux += ret[aux] + 1);
+            break;
+          case 3: // TYPE_ENTITY
+            base.flags = read_u32(arr, aux += ret[aux] + 1);
+            break;
+        }
+        dbSubEmit(echo("BCP_ITEM", base));
+        if (base.dynflags === 1) {
+          dbEmit(base.dbref, base);
+          if (base.type === 0) {
+            hereEmit({
+              dbref: base.dbref,
+              contents: {},
+            });
+            targetEmit(null);
+          } else
+            targetEmit(base.dbref);
+
+          termSub.data.value.write(base.description ? "You see: " + base.description + "\r\n" : "");
+        }
+
+        return;
+      case 6: // BCP_VIEW_BUFFER
+        viewEmit(String.fromCharCode.apply(null, arr.slice(3)));
+        return;
+      case 9: // BCP_AUTH_FAILURE
+        authEmit(-1, true);
+        return;
+      case 10: // BCP_AUTH_SUCCESS
+        authEmit(read_32(arr, 3));
+        return;
+      case 11: { // BCP_OUT
+        const { loc, dbref } = {
+          dbref: read_32(arr, aux = 3),
+          loc: read_32(arr, aux += 4),
+        };
+
+        if (!dbSub.data.value[loc])
+          return;
+
+        let newContents = { ...dbSub.data.value[loc].contents };
+        delete newContents[dbref];
+
+        dbEmit(loc, { ...dbSub.data.value[loc], contents: newContents });
+        return;
+    }}
+  } else {
+    const data = ab2str(arr);
+    if (data != "\n\r") 
+      termSub.data.value.write(data + "\r\n");
   }
 }
 
@@ -324,7 +464,7 @@ const connect = wsSub.easyEmit(() => {
   }
 
   function init() {
-    ws = new WebSocket(url, 'text');
+    ws = new WebSocket(url, 'binary');
 
     ws.binaryType = 'arraybuffer';
     ws.addEventListener('open', onOpen);
@@ -360,17 +500,19 @@ const dbSubEmit = dbSub.easyEmit(obj => {
   const loc = parseInt(obj.loc);
   const dbref = parseInt(obj.dbref);
 
-  if (!dbSub.data.value[loc]) {
-      console.warn("web-in: actionable of loc", loc, "is not available");
-      return dbSub.data.value;
+  if (!dbSub.data.value[loc] && loc != -1) {
+    console.warn("web-in: actionable of loc", loc, "is not available");
+    return dbSub.data.value;
   }
+
+  const current = dbSub.data.value[loc] ?? {};
 
   return {
     ...dbSub.data.value,
     [loc]: {
-      ...dbSub.data.value[loc],
+      ...current,
       contents: {
-        ...dbSub.data.value[loc].contents,
+        ...current.contents,
         [dbref]: {
           ...obj,
           icon: tty_proc(obj.icon),
@@ -400,50 +542,6 @@ const statsSub = easySub({});
 const statsEmit = statsSub.easyEmit();
 const barsSub = easySub({ hp: 1, mp: 1 });
 const barsEmit = barsSub.easyEmit();
-
-const mcp_map = {
-  'inband': action => {
-    if (action.data != "\n\r") {
-      // console.log("output", action.data.substring(1), action.data.charAt(0));
-      termSub.data.value.write(action.data.substring(1) + "\r\n");
-    }
-  },
-  "web-view": action => viewEmit(action.data),
-  "web-look": action => {
-    const dbref = parseInt(action.dbref);
-    dbEmit(dbref, action);
-
-    if (action.room) {
-      hereEmit({
-        dbref,
-        contents: {},
-      });
-      targetEmit(null);
-    } else
-      targetEmit(dbref);
-
-    termSub.data.value.write(action.description ? "You see: " + action.description + "\r\n" : "");
-  },
-  "web-look-content": dbSubEmit,
-  "web-in": dbSubEmit,
-  "web-out": action => {
-		const dbref = parseInt(action.dbref);
-		const loc = parseInt(action.loc);
-
-		if (!dbSub.data.value[loc])
-      return;
-
-		let newContents = { ...dbSub.data.value[loc].contents };
-		delete newContents[dbref];
-
-    dbEmit(loc, { ...dbSub.data.value[loc], contents: newContents });
-  },
-  "web-auth-success": action => authEmit(action.player),
-  "web-auth-fail": action => authEmit(action.player, true),
-  "web-stats": statsEmit,
-  "web-bars": barsEmit,
-  "web-equipment-item": equipmentEmit,
-};
 
 function GameContextProvider(props) {
 	const { children } = props;
@@ -544,6 +642,7 @@ const eql_label = {
 function Equipment(props) {
 	const { eql } = props;
   const equipment = useSub(equipmentSub);
+  const objects = useSub(dbSub);
 
 	if (!equipment)
 		return null;
@@ -552,14 +651,14 @@ function Equipment(props) {
 		return <div className="s32 c0"></div>;
 
 	return (<Avatar
-		item={equipment[eql]}
+		item={objects[equipment[eql]]}
     square
 		size="l"
 		onClick={() => sendMessage("unequip " + eql_label[eql])}
 	/>);
 }
 
-function MiniMap(props) {
+function MiniMap() {
   const view = useSub(viewSub);
   const target = useSub(targetSub);
 
@@ -638,7 +737,7 @@ function RB(props) {
 	return <a className="round ts26 p8 c0" onClick={onClick}>{ children }</a>;
 }
 
-function RBT(props) {
+function RBT() {
 	return <a className="round ts26 p8"></a>;
 }
 
@@ -810,7 +909,7 @@ function Bar(props) {
 }
 
 function PlayerBars() {
-	const { bars } = useContext(GameContext);
+	const bars = useSub(barsSub);
 
 	if (!bars)
 		return null;
@@ -897,7 +996,7 @@ function EquipmentButton() {
 }
 
 function Game() {
-	const { session } = useContext(GameContext);
+	const session = useSub(wsSub).ws;
   const { dbref: here } = useSub(hereSub);
   const objects = useSub(dbSub);
 	const [ modal, isOpen, setOpen ] = useModal(Help, {});

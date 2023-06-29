@@ -74,7 +74,7 @@ ws_handshake(int cfd, char *buf) {
 		= "HTTP/1.1 101 Switching Protocols\r\n"
 		"Upgrade: websocket\r\n"
 		"Connection: upgrade\r\n"
-		"Sec-Websocket-Protocol: text\r\n"
+		"Sec-Websocket-Protocol: binary\r\n"
 		"Sec-Websocket-Accept: 00000000000000000000000000000\r\n\r\n",
 		kkey[] = "Sec-WebSocket-Key";
 	unsigned char hash[SHA_DIGEST_LENGTH];
@@ -91,9 +91,9 @@ ws_handshake(int cfd, char *buf) {
                         SHA1_Update(&c, s, s2 - s);
                         SHA1_Update(&c, "258EAFA5-E914-47DA-95CA-C5AB0DC85B11", 36);
                         SHA1_Final(hash, &c);
-                        b64_ntop(hash, sizeof(hash), common_resp + 127, 29);
-			memcpy(common_resp + 127 + 28, "\r\n\r\n", 5);
-                        WRITE(cfd, common_resp, 127 + 28 + 4);
+                        b64_ntop(hash, sizeof(hash), common_resp + 129, 29);
+			memcpy(common_resp + 129 + 28, "\r\n\r\n", 5);
+                        WRITE(cfd, common_resp, 129 + 28 + 4);
                         return 0;
                 }
 
@@ -101,10 +101,12 @@ ws_handshake(int cfd, char *buf) {
 }
 
 int
-_ws_write(int cfd, const void *data, size_t n)
+_ws_write(int cfd, const void *data, size_t n, int start, int cont, int fin)
 {
-	unsigned char head[2] = { 0x81, 0x00 };
-	size_t len = 2;
+	warn("_ws_write %d %lu %d %d %d\n", cfd, n, start, cont, fin);
+	unsigned char head[2] = { (cont ? 0x00 : 0x02) | (fin ? 0x80 : 0x00), (start ? 0x2 : 0x0) };
+	/* unsigned char head[2] = { (0 ? 0x00 : 0x01) | (1 ? 0x80 : 0x00), (0 ? 0x1 : 0x0) }; */
+	size_t len = sizeof(head);
 	int smallest = n < 126;
 	char frame[2 + (smallest ? 0 : sizeof(uint64_t)) + n];
 
@@ -126,7 +128,7 @@ _ws_write(int cfd, const void *data, size_t n)
 	}
 
 	memcpy(frame + len, data, n);
-	return WRITE(cfd, frame, len + n) < n;
+	return WRITE(cfd, frame, len + n) < len + n;
 }
 
 static inline void
@@ -190,13 +192,17 @@ ws_write(int cfd, const void *data, size_t n)
 {
 	const char *p = data;
 	size_t max_len = BUFSIZ;
+	int cont = 0, start = n >= max_len;
 	while (n >= max_len) {
-		_ws_write(cfd, p, max_len);
+		if (_ws_write(cfd, p, max_len, start, cont, n - max_len == 0) < 0)
+			return -1;
 		n -= max_len;
 		p += max_len;
+		cont = 1;
+		start = 0;
 	}
-	if (n)
-		_ws_write(cfd, p, n);
+	if (n && _ws_write(cfd, p, n, start, cont, 1) < 0)
+		return -1;
 	return 0;
 
 }
@@ -204,24 +210,8 @@ ws_write(int cfd, const void *data, size_t n)
 int
 wsdprintf(int fd, const char *format, va_list ap)
 {
-#if 0
-	size_t max_len = BUFFER_LEN * 10000;
-#endif
-	static char buf[BUFSIZ], *p = buf;
-	ssize_t len, llen;
-	llen = len = vsnprintf(buf, sizeof(buf), format, ap);
-#if 0
-	while (llen >= max_len) {
-		_ws_write(fd, p, max_len);
-		llen -= max_len;
-		p += max_len;
-	}
-	if (llen)
-		_ws_write(fd, p, llen);
-#else
-	_ws_write(fd, p, llen);
-#endif
-	return len;
+	static char buf[BUFSIZ];
+	return ws_write(fd, buf, vsnprintf(buf, sizeof(buf), format, ap));
 }
 
 int

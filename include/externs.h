@@ -12,7 +12,6 @@ void do_reroll(command_t *);
 void do_pose(command_t *);
 void do_score(command_t *);
 void do_view(command_t *);
-void do_meme(command_t *);
 
 /* From create.c */
 extern void do_create(command_t *);

@@ -422,7 +422,9 @@ view(OBJ *player)
 	}
 
 	char *view_buf = view_draw(view);
-        if (mcp_view(eplayer, view_buf))
+        /* if (mcp_view(eplayer, &view)) */
+        /* if (fbcp_view(eplayer, &view)) */
+        if (fbcp_view_buf(eplayer, view_buf))
 		notify(eplayer, view_buf);
 }
 
