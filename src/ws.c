@@ -70,16 +70,14 @@ b64_ntop(u_char *src, size_t srclength, char *target, size_t target_size)
 
 int
 ws_handshake(int cfd, char *buf) {
-	static char const common_resp[]
+	static char common_resp[]
 		= "HTTP/1.1 101 Switching Protocols\r\n"
 		"Upgrade: websocket\r\n"
 		"Connection: upgrade\r\n"
 		"Sec-Websocket-Protocol: text\r\n"
-		"Sec-Websocket-Accept: ",
+		"Sec-Websocket-Accept: 00000000000000000000000000000\r\n\r\n",
 		kkey[] = "Sec-WebSocket-Key";
 	unsigned char hash[SHA_DIGEST_LENGTH];
-	char result[29];
-	/* char buf[BUFSIZ]; */
 	char *s;
 
 	// warn("ws_handshake %s", buf);
@@ -93,11 +91,9 @@ ws_handshake(int cfd, char *buf) {
                         SHA1_Update(&c, s, s2 - s);
                         SHA1_Update(&c, "258EAFA5-E914-47DA-95CA-C5AB0DC85B11", 36);
                         SHA1_Final(hash, &c);
-                        b64_ntop(hash, sizeof(hash), result, sizeof(result));
-                        WRITE(cfd, common_resp, sizeof(common_resp) - 1);
-                        WRITE(cfd, result, sizeof(result) - 1);
-                        // wss[cfd].hash = * (unsigned long *) result;
-                        WRITE(cfd, "\r\n\r\n", 4);
+                        b64_ntop(hash, sizeof(hash), common_resp + 127, 29);
+			memcpy(common_resp + 127 + 28, "\r\n\r\n", 5);
+                        WRITE(cfd, common_resp, 127 + 28 + 4);
                         return 0;
                 }
 
@@ -108,26 +104,29 @@ int
 _ws_write(int cfd, const void *data, size_t n)
 {
 	unsigned char head[2] = { 0x81, 0x00 };
+	size_t len = 2;
+	int smallest = n < 126;
+	char frame[2 + (smallest ? 0 : sizeof(uint64_t)) + n];
 
-	if (n < 126) {
+	if (smallest) {
 		head[1] |= n;
-		if (WRITE(cfd, head, sizeof(head)) < sizeof(head))
-			return -1;
+		memcpy(frame, head, sizeof(head));
 	} else if (n < (1 << 16)) {
 		uint16_t nn = htons(n);
 		head[1] |= 126;
-		if (WRITE(cfd, head, sizeof(head)) < sizeof(head)
-		    || WRITE(cfd, &nn, sizeof(nn)) < sizeof(nn))
-			return -1;
+		memcpy(frame, head, sizeof(head));
+		memcpy(frame + sizeof(head), &nn, sizeof(nn));
+		len = sizeof(head) + sizeof(nn);
 	} else {
 		uint64_t nn = htonl(n);
 		head[1] |= 127;
-		if (WRITE(cfd, head, sizeof(head)) < sizeof(head)
-		    || WRITE(cfd, &nn, sizeof(nn)) < sizeof(nn))
-			return -1;
+		memcpy(frame, head, sizeof(head));
+		memcpy(frame + sizeof(head), &nn, sizeof(nn));
+		len = sizeof(head) + sizeof(nn);
 	}
 
-	return WRITE(cfd, data, n) < n;
+	memcpy(frame + len, data, n);
+	return WRITE(cfd, frame, len + n) < n;
 }
 
 static inline void
