@@ -13,8 +13,8 @@
 
 struct ws_frame {
 	char head[2];
-	char mk[4];
 	uint64_t pl;
+	char mk[4];
 	char data[BUFSIZ];
 };
 
@@ -149,6 +149,9 @@ ws_read(int cfd, char *data, size_t len)
 	if (n != sizeof(frame.head))
 		goto error;
 
+	if (OPCODE(frame.head) == 8)
+		return 0;
+
 	pl = PAYLOAD_LEN(frame.head);
 
 	if (pl == 126) {
@@ -167,16 +170,8 @@ ws_read(int cfd, char *data, size_t len)
 
 	frame.pl = pl;
 
-	n = READ(cfd, frame.mk, sizeof(frame.mk));
-
-	if (n != sizeof(frame.mk))
-		goto error;
-
-	if (OPCODE(frame.head) == 8)
-		return 0;
-
-	n = READ(cfd, frame.data, pl);
-	if (n != pl)
+	n = READ(cfd, frame.mk, sizeof(frame.mk) + pl);
+	if (n != sizeof(frame.mk) + pl)
 		goto error;
 
 	for (i = 0; i < pl; i++)
