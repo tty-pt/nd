@@ -195,7 +195,7 @@ int
 ws_write(int cfd, const void *data, size_t n)
 {
 	const char *p = data;
-	size_t max_len = BIGBUFSIZ / 2;
+	size_t max_len = BUFSIZ;
 	while (n >= max_len) {
 		_ws_write(cfd, p, max_len);
 		n -= max_len;

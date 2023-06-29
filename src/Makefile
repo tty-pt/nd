@@ -4,13 +4,10 @@ prefix?=/usr/local
 INCLUDE= ${srcdir}/include
 INSTALL_BINDIR=${prefix}/bin
 INSTALL_HELPDIR=${prefix}/share/fbmuck
-CONFIG_SSL=y
 
-ldlibs-y := -lpcre -lm -lxxhash -ldb
-ldlibs-$(CONFIG_SSL) += -lssl -lcrypto
 cflags-y := -g -Wall -Wno-initializer-overrides
 
-exe := fbmuck prochelp
+exe := fbmuck
 src = ${real-obj-y:%.o=%.c}
 
 prochelp-obj-y := prochelp.o

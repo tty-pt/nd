@@ -96,7 +96,9 @@ carriage_return(char *output, char *input) {
 	int ret = 0;
 
 	while (*i) {
+		/* warn("i"); */
 		if (*i == '\n') {
+			/* warn("i"); */
 			*s++ = '\r';
 			ret ++;
 		}
@@ -104,32 +106,36 @@ carriage_return(char *output, char *input) {
 		s++;
 		i++;
 	}
+	/* warn("\n"); */
 
 	*s = '\0';
 
 	return ret;
 }
 
-int writel(int fd, const char *line, size_t len);
+int twrite(int fd, const char *buf, size_t len);
 
 char *
 command(ENT *eplayer, char *prompt) {
-	descr_t *d = &descr_map[eplayer->fd];
-	static char buf[BIGBUFSIZ];
-	static char carr[BIGBUFSIZ * 2];
+	static char buf[BUFSIZ];
+	static char carr[BUFSIZ * 2];
 	struct popen2 child;
 	ssize_t len = 0;
-	int ws = d->flags & DF_WEBSOCKET;
 	CBUG(popen2(&child, prompt));
 	close(child.in);
-	while ((len = read(child.out, buf, sizeof(buf))) > 0) {
-		*(buf + len + 1) = '\0';
-		int cr = carriage_return(carr, buf);
-		if (ws)
+	if (descr_map[eplayer->fd].flags & DF_WEBSOCKET)
+		while ((len = read(child.out, buf, sizeof(buf) - 1)) > 0) {
+			buf[len] = '\0';
+			int cr = carriage_return(carr, buf);
 			ws_write(eplayer->fd, carr, len + cr);
-		else
-			writel(eplayer->fd, carr, len + cr);
-	}
+		}
+	else
+		while ((len = read(child.out, buf, sizeof(buf) - 1)) > 0) {
+			/* warn("READ %lu bytes\n", len); */
+			buf[len] = '\0';
+			int cr = carriage_return(carr, buf);
+			twrite(eplayer->fd, carr, len + cr);
+		}
 	close(child.out);
 	kill(child.pid, 0);
 	return buf;
@@ -604,12 +610,11 @@ pprintf(OBJ *player, char *format, ...)
 }
 
 int
-writel(int fd, const char *line, size_t len)
+twrite(int fd, const char *buf, size_t len)
 {
-	const char *p = line;
-	size_t max_len = BIGBUFSIZ / 8;
-	if (!len)
-		len = strlen(line);
+	warn("twrite %lu bytes\n", len);
+	const char *p = buf;
+	size_t max_len = BUFSIZ;
 	while (len >= max_len) {
 		WRITE(fd, p, max_len);
 		len -= max_len;
@@ -617,6 +622,13 @@ writel(int fd, const char *line, size_t len)
 	}
 	if (len)
 		WRITE(fd, p, len);
+	return 0;
+}
+
+int
+writel(int fd, const char *line, size_t len)
+{
+	twrite(fd, line, len ? len : strlen(line));
 	WRITE(fd, "\r\n", 2);
 	return 0;
 }
@@ -624,7 +636,7 @@ writel(int fd, const char *line, size_t len)
 int
 dwritelf(int fd, const char *format, va_list args)
 {
-	static char buf[BUFSIZ];
+	static char buf[BUFSIZ * 2];
 	ssize_t len;
 	len = vsnprintf(buf, sizeof(buf), format, args);
 	return writel(fd, buf, len);

@@ -13,11 +13,13 @@ ldflags-Darwin += -L/usr/local/opt/openssl@3/lib
 
 ldlibs-Linux += -lbsd
 
+CONFIG_SSL=y
 config	!= cat ${srcdir}/.config | sed -n '/^.*=y$$/p' | sed 's/^\(.*\)=y$$/-D\1/' | tr '\n' ' '
 cflags-y	+= ${config}
 cflags-y	+= -I/usr/local/include ${cflags-${uname}} -I${srcdir}/include -D_GNU_SOURCE -std=c99 -Wall -Wno-gnu-zero-variadic-macro-arguments -Wno-gnu-designator
 ldflags-y	+= -L/usr/local/lib ${ldflags-${uname}}
-ldlibs-y	+= ${ldlibs-${uname}}
+ldlibs-y	+= -lxxhash -lpcre -lm -ldb ${ldlibs-${uname}}
+ldlibs-$(CONFIG_SSL) += -lssl -lcrypto
 
 LD := ${CC}
 CFLAGS		+= ${cflags-y}
