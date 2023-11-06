@@ -6,6 +6,7 @@ import { WebLinksAddon } from 'xterm-addon-web-links';
 // import { OverlayAddon } from './addons/overlay';
 import { usePopper } from 'react-popper';
 import { useMagic, withMagic, makeMagic } from "@tty-pt/styles";
+import { Sub, reflect } from "@tty-pt/sub";
 import ReactDOM from "react-dom";
 import ACTIONS, { ACTIONS_LABEL } from "./actions";
 import tty_proc from "./tty";
@@ -19,144 +20,119 @@ function echo(...args) {
   return args[args.length - 1];
 }
 
-function easySub(defaultData) {
-  const subs = new Map();
-  const valueMap = { value: defaultData };
-
-  function update(obj) {
-    valueMap.value = obj;
-    let allPromises = [];
-    for (const [sub] of subs)
-      allPromises.push(sub(obj));
-    return Promise.all(allPromises);
-  }
-
-  function subscribe(sub) {
-    subs.set(sub, true);
-    return () => {
-      subs.delete(sub);
-    };
-  }
-
-  function easyEmit(cb = a => a) {
-    return async (...args) => update(await cb(...args));
-  }
-
-  return { update, subscribe, data: valueMap, easyEmit };
-}
-
-function useSub(sub, defaultData = null) {
-  const [data, setData] = useState(sub.data.value ?? defaultData);
-  useEffect(() => sub.subscribe(setData), []);
-  return data;
-}
-
 const fitAddon = new FitAddon();
 // const overlayAddon = new OverlayAddon();
 
-const termSub = easySub(null);
-const isMobile = window.navigator.maxTouchPoints > 1;
-
-const termEmit = termSub.easyEmit((parent) => {
-  const term = new XTerm({
-    fontSize: 13,
-    fontFamily: 'Consolas,Liberation Mono,Menlo,Courier,monospace',
-    theme: {
-      foreground: '#93ada5',
-      background: 'rgba(0, 0, 0, 0.2)',
-      cursor: '#73fa91',
-      black: '#112616',
-      red: '#7f2b27',
-      green: '#2f7e25',
-      yellow: '#717f24',
-      blue: '#2f6a7f',
-      magenta: '#47587f',
-      cyan: '#327f77',
-      white: '#647d75',
-      brightBlack: '#3c4812',
-      brightRed: '#e08009',
-      brightGreen: '#18e000',
-      brightYellow: '#bde000',
-      brightBlue: '#00aae0',
-      brightMagenta: '#0058e0',
-      brightCyan: '#00e0c4',
-      brightWhite: '#73fa91',
-    },
-    allowProposedApi: true,
-  });
-
-  term.loadAddon(fitAddon);
-  term.loadAddon(new WebLinksAddon());
-  term.open(parent);
-  term.inputBuf = "";
-  term.perm = "";
-
-  term.element.addEventListener("focusin", () => {
-    term.focused = true;
-  });
-  term.element.addEventListener("focusout", () => {
-    term.focused = false;
-  });
-  if (isMobile) {
-    term.element.addEventListener("input", function (event) {
-      switch (event.inputType) {
-        case "deleteContentBackward":
-          term.inputBuf = term.inputBuf.slice(0, term.inputBuf.length - 2);
-          return true;
-        case "deleteContentForward":
-        case "deleteByCut":
-          return true;
-      }
-      if (event.data !== " ")
-        term.inputBuf = event.data;
-      else
-        term.perm = term.inputBuf;
-      // console.log("input", term.inputBuf);
-      term.lastInput = true;
-      return true;
-    });
+class TermSub extends Sub {
+  constructor() {
+    super(null);
   }
-  term.onKey(event => {
-    console.log("term.onKey", event, event.key);
-    if (event.key === "\u001b")
-      term.blur();
-    else if (event.key === "\u001b[A")
-      sendMessage("k");
-    else if (event.key === "\u001b[1;2A")
-      sendMessage("K");
-    else if (event.key === "\u001b[B")
-      sendMessage("j");
-    else if (event.key === "\u001b[1;2B")
-      sendMessage("J");
-    else if (event.key === "\u001b[D")
-      sendMessage("h");
-    else if (event.key === "\u001b[C")
-      sendMessage("l");
-    else if (event.key === "\u007f") {
-      term.write("\b \b");
-      term.inputBuf = term.inputBuf.slice(0, term.inputBuf.length - 1);
-    } else if (event.key === "\r") {
-      if (isMobile) {
-        const msg = (term.perm ? term.perm + " " : "") + term.inputBuf;
-        term.write(msg + "\r\n");
-        sendMessage(msg);
-        term.perm = "";
+
+  @reflect()
+  init(parent) {
+    const term = new XTerm({
+      fontSize: 13,
+      fontFamily: 'Consolas,Liberation Mono,Menlo,Courier,monospace',
+      theme: {
+        foreground: '#93ada5',
+        background: 'rgba(0, 0, 0, 0.2)',
+        cursor: '#73fa91',
+        black: '#112616',
+        red: '#7f2b27',
+        green: '#2f7e25',
+        yellow: '#717f24',
+        blue: '#2f6a7f',
+        magenta: '#47587f',
+        cyan: '#327f77',
+        white: '#647d75',
+        brightBlack: '#3c4812',
+        brightRed: '#e08009',
+        brightGreen: '#18e000',
+        brightYellow: '#bde000',
+        brightBlue: '#00aae0',
+        brightMagenta: '#0058e0',
+        brightCyan: '#00e0c4',
+        brightWhite: '#73fa91',
+      },
+      allowProposedApi: true,
+    });
+
+    term.loadAddon(fitAddon);
+    term.loadAddon(new WebLinksAddon());
+    term.open(parent);
+    term.inputBuf = "";
+    term.perm = "";
+
+    term.element.addEventListener("focusin", () => {
+      term.focused = true;
+    });
+    term.element.addEventListener("focusout", () => {
+      term.focused = false;
+    });
+    if (isMobile) {
+      term.element.addEventListener("input", function (event) {
+        switch (event.inputType) {
+          case "deleteContentBackward":
+            term.inputBuf = term.inputBuf.slice(0, term.inputBuf.length - 2);
+            return true;
+          case "deleteContentForward":
+          case "deleteByCut":
+            return true;
+        }
+        if (event.data !== " ")
+          term.inputBuf = event.data;
+        else
+          term.perm = term.inputBuf;
+        // console.log("input", term.inputBuf);
+        term.lastInput = true;
+        return true;
+      });
+    }
+    term.onKey(event => {
+      console.log("term.onKey", event, event.key);
+      if (event.key === "\u001b")
+        term.blur();
+      else if (event.key === "\u001b[A")
+        sendMessage("k");
+      else if (event.key === "\u001b[1;2A")
+        sendMessage("K");
+      else if (event.key === "\u001b[B")
+        sendMessage("j");
+      else if (event.key === "\u001b[1;2B")
+        sendMessage("J");
+      else if (event.key === "\u001b[D")
+        sendMessage("h");
+      else if (event.key === "\u001b[C")
+        sendMessage("l");
+      else if (event.key === "\u007f") {
+        term.write("\b \b");
+        term.inputBuf = term.inputBuf.slice(0, term.inputBuf.length - 1);
+      } else if (event.key === "\r") {
+        if (isMobile) {
+          const msg = (term.perm ? term.perm + " " : "") + term.inputBuf;
+          term.write(msg + "\r\n");
+          sendMessage(msg);
+          term.perm = "";
+          term.inputBuf = "";
+        } else {
+          term.write("\r\n");
+          sendMessage(term.inputBuf);
+        }
         term.inputBuf = "";
       } else {
-        term.write("\r\n");
-        sendMessage(term.inputBuf);
+        if (!isMobile)
+          term.write(event.key);
+        term.inputBuf += event.key;
       }
-      term.inputBuf = "";
-    } else {
-      if (!isMobile)
-        term.write(event.key);
-      term.inputBuf += event.key;
-    }
-    term.lastInput = false;
-  });
-  fitAddon.fit();
-  return term;
-});
+      term.lastInput = false;
+    });
+    fitAddon.fit();
+    return term;
+  }
+}
+
+const termSub = new TermSub();
+const isMobile = window.navigator.maxTouchPoints > 1;
 
 makeMagic({
   "?pre": {
@@ -287,13 +263,13 @@ const atiles = [
 
 const GameContext = React.createContext({});
 
-const wsSub = easySub({
+const wsSub = new Sub({
   ws: null,
   unsubscribe: () => {},
 });
 
 function sendMessage(text) {
-  wsSub.data.value.ws.send(text + "\n");
+  wsSub.value.ws.send(text + "\n");
 }
 
 function onOpen() {
@@ -304,8 +280,10 @@ function onOpen() {
   }
 }
 
+const decoder = new TextDecoder('utf-8');
+
 function ab2str(arr) {
-  return String.fromCharCode.apply(null, arr);
+  return decoder.decode(arr);
 }
 
 function read_16(arr, start) {
@@ -345,7 +323,8 @@ function onMessage(ev) {
   if (String.fromCharCode(arr[0]) == "#" && String.fromCharCode(arr[1]) == "b") {
     const iden = arr[2];
     switch (iden) {
-      case 1: // BCP_BARS
+      case 1: { // BCP_BARS
+        let aux;
         barsEmit({
           hp: read_32(arr, aux = 3),
           hpMax: read_32(arr, aux += 4),
@@ -354,7 +333,8 @@ function onMessage(ev) {
         });
         return;
 
-      case 1: // BCP_EQUIPMENT
+      } case 1: {// BCP_EQUIPMENT
+        let aux;
         barsEmit({
           head: read_32(arr, aux = 3),
           neck: read_32(arr, aux += 4),
@@ -366,7 +346,7 @@ function onMessage(ev) {
         });
         return;
 
-      case 3: {// BCP_STATS
+      } case 3: {// BCP_STATS
         let aux;
         statsEmit({
           str: read_32(arr, aux = 3),
@@ -420,7 +400,7 @@ function onMessage(ev) {
           } else
             targetEmit(base.dbref);
 
-          termSub.data.value.write(base.description ? "You see: " + base.description + "\r\n" : "");
+          termSub.value.write(base.description ? "You see: " + base.description + "\r\n" : "");
         }
 
         return;
@@ -434,29 +414,32 @@ function onMessage(ev) {
         authEmit(read_32(arr, 3));
         return;
       case 11: { // BCP_OUT
+        let aux;
+
         const { loc, dbref } = {
           dbref: read_32(arr, aux = 3),
           loc: read_32(arr, aux += 4),
         };
 
-        if (!dbSub.data.value[loc])
+        if (!dbSub.value[loc])
           return;
 
-        let newContents = { ...dbSub.data.value[loc].contents };
+        let newContents = { ...dbSub.value[loc].contents };
         delete newContents[dbref];
 
-        dbEmit(loc, { ...dbSub.data.value[loc], contents: newContents });
+        dbEmit(loc, { ...dbSub.value[loc], contents: newContents });
         return;
     }}
   } else {
     const data = ab2str(arr);
+    console.log("inband", data);
     if (data != "\n\r") 
-      termSub.data.value.write(data + "\r\n");
+      termSub.value.write(data + "\r\n");
   }
 }
 
 const url = process.env.CONFIG_PROTO + "://" + window.location.hostname + ':4201';
-const connect = wsSub.easyEmit(() => {
+const connect = wsSub.makeEmit(() => {
   let ws = null;
 
   function onClose() {
@@ -484,31 +467,31 @@ const connect = wsSub.easyEmit(() => {
   return init();
 });
 
-const hereSub = easySub({ dbref: null, contents: {} });
-const hereEmit = hereSub.easyEmit();
-const targetSub = easySub(null);
-const targetEmit = targetSub.easyEmit();
-const dbSub = easySub({});
-const dbEmit = dbSub.easyEmit((dbref, obj) => ({
-  ...dbSub.data.value,
+const hereSub = new Sub({ dbref: null, contents: {} });
+const hereEmit = hereSub.makeEmit();
+const targetSub = new Sub(null);
+const targetEmit = targetSub.makeEmit();
+const dbSub = new Sub({});
+const dbEmit = dbSub.makeEmit((dbref, obj) => ({
+  ...dbSub.value,
   [dbref]: {
     contents: {},
     ...obj,
   },
 }));
-const dbSubEmit = dbSub.easyEmit(obj => {
+const dbSubEmit = dbSub.makeEmit(obj => {
   const loc = parseInt(obj.loc);
   const dbref = parseInt(obj.dbref);
 
-  if (!dbSub.data.value[loc] && loc != -1) {
+  if (!dbSub.value[loc] && loc != -1) {
     console.warn("web-in: actionable of loc", loc, "is not available");
-    return dbSub.data.value;
+    return dbSub.value;
   }
 
-  const current = dbSub.data.value[loc] ?? {};
+  const current = dbSub.value[loc] ?? {};
 
   return {
-    ...dbSub.data.value,
+    ...dbSub.value,
     [loc]: {
       ...current,
       contents: {
@@ -522,31 +505,34 @@ const dbSubEmit = dbSub.easyEmit(obj => {
     },
   };
 });
-const viewSub = easySub("");
-const viewEmit = viewSub.easyEmit(data => tty_proc(data));
-const equipmentSub = easySub({});
-const equipmentEmit = equipmentSub.easyEmit(item => ({
-  ...equipmentSub.data.value,
+const viewSub = new Sub("");
+const viewEmit = viewSub.makeEmit(data => tty_proc(data));
+const equipmentSub = new Sub({});
+const equipmentEmit = equipmentSub.makeEmit(item => ({
+  ...equipmentSub.value,
   [parseInt(item.eql)]: {
     ...item,
     pname: tty_proc(item.pname),
     icon: tty_proc(item.icon),
   },
 }));
-const authSub = easySub({ me: null, authFail: true });
-const authEmit = authSub.easyEmit((player, authFail) => ({
+const authSub = new Sub({ me: null, authFail: true });
+const authEmit = authSub.makeEmit((player, authFail) => ({
   me: parseInt(player),
   authFail,
 }));
-const statsSub = easySub({});
-const statsEmit = statsSub.easyEmit();
-const barsSub = easySub({ hp: 1, mp: 1 });
-const barsEmit = barsSub.easyEmit();
+const statsSub = new Sub({});
+const statsEmit = statsSub.makeEmit();
+const barsSub = new Sub({ hp: 1, mp: 1 });
+const barsEmit = barsSub.makeEmit();
 
 function GameContextProvider(props) {
 	const { children } = props;
-  useEffect(() => connect().unsubscribe, []);
-	const session = useSub(wsSub).ws;
+	const session = wsSub.use();
+  useEffect(() => {
+    connect();
+    return session.unsubscribe();
+  }, []);
 
 	return (<GameContext.Provider
 		value={{ session }}
@@ -561,7 +547,7 @@ function Terminal() {
 	useEffect(() => {
     if (ref.current) {
       ref.current.scrollTop = ref.current.scrollHeight;
-      termEmit(ref.current);
+      termSub.init(ref.current);
     }
 	}, []);
 
@@ -641,8 +627,8 @@ const eql_label = {
 
 function Equipment(props) {
 	const { eql } = props;
-  const equipment = useSub(equipmentSub);
-  const objects = useSub(dbSub);
+  const equipment = equipmentSub.use();
+  const objects = dbSub.use();
 
 	if (!equipment)
 		return null;
@@ -659,8 +645,8 @@ function Equipment(props) {
 }
 
 function MiniMap() {
-  const view = useSub(viewSub);
-  const target = useSub(targetSub);
+  const view = viewSub.use();
+  const target = targetSub.use();
 
 	if (target || !view)
 		return null;
@@ -669,8 +655,8 @@ function MiniMap() {
 }
 
 function TargetTitleAndArt() {
-  const objects = useSub(dbSub);
-  const target = useSub(targetSub);
+  const objects = dbSub.use();
+  const target = targetSub.use();
 	const obj = objects[target];
   const bgClass = useBgImg(obj);
   if (!obj)
@@ -710,9 +696,9 @@ function ContentsItem(props) {
 
 function Contents(props) {
 	const { onItemClick, activeItem } = props;
-  const target = useSub(targetSub);
-  const { dbref: here } = useSub(hereSub);
-  const objects = useSub(dbSub);
+  const target = targetSub.use();
+  const { dbref: here } = hereSub.use();
+  const objects = dbSub.use();
 	const obj = target ? objects[target] : objects[here];
 
 	if (!here)
@@ -750,10 +736,10 @@ function RBI(props) {
 
 function ContentsAndActions() {
   const targetState = useState(null);
-  const { dbref: here } = useSub(hereSub);
-  const rtarget = useSub(targetSub);
-  const { me } = useSub(authSub);
-  const objects = useSub(dbSub);
+  const { dbref: here } = hereSub.use();
+  const rtarget = targetSub.use();
+  const { me } = authSub.use();
+  const objects = dbSub.use();
   const [referenceElement, setReferenceElement] = useState(null);
   const [popperElement, setPopperElement] = useState(null);
 	const [ actions, setActions ] = useState([]);
@@ -909,7 +895,7 @@ function Bar(props) {
 }
 
 function PlayerBars() {
-	const bars = useSub(barsSub);
+	const bars = barsSub.use();
 
 	if (!bars)
 		return null;
@@ -923,7 +909,7 @@ function PlayerBars() {
 }
 
 function StatsModal() {
-	const stats = useSub(statsSub);
+	const stats = statsSub.use();
 
   return (<div label="stats" className="p8 h8 f">
     <div className="v8 fg">
@@ -996,16 +982,16 @@ function EquipmentButton() {
 }
 
 function Game() {
-	const session = useSub(wsSub).ws;
-  const { dbref: here } = useSub(hereSub);
-  const objects = useSub(dbSub);
+	const session = wsSub.use().ws;
+  const { dbref: here } = hereSub.use();
+  const objects = dbSub.use();
 	const [ modal, isOpen, setOpen ] = useModal(Help, {});
   const [ referenceElement, setReferenceElement ] = useState(null);
   const obj = objects[here];
   const bgClass = useBgImg(obj);
 
 	function keyUpHandler(e) {
-    if (termSub.data.value.focused)
+    if (termSub.value.focused)
       return;
     switch (e.keyCode) {
     case 75: // k
@@ -1032,7 +1018,7 @@ function Game() {
       break;
     case 73: // i
       if (e.shiftKey)
-        termSub.data.value.focus();
+        termSub.value.focus();
       else
         sendMessage("inventory");
       break;

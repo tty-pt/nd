@@ -5,6 +5,9 @@
   "main": "main.js",
   "@tty-pt/scripts": {
     "entry": "./js/index.jsx",
+    "template": "./index.html",
+    "development": true,
+    "library": false,
     "parser": "babel"
   },
   "directories": {
@@ -30,13 +33,19 @@
   "devDependencies": {
     "@babel/cli": "^7.16.0",
     "@babel/core": "^7.16.0",
+    "@babel/plugin-proposal-class-properties": "^7.18.6",
+    "@babel/plugin-proposal-decorators": "^7.23.2",
+    "@babel/plugin-transform-class-properties": "^7.22.5",
+    "@babel/plugin-transform-private-methods": "^7.22.5",
+    "@babel/plugin-transform-private-property-in-object": "^7.22.11",
     "@babel/preset-react": "^7.16.0",
-    "@tty-pt/scripts": "0.1.4",
-    "@tty-pt/styles": "0.1.5-1",
+    "@tty-pt/scripts": "0.2.4",
     "webpack": "^5.75.0"
   },
   "dependencies": {
     "@popperjs/core": "^2.11.7",
+    "@tty-pt/styles": "^0.2.9",
+    "@tty-pt/sub": "^2.0.10",
     "process": "^0.11.10",
     "prop-types": "^15.8.1",
     "react": "^18.2.0",

@@ -31,8 +31,10 @@ real-obj-y	:= ${obj-y:N*/}$(filter %.o,${obj-y})
 
 all: ${exe}
 
+QCMD != pkg-config --cflags --libs qcmd
+
 $(exe): ${real-obj-y} ${exe-obj-y}
-	${LINK.c} -o $@ ${real-obj-y} ${$@-obj-y} ${ldlibs-y}
+	${LINK.c} -o $@ ${real-obj-y} ${$@-obj-y} ${ldlibs-y}  ${QCMD} -lrt
 
 reldir-OpenBSD := ${PWD:${srcdir}/%=%}
 reldir-Darwin := ${reldir-OpenBSD}

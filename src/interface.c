@@ -34,6 +34,7 @@
 #include <arpa/inet.h>
 #include <sys/select.h>
 #include <openssl/ssl.h>
+#include <qcmd.h>
 
 #include <err.h>
 
@@ -114,35 +115,42 @@ carriage_return(char *output, char *input) {
 }
 
 int twrite(int fd, const char *buf, size_t len);
+int start = 1, cont = 0;
 
-char *
-command(ENT *eplayer, char *prompt) {
-	static char buf[BUFSIZ];
+void term_cb(char *buf, ssize_t len, struct popen2 *child, char *arg) {
+	ENT *ent = (ENT *) arg;
 	static char carr[BUFSIZ * 2];
-	struct popen2 child;
-	ssize_t len = 0;
-	int start = 1, cont = 0;
-	CBUG(popen2(&child, prompt));
-	close(child.in);
-	if (descr_map[eplayer->fd].flags & DF_WEBSOCKET) {
-		while ((len = read(child.out, buf, sizeof(buf) - 1)) > 0) {
-			buf[len] = '\0';
-			int cr = carriage_return(carr, buf);
-			_ws_write(eplayer->fd, carr, len + cr - 1, start, cont, 0);
-			start = 0;
-			cont = 1;
-		}
-		_ws_write(eplayer->fd, "", 0, start, cont, 1);
-	} else
-		while ((len = read(child.out, buf, sizeof(buf) - 1)) > 0) {
-			/* warn("READ %lu bytes\n", len); */
-			buf[len] = '\0';
-			int cr = carriage_return(carr, buf);
-			twrite(eplayer->fd, carr, len + cr);
-		}
-	close(child.out);
-	kill(child.pid, 0);
-	return buf;
+	if (len <= 0)
+		return;
+
+	int cr = carriage_return(carr, buf);
+	twrite(ent->fd, carr, len + cr);
+}
+
+void ws_cb(char *buf, ssize_t len, struct popen2 *child, char *arg) {
+	ENT *ent = (ENT *) arg;
+	static char carr[BUFSIZ * 2];
+	if (len < 0)
+		return;
+	else if (len == 0) {
+		_ws_write(ent->fd, "", 0, start, cont, 1);
+		return;
+	}
+
+	int cr = carriage_return(carr, buf);
+	_ws_write(ent->fd, carr, len + cr - 1, start, cont, 0);
+	start = 0;
+	cont = 1;
+}
+
+void ocommand(ENT *ent, char *buf) {
+	if (descr_map[ent->fd].flags & DF_WEBSOCKET) {
+		start = 1;
+		cont = 0;
+		command(buf, ws_cb, (char *) ent);
+	}
+	else
+		command(buf, term_cb, (char *) ent);
 }
 
 void
@@ -157,12 +165,13 @@ do_man(command_t *cmd) {
 	}
 
 #ifdef __OpenBSD__
-	snprintf(buf, sizeof(buf), "man -c %s", cmd->argv[1]);
+	snprintf(buf, sizeof(buf), "man -c %s 2>&1", cmd->argv[1]);
 #else
-	snprintf(buf, sizeof(buf), "man %s", cmd->argv[1]);
+	snprintf(buf, sizeof(buf), "man %s 2>&1", cmd->argv[1]);
 #endif
 	warn("executing man '%s'\n", buf);
-	command(&cmd->player->sp.entity, buf);
+	ocommand(&cmd->player->sp.entity, buf);
+	/* command(&cmd->player->sp.entity, buf); */
 	/* res = carriage_return(command(buf)); */
 	/* notify(&cmd->player->sp.entity, res); */
 }
@@ -177,7 +186,7 @@ do_diff(command_t *cmd) {
 	// the status or the commit. It adds a lot of overhead to
 	// fetch on every diff. Perhaps later, when the repo is
 	// local, fetch will make no sense at all
-	command(&cmd->player->sp.entity, "git diff origin/master");
+	ocommand(&cmd->player->sp.entity, "git diff origin/master");
 }
 
 
@@ -759,6 +768,13 @@ do_httpget(command_t *cmd)
 	}
 	d->flags |= DF_WEBSOCKET;
 	d->mcpframe.enabled = 1;
+	/* d->pty = posix_openpt(O_RDWR | O_NOCTTY); */
+	/* if (d->pty == -1) */
+	/* 	perror("posix_openpt"); */
+	/* if (grantpt(d->pty) == -1) */
+	/* 	perror("grantpt"); */
+	/* if (unlockpt(d->pty) == -1) */
+	/* 	perror("unlockpt"); */
 }
 
 static inline void

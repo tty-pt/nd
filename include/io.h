@@ -24,7 +24,7 @@ typedef struct descr_st {
 #ifdef CONFIG_SECURE
 	SSL *cSSL;
 #endif
-	int fd, flags;
+	int fd, flags, pty;
 	OBJ *player;
 	McpFrame mcpframe;
 } descr_t;
