@@ -73,7 +73,7 @@ main(int argc, char *argv[], char *envp[])
 
 	servaddr.sin_family = AF_INET; 
 	servaddr.sin_addr.s_addr = inet_addr("127.0.0.1"); 
-	servaddr.sin_port = htons(4201); 
+	servaddr.sin_port = htons(4234); 
 
 	if (connect(sockfd, (struct sockaddr *) &servaddr, sizeof(servaddr)) != 0) { 
 		perror("connect");

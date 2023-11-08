@@ -246,10 +246,10 @@ mcp_frame(int descr)
 {
 	McpFrame *mfr = &DESCR(descr)->mcpframe;
 
-	if (!mfr || !mfr->enabled)
-                return NULL;
+	if (DESCR(descr)->flags & DF_WEBSOCKET)
+                return mfr;
 
-        return mfr;
+        return NULL;
 }
 
 int

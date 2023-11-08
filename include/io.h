@@ -1,6 +1,7 @@
 #ifndef IO_H
 #define IO_H
 
+#include <termios.h>
 #include "config.h"
 #include "object.h"
 #include "mcp.h"
@@ -20,11 +21,19 @@
 #define WRITE(cfd, from, len) write(cfd, from, len)
 #endif
 
+enum descr_flags {
+	DF_CONNECTED = 1,
+	DF_NAWS = 2,
+	DF_WEBSOCKET = 4,
+};
+
 typedef struct descr_st {
 #ifdef CONFIG_SECURE
 	SSL *cSSL;
 #endif
-	int fd, flags, pty;
+	int fd, flags, pty, pid;
+	unsigned short cols, rows;
+	struct termios tty;
 	OBJ *player;
 	McpFrame mcpframe;
 } descr_t;

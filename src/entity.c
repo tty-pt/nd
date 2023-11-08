@@ -680,7 +680,7 @@ look_contents(OBJ *player, OBJ *loc, const char *contents_name)
 			if (thing == player)
 				continue;
 			buf_l += snprintf(&buf[buf_l], BUFSIZ - buf_l,
-					"\n%s", unparse(player, thing));
+					"%s\r\n", unparse(player, thing));
                 }
 	}
 
@@ -697,10 +697,10 @@ look_room(OBJ *player, OBJ *loc)
 	CBUG(loc->type != TYPE_ROOM);
 
 	if (mcp_look(player, loc)) {
-		notify(eplayer, unparse(player, loc));
+		notifyf(eplayer, "%s\r\n", unparse(player, loc));
 		if (*description && description)
 			notify(eplayer, description);
-		look_contents(player, loc, "You see:");
+		look_contents(player, loc, "You see:\r\n");
 	}
 }
 

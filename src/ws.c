@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+#include <ctype.h>
 #include <sys/select.h>
 #include <openssl/sha.h>
 #include <arpa/inet.h>
@@ -78,26 +79,27 @@ ws_handshake(int cfd, char *buf) {
 		"Sec-Websocket-Accept: 00000000000000000000000000000\r\n\r\n",
 		kkey[] = "Sec-WebSocket-Key";
 	unsigned char hash[SHA_DIGEST_LENGTH];
-	char *s;
+	char *s, *bak;
 
-	// warn("ws_handshake %s", buf);
-        for (s = buf; s && *s; s = strchr(s, '\n'))
-                if (!strncasecmp(++s, kkey, sizeof(kkey) - 1)) {
-                        SHA_CTX c;
-                        char *s2;
-                        s += sizeof(kkey) + 1;
-                        SHA1_Init(&c);
-                        s2 = strchr(s, '\r');
-                        SHA1_Update(&c, s, s2 - s);
-                        SHA1_Update(&c, "258EAFA5-E914-47DA-95CA-C5AB0DC85B11", 36);
-                        SHA1_Final(hash, &c);
-                        b64_ntop(hash, sizeof(hash), common_resp + 129, 29);
-			memcpy(common_resp + 129 + 28, "\r\n\r\n", 5);
-                        WRITE(cfd, common_resp, 129 + 28 + 4);
-                        return 0;
-                }
+	bak = s = buf;
+	while (*s != '\r' || s[1] != '\n') {
+		s = strstr(s + 1, kkey);
+		if (s) break;
+		s = bak = bak + strlen(bak);
+	}
 
-        return 1;
+	SHA_CTX c;
+	char *s2;
+	s += sizeof(kkey) + 1;
+	SHA1_Init(&c);
+	s2 = strchr(s, '\r');
+	SHA1_Update(&c, s, s2 - s);
+	SHA1_Update(&c, "258EAFA5-E914-47DA-95CA-C5AB0DC85B11", 36);
+	SHA1_Final(hash, &c);
+	b64_ntop(hash, sizeof(hash), common_resp + 129, 29);
+	memcpy(common_resp + 129 + 28, "\r\n\r\n", 5);
+	WRITE(cfd, common_resp, 129 + 28 + 4);
+	return 0;
 }
 
 int

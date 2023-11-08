@@ -14,6 +14,8 @@ import tty_proc from "./tty";
 import 'xterm/css/xterm.css';
 import "./vim.css";
 const baseDir = process.env.CONFIG_BASEDIR || "";
+let do_echo = true;
+let raw = false;
 
 function echo(...args) {
   console.log(...args);
@@ -22,6 +24,29 @@ function echo(...args) {
 
 const fitAddon = new FitAddon();
 // const overlayAddon = new OverlayAddon();
+function resize(cols, rows) {
+  const IAC = 255;
+  const SB = 250;
+  const NAWS = 31;
+  const SE = 240;
+
+  // Convert the column and row numbers into high byte and low byte.
+  const colsHighByte = cols >> 8;
+  const colsLowByte = cols & 0xFF;
+  const rowsHighByte = rows >> 8;
+  const rowsLowByte = rows & 0xFF;
+
+  // Create a buffer for the command.
+  const nawsCommand = new Uint8Array([
+    IAC, SB, NAWS,
+    colsHighByte, colsLowByte,
+    rowsHighByte, rowsLowByte,
+    IAC, SE
+  ]);
+
+  // Send the command over the WebSocket.
+  wsSub.value.ws?.send(nawsCommand);
+}
 
 class TermSub extends Sub {
   constructor() {
@@ -63,6 +88,11 @@ class TermSub extends Sub {
     term.inputBuf = "";
     term.perm = "";
 
+    term.onResize(({ cols, rows }) => {
+      console.log("RESIZE", cols, rows);
+      resize(cols, rows);
+    });
+
     term.element.addEventListener("focusin", () => {
       term.focused = true;
     });
@@ -90,7 +120,26 @@ class TermSub extends Sub {
     }
     term.onKey(event => {
       console.log("term.onKey", event, event.key);
-      if (event.key === "\u001b")
+      if (event.key === "\r") {
+        if (isMobile) {
+          const msg = (term.perm ? term.perm + " " : "") + term.inputBuf;
+          term.write(msg + "\r\n");
+          sendMessage(msg);
+          term.perm = "";
+        } else {
+          if (echo) term.write("\r\n");
+          wsSub.value.ws.send(term.inputBuf);
+          // sendMessage(term.inputBuf);
+          // const initialSize = term.getSize();
+        }
+        term.inputBuf = "";
+      } else if (!do_echo) {
+        if (raw)
+          sendMessage(event.key);
+        else
+          term.inputBuf += event.key;
+        return;
+      } else if (event.key === "\u001b")
         term.blur();
       else if (event.key === "\u001b[A")
         sendMessage("k");
@@ -107,20 +156,8 @@ class TermSub extends Sub {
       else if (event.key === "\u007f") {
         term.write("\b \b");
         term.inputBuf = term.inputBuf.slice(0, term.inputBuf.length - 1);
-      } else if (event.key === "\r") {
-        if (isMobile) {
-          const msg = (term.perm ? term.perm + " " : "") + term.inputBuf;
-          term.write(msg + "\r\n");
-          sendMessage(msg);
-          term.perm = "";
-          term.inputBuf = "";
-        } else {
-          term.write("\r\n");
-          sendMessage(term.inputBuf);
-        }
-        term.inputBuf = "";
       } else {
-        if (!isMobile)
+        if (!isMobile && do_echo)
           term.write(event.key);
         term.inputBuf += event.key;
       }
@@ -261,23 +298,23 @@ const atiles = [
 	"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAEklEQVQ4jWNgGAWjYBSMAggAAAQQAAF/TXiOAAAAAElFTkSuQmCC"
 ];
 
-const GameContext = React.createContext({});
-
 const wsSub = new Sub({
   ws: null,
   unsubscribe: () => {},
 });
 
 function sendMessage(text) {
-  wsSub.value.ws.send(text + "\n");
+  wsSub.value.ws.send(text);
 }
 
 function onOpen() {
-  if (process.env.development) {
+  const term = termSub.value;
+  resize(term.cols, term.rows);
+
+  if (process.env.development)
     sendMessage("auth test");
-  } else {
+  else
     sendMessage("auth " + getCookie("QSESSION"));
-  }
 }
 
 const decoder = new TextDecoder('utf-8');
@@ -430,15 +467,17 @@ function onMessage(ev) {
         dbEmit(loc, { ...dbSub.value[loc], contents: newContents });
         return;
     }}
-  } else {
+  } else if (arr[0] != 255) {
     const data = ab2str(arr);
-    console.log("inband", data);
-    if (data != "\n\r") 
-      termSub.value.write(data + "\r\n");
+    termSub.value.write(data);
+  } else {
+    do_echo = !do_echo;
+    raw = !raw;
   }
 }
 
-const url = process.env.CONFIG_PROTO + "://" + window.location.hostname + ':4201';
+const url = process.env.CONFIG_PROTO + "://" + window.location.hostname + ':4234';
+console.log("URL", url);
 const connect = wsSub.makeEmit(() => {
   let ws = null;
 
@@ -525,21 +564,6 @@ const statsSub = new Sub({});
 const statsEmit = statsSub.makeEmit();
 const barsSub = new Sub({ hp: 1, mp: 1 });
 const barsEmit = barsSub.makeEmit();
-
-function GameContextProvider(props) {
-	const { children } = props;
-	const session = wsSub.use();
-  useEffect(() => {
-    connect();
-    return session.unsubscribe();
-  }, []);
-
-	return (<GameContext.Provider
-		value={{ session }}
-	>
-		{ children }
-	</GameContext.Provider>);
-}
 
 function Terminal() {
 	const ref = useRef(null);
@@ -991,7 +1015,7 @@ function Game() {
   const bgClass = useBgImg(obj);
 
 	function keyUpHandler(e) {
-    if (termSub.value.focused)
+    if (termSub.value.focused || raw)
       return;
     switch (e.keyCode) {
     case 75: // k
@@ -1116,7 +1140,10 @@ function getCookie(cname) {
 
 export default
 withMagic(function App() {
-	return (<GameContextProvider>
-		<Game />
-	</GameContextProvider>);
+	const session = wsSub.use();
+  useEffect(() => {
+    connect();
+    return session.unsubscribe();
+  }, []);
+	return <Game />;
 });

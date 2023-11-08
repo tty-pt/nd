@@ -184,7 +184,7 @@ dr_vs(char *b, view_tile_t *t)
 		b = dr_v(b, tp, exit, wp);
 	}
 
-        b = stpcpy(b, ANSI_RESET"\n");
+        b = stpcpy(b, ANSI_RESET"\r\n");
         return b;
 }
 
@@ -255,7 +255,7 @@ dr_hs_n(char *b, view_tile_t *t)
 			w = (char *) h_open;
 	}
 
-        b = stpcpy(b, ANSI_RESET"\n");
+        b = stpcpy(b, ANSI_RESET"\r\n");
         return b;
 }
 

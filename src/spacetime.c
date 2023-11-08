@@ -506,8 +506,8 @@ e_move(OBJ *player, enum exit e) {
 		notifyf(eplayer, "You open the %s.", dwts);
 	}
 
-	notifyf(eplayer, "You go %s%s%s.", ANSI_FG_BLUE ANSI_BOLD, e_name(e), ANSI_RESET);
-	onotifyf(player, "%s goes %s.", player->name, e_name(e));
+	notifyf(eplayer, "You go %s%s%s.\r\n", ANSI_FG_BLUE ANSI_BOLD, e_name(e), ANSI_RESET);
+	onotifyf(player, "%s goes %s.\r\n", player->name, e_name(e));
 
 	dest = st_there(loc, e);
 	if (!dest)
@@ -515,7 +515,7 @@ e_move(OBJ *player, enum exit e) {
 
 	enter(player, dest, e);
 
-	onotifyf(player, "%s comes in from the %s.", player->name, e_name(e_simm(e)));
+	onotifyf(player, "%s comes in from the %s.\r\n", player->name, e_name(e_simm(e)));
 
 	if (door)
 		notifyf(eplayer, "You close the %s.", dwts);

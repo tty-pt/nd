@@ -1,6 +1,7 @@
 /* Copyright 1992-2001 by Fuzzball Software */
 /* Consider this code protected under the GNU public license, with explicit
  * permission to distribute when linked against openSSL. */
+#define _XOPEN_SOURCE 600
 
 #include "io.h"
 
@@ -32,8 +33,10 @@
 #include <netinet/tcp.h>
 #include <netdb.h>
 #include <arpa/inet.h>
+#include <arpa/telnet.h>
 #include <sys/select.h>
 #include <openssl/ssl.h>
+#include <termios.h>
 #include <qcmd.h>
 
 #include <err.h>
@@ -69,11 +72,6 @@
 		    || !(di_d->flags & DF_CONNECTED)) \
 			continue; \
 		else
-
-enum descr_flags {
-	DF_CONNECTED = 1,
-	DF_WEBSOCKET = 4,
-};
 
 enum opts {
 	OPT_DETACH = 1,
@@ -120,6 +118,10 @@ int start = 1, cont = 0;
 void term_cb(char *buf, ssize_t len, struct popen2 *child, char *arg) {
 	ENT *ent = (ENT *) arg;
 	static char carr[BUFSIZ * 2];
+	if (len < 0) {
+		dup2(child->in, descr_map[ent->fd].pty);
+		return;
+	}
 	if (len <= 0)
 		return;
 
@@ -130,8 +132,10 @@ void term_cb(char *buf, ssize_t len, struct popen2 *child, char *arg) {
 void ws_cb(char *buf, ssize_t len, struct popen2 *child, char *arg) {
 	ENT *ent = (ENT *) arg;
 	static char carr[BUFSIZ * 2];
-	if (len < 0)
+	if (len < 0) {
+		dup2(child->in, descr_map[ent->fd].pty);
 		return;
+	}
 	else if (len == 0) {
 		_ws_write(ent->fd, "", 0, start, cont, 1);
 		return;
@@ -153,9 +157,11 @@ void ocommand(ENT *ent, char *buf) {
 		command(buf, term_cb, (char *) ent);
 }
 
+fd_set readfds, activefds, writefds;
+
 void
 do_man(command_t *cmd) {
-	char buf[BUFSIZ], *s;
+	char *s;
 
 	for (s = cmd->argv[1]; *s; s++) {
 		if (isalnum(*s) || *s == '_')
@@ -164,16 +170,30 @@ do_man(command_t *cmd) {
 		return;
 	}
 
-#ifdef __OpenBSD__
-	snprintf(buf, sizeof(buf), "man -c %s 2>&1", cmd->argv[1]);
-#else
-	snprintf(buf, sizeof(buf), "man %s 2>&1", cmd->argv[1]);
-#endif
-	warn("executing man '%s'\n", buf);
-	ocommand(&cmd->player->sp.entity, buf);
-	/* command(&cmd->player->sp.entity, buf); */
-	/* res = carriage_return(command(buf)); */
-	/* notify(&cmd->player->sp.entity, res); */
+	ENT *ent = &cmd->player->sp.entity;
+	struct popen2 child;
+	descr_t *d = &descr_map[ent->fd];
+
+	pty_open(d->pty, d->cols, d->rows, &child, (char * const []) { "man", cmd->argv[1], NULL });
+	d->pid = child.pid;
+
+	int ws = descr_map[ent->fd].flags & DF_WEBSOCKET;
+
+	unsigned char command[] = { IAC, WILL, TELOPT_ECHO, IAC, WILL, TELOPT_SGA };
+	if (ws) {
+		ws_write(ent->fd, command, sizeof(command));
+	} else
+		WRITE(ent->fd, command, sizeof(command));
+
+	int flags = fcntl(d->pty, F_GETFL, 0);
+	if (flags == -1) {
+		perror("fcntl F_GETFL");
+	}
+
+	flags |= O_NONBLOCK;
+	if (fcntl(d->pty, F_SETFL, flags) == -1) {
+		perror("fcntl F_SETFL O_NONBLOCK");
+	}
 }
 
 void
@@ -338,8 +358,6 @@ core_command_t cmds[] = {
 };
 
 long long mstart, mnow, mlast, dt, macc = 0;
-
-fd_set readfds, activefds, writefds;
 
 int shutdown_flag = 0;
 
@@ -574,6 +592,8 @@ main(int argc, char **argv)
 
 	/* errno = 0; // TODO why? sanity fails to access file */
 
+	setenv("TERM", "xterm-256color", 1);
+
 	if (shovechars())
 		return 1;
 
@@ -639,7 +659,6 @@ int
 writel(int fd, const char *line, size_t len)
 {
 	twrite(fd, line, len ? len : strlen(line));
-	WRITE(fd, "\r\n", 2);
 	return 0;
 }
 
@@ -650,6 +669,16 @@ dwritelf(int fd, const char *format, va_list args)
 	ssize_t len;
 	len = vsnprintf(buf, sizeof(buf), format, args);
 	return writel(fd, buf, len);
+}
+
+int
+writelf(int fd, const char *format, ...)
+{
+	va_list args;
+	va_start(args, format);
+	int ret = dwritelf(fd, format, args);
+	va_end(args);
+	return ret;
 }
 
 int
@@ -768,13 +797,6 @@ do_httpget(command_t *cmd)
 	}
 	d->flags |= DF_WEBSOCKET;
 	d->mcpframe.enabled = 1;
-	/* d->pty = posix_openpt(O_RDWR | O_NOCTTY); */
-	/* if (d->pty == -1) */
-	/* 	perror("posix_openpt"); */
-	/* if (grantpt(d->pty) == -1) */
-	/* 	perror("grantpt"); */
-	/* if (unlockpt(d->pty) == -1) */
-	/* 	perror("unlockpt"); */
 }
 
 static inline void
@@ -825,6 +847,12 @@ do_auth(command_t *cmd)
                 mcp_auth_fail(fd, 2);
                 return;
         }
+
+	unsigned char command[] = { IAC, DO, TELOPT_NAWS };
+	if (!(d->flags & DF_WEBSOCKET)) {
+		WRITE(d->fd, command, sizeof(command));
+		d->flags |= DF_NAWS;
+	}
 
 	d->flags |= DF_CONNECTED;
 	d->player = cmd->player = player;
@@ -918,14 +946,21 @@ command_process(command_t *cmd)
 		do_view(cmd);
 }
 
+void seq_print(unsigned char *buf, int ret) {
+	warn("SEQ");
+	for (int i = 0; i < ret; i ++)
+		warn(" %u", buf[i]);
+	warn("\n");
+}
+
 int
 descr_read(descr_t *d)
 {
-	char buf[BUFFER_LEN];
+	unsigned char buf[BUFFER_LEN];
 	int ret;
 
 	if (d->flags & DF_WEBSOCKET) {
-		ret = ws_read(d->fd, buf, sizeof(buf));
+		ret = ws_read(d->fd, (char *) buf, sizeof(buf));
 		switch (ret) {
 		case -1:
 			if (errno == EAGAIN)
@@ -934,7 +969,6 @@ descr_read(descr_t *d)
 			perror("descr_read ws ");
 		case 0: return -1;
 		}
-		ret -= 1;
 	} else {
 		ret = READ(d->fd, buf, sizeof(buf));
 		switch (ret) {
@@ -943,24 +977,98 @@ descr_read(descr_t *d)
 				return 0;
 
 			perror("descr_read");
-			/* BUG("descr_read %s", strerror(errno)); */
-		case 0:
-		case 1:
-			return -1;
+			exit(-1);
+		case 1: break;
+		case 0: return -1;
 		}
-		ret -= 2;
 	}
+
+	int i = 0;
+
+pop:
+	for (; i < ret && buf[i] != IAC; i++);
+	/* seq_print(buf + i, ret - i); */
+
+	if (buf[i + 0] == IAC) {
+		if (buf[i + 1] == SB && buf[i + 2] == TELOPT_NAWS) {
+			unsigned char colsHighByte = buf[i + 3];
+			unsigned char colsLowByte = buf[i + 4];
+			unsigned char rowsHighByte = buf[i + 5];
+			unsigned char rowsLowByte = buf[i + 6];
+
+			struct winsize ws;
+			memset(&ws, 0, sizeof(ws));
+			d->cols = ws.ws_col = (colsHighByte << 8) | colsLowByte;
+			d->rows = ws.ws_row = (rowsHighByte << 8) | rowsLowByte;
+			ioctl(d->pty, TIOCSWINSZ, &ws);
+
+			d->flags &= ~DF_NAWS;
+			/* warn("NAWS! %hu %hu %s?\n", d->cols, d->rows, buf); */
+			i += 3;
+			goto pop;
+		} else if (buf[i + 1] == DO && buf[i + 2] == TELOPT_SGA) {
+			unsigned char command[] = { IAC, WONT, TELOPT_ECHO, IAC, WILL, TELOPT_SGA };
+			if (descr_map[d->fd].flags & DF_WEBSOCKET)
+				ws_write(d->fd, command, sizeof(command));
+			else
+				WRITE(d->fd, command, sizeof(command));
+			i += 3;
+			goto pop;
+		} else if (buf[i + 1] == DO) {
+			unsigned char command[] = { IAC, WILL, buf[i + 2] };
+			if (descr_map[d->fd].flags & DF_WEBSOCKET)
+				ws_write(d->fd, command, sizeof(command));
+			else
+				WRITE(d->fd, command, sizeof(command));
+			i += 3;
+			goto pop;
+		} else if (buf[i + 1] == DONT) {
+			unsigned char command[] = { IAC, WONT, buf[i + 2] };
+			if (descr_map[d->fd].flags & DF_WEBSOCKET)
+				ws_write(d->fd, command, sizeof(command));
+			else
+				WRITE(d->fd, command, sizeof(command));
+			i += 3;
+			goto pop;
+		} else if (buf[i + 1] == DO || buf[i + 1] == DONT || buf[i + 1] == WILL) {
+			i += 3;
+			goto pop;
+		} else {
+			seq_print(buf + i, ret - i);
+			i += 1;
+			goto pop;
+		}
+		return 0;
+	}
+
+	if (buf[ret - 2] == '\r' && ret >= 3)
+		ret -= 2;
 	buf[ret] = '\0';
 
-	command_t cmd = command_new(d, buf, ret);
+	int value;
+
+	if (d->pid > 0) {
+		int wpid = waitpid(d->pid, &value, WNOHANG);
+		if (wpid)
+			d->pid = 0;
+		else {
+			write(d->pty, buf, ret);
+			return 0;
+		}
+	}
+
+	command_t cmd = command_new(d, (char *) buf, ret);
+
+	for (i = 0; i < ret && buf[i] != '\r'; i++);
+	buf[i] = '\0';
 
 	if (!cmd.argc)
 		return 0;
 
 	command_process(&cmd);
 
-	/* if (cmd.argc != 3) */
-	/* 	return 0; */
+	if (cmd.argc != 3)
+		return 0;
 
 	return ret;
 }
@@ -978,14 +1086,15 @@ descr_new()
 		return NULL;
 	}
 
-	warn("accept %d\n", fd);
-
 	FD_SET(fd, &activefds);
 
 	d = &descr_map[fd];
 	memset(d, 0, sizeof(descr_t));
 	d->fd = fd;
+
 	d->player = NULL;
+	/* d->cols = 80; */
+	/* d->rows = 24; */
 
 #ifdef CONFIG_SECURE
 	d->cSSL = SSL_new(sslctx);
@@ -1005,8 +1114,25 @@ descr_new()
 		abort();
 	}
 
+	d->pty = posix_openpt(O_RDWR | O_NOCTTY);
+	if (d->pty == -1)
+		perror("posix_openpt");
+	if (grantpt(d->pty) == -1)
+		perror("grantpt");
+	if (unlockpt(d->pty) == -1)
+		perror("unlockpt");
+
+	int flags;
+	flags = fcntl(d->pty, F_GETFL, 0);
+	fcntl(d->pty, F_SETFL, flags | O_NONBLOCK);
+	FD_SET(d->pty, &activefds);
+	/* FD_SET(d->pty, &readfds); */
+	descr_map[d->pty].fd = fd;
+	descr_map[d->pty].pty = d->pty;
+	descr_map[d->pty].pid = d->pid;
+	descr_map[d->pty].tty = d->tty;
+
 	mcp_frame_init(&d->mcpframe, d);
-	/* mcp_negotiation_start(&d->mcpframe); */
 	return d;
 }
 
@@ -1099,6 +1225,37 @@ time_t get_now() {
 	return now;
 }
 
+void pty_read(int i) {
+	descr_t *d = &descr_map[i];
+	char buf[BUFSIZ * 4];
+
+	if (!FD_ISSET(d->pty, &readfds))
+		return;
+
+	int ret = read(d->pty, buf, sizeof(buf)), value;
+	switch (ret) {
+		case -1: if (errno == EAGAIN) return;
+		case 0: 
+			 if (d->pid > 0 && waitpid(d->pid, &value, WNOHANG)) {
+				 d->pid = 0;
+				 /* FD_CLR(d->pty, &activefds); */
+				 /* FD_CLR(d->pty, &readfds); */
+
+				 unsigned char command[] = { IAC, WONT, TELOPT_ECHO, IAC, WONT, TELOPT_SGA };
+				 if (descr_map[d->fd].flags & DF_WEBSOCKET)
+					 ws_write(d->fd, command, sizeof(command));
+				 else
+					 WRITE(d->fd, command, sizeof(command));
+			 }
+		case 1: return;
+		default:
+			if (descr_map[i].flags & DF_WEBSOCKET)
+				ws_write(i, buf, ret);
+			else
+				WRITE(i, buf, ret);
+	}
+}
+
 int
 shovechars()
 {
@@ -1139,8 +1296,8 @@ shovechars()
 		if (shutdown_flag)
 			break;
 
-		timeout.tv_sec = 1;
-		timeout.tv_usec = 0;
+		timeout.tv_sec = 0;
+		timeout.tv_usec = 100;
 
 		readfds = activefds;
 		int select_n = select(FD_SETSIZE, &readfds, NULL, NULL, &timeout);
@@ -1170,8 +1327,15 @@ shovechars()
 
 			if (i == sockfd) {
 				descr_new();
-			} else if (descr_read(d) < 0)
+				continue;
+			}
+
+			if (d->fd == i && descr_read(d) < 0) {
 				descr_close(d);
+				continue;
+			}
+
+			pty_read(d->fd);
 		}
 	}
 
