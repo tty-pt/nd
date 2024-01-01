@@ -1,3 +1,4 @@
+#include <ndc.h>
 #include <stdlib.h>
 #include <ctype.h>
 #include "io.h"
@@ -5,7 +6,6 @@
 #include "debug.h"
 #include "params.h"
 #include "match.h"
-#include "command.h"
 #include "spell.h"
 
 void
@@ -33,11 +33,10 @@ notify_attack(OBJ *player, OBJ *target, struct wts wts, short val, char const *c
 
 
 void
-do_kill(command_t *cmd)
+do_kill(int fd, int argc, char *argv[])
 {
-	const char *what = cmd->argv[1];
-	OBJ *player = cmd->player;
-	ENT *eplayer = &player->sp.entity;
+	char *what = argv[1];
+	OBJ *player = FD_PLAYER(fd);
 	OBJ *here = player->location;
 	ROO *rhere = &here->sp.room;
 	OBJ *target = strcmp(what, "me")
@@ -45,7 +44,7 @@ do_kill(command_t *cmd)
 		: player;
 
 	if (object_ref(here) == 0 || (rhere->flags & RF_HAVEN)) {
-		notify(eplayer, "You may not kill here");
+		ndc_writef(fd, "You may not kill here.\n");
 		return;
 	}
 
@@ -55,25 +54,25 @@ do_kill(command_t *cmd)
 	    || player == target
 	    || target->type != TYPE_ENTITY)
 	{
-		notify(eplayer, "You can't target that.");
+		ndc_writef(fd, "You can't target that.\n");
 		return;
 	}
 
 	player->sp.entity.target = target;
-	/* notify(eplayer, "You form a combat pose."); */
+	/* ndc_writef(fd, "You form a combat pose."); */
 }
 
 void
-do_status(command_t *cmd)
+do_status(int fd, int argc, char *argv[])
 {
-	OBJ *player = cmd->player;
+	OBJ *player = FD_PLAYER(fd);
 	ENT *eplayer = &player->sp.entity;
 	// TODO optimize MOB_EV / MOB_EM
-	notifyf(eplayer, "hp %u/%u\tmp %u/%u\tstuck 0x%x\n"
+	ndc_writef(fd, "hp %u/%u\tmp %u/%u\tstuck 0x%x\n"
 		"dodge %d\tcombo 0x%x \tdebuf_mask 0x%x\n"
 		"damage %d\tmdamage %d\tmdmg_mask 0x%x\n"
 		"defense %d\tmdefense %d\tmdef_mask 0x%x\n"
-		"klock   %u\thunger %u\tthirst %u",
+		"klock   %u\thunger %u\tthirst %u\n",
 		eplayer->hp, HP_MAX(eplayer), eplayer->mp, MP_MAX(eplayer), EFFECT(eplayer, MOV).mask,
 		EFFECT(eplayer, DODGE).value, eplayer->combo, eplayer->debuf_mask,
 		EFFECT(eplayer, DMG).value, EFFECT(eplayer, MDMG).value, EFFECT(eplayer, MDMG).mask,
@@ -82,10 +81,10 @@ do_status(command_t *cmd)
 }
 
 void
-do_heal(command_t *cmd)
+do_heal(int fd, int argc, char *argv[])
 {
-	const char *name = cmd->argv[1];
-	OBJ *player = cmd->player,
+	char *name = argv[1];
+	OBJ *player = FD_PLAYER(fd),
 	    *target;
 	ENT *eplayer = &player->sp.entity,
 	    *etarget;
@@ -99,7 +98,7 @@ do_heal(command_t *cmd)
 	if (!(eplayer->flags & EF_WIZARD)
 	    || !target
 	    || target->type != TYPE_ENTITY) {
-                notify(eplayer, "You can't do that.");
+                ndc_writef(fd, "You can't do that.\n");
                 return;
         }
 
@@ -113,30 +112,30 @@ do_heal(command_t *cmd)
 }
 
 void
-do_advitam(command_t *cmd)
+do_advitam(int fd, int argc, char *argv[])
 {
-	OBJ *player = cmd->player;
+	OBJ *player = FD_PLAYER(fd);
 	ENT *eplayer = &player->sp.entity;
-	const char *name = cmd->argv[1];
+	char *name = argv[1];
 	OBJ *target = ematch_near(player, name);
 
 	if (!(eplayer->flags & EF_WIZARD)
 	    || !target
 	    || target->owner != player) {
-		notify(eplayer, "You can't do that.");
+		ndc_writef(fd, "You can't do that.\n");
 		return;
 	}
 
 	birth(target);
-	notifyf(eplayer, "You infuse %s with life.", target->name);
+	ndc_writef(fd, "You infuse %s with life.\n", target->name);
 }
 
 void
-do_train(command_t *cmd) {
-	OBJ *player = cmd->player;
+do_train(int fd, int argc, char *argv[]) {
+	OBJ *player = FD_PLAYER(fd);
 	ENT *eplayer = &player->sp.entity;
-	const char *attrib = cmd->argv[1];
-	const char *amount_s = cmd->argv[2];
+	const char *attrib = argv[1];
+	const char *amount_s = argv[2];
 	int attr;
 
 	switch (attrib[0]) {
@@ -147,7 +146,7 @@ do_train(command_t *cmd) {
 	case 'w': attr = ATTR_WIZ; break;
 	case 'h': attr = ATTR_CHA; break;
 	default:
-		  notify(eplayer, "Invalid attribute.");
+		  ndc_writef(fd, "Invalid attribute.\n");
 		  return;
 	}
 
@@ -155,7 +154,7 @@ do_train(command_t *cmd) {
 	int amount = *amount_s ? atoi(amount_s) : 1;
 
 	if (amount > avail) {
-		  notify(eplayer, "Not enough points.");
+		  ndc_writef(fd, "Not enough points.\n");
 		  return;
 	}
 
@@ -172,7 +171,7 @@ do_train(command_t *cmd) {
 	}
 
 	eplayer->spend = avail - amount;
-	notifyf(eplayer, "Your %s increases %d time(s).", attrib, amount);
+	ndc_writef(fd, "Your %s increases %d time(s).\n", attrib, amount);
         mcp_stats(player);
 }
 
@@ -180,17 +179,18 @@ int
 kill_v(OBJ *player, char const *opcs)
 {
 	ENT *eplayer = &player->sp.entity;
+	int fd = eplayer->fd;
 	char *end;
 	if (isdigit(*opcs)) {
 		unsigned combo = strtol(opcs, &end, 0);
 		eplayer->combo = combo;
-		notifyf(eplayer, "Set combo to 0x%x.", combo);
+		ndc_writef(fd, "Set combo to 0x%x.\n", combo);
 		return end - opcs;
 	} else if (*opcs == 'c' && isdigit(opcs[1])) {
 		unsigned slot = strtol(opcs + 1, &end, 0);
                 OBJ *target = eplayer->target;
 		if (player->location == 0) {
-			notify(eplayer, "You may not cast spells in room 0");
+			ndc_writef(fd, "You may not cast spells in room 0.\n");
 		} else {
 			spell_cast(player, target, slot);
 		}
@@ -200,15 +200,15 @@ kill_v(OBJ *player, char const *opcs)
 }
 
 void
-do_sit(command_t *cmd)
+do_sit(int fd, int argc, char *argv[])
 {
-	OBJ *player = cmd->player;
-	const char *name = cmd->argv[1];
+	OBJ *player = FD_PLAYER(fd);
+	char *name = argv[1];
         sit(player, name);
 }
 
 void
-do_stand(command_t *cmd)
+do_stand(int fd, int argc, char *argv[])
 {
-        stand(cmd->player);
+        stand(FD_PLAYER(fd));
 }

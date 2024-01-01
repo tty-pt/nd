@@ -1,51 +1,56 @@
-# srcdir= ..
+srcdir := ..
+reldir-OpenBSD := ${PWD:${srcdir}/%=%}
+reldir-Darwin := ${reldir-OpenBSD}
+reldir-Linux := ${reldir-OpenBSD}/src
+RELDIR=${reldir-${uname}}
 
 prefix?=/usr/local
-INCLUDE= ${srcdir}/include
 INSTALL_BINDIR=${prefix}/bin
-INSTALL_HELPDIR=${prefix}/share/fbmuck
 
-cflags-y := -g -Wall -Wno-initializer-overrides
+uname != uname
+config	!= cat ${srcdir}/.config | sed -n '/^.*=y$$/p' | sed 's/^\(.*\)=y$$/-D\1/' | tr '\n' ' '
+cflags-Darwin	+= -I/usr/local/opt/berkeley-db@4/include
+CFLAGS := -g -O0 -Wall -Wno-initializer-overrides ${cflags-${uname}} ${config} \
+	-I/usr/local/include -I${srcdir}/include -D_GNU_SOURCE -std=c99 \
+	-Wno-gnu-zero-variadic-macro-arguments -Wno-gnu-designator
+ldlibs-Linux := -lbsd
+LDLIBS := -lxxhash -lpcre -lm -ldb -lndc ${ldlibs-${uname}}
+ldflags-Darwin += -L/usr/local/opt/berkeley-db@4/lib
+LDFLAGS	:= ${ldflags-${uname}}
 
-exe := fbmuck
-src = ${real-obj-y:%.o=%.c}
-
-prochelp-obj-y := prochelp.o
-fbmuck-obj-y := object.o entity.o spacetime.o mcp.o map.o \
-	plant.o biome.o noise.o \
-	view.o item.o spell.o drink.o mob.o kill.o \
-	shop.o ws.o hashtable.o
-fbmuck-obj-y += create.o \
-	help.o \
-	look.o match.o \
-	move.o \
-	player.o \
-	utils.o \
-	rob.o set.o \
-	speech.o \
-	wiz.o \
+exe := ../nd
+obj-y := object.o entity.o spacetime.o mcp.o map.o \
+	plant.o biome.o noise.o view.o item.o spell.o drink.o \
+	mob.o kill.o shop.o create.o look.o match.o \
+	move.o player.o utils.o rob.o set.o speech.o wiz.o \
 	copyright.o interface.o
 
-exe-obj-y := ${fbmuck-obj-y} ${prochelp-obj-y}
+src = ${obj-y:%.o=%.c}
 
-HELPFILES := man.txt help.txt mpihelp.txt
+all: ${exe}
+
+$(exe): ${obj-y}
+	@echo LD $@
+	@${LINK.c} -o $@ $^ ${LDLIBS} -lrt -lutil
+
+.c.o:
+	@echo CC ${@:%=${RELDIR}/%}
+	@${COMPILE.c} -o ${@:%=${RELDIR}/%} ${<:%=${RELDIR}/%}
+
 CTAGS ?= ctags
 
 tags: ${src}
 	${CTAGS} --c-types=-m ${src} ../include/*.h
 
-# .depend: ${obj-y:%.o=%.c}
-# 	mkdep ${CFLAGS} -I../include ${obj-y:%.o=%.c}
+.c.d:
+	@echo MKDEP ${@:%=${RELDIR}/%}
+	@gcc -MM -o $@ ${CFLAGS} -I../include $<
 
-cleaner: clean
-	-rm config.status config.cache config.log ${INCLUDE}/autoconf.h ${exe} prochelp
+clean:
+	@echo rm ${RELDIR}/{ ${exe} ${obj-y} }
+	@rm ${exe} ${obj-y} >/dev/null 2>&1 || true
 
-install: all
-	${INSTALL} -d ${INSTALL_BINDIR}
-	${INSTALL} ${exe} ${INSTALL_BINDIR}
-	${INSTALL} -d ${INSTALL_HELPDIR}
-	cd ../game/data && ${INSTALL} -m 644 ${HELPFILES} ${INSTALL_HELPDIR}
+.PHONY: all clean
+.SUFFIXES: .d .o .c
 
-.PHONY: cleaner install
-
-# FIXME: Check base and minimal dbs into CVS as unpacked file trees under dbs/
+-include ${src:%.c=%.d}

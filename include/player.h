@@ -2,35 +2,36 @@
 #define PLAYER_H
 
 #include "object.h"
-#include "hashtable.h"
 
-extern DB *playerdb;
+#include <hash.h>
+
+extern int player_hd;
 
 OBJ *player_connect(const char *qsession);
-OBJ *player_create(const char *name);
+OBJ *player_create(char *name);
 
 static inline void
 players_init()
 {
-	hash_init(&playerdb);
+	player_hd = hash_init();
 }
 
 static inline OBJ *
-player_get(const char *name)
+player_get(char *name)
 {
-	return hash_get(playerdb, name);
+	return SHASH_GET(player_hd, name);
 }
 
 static inline void
 player_put(OBJ *player)
 {
-	hash_put(playerdb, player->name, player);
+	SHASH_PUT(player_hd, player->name, player);
 }
 
 static inline void
 player_delete(OBJ *player)
 {
-	hash_delete(playerdb, player->name);
+	SHASH_DEL(player_hd, player->name);
 }
 
 #endif

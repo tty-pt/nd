@@ -1,114 +1,113 @@
 #include "io.h"
+#include <ndc.h>
 
 #include "entity.h"
 
 #include "defaults.h"
 #include "match.h"
 #include "player.h"
-#include "command.h"
 
 /* prints owner of something */
 static inline void
-print_owner(ENT *eplayer, OBJ *thing)
+print_owner(int fd, OBJ *thing)
 {
 	switch (thing->type) {
 	case TYPE_ENTITY:
-		notifyf(eplayer, "%s is an entity.", thing->name);
+		ndc_writef(fd, "%s is an entity.\n", thing->name);
 		break;
 	case TYPE_ROOM:
 	case TYPE_CONSUMABLE:
 	case TYPE_EQUIPMENT:
 	case TYPE_THING:
-		notifyf(eplayer, "Owner: %s", thing->owner->name);
+		ndc_writef(fd, "Owner: %s\n", thing->owner->name);
 		break;
 	case TYPE_GARBAGE:
-		notifyf(eplayer, "%s is garbage.", thing->name);
+		ndc_writef(fd, "%s is garbage.\n", thing->name);
 		break;
 	}
 }
 
 void
-do_examine(command_t *cmd)
+do_examine(int fd, int argc, char *argv[])
 {
-	OBJ *player = cmd->player;
-	ENT *eplayer = &player->sp.entity;
-	const char *name = cmd->argv[1];
+	OBJ *player = FD_PLAYER(fd);
+	char *name = argv[1];
 	OBJ *thing, *content;
 
 	if (*name == '\0') {
 		thing = player->location;
 	} else if (!(thing = ematch_all(player, name))) {
-		notify(eplayer, NOMATCH_MESSAGE);
+		ndc_writef(fd, NOMATCH_MESSAGE);
 		return;
 	}
 
 	if (!controls(player, thing)) {
-		print_owner(eplayer, thing);
+		print_owner(fd, thing);
 		return;
 	}
 
 	if (thing->type == TYPE_GARBAGE)
-		notifyf(eplayer, "%s", unparse(player, thing));
+		ndc_writef(fd, "%s\n", unparse(player, thing));
 	else
-		notifyf(eplayer, "%s (#%d) Owner: %s  Value: %d",
+		ndc_writef(fd, "%s (#%d) Owner: %s  Value: %d\n",
 				unparse(player, thing),
 				object_ref(thing),
 				thing->owner->name, thing->value);
 
 	if (thing->description)
-		notify(eplayer, thing->description);
+		ndc_writef(fd, thing->description);
 
 	/* show him the contents */
 	if (thing->contents) {
-		notify(eplayer, "Contents:");
+		ndc_writef(fd, "Contents:\n");
 		FOR_LIST(content, thing->contents) {
-			notify(eplayer, unparse(player, content));
+			ndc_writef(fd, unparse(player, content));
 		}
 	}
 	switch (thing->type) {
 	case TYPE_ROOM:
 		{
 			ROO *rthing = &thing->sp.room;
-			notifyf(eplayer, "Exits: %hhx Doors: %hhx", rthing->exits, rthing->doors);
+			ndc_writef(fd, "Exits: %hhx Doors: %hhx\n", rthing->exits, rthing->doors);
 
 			if (rthing->dropto)
-				notifyf(eplayer, "Dropped objects go to: %s",
+				ndc_writef(fd, "Dropped objects go to: %s\n",
 						unparse(player, rthing->dropto));
 		}
 		break;
 	case TYPE_EQUIPMENT:
 		{
 			EQU *ething = &thing->sp.equipment;
-			notifyf(eplayer, "equipment eqw %u msv %u.", ething->eqw, ething->msv);
+			ndc_writef(fd, "equipment eqw %u msv %u.\n", ething->eqw, ething->msv);
 		}
 		break;
 	case TYPE_PLANT:
 		{
 			PLA *pthing = &thing->sp.plant;
-			notifyf(eplayer, "plant plid %u size %u.", pthing->plid, pthing->size);
+			ndc_writef(fd, "plant plid %u size %u.\n", pthing->plid, pthing->size);
 		}
 		break;
 	case TYPE_SEAT:
 		{
 			SEA *sthing = &thing->sp.seat;
-			notifyf(eplayer, "seat quantity %u capacity %u.", sthing->quantity, sthing->capacity);
+			ndc_writef(fd, "seat quantity %u capacity %u.\n", sthing->quantity, sthing->capacity);
 		}
 		break;
 	case TYPE_THING:
 		/* print location if player can link to it */
 		if (thing->location && controls(player, thing->location))
-			notifyf(eplayer, "Location: %s", unparse(player, thing->location));
+			ndc_writef(fd, "Location: %s\n", unparse(player, thing->location));
 		break;
 	case TYPE_ENTITY:
 		{
 			ENT *ething = &thing->sp.entity;
 
-			notifyf(eplayer, "Home: %s", unparse(player, ething->home));
-			notifyf(eplayer, "hp: %d/%d entity flags: %d", ething->hp, HP_MAX(ething), ething->flags);
+			ndc_writef(fd, "Home: %s", unparse(player, ething->home));
+			ndc_writef(fd, "hp: %d/%d entity flags: %d", ething->hp, HP_MAX(ething), ething->flags);
 
 			/* print location if player can link to it */
 			if (thing->location && controls(player, thing->location))
-				notifyf(eplayer, "Location: %s", unparse(player, thing->location));
+				ndc_writef(fd, "Location: %s", unparse(player, thing->location));
 		}
 		break;
 	default:
@@ -119,61 +118,59 @@ do_examine(command_t *cmd)
 
 
 void
-do_score(command_t *cmd)
+do_score(int fd, int argc, char *argv[])
 {
-	OBJ *player = cmd->player;
-	ENT *eplayer = &player->sp.entity;
+	OBJ *player = FD_PLAYER(fd);
 
-	notifyf(eplayer, "You have %d %s.", player->value,
+	ndc_writef(fd, "You have %d %s.\n", player->value,
 			player->value == 1 ? PENNY : PENNIES);
 }
 
 void
-do_inventory(command_t *cmd)
+do_inventory(int fd, int argc, char *argv[])
 {
-	OBJ *player = cmd->player,
+	OBJ *player = FD_PLAYER(fd),
 	    *thing;
-	ENT *eplayer = &player->sp.entity;
 
         if (mcp_look(player, player)) {
 		thing = player->contents;
                 if (!thing) {
-                        notify(eplayer, "You aren't carrying anything.");
+                        ndc_writef(fd, "You aren't carrying anything.\n");
                 } else {
-                        notify(eplayer, "You are carrying:");
+                        ndc_writef(fd, "You are carrying:\n");
                         FOR_LIST(thing, thing) {
-                                notify(eplayer, unparse(player, thing));
+                                ndc_writef(fd, unparse(player, thing));
                         }
                 }
         }
 
-	do_score(cmd);
+	do_score(fd, argc, argv);
 }
 
 static void
 display_objinfo(OBJ *player, OBJ *obj)
 {
 	ENT *eplayer = &player->sp.entity;
-	notifyf(eplayer, "%s", unparse(player, obj));
+	ndc_writef(eplayer->fd, "%s\n", unparse(player, obj));
 }
 
 void
-do_owned(command_t *cmd)
+do_owned(int fd, int argc, char *argv[])
 {
-	OBJ *player = cmd->player;
+	OBJ *player = FD_PLAYER(fd);
 	ENT *eplayer = &player->sp.entity;
-	const char *name = cmd->argv[1];
+	char *name = argv[1];
 	OBJ *victim, *oi;
 	int total = 0;
 
 	if (!payfor(player, LOOKUP_COST)) {
-		notifyf(eplayer, "You don't have enough %s.", PENNIES);
+		ndc_writef(fd, "You don't have enough %s.\n", PENNIES);
 		return;
 	}
 	if ((eplayer->flags & EF_WIZARD) && *name) {
 		victim = player_get(name);
 		if (!victim) {
-			notify(eplayer, "I couldn't find that player.");
+			ndc_writef(fd, "I couldn't find that player.\n");
 			return;
 		}
 	} else
@@ -185,34 +182,33 @@ do_owned(command_t *cmd)
 			total++;
 		}
 	}
-	notify(eplayer, "***End of List***");
-	notifyf(eplayer, "%d objects found.", total);
+	ndc_writef(fd, "***End of List***\n");
+	ndc_writef(fd, "%d objects found.\n", total);
 }
 
 void
-do_contents(command_t *cmd)
+do_contents(int fd, int argc, char *argv[])
 {
-	OBJ *player = cmd->player;
-	ENT *eplayer = &player->sp.entity;
-	const char *name = cmd->argv[1];
+	OBJ *player = FD_PLAYER(fd);
+	char *name = argv[1];
 	OBJ *oi, *thing;
 	int total = 0;
 
 	if (*name == '\0') {
 		thing = player->location;
 	} else if (!(thing = ematch_all(player, name))) {
-		notify(eplayer, NOMATCH_MESSAGE);
+		ndc_writef(fd, NOMATCH_MESSAGE);
 		return;
 	}
 
 	if (!controls(player, thing)) {
-		notify(eplayer, "Permission denied. (You can't get the contents of something you don't control)");
+		ndc_writef(fd, "Permission denied. (You can't get the contents of something you don't control)\n");
 		return;
 	}
 	FOR_LIST(oi, thing->contents) {
 		display_objinfo(player, oi);
 		total++;
 	}
-	notify(eplayer, "***End of List***");
-	notifyf(eplayer, "%d objects found.", total);
+	ndc_writef(fd, "***End of List***");
+	ndc_writef(fd, "%d objects found.\n", total);
 }

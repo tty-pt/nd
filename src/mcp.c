@@ -1,7 +1,6 @@
-/* mcp.c: MUD Client Protocol.
-   Part of the FuzzBall distribution. */
-
 #include "mcp.h"
+#include "io.h"
+#include <ndc.h>
 #include "entity.h"
 #include "config.h"
 #include <stdlib.h>
@@ -9,8 +8,6 @@
 #include <string.h>
 #include "debug.h"
 #include "io.h"
-#include "ws.h"
-#include "command.h"
 
 #ifndef __OpenBSD__
 #include <bsd/string.h>
@@ -66,40 +63,6 @@ msgarg_escape(char* buf, int bufsize, const char* in)
 	return len;
 }
 
-/*****************************************************************/
-/***                       ***************************************/
-/*** MCP CONNECTION FRAMES ***************************************/
-/***                       ***************************************/
-/*****************************************************************/
-
-struct McpFrameList_t {
-	McpFrame* mfr;
-	struct McpFrameList_t* next;
-};
-typedef struct McpFrameList_t McpFrameList;
-McpFrameList* mcp_frame_list;
-
-void
-mcp_frame_init(McpFrame * mfr, connection_t con)
-{
-	McpFrameList* mfrl;
-
-	mfr->descriptor = con;
-	mfr->version.verminor = 0;
-	mfr->version.vermajor = 0;
-	mfr->authkey = NULL;
-	mfr->packages = NULL;
-	mfr->messages = NULL;
-	mfr->enabled = 0;
-
-	mfrl = (McpFrameList*)malloc(sizeof(McpFrameList));
-	mfrl->mfr = mfr;
-	mfrl->next = mcp_frame_list;
-	mcp_frame_list = mfrl;
-}
-
-#define MFR_FD(a) (((descr_t *) mfr->descriptor)->fd)
-
 static int
 fbcp(int fd, size_t len, unsigned char iden, void *data)
 {
@@ -107,7 +70,7 @@ fbcp(int fd, size_t len, unsigned char iden, void *data)
 	memcpy(bcp_buf, "#b", 2);
 	memcpy(bcp_buf + 2, &iden, sizeof(iden));
 	memcpy(bcp_buf + 2 + sizeof(iden), data, len);
-	return ws_write(fd, bcp_buf, 1 + sizeof(iden) + len);
+	return ndc_write(fd, bcp_buf, 1 + sizeof(iden) + len);
 }
 
 static int
@@ -157,7 +120,7 @@ static int
 fbcp_item(int fd, OBJ *obj, unsigned char dynflags)
 {
 	static char bcp_buf[SUPERBIGSIZ];
-	return ws_write(fd, bcp_buf, _fbcp_item(bcp_buf, obj, dynflags));
+	return ndc_write(fd, bcp_buf, _fbcp_item(bcp_buf, obj, dynflags));
 }
 
 static int // 2 + sizeof(iden) + sizeof(int) * 2
@@ -186,7 +149,7 @@ fbcp_auth_success(int fd, dbref who)
 	memcpy(p += 2, &iden, sizeof(iden));
 	memcpy(p += sizeof(iden), &who, sizeof(who));
 	p += sizeof(who);
-	return ws_write(fd, bcp_buf, p - bcp_buf);
+	return ndc_write(fd, bcp_buf, p - bcp_buf);
 }
 
 static int
@@ -199,7 +162,7 @@ fbcp_auth_failure(int fd, int reason)
 	memcpy(p += 2, &iden, sizeof(iden));
 	memcpy(p += sizeof(iden), &reason, sizeof(reason));
 	p += sizeof(reason);
-	return ws_write(fd, bcp_buf, p - bcp_buf);
+	return ndc_write(fd, bcp_buf, p - bcp_buf);
 }
 
 static int
@@ -219,7 +182,7 @@ fbcp_stats(ENT *eplayer)
 	memcpy(p += sizeof(short), &eplayer->e[AF_DMG].value, sizeof(short));
 	memcpy(p += sizeof(short), &eplayer->e[AF_DEF].value, sizeof(short));
 	p += sizeof(short);
-	return ws_write(eplayer->fd, bcp_buf, p - bcp_buf);
+	return ndc_write(eplayer->fd, bcp_buf, p - bcp_buf);
 }
 
 static int
@@ -238,37 +201,24 @@ fbcp_bars(ENT *eplayer)
 	aux = HP_MAX(eplayer);
 	memcpy(p += sizeof(eplayer->mp), &aux, sizeof(aux));
 	p += sizeof(aux);
-	return ws_write(eplayer->fd, bcp_buf, p - bcp_buf);
-}
-
-static inline McpFrame *
-mcp_frame(int descr)
-{
-	McpFrame *mfr = &DESCR(descr)->mcpframe;
-
-	if (DESCR(descr)->flags & DF_WEBSOCKET)
-                return mfr;
-
-        return NULL;
+	return ndc_write(eplayer->fd, bcp_buf, p - bcp_buf);
 }
 
 int
 fbcp_view(ENT *eplayer, view_t *view)
 {
-	McpFrame *mfr = mcp_frame(eplayer->fd);
-	if (!mfr)
+	if (!(ndc_flags(eplayer->fd) & DF_WEBSOCKET))
                 return 1;
-	fbcp(MFR_FD(mfr), sizeof(view_t), BCP_VIEW, view);
+	fbcp(eplayer->fd, sizeof(view_t), BCP_VIEW, view);
         return 0;
 }
 
 int
 fbcp_view_buf(ENT *eplayer, char *view_buf)
 {
-	McpFrame *mfr = mcp_frame(eplayer->fd);
-	if (!mfr)
+	if (!(ndc_flags(eplayer->fd) & DF_WEBSOCKET))
                 return 1;
-	fbcp(MFR_FD(mfr), strlen(view_buf), BCP_VIEW_BUFFER, view_buf);
+	fbcp(eplayer->fd, strlen(view_buf), BCP_VIEW_BUFFER, view_buf);
         return 0;
 }
 
@@ -279,8 +229,7 @@ mcp_look(OBJ *player, OBJ *loc)
 	OBJ *thing;
 
 	int fd = eplayer->fd;
-	McpFrame *mfr = mcp_frame(fd);
-	if (!mfr)
+	if (!(ndc_flags(eplayer->fd) & DF_WEBSOCKET))
                 return 1;
 	fbcp_item(fd, loc, 1);
 	switch (loc->type) {
@@ -312,10 +261,10 @@ fbcp_room(OBJ *room, char *msg, size_t len)
 
 		int fd = tmp->sp.entity.fd;
 
-		if (!mcp_frame(fd))
+		if (!(ndc_flags(fd) & DF_WEBSOCKET))
 			continue;
 
-		ws_write(fd, msg, len);
+		ndc_write(fd, msg, len);
 	}
 }
 
@@ -332,10 +281,10 @@ fbcp_observers(OBJ *thing, char *msg, size_t len)
 
 		int fd = tmp->sp.entity.fd;
 
-		if (!mcp_frame(fd))
+		if (!(ndc_flags(fd) & DF_WEBSOCKET))
 			continue;
 
-		ws_write(fd, msg, len);
+		ndc_write(fd, msg, len);
 	}
 }
 
@@ -363,9 +312,8 @@ mcp_content_in(OBJ *loc, OBJ *thing) {
 
 int
 mcp_auth_fail(int descr, int reason) {
-	if (!mcp_frame(descr))
+	if (!(ndc_flags(descr) & DF_WEBSOCKET))
                 return 1;
-
 	fbcp_auth_failure(descr, reason);
         return 0;
 }
@@ -373,10 +321,8 @@ mcp_auth_fail(int descr, int reason) {
 int
 mcp_auth_success(OBJ *player) {
 	ENT *eplayer = &player->sp.entity;
-
-	if (!mcp_frame(eplayer->fd))
+	if (!(ndc_flags(eplayer->fd) & DF_WEBSOCKET))
                 return 1;
-
 	fbcp_auth_success(eplayer->fd, object_ref(player));
         return 0;
 }
@@ -384,7 +330,7 @@ mcp_auth_success(OBJ *player) {
 int
 mcp_stats(OBJ *player) {
 	ENT *eplayer = &player->sp.entity;
-	if (!mcp_frame(eplayer->fd))
+	if (!(ndc_flags(eplayer->fd) & DF_WEBSOCKET))
                 return 1;
 	fbcp_stats(eplayer);
         return 0;
@@ -392,9 +338,8 @@ mcp_stats(OBJ *player) {
 
 int
 mcp_bars(ENT *eplayer) {
-	if (!mcp_frame(eplayer->fd))
+	if (!(ndc_flags(eplayer->fd) & DF_WEBSOCKET))
                 return 1;
-
 	fbcp_bars(eplayer);
         return 0;
 }
@@ -405,10 +350,8 @@ mcp_equipment(OBJ *player)
 	ENT *eplayer = &player->sp.entity;
 	int fd = eplayer->fd;
 	int aux;
-
-	if (!mcp_frame(fd))
+	if (!(ndc_flags(eplayer->fd) & DF_WEBSOCKET))
                 return 1;
-
 	fbcp(fd, sizeof(eplayer->equipment), BCP_EQUIPMENT, eplayer->equipment);
 	
 	aux = eplayer->equipment[ES_HEAD];

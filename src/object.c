@@ -224,16 +224,10 @@ struct core_art core_art[] = {
 	{ 14, "stick" },
 };
 
-DB *art_db = NULL;
+int art_hd = -1;
 
-#define HASH_INIT(db, arr, n) { \
-	hash_init(&db); \
-	int hash_i = 0; \
-	for (; hash_i < n; hash_i++) hash_put(db, arr[hash_i].name, &arr[hash_i]); \
-}
-
-unsigned art_max(char const *name) {
-	struct core_art *core_art_item = (struct core_art *) hash_get(art_db, name);
+unsigned art_max(char *name) {
+	struct core_art *core_art_item = (struct core_art *) SHASH_GET(art_hd, name);
 	return core_art_item->max;
 }
 
@@ -701,7 +695,12 @@ objects_read(FILE * f)
 	const char *special;
 	char c;
 
-	HASH_INIT(art_db, core_art, sizeof(core_art) / sizeof(struct core_art));
+	art_hd = hash_init();
+
+	int hash_i = 0;
+	for (; hash_i < sizeof(core_art) / sizeof(struct core_art); hash_i++)
+		SHASH_PUT(art_hd, core_art[hash_i].name, &core_art[hash_i]);
+
 	/* Parse the header */
 	grow = ref_read(f);
 	objects_grow( grow );

@@ -210,7 +210,7 @@ union specific {
 
 typedef struct object {
         struct observer_node *first_observer;
-	const char *name, *description;
+	char *name, *description;
 	struct object *location, *owner, *contents, *next;
 
 	unsigned art_id;
@@ -259,6 +259,6 @@ void object_drop(OBJ *where, struct drop **drop);
 struct icon object_icon(OBJ *thing);
 void observer_add(OBJ *observable, OBJ *observer);
 int observer_remove(OBJ *observable, OBJ *observer);
-unsigned art_max(char const *name);
+unsigned art_max(char *name);
 
 #endif

@@ -1,36 +1,36 @@
+#include <ndc.h>
 #include "consumable.h"
 #include "io.h"
 #include "entity.h"
-#include "command.h"
 #include "match.h"
 
 #define DRINK_VALUE (1 << 14)
 #define FOOD_VALUE(x) (1 << (16 - x->food))
 
 void
-do_consume(command_t *cmd)
+do_consume(int fd, int argc, char *argv[])
 {
-	OBJ *player = cmd->player;
+	OBJ *player = FD_PLAYER(fd);
 	ENT *eplayer = &player->sp.entity;
-	const char *name = cmd->argv[1];
+	char *name = argv[1];
 	OBJ *vial;
 	CON *cvial;
 	int aux;
 
 	if (!*name || !(vial = ematch_mine(player, name))) {
-		notify(eplayer, "Consume what?");
+		ndc_writef(fd, "Consume what?\n");
 		return;
 	}
 
 	if (vial->type != TYPE_CONSUMABLE) {
-		notify(eplayer, "You can not consume that.");
+		ndc_writef(fd, "You can not consume that.\n");
 		return;
 	}
 
 	cvial = &vial->sp.consumable;
 
 	if (!cvial->quantity) {
-		notifyf(eplayer, "%s is empty.", vial->name);
+		ndc_writef(fd, "%s is empty.\n", vial->name);
 		return;
 	}
 
@@ -45,49 +45,48 @@ do_consume(command_t *cmd)
 	}
 
 	cvial->quantity--;
-	notify_wts(player, "consume", "consumes", " %s", vial->name);
+	notify_wts(player, "consume", "consumes", " %s\n", vial->name);
 
 	if (!cvial->quantity && !cvial->capacity)
 		recycle(player, vial);
 }
 
 void
-do_fill(command_t *cmd)
+do_fill(int fd, int argc, char *argv[])
 {
-	OBJ *player = cmd->player;
-	ENT *eplayer = &player->sp.entity;
-	const char *vial_s = cmd->argv[1];
-	const char *source_s = cmd->argv[2];
+	OBJ *player = FD_PLAYER(fd);
+	char *vial_s = argv[1];
+	char *source_s = argv[2];
 	OBJ *vial = ematch_mine(player, vial_s);
 	CON *cvial;
 	unsigned m;
 
 	if (!vial) {
-		notify(eplayer, "Fill what?");
+		ndc_writef(fd, "Fill what?\n");
 		return;
 	}
 
 	if (vial->type != TYPE_CONSUMABLE) {
-		notify(eplayer, "You can not fill that up.");
+		ndc_writef(fd, "You can not fill that up.\n");
 		return;
 	}
 
 	cvial = &vial->sp.consumable;
 
 	if (!(m = cvial->capacity)) {
-		notify(eplayer, "You can not fill that up.");
+		ndc_writef(fd, "You can not fill that up.\n");
 		return;
 	}
 
 	if (cvial->quantity) {
-		notifyf(eplayer, "%s is not empty.", vial->name);
+		ndc_writef(fd, "%s is not empty.\n", vial->name);
 		return;
 	}
 
 	OBJ *source = ematch_near(player, source_s);
 
 	if (!source || source->type != TYPE_CONSUMABLE) {
-		notify(eplayer, "Invalid source.");
+		ndc_writef(fd, "Invalid source.\n");
 		return;
 	}
 
@@ -97,6 +96,6 @@ do_fill(command_t *cmd)
 	cvial->drink = csource->drink;
 	cvial->food = csource->food;
 
-	notify_wts(player, "fill", "fills", " %s from %s",
+	notify_wts(player, "fill", "fills", " %s from %s\n",
 		vial->name, source->name);
 }

@@ -1,22 +1,22 @@
+#include <ndc.h>
 #include <stdlib.h>
 #include "io.h"
 #include "entity.h"
 #include "params.h"
 #include "defaults.h"
 #include "match.h"
-#include "command.h"
 
 void
-do_give(command_t *cmd)
+do_give(int fd, int argc, char *argv[])
 {
-	OBJ *player = cmd->player;
+	OBJ *player = FD_PLAYER(fd);
 	ENT *eplayer = &player->sp.entity;
-	const char *recipient = cmd->argv[1];
-	int amount = atoi(cmd->argv[2]);
+	char *recipient = argv[1];
+	int amount = atoi(argv[2]);
 	OBJ *who;
 
 	if (amount < 0 && !(eplayer->flags & EF_WIZARD)) {
-		notify(eplayer, "Invalid amount.");
+		ndc_writef(fd, "Invalid amount.\n");
 		return;
 	}
 
@@ -25,7 +25,7 @@ do_give(command_t *cmd)
 			&& !(who = ematch_near(player, recipient))
 	   )
 	{
-		notify(eplayer, NOMATCH_MESSAGE);
+		ndc_writef(fd, NOMATCH_MESSAGE);
 		return;
 	}
 
@@ -33,36 +33,36 @@ do_give(command_t *cmd)
 
 	if (!(eplayer->flags & EF_WIZARD)) {
 		if (who->type != TYPE_ENTITY) {
-			notify(eplayer, "You can only give to other entities.");
+			ndc_writef(fd, "You can only give to other entities.\n");
 			return;
 		} else if (who->value + amount > MAX_PENNIES) {
-			notifyf(eplayer, "That player doesn't need that many %s!", PENNIES);
+			ndc_writef(fd, "That player doesn't need that many %s!\n", PENNIES);
 			return;
 		}
 	}
 
 	if (!payfor(player, amount)) {
-		notifyf(eplayer, "You don't have that many %s to give!", PENNIES);
+		ndc_writef(fd, "You don't have that many %s to give!\n", PENNIES);
 		return;
 	}
 
 	if (who->type != TYPE_ENTITY) {
-		notifyf(eplayer, "You can't give %s to that!", PENNIES);
+		ndc_writef(fd, "You can't give %s to that!\n", PENNIES);
 		return;
 	}
 
 	who->value += amount;
 
 	if (amount >= 0) {
-		notifyf(eplayer, "You give %d %s to %s.",
+		ndc_writef(fd, "You give %d %s to %s.\n",
 				amount, amount == 1 ? PENNY : PENNIES, who->name);
 
-		notifyf(ewho, "%s gives you %d %s.",
+		ndc_writef(ewho->fd, "%s gives you %d %s.\n",
 				player->name, amount, amount == 1 ? PENNY : PENNIES);
 	} else {
-		notifyf(eplayer, "You take %d %s from %s.",
+		ndc_writef(fd, "You take %d %s from %s.\n",
 				-amount, amount == -1 ? PENNY : PENNIES, who->name);
-		notifyf(ewho, "%s takes %d %s from you!",
+		ndc_writef(ewho->fd, "%s takes %d %s from you!\n",
 				player->name, -amount, -amount == 1 ? PENNY : PENNIES);
 	}
 }

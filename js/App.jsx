@@ -1,20 +1,15 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Terminal as XTerm } from 'xterm';
-// import { WebglAddon } from 'xterm-addon-webgl';
-import { FitAddon } from 'xterm-addon-fit';
-import { WebLinksAddon } from 'xterm-addon-web-links';
-// import { OverlayAddon } from './addons/overlay';
 import { usePopper } from 'react-popper';
 import { useMagic, withMagic, makeMagic } from "@tty-pt/styles";
-import { Sub, reflect } from "@tty-pt/sub";
+import { Sub } from "@tty-pt/sub";
 import ReactDOM from "react-dom";
 import ACTIONS, { ACTIONS_LABEL } from "./actions";
 import tty_proc from "./tty";
+import * as NDC from "@tty-pt/ndc";
 // import canvas from "./canvas";
-import 'xterm/css/xterm.css';
+// import 'xterm/css/xterm.css';
 import "./vim.css";
 const baseDir = process.env.CONFIG_BASEDIR || "";
-let do_echo = true;
 let raw = false;
 
 function echo(...args) {
@@ -22,154 +17,64 @@ function echo(...args) {
   return args[args.length - 1];
 }
 
-const fitAddon = new FitAddon();
-// const overlayAddon = new OverlayAddon();
-function resize(cols, rows) {
-  const IAC = 255;
-  const SB = 250;
-  const NAWS = 31;
-  const SE = 240;
+// class TermSub extends Sub {
+//     term.element.addEventListener("focusin", () => {
+//       term.focused = true;
+//     });
+//     term.element.addEventListener("focusout", () => {
+//       term.focused = false;
+//     });
+//     term.onKey(event => {
+//       console.log("term.onKey", event, event.key);
+//       if (event.key === "\r") {
+//         if (isMobile) {
+//           const msg = (term.perm ? term.perm + " " : "") + term.inputBuf;
+//           term.write(msg + "\r\n");
+//           sendMessage(msg);
+//           term.perm = "";
+//         } else {
+//           if (echo) term.write("\r\n");
+//           wsSub.value.ws.send(term.inputBuf);
+//           // sendMessage(term.inputBuf);
+//           // const initialSize = term.getSize();
+//         }
+//         term.inputBuf = "";
+//       } else if (!do_echo) {
+//         if (raw)
+//           sendMessage(event.key);
+//         else
+//           term.inputBuf += event.key;
+//         return;
+//       } else if (event.key === "\u001b")
+//         term.blur();
+//       else if (event.key === "\u001b[A")
+//         sendMessage("k");
+//       else if (event.key === "\u001b[1;2A")
+//         sendMessage("K");
+//       else if (event.key === "\u001b[B")
+//         sendMessage("j");
+//       else if (event.key === "\u001b[1;2B")
+//         sendMessage("J");
+//       else if (event.key === "\u001b[D")
+//         sendMessage("h");
+//       else if (event.key === "\u001b[C")
+//         sendMessage("l");
+//       else if (event.key === "\u007f") {
+//         term.write("\b \b");
+//         term.inputBuf = term.inputBuf.slice(0, term.inputBuf.length - 1);
+//       } else {
+//         if (!isMobile && do_echo)
+//           term.write(event.key);
+//         term.inputBuf += event.key;
+//       }
+//       term.lastInput = false;
+//     });
+//     fitAddon.fit();
+//     return term;
+//   }
+// }
 
-  // Convert the column and row numbers into high byte and low byte.
-  const colsHighByte = cols >> 8;
-  const colsLowByte = cols & 0xFF;
-  const rowsHighByte = rows >> 8;
-  const rowsLowByte = rows & 0xFF;
-
-  // Create a buffer for the command.
-  const nawsCommand = new Uint8Array([
-    IAC, SB, NAWS,
-    colsHighByte, colsLowByte,
-    rowsHighByte, rowsLowByte,
-    IAC, SE
-  ]);
-
-  // Send the command over the WebSocket.
-  wsSub.value.ws?.send(nawsCommand);
-}
-
-class TermSub extends Sub {
-  constructor() {
-    super(null);
-  }
-
-  @reflect()
-  init(parent) {
-    const term = new XTerm({
-      fontSize: 13,
-      fontFamily: 'Consolas,Liberation Mono,Menlo,Courier,monospace',
-      theme: {
-        foreground: '#93ada5',
-        background: 'rgba(0, 0, 0, 0.2)',
-        cursor: '#73fa91',
-        black: '#112616',
-        red: '#7f2b27',
-        green: '#2f7e25',
-        yellow: '#717f24',
-        blue: '#2f6a7f',
-        magenta: '#47587f',
-        cyan: '#327f77',
-        white: '#647d75',
-        brightBlack: '#3c4812',
-        brightRed: '#e08009',
-        brightGreen: '#18e000',
-        brightYellow: '#bde000',
-        brightBlue: '#00aae0',
-        brightMagenta: '#0058e0',
-        brightCyan: '#00e0c4',
-        brightWhite: '#73fa91',
-      },
-      allowProposedApi: true,
-    });
-
-    term.loadAddon(fitAddon);
-    term.loadAddon(new WebLinksAddon());
-    term.open(parent);
-    term.inputBuf = "";
-    term.perm = "";
-
-    term.onResize(({ cols, rows }) => {
-      console.log("RESIZE", cols, rows);
-      resize(cols, rows);
-    });
-
-    term.element.addEventListener("focusin", () => {
-      term.focused = true;
-    });
-    term.element.addEventListener("focusout", () => {
-      term.focused = false;
-    });
-    if (isMobile) {
-      term.element.addEventListener("input", function (event) {
-        switch (event.inputType) {
-          case "deleteContentBackward":
-            term.inputBuf = term.inputBuf.slice(0, term.inputBuf.length - 2);
-            return true;
-          case "deleteContentForward":
-          case "deleteByCut":
-            return true;
-        }
-        if (event.data !== " ")
-          term.inputBuf = event.data;
-        else
-          term.perm = term.inputBuf;
-        // console.log("input", term.inputBuf);
-        term.lastInput = true;
-        return true;
-      });
-    }
-    term.onKey(event => {
-      console.log("term.onKey", event, event.key);
-      if (event.key === "\r") {
-        if (isMobile) {
-          const msg = (term.perm ? term.perm + " " : "") + term.inputBuf;
-          term.write(msg + "\r\n");
-          sendMessage(msg);
-          term.perm = "";
-        } else {
-          if (echo) term.write("\r\n");
-          wsSub.value.ws.send(term.inputBuf);
-          // sendMessage(term.inputBuf);
-          // const initialSize = term.getSize();
-        }
-        term.inputBuf = "";
-      } else if (!do_echo) {
-        if (raw)
-          sendMessage(event.key);
-        else
-          term.inputBuf += event.key;
-        return;
-      } else if (event.key === "\u001b")
-        term.blur();
-      else if (event.key === "\u001b[A")
-        sendMessage("k");
-      else if (event.key === "\u001b[1;2A")
-        sendMessage("K");
-      else if (event.key === "\u001b[B")
-        sendMessage("j");
-      else if (event.key === "\u001b[1;2B")
-        sendMessage("J");
-      else if (event.key === "\u001b[D")
-        sendMessage("h");
-      else if (event.key === "\u001b[C")
-        sendMessage("l");
-      else if (event.key === "\u007f") {
-        term.write("\b \b");
-        term.inputBuf = term.inputBuf.slice(0, term.inputBuf.length - 1);
-      } else {
-        if (!isMobile && do_echo)
-          term.write(event.key);
-        term.inputBuf += event.key;
-      }
-      term.lastInput = false;
-    });
-    fitAddon.fit();
-    return term;
-  }
-}
-
-const termSub = new TermSub();
-const isMobile = window.navigator.maxTouchPoints > 1;
+// const termSub = new TermSub();
 
 makeMagic({
   "?pre": {
@@ -220,6 +125,8 @@ makeMagic({
   },
 });
 
+const modalEl = document.querySelector('.modal');
+
 class Modal extends React.Component {
 	constructor(props) {
 		super(props);
@@ -233,7 +140,6 @@ class Modal extends React.Component {
 				this.props.setOpen(false);
 		};
 		this.el.className = 'modal abs vertical-0 align-items c fcc oh f';
-		// this.el.classList.remove('dn');
 	}
 
 	componentWillUnmount() {
@@ -256,13 +162,11 @@ class Modal extends React.Component {
 	}
 }
 
-const modal = document.querySelector('.modal');
-
-function _useModal(el, Component, props = {}) {
+function useModal(Component, props = {}) {
 	const [ isOpen, setOpen ] = useState(false);
 
 	const modal = isOpen ? (
-		<Modal setOpen={setOpen} el={el}>
+		<Modal setOpen={setOpen} el={modalEl}>
 			<Component
 				{ ...props }
 				close={() => setOpen(false)}
@@ -272,8 +176,6 @@ function _useModal(el, Component, props = {}) {
 
 	return [ modal, isOpen, setOpen ];
 }
-
-const useModal = _useModal.bind(null, modal);
 
 // window.onorientationchange = scroll_reset;
 
@@ -298,29 +200,16 @@ const atiles = [
 	"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAEklEQVQ4jWNgGAWjYBSMAggAAAQQAAF/TXiOAAAAAElFTkSuQmCC"
 ];
 
-const wsSub = new Sub({
-  ws: null,
-  unsubscribe: () => {},
-});
-
-function sendMessage(text) {
-  wsSub.value.ws.send(text);
-}
+let ws = null;
 
 function onOpen() {
   const term = termSub.value;
   resize(term.cols, term.rows);
 
   if (process.env.development)
-    sendMessage("auth test");
+    ws.send("auth test");
   else
-    sendMessage("auth " + getCookie("QSESSION"));
-}
-
-const decoder = new TextDecoder('utf-8');
-
-function ab2str(arr) {
-  return decoder.decode(arr);
+    ws.send("auth " + getCookie("QSESSION"));
 }
 
 function read_16(arr, start) {
@@ -355,7 +244,7 @@ function read_string(arr, start, ret = {}) {
   return rret;
 }
 
-function onMessage(ev) {
+NDC.setOnMessage(function onMessage(ev) {
   const arr = new Uint8Array(ev.data);
   if (String.fromCharCode(arr[0]) == "#" && String.fromCharCode(arr[1]) == "b") {
     const iden = arr[2];
@@ -437,7 +326,7 @@ function onMessage(ev) {
           } else
             targetEmit(base.dbref);
 
-          termSub.value.write(base.description ? "You see: " + base.description + "\r\n" : "");
+          NDC.term.write(base.description ? "You see: " + base.description + "\r\n" : "");
         }
 
         return;
@@ -467,43 +356,8 @@ function onMessage(ev) {
         dbEmit(loc, { ...dbSub.value[loc], contents: newContents });
         return;
     }}
-  } else if (arr[0] != 255) {
-    const data = ab2str(arr);
-    termSub.value.write(data);
-  } else {
-    do_echo = !do_echo;
-    raw = !raw;
-  }
-}
-
-const url = process.env.CONFIG_PROTO + "://" + window.location.hostname + ':4234';
-console.log("URL", url);
-const connect = wsSub.makeEmit(() => {
-  let ws = null;
-
-  function onClose() {
-    return wsSub.update(init());
-  }
-
-  function init() {
-    ws = new WebSocket(url, 'binary');
-
-    ws.binaryType = 'arraybuffer';
-    ws.addEventListener('open', onOpen);
-    ws.addEventListener('message', onMessage);
-    ws.addEventListener('close', onClose);
-
-    return {
-      ws,
-      unsubscribe: () => {
-        ws.removeEventListener('open', onOpen);
-        ws.removeEventListener('message', onMessage);
-        ws.removeEventListener('close', onClose);
-      }
-    };
-  }
-
-  return init();
+  } else
+    return true;
 });
 
 const hereSub = new Sub({ dbref: null, contents: {} });
@@ -571,7 +425,7 @@ function Terminal() {
 	useEffect(() => {
     if (ref.current) {
       ref.current.scrollTop = ref.current.scrollHeight;
-      termSub.init(ref.current);
+      NDC.open(ref.current);
     }
 	}, []);
 
@@ -664,7 +518,7 @@ function Equipment(props) {
 		item={objects[equipment[eql]]}
     square
 		size="l"
-		onClick={() => sendMessage("unequip " + eql_label[eql])}
+		onClick={() => ws.send("unequip " + eql_label[eql])}
 	/>);
 }
 
@@ -792,45 +646,45 @@ function ContentsAndActions() {
 
 				let id = ACTIONS_LABEL[p];
 				newActions.push([p, function () {
-					sendMessage(id + " #" + item.dbref);
+					ws.send(id + " #" + item.dbref);
           return unselect();
 				}]);
 			}
       } else {
         if (item.loc == me) {
           newActions.push([ACTIONS.EQUIP, function () {
-            sendMessage("equip #" + item.dbref);
+            ws.send("equip #" + item.dbref);
             return unselect();
           }]);
 
           newActions.push([ACTIONS.DROP, function () {
-            sendMessage("drop #" + item.dbref);
+            ws.send("drop #" + item.dbref);
             return unselect();
           }]);
 
           newActions.push([ACTIONS.EAT, function () {
-            sendMessage("eat #" + item.dbref);
+            ws.send("eat #" + item.dbref);
             return unselect();
           }]);
 
           newActions.push([ACTIONS.SHOP, function () {
-            sendMessage("sell #" + item.dbref);
+            ws.send("sell #" + item.dbref);
             return unselect();
           }]);
         } else if (objects[item.loc].shop)
           newActions.push([ACTIONS.SHOP, function () {
-            sendMessage("buy #" + item.dbref);
+            ws.send("buy #" + item.dbref);
             return unselect();
           }]);
 
         else
           newActions.push([ACTIONS.GET, function () {
-            sendMessage("get #" + rtarget + "=#" + item.dbref);
+            ws.send("get #" + rtarget + "=#" + item.dbref);
             return unselect();
           }]);
 
         newActions.push([ACTIONS.LOOK, function () {
-          sendMessage("look #" + item.dbref);
+          ws.send("look #" + item.dbref);
           return unselect();
         }]);
       }
@@ -1005,8 +859,8 @@ function EquipmentButton() {
   </>);
 }
 
-function Game() {
-	const session = wsSub.use().ws;
+export default
+withMagic(function Game() {
   const { dbref: here } = hereSub.use();
   const objects = dbSub.use();
 	const [ modal, isOpen, setOpen ] = useModal(Help, {});
@@ -1015,48 +869,49 @@ function Game() {
   const bgClass = useBgImg(obj);
 
 	function keyUpHandler(e) {
-    if (termSub.value.focused || raw)
+    if (NDC.term.focused || raw)
       return;
     switch (e.keyCode) {
     case 75: // k
     case 38: // ArrowUp
       if (e.shiftKey)
-        sendMessage("K");
+        ws.send("K");
       else
-        sendMessage("k");
+        ws.send("k");
       break;
     case 74: // j
     case 40: // ArrowDown
       if (e.shiftKey)
-        sendMessage("J");
+        ws.send("J");
       else
-        sendMessage("j");
+        ws.send("j");
       break;
     case 72: // h
     case 37: // ArrowLeft
-      sendMessage("h");
+      ws.send("h");
       break;
     case 76: // l
     case 39: // ArrowRight
-      sendMessage("l");
+      ws.send("l");
       break;
     case 73: // i
       if (e.shiftKey)
         termSub.value.focus();
       else
-        sendMessage("inventory");
+        ws.send("inventory");
       break;
     case 79: // o
-      sendMessage("look");
+      ws.send("look");
       break;
     default:
       console.log(e);
     }
   }
 	useEffect(() => {
+    ws = NDC.connect("ws");
 		window.addEventListener('keyup', keyUpHandler);
 		return () => window.removeEventListener('keyup', keyUpHandler);
-	}, [session]);
+	}, []);
 
 	function toggle_help() {
 		setOpen(!isOpen);
@@ -1090,18 +945,18 @@ function Game() {
         <div className="vertical-0 tar tnow">
           <div className="horizontal-0">
             <RBT />
-            <RB onClick={() => sendMessage("k")}>&uarr;</RB>
-            <RBI onClick={() => sendMessage("K")} src={ACTIONS.K} />
+            <RB onClick={() => ws.send("k")}>&uarr;</RB>
+            <RBI onClick={() => ws.send("K")} src={ACTIONS.K} />
           </div>
           <div className="horizontal-0">
-            <RB onClick={() => sendMessage("h")}>&larr;</RB>
+            <RB onClick={() => ws.send("h")}>&larr;</RB>
             <RBT />
-            <RB onClick={() => sendMessage("l")}>&rarr;</RB>
+            <RB onClick={() => ws.send("l")}>&rarr;</RB>
           </div>
           <div className="horizontal-0">
             <RBT />
-            <RB onClick={() => sendMessage("j")}>&darr;</RB>
-            <RBI onClick={() => sendMessage("J")} src={ACTIONS.J} />
+            <RB onClick={() => ws.send("j")}>&darr;</RB>
+            <RBI onClick={() => ws.send("J")} src={ACTIONS.J} />
           </div>
         </div>
         ) : (
@@ -1110,8 +965,8 @@ function Game() {
           <RB onClick={toggle_help}>?</RB>
           <StatsButton />
           <EquipmentButton />
-          <RBI onClick={() => sendMessage('inventory')} src={ACTIONS.OPEN} />
-          <RBI onClick={() => sendMessage('look')} src={ACTIONS.LOOK} />
+          <RBI onClick={() => ws.send('inventory')} src={ACTIONS.OPEN} />
+          <RBI onClick={() => ws.send('look')} src={ACTIONS.LOOK} />
           <RBI onClick={(ev) => { setReferenceElement(ev.target); ev.stopPropagation(); }} src={baseDir + "/art/walking.png"} />
         </div>
         ) }
@@ -1120,7 +975,7 @@ function Game() {
 
 		{ modal }
 	</>);
-}
+});
 
 function getCookie(cname) {
 	let name = cname + "=";
@@ -1137,13 +992,3 @@ function getCookie(cname) {
 	}
 	return "";
 }
-
-export default
-withMagic(function App() {
-	const session = wsSub.use();
-  useEffect(() => {
-    connect();
-    return session.unsubscribe();
-  }, []);
-	return <Game />;
-});

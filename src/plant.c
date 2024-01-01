@@ -1,6 +1,7 @@
 #include "noise.h"
 
 #include <string.h>
+#include <xxhash.h>
 
 #include "params.h"
 #include "debug.h"
@@ -178,7 +179,7 @@ plants_noise(struct plant_data *pd, noise_t ty, coord_t tmp, ucoord_t rn, unsign
 	     i < PLANT_MAX && idc < pd->id + n;
 	     i++, v >>= 8) {
 		if (!v)
-			v = uhash((const char *) &ty, sizeof(ty), i);
+			v = XXH32((const char *) &ty, sizeof(ty), i);
 
                 cpln = plant_noise(idc, tmp, rn, v, i);
 		if (cpln) {
@@ -221,7 +222,7 @@ static inline void
 _plants_add(OBJ *where, struct bio *bio, pos_t pos)
 {
 	register int i, n;
-	noise_t v = uhash((const char *) pos, sizeof(pos_t), 1);
+	noise_t v = XXH32((const char *) pos, sizeof(pos_t), 1);
 
         for (i = 0; i < 3; i++, v >>= 4) {
                 n = PLANT_N(bio->pd.n, i);

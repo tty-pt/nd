@@ -14,7 +14,7 @@
 #include "player.h"
 
 OBJ *
-ematch_me(OBJ *player, const char *str)
+ematch_me(OBJ *player, char *str)
 {
 	if (!strcmp(str, "me"))
 		return player;
@@ -23,7 +23,7 @@ ematch_me(OBJ *player, const char *str)
 }
 
 OBJ *
-ematch_here(OBJ *player, const char *str)
+ematch_here(OBJ *player, char *str)
 {
 	if (!strcmp(str, "here"))
 		return player->location;
@@ -32,13 +32,13 @@ ematch_here(OBJ *player, const char *str)
 }
 
 OBJ *
-ematch_mine(OBJ *player, const char *str)
+ematch_mine(OBJ *player, char *str)
 {
 	return ematch_at(player, player, str);
 }
 
 OBJ *
-ematch_near(OBJ *player, const char *str)
+ematch_near(OBJ *player, char *str)
 {
 	return ematch_at(player, player->location, str);
 }
@@ -47,7 +47,7 @@ ematch_near(OBJ *player, const char *str)
  * (not found by the linker if it is not static?)
  */
 OBJ *
-ematch_all(OBJ *player, const char *name)
+ematch_all(OBJ *player, char *name)
 {
 	OBJ *res;
 
@@ -68,7 +68,7 @@ ematch_all(OBJ *player, const char *name)
 
 /* TODO move to match.h as static inline */
 OBJ *
-ematch_player(const char *name)
+ematch_player(char *name)
 {
 	return player_get(name);
 }
@@ -97,7 +97,7 @@ parse_dbref(const char *s)
 
 /* returns nnn if name = #nnn, else NOTHING */
 OBJ *
-ematch_absolute(const char *name)
+ematch_absolute(char *name)
 {
 	dbref match;
 	if (*name == NUMBER_TOKEN) {
@@ -129,7 +129,7 @@ string_match(register const char *src, register const char *sub)
 }
 
 static OBJ *
-ematch_list(OBJ *player, OBJ *first, const char *name)
+ematch_list(OBJ *player, OBJ *first, char *name)
 {
 	OBJ *absolute;
 	ENT *mob = &player->sp.entity;
@@ -154,7 +154,7 @@ ematch_list(OBJ *player, OBJ *first, const char *name)
 }
 
 OBJ *
-ematch_at(OBJ *player, OBJ *where, const char *name) {
+ematch_at(OBJ *player, OBJ *where, char *name) {
 	OBJ *what;
 
 	what = ematch_absolute(name);

@@ -1,8 +1,6 @@
-/* Copyright 1992-2001 by Fuzzball Software */
-/* Consider this code protected under the GNU public license, with explicit
- * permission to distribute when linked against openSSL. */
 #define _XOPEN_SOURCE 600
 
+#include <ndc.h>
 #include "io.h"
 
 #include <string.h>
@@ -37,20 +35,13 @@
 #include <sys/select.h>
 #include <openssl/ssl.h>
 #include <termios.h>
-#include <qcmd.h>
 
 #include <err.h>
 
-#ifdef CONFIG_SECURE
-#include <openssl/bio.h>
-#include <openssl/err.h>
-#include <sys/socket.h>
-#endif
 #include <pwd.h>
 #include <grp.h>
 
 #include "nddb.h"
-#include "command.h"
 #include "params.h"
 #include "defaults.h"
 #include "mcp.h"
@@ -58,170 +49,49 @@
 #include "map.h"
 #include "view.h"
 #include "mob.h"
-#include "hash.h"
-#include "ws.h"
 #include "player.h"
 #include "debug.h"
 #include "utils.h"
-
-#define DESCR_ITER(di_d) \
-	for (di_d = &descr_map[sockfd + 1]; \
-	     di_d < &descr_map[FD_SETSIZE]; \
-	     di_d++) \
-		if (!FD_ISSET(di_d->fd, &readfds) \
-		    || !(di_d->flags & DF_CONNECTED)) \
-			continue; \
-		else
 
 enum opts {
 	OPT_DETACH = 1,
 };
 
-DB *cmdsdb = NULL;
-
-#ifdef CONFIG_SECURE
-SSL_CTX *sslctx;
-#endif
-
-void do_bio(command_t *cmd);
-extern void do_auth(command_t *cmd);
-extern void do_avatar(command_t *cmd);
-extern void do_httpget(command_t *cmd);
-/* extern void do_gpt(command_t *cmd); */
-
-int
-carriage_return(char *output, char *input) {
-	char *s = output, *i = input;
-	int ret = 0;
-
-	while (*i) {
-		/* warn("i"); */
-		if (*i == '\n') {
-			/* warn("i"); */
-			*s++ = '\r';
-			ret ++;
-		}
-		*s = *i;
-		s++;
-		i++;
-	}
-	/* warn("\n"); */
-
-	*s = '\0';
-
-	return ret;
-}
-
-int twrite(int fd, const char *buf, size_t len);
-int start = 1, cont = 0;
-
-void term_cb(char *buf, ssize_t len, struct popen2 *child, char *arg) {
-	ENT *ent = (ENT *) arg;
-	static char carr[BUFSIZ * 2];
-	if (len < 0) {
-		dup2(child->in, descr_map[ent->fd].pty);
-		return;
-	}
-	if (len <= 0)
-		return;
-
-	int cr = carriage_return(carr, buf);
-	twrite(ent->fd, carr, len + cr);
-}
-
-void ws_cb(char *buf, ssize_t len, struct popen2 *child, char *arg) {
-	ENT *ent = (ENT *) arg;
-	static char carr[BUFSIZ * 2];
-	if (len < 0) {
-		dup2(child->in, descr_map[ent->fd].pty);
-		return;
-	}
-	else if (len == 0) {
-		_ws_write(ent->fd, "", 0, start, cont, 1);
-		return;
-	}
-
-	int cr = carriage_return(carr, buf);
-	_ws_write(ent->fd, carr, len + cr - 1, start, cont, 0);
-	start = 0;
-	cont = 1;
-}
-
-void ocommand(ENT *ent, char *buf) {
-	if (descr_map[ent->fd].flags & DF_WEBSOCKET) {
-		start = 1;
-		cont = 0;
-		command(buf, ws_cb, (char *) ent);
-	}
-	else
-		command(buf, term_cb, (char *) ent);
-}
-
-fd_set readfds, activefds, writefds;
+void do_bio(int fd, int argc, char *argv[]);
+extern void do_auth(int fd, int argc, char *argv[]);
+extern void do_avatar(int fd, int argc, char *argv[]);
+/* extern void do_gpt(int fd, int argc, char *argv[]); */
 
 void
-do_man(command_t *cmd) {
-	char *s;
-
-	for (s = cmd->argv[1]; *s; s++) {
-		if (isalnum(*s) || *s == '_')
-			continue;
-		notify(&cmd->player->sp.entity, "Hacking is invalid\n");
-		return;
-	}
-
-	ENT *ent = &cmd->player->sp.entity;
-	struct popen2 child;
-	descr_t *d = &descr_map[ent->fd];
-
-	pty_open(d->pty, d->cols, d->rows, &child, (char * const []) { "man", cmd->argv[1], NULL });
-	d->pid = child.pid;
-
-	int ws = descr_map[ent->fd].flags & DF_WEBSOCKET;
-
-	unsigned char command[] = { IAC, WILL, TELOPT_ECHO, IAC, WILL, TELOPT_SGA };
-	if (ws) {
-		ws_write(ent->fd, command, sizeof(command));
-	} else
-		WRITE(ent->fd, command, sizeof(command));
-
-	int flags = fcntl(d->pty, F_GETFL, 0);
-	if (flags == -1) {
-		perror("fcntl F_GETFL");
-	}
-
-	flags |= O_NONBLOCK;
-	if (fcntl(d->pty, F_SETFL, flags) == -1) {
-		perror("fcntl F_SETFL O_NONBLOCK");
-	}
+do_man(int fd, int argc, char *argv[]) {
+	ndc_pty(fd, argv);
 }
 
 void
-do_diff(command_t *cmd) {
-	// TODO ssh in chroot?
-	/* descr_inband(cmd->fd, command("git fetch origin master; git diff origin/master")); */
-
-	// the fetch is not needed I think if it is
-	// not updated we can do it manually or display
-	// the status or the commit. It adds a lot of overhead to
-	// fetch on every diff. Perhaps later, when the repo is
-	// local, fetch will make no sense at all
-	ocommand(&cmd->player->sp.entity, "git diff origin/master");
+do_diff(int fd, int argc, char *argv[]) {
+	char *command[] = { "git", "diff", "origin/master", NULL };
+	ndc_pty(fd, command);
 }
 
-
-core_command_t cmds[] = {
+struct cmd_slot cmds[] = {
 	{
+		.name = "sh",
+		.cb = &do_sh
+	}, {
+		.name = "GET",
+		.cb = &do_GET,
+		.flags = CF_NOAUTH | CF_NOTRIM,
+	}, {
+		.name = "POST",
+		.cb = &do_GET,
+		.flags = CF_NOAUTH | CF_NOTRIM,
+	}, {
 		.name = "auth",
 		.cb = &do_auth,
 		.flags = CF_NOAUTH,
 	}, {
 		.name = "avatar",
 		.cb = &do_avatar,
-	}, {
-		.name = "GET",
-		.cb = &do_httpget,
-		.flags = CF_NOAUTH | CF_NOARGS,
 	/* }, { */
 	/* 	.name = "gpt", */
 	/* 	.cb = &do_gpt, */
@@ -298,14 +168,8 @@ core_command_t cmds[] = {
 		.name = "give",
 		.cb = &do_give,
 	}, {
-		.name = "help",
-		.cb = &do_help,
-	}, {
 		.name = "inventory",
 		.cb = &do_inventory,
-	}, {
-		.name = "info",
-		.cb = &do_info,
 	}, {
 		.name = "kill",
 		.cb = &do_kill,
@@ -357,93 +221,6 @@ core_command_t cmds[] = {
 	},
 };
 
-long long mstart, mnow, mlast, dt, macc = 0;
-
-int shutdown_flag = 0;
-
-static int sockfd;
-descr_t descr_map[FD_SETSIZE];
-
-void
-command_debug(command_t *cmd, char *label)
-{
-	char **arg;
-
-	warn("acommand_debug '%s' %d", label, cmd->argc);
-	for (arg = cmd->argv;
-	     arg < cmd->argv + cmd->argc;
-	     arg++)
-	{
-		warn(" '%s'", *arg);
-	}
-	warn("\n");
-}
-
-static inline core_command_t *
-command_match(command_t *cmd) {
-	return hash_get(cmdsdb, cmd->argv[0]);
-}
-
-static command_t
-command_new(descr_t *d, char *input, size_t len)
-{
-	command_t cmd;
-	register char *p = input;
-
-	p[len] = '\0';
-	cmd.player = d->player;
-	cmd.fd = d->fd;
-	cmd.argc = 0;
-
-	if (!*p || !isprint(*p))
-		return cmd;
-
-	cmd.argv[0] = p;
-	cmd.argc++;
-
-	for (; p < input + len && *p != ' '; p++)
-		;
-
-	if (*p == ' ') {
-		*p = '\0';
-		cmd.argv[cmd.argc] = p + 1;
-		core_command_t *cmd_i = command_match(&cmd);
-		cmd.argc ++;
-
-		if (cmd_i && cmd_i->flags & CF_NOARGS)
-			goto cleanup;
-
-		for (; p < input + len; p++) {
-			if (*p != '=')
-				continue;
-
-			*p = '\0';
-
-			cmd.argv[cmd.argc] = p + 1;
-			cmd.argc ++;
-		}
-	}
-
-cleanup:
-	for (int i = cmd.argc;
-	     i < sizeof(cmd.argv) / sizeof(char *);
-	     i++)
-
-		cmd.argv[i] = "";
-
-	return cmd;
-}
-
-static void
-commands_init() {
-	int i;
-
-	for (i = 0; i < sizeof(cmds) / sizeof(core_command_t); i++)
-		hash_put(cmdsdb, cmds[i].name, &cmds[i]);
-}
-
-int shovechars();
-
 short optflags = 0;
 
 void
@@ -460,28 +237,10 @@ show_program_usage(char *prog)
 	exit(1);
 }
 
-void
-close_sockets(const char *msg) {
-	descr_t *d;
-
-	DESCR_ITER(d) {
-		/* forget_player_descr(d->player, d->fd); */
-		if (shutdown(d->fd, 2) < 0)
-			perror("shutdown");
-		close(d->fd);
-	}
-}
-
-void sig_shutdown(int i)
-{
-	warn("SHUTDOWN: via SIGNAL\n");
-	shutdown_flag = 1;
-}
-
 int
 init_game()
 {
-	const char *name = "std.db";
+	const char *name = STD_DB;
 	FILE *f;
 
 	if (access(STD_DB, F_OK) != 0)
@@ -502,16 +261,11 @@ init_game()
 	return 0;
 }
 
-time_t get_tick() {
-	return (mnow - mstart) / 1000;
-}
-
 int
 main(int argc, char **argv)
 {
+	struct ndc_config config = { .flags = 0 };
 	register char c;
-
-	memset(descr_map, 0, sizeof(descr_map));
 
 	while ((c = getopt(argc, argv, "dv")) != -1) {
 		switch (c) {
@@ -532,46 +286,7 @@ main(int argc, char **argv)
 		}
 	}
 
-#ifdef CONFIG_SECURE
-	SSL_load_error_strings();
-	SSL_library_init();
-	OpenSSL_add_all_algorithms();
-	sslctx = SSL_CTX_new(TLS_server_method());
-	SSL_CTX_set_ecdh_auto(sslctx, 1);
-	SSL_CTX_use_certificate_file(sslctx, "/etc/ssl/tty.pt.crt" , SSL_FILETYPE_PEM);
-	SSL_CTX_use_PrivateKey_file(sslctx, "/etc/ssl/private/tty.pt.key", SSL_FILETYPE_PEM);
-	ERR_print_errors_fp(stderr);
-#endif
-
-
-#ifdef CONFIG_ROOT
-	if (geteuid())
-		errx(1, "need root privileges");
-#endif
-
-#ifdef CONFIG_CHROOT
-	char *user = "www";
-	struct passwd *pw = getpwnam(user);
-
-	if (pw == NULL)
-		errx(1, "unknown user %s", user);
-
-	if (chroot("/var/www") != 0 || chdir("/nd/game") != 0)
-		err(1, "%s", "/var/www");
-
-	if (setgroups(1, &pw->pw_gid) ||
-			setresgid(pw->pw_gid, pw->pw_gid, pw->pw_gid) ||
-			setresuid(pw->pw_uid, pw->pw_uid, pw->pw_uid)) {
-		fprintf(stderr, "%s: cannot drop privileges\n", __func__);
-		exit(1);
-	}
-#else
-	if (chdir("./game") != 0)
-		err(1, "No dir ./game");
-#endif
-
 	players_init();
-	hash_init(&cmdsdb);
 
 	if (init_game() < 0) {
 		warn("Couldn't load " STD_DB "!\n");
@@ -583,23 +298,19 @@ main(int argc, char **argv)
 		warn("map_init %s", db_strerror(ret));
 		exit(1);
 	}
-	commands_init();
 
-	signal(SIGPIPE, SIG_IGN);
-	signal(SIGHUP, SIG_IGN);
-	signal(SIGUSR1, SIG_DFL);
-	signal(SIGTERM, sig_shutdown);
+	/* signal(SIGPIPE, SIG_IGN); */
+	/* signal(SIGHUP, SIG_IGN); */
+	/* signal(SIGUSR1, SIG_DFL); */
 
 	/* errno = 0; // TODO why? sanity fails to access file */
 
 	setenv("TERM", "xterm-256color", 1);
 
-	if (shovechars())
-		return 1;
+	fprintf(stderr, "Done.\n");
+	ndc_main(&config);
 
 	map_close();
-
-	close_sockets("\r\nServer shutting down.\r\n");
 
 	FILE *f = fopen(STD_DB, "wb");
 
@@ -615,188 +326,25 @@ main(int argc, char **argv)
 	return 0;
 }
 
-int
-descr_inband(int fd, const char *s)
-{
-	/* return write(fd, s, strlen(s)); */
-	size_t len = strlen(s);
-	descr_t *d = &descr_map[fd];
-	/* warn("descr_inband %d %s %d", d->fd, s, d->flags & DF_WEBSOCKET); */
-	if (d->flags & DF_WEBSOCKET)
-		return ws_write(d->fd, s, len);
-	else
-		return WRITE(d->fd, s, len);
-}
-
-int
-pprintf(OBJ *player, char *format, ...)
-{
-	ENT *eplayer = &player->sp.entity;
-	va_list args;
-	va_start(args, format);
-	vdprintf(eplayer->fd, format, args);
-	va_end(args);
-	return 0;
-}
-
-int
-twrite(int fd, const char *buf, size_t len)
-{
-	warn("twrite %lu bytes\n", len);
-	const char *p = buf;
-	size_t max_len = BUFSIZ;
-	while (len >= max_len) {
-		WRITE(fd, p, max_len);
-		len -= max_len;
-		p += max_len;
-	}
-	if (len)
-		WRITE(fd, p, len);
-	return 0;
-}
-
-int
-writel(int fd, const char *line, size_t len)
-{
-	twrite(fd, line, len ? len : strlen(line));
-	return 0;
-}
-
-int
-dwritelf(int fd, const char *format, va_list args)
-{
-	static char buf[BUFSIZ * 2];
-	ssize_t len;
-	len = vsnprintf(buf, sizeof(buf), format, args);
-	return writel(fd, buf, len);
-}
-
-int
-writelf(int fd, const char *format, ...)
-{
-	va_list args;
-	va_start(args, format);
-	int ret = dwritelf(fd, format, args);
-	va_end(args);
-	return ret;
-}
-
-int
-notify(ENT *eplayer, const char *msg)
-{
-	if (eplayer->fd <= 0)
-		return 0;
-	descr_t *d = &descr_map[eplayer->fd];
-	return (d->flags & DF_WEBSOCKET)
-		? ws_write(eplayer->fd, msg, strlen(msg))
-		: writel(eplayer->fd, msg, 0);
-}
-
-int
-notifyf(ENT *eplayer, const char *format, ...)
-{
-	if (eplayer->fd <= 0)
-		return 0;
-	descr_t *d = &descr_map[eplayer->fd];
-	va_list args;
-	va_start(args, format);
-	int ret = (d->flags & DF_WEBSOCKET)
-		? wsdprintf(eplayer->fd, format, args)
-		: dwritelf(eplayer->fd, format, args);
-	va_end(args);
-	return ret;
-}
-
 static inline void
-vnotifyfe(OBJ *first, OBJ *exception, const char *format, va_list va)
-{
-	FOR_LIST(first, first) {
-		if (first->type != TYPE_ENTITY || first == exception)
-			continue;
-
-		ENT *efirst = &first->sp.entity;
-		if (efirst->fd <= 0)
-			continue;
-		descr_t *d = &descr_map[efirst->fd];
-		if (d->flags & DF_WEBSOCKET)
-			wsdprintf(efirst->fd, format, va);
-		else
-			dwritelf(efirst->fd, format, va);
-	}
-}
-
-static inline void
-vnotifyfa(OBJ *first, const char *format, va_list va)
-{
-	return vnotifyfe(first, NULL, format, va);
-}
-
-static inline void
-netnotifyfe(OBJ *first, OBJ *exception, const char *format, va_list va)
-{
+nd_ldwritef(OBJ *first, OBJ *exception, const char *format, va_list va) {
 	FOR_LIST(first, first) {
 		if (first->type != TYPE_ENTITY || first == exception)
 			continue;
 		ENT *efirst = &first->sp.entity;
 		if (efirst->fd <= 0)
 			continue;
-		descr_t *d = &descr_map[efirst->fd];
-		if (d->flags & DF_WEBSOCKET)
-			continue;
-		dwritelf(efirst->fd, format, va);
+		ndc_dwritef(efirst->fd, format, va);
 	}
 }
 
-static inline void
-netnotifyfa(OBJ *first, const char *format, va_list va)
-{
-	netnotifyfe(first, NULL, format, va);
-}
-
 void
-anotifyf(OBJ *room, char *format, ...)
+nd_rwritef(OBJ *room, OBJ *exception, char *format, ...)
 {
 	va_list args;
 	va_start(args, format);
-	vnotifyfa(room->contents, format, args);
+	nd_ldwritef(room->contents, exception, format, args);
 	va_end(args);
-	netnotifyfa(room->contents, "\n", args);
-}
-
-void
-onotifyf(OBJ *player, char *format, ...)
-{
-	OBJ *loc = player->location;
-	va_list args;
-	va_start(args, format);
-	vnotifyfe(loc->contents, player, format, args);
-	va_end(args);
-	/* netnotifyfe(loc->contents, player, "\n", args); */
-}
-
-void
-wall(const char *msg)
-{
-	descr_t *d;
-	char buf[BUFSIZ];
-
-	strlcpy(buf, msg, sizeof(buf));
-	strlcat(buf, "\r\n", sizeof(buf));
-
-	DESCR_ITER(d) descr_inband(d->fd, buf);
-}
-
-void
-do_httpget(command_t *cmd)
-{
-	descr_t *d = &descr_map[cmd->fd];
-	warn("httpget %d argc %d", cmd->fd, cmd->argc);
-	if (ws_handshake(cmd->fd, cmd->argv[cmd->argc - 1])) {
-		warn("websocket connection closed");
-		return;
-	}
-	d->flags |= DF_WEBSOCKET;
-	d->mcpframe.enabled = 1;
 }
 
 static inline void
@@ -805,27 +353,25 @@ avatar(OBJ *player) {
 }
 
 void
-do_auth(command_t *cmd)
+do_auth(int fd, int argc, char *argv[])
 {
 	char buf[BUFSIZ];
-	int fd = cmd->fd;
-	char *qsession = cmd->argv[1];
+	char *qsession = argv[1];
 	FILE *fp;
 	OBJ *player;
-	descr_t *d = &descr_map[fd];
-
 
 	if (!*qsession) {
-		descr_inband(fd, "Please log in.");
+		ndc_writef(fd, "Please log in.\n");
 		mcp_auth_fail(fd, 3);
 		return;
 	}
 
+	warn("AUTH '%s'\n", qsession);
 	snprintf(buf, sizeof(buf), "/sessions/%s", qsession);
 	fp = fopen(buf, "r");
 
 	if (!fp) {
-		descr_inband(fd, "No such session\r\n");
+		ndc_writef(fd, "No such session\n");
 		mcp_auth_fail(fd, 1);
 		return;
 	}
@@ -843,20 +389,13 @@ do_auth(command_t *cmd)
 		spells_birth(player);
 		avatar(player);
 	} else if (player->sp.entity.fd > 0) {
-                descr_inband(fd, "That player is already connected.\r\n");
+                ndc_writef(fd, "That player is already connected.\n");
                 mcp_auth_fail(fd, 2);
                 return;
         }
 
-	unsigned char command[] = { IAC, DO, TELOPT_NAWS };
-	if (!(d->flags & DF_WEBSOCKET)) {
-		WRITE(d->fd, command, sizeof(command));
-		d->flags |= DF_NAWS;
-	}
-
-	d->flags |= DF_CONNECTED;
-	d->player = cmd->player = player;
-	CBUG(d->fd != fd);
+	FD_PLAYER(fd) = player;
+	ndc_set_flags(fd, ndc_flags(fd) | DF_CONNECTED);
 	ENT *eplayer = &player->sp.entity;
 	eplayer->fd = fd;
         mcp_stats(player);
@@ -865,34 +404,26 @@ do_auth(command_t *cmd)
         mcp_equipment(player);
 	look_around(player);
 	/* enter_room(player, E_ALL); */
-	do_view(cmd);
+	do_view(fd, argc, argv);
 }
 
 void
-do_avatar(command_t *cmd)
+do_avatar(int fd, int argc, char *argv[])
 {
-	OBJ *player = cmd->player;
-	ENT *eplayer = &player->sp.entity;
+	OBJ *player = FD_PLAYER(fd);
 	avatar(player);
-	notifyf(eplayer, "Selected avatar %u", player->art_id);
+	ndc_writef(fd, "Selected avatar %u\n", player->art_id);
 }
 
-#if 0
 void
-do_gpt(command_t *cmd)
+ndc_update()
 {
-	OBJ *player = cmd->player;
-	ENT *eplayer = &player->sp.entity;
-	char *reply = gpt(cmd->argv[1]);
-	notifyf(eplayer, "%s", reply);
 }
-#endif
 
-static inline void
-do_v(OBJ *player, char const *cmdstr)
-{
+void ndc_vim(int fd, int argc, char *argv[]) {
+	OBJ *player = FD_PLAYER(fd);
 	int ofs = 1;
-	char const *s = cmdstr;
+	char const *s = argv[0];
 
 	for (; *s && ofs > 0; s += ofs) {
 		ofs = st_v(player, s);
@@ -903,441 +434,22 @@ do_v(OBJ *player, char const *cmdstr)
 	}
 }
 
-void
-command_process(command_t *cmd)
-{
-	if (cmd->argc < 1)
-		return;
+void ndc_view(int fd, int argc, char *argv[]) {
+	do_look_at(fd, argc, argv);
+}
 
-	core_command_t *cmd_i = command_match(cmd);
-	int descr = cmd->fd;
+void ndc_connect(int fd) {
+}
 
-	descr_t *d = &descr_map[descr];
-
-	if (!(d->flags & DF_CONNECTED)) {
-		if (cmd_i && (cmd_i->flags & CF_NOAUTH))
-			cmd_i->cb(cmd);
-		return;
-	}
-
-	OBJ *player = cmd->player;
+void ndc_disconnect(int fd) {
+	OBJ *player = FD_PLAYER(fd);
 	ENT *eplayer = &player->sp.entity;
-
-	command_debug(cmd, "command_process");
-
-	// set current descriptor (needed for death)
-	eplayer->fd = descr;
-
-	OBJ *here = player->location;
-
-	pos_t pos;
-	map_where(pos, here);
-
-	if (cmd_i)
-		cmd_i->cb(cmd);
-	else
-		do_v(player, cmd->argv[0]);
-
-	pos_t pos2;
-	OBJ *there = player->location;
-	map_where(pos2, there);
-
-	if (MORTON_READ(pos2) != MORTON_READ(pos))
-		do_view(cmd);
-}
-
-void seq_print(unsigned char *buf, int ret) {
-	warn("SEQ");
-	for (int i = 0; i < ret; i ++)
-		warn(" %u", buf[i]);
-	warn("\n");
-}
-
-int
-descr_read(descr_t *d)
-{
-	unsigned char buf[BUFFER_LEN];
-	int ret;
-
-	if (d->flags & DF_WEBSOCKET) {
-		ret = ws_read(d->fd, (char *) buf, sizeof(buf));
-		switch (ret) {
-		case -1:
-			if (errno == EAGAIN)
-				return 0;
-
-			perror("descr_read ws ");
-		case 0: return -1;
-		}
-	} else {
-		ret = READ(d->fd, buf, sizeof(buf));
-		switch (ret) {
-		case -1:
-			if (errno == EAGAIN)
-				return 0;
-
-			perror("descr_read");
-			exit(-1);
-		case 1: break;
-		case 0: return -1;
-		}
-	}
-
-	int i = 0;
-
-pop:
-	for (; i < ret && buf[i] != IAC; i++);
-	/* seq_print(buf + i, ret - i); */
-
-	if (buf[i + 0] == IAC) {
-		if (buf[i + 1] == SB && buf[i + 2] == TELOPT_NAWS) {
-			unsigned char colsHighByte = buf[i + 3];
-			unsigned char colsLowByte = buf[i + 4];
-			unsigned char rowsHighByte = buf[i + 5];
-			unsigned char rowsLowByte = buf[i + 6];
-
-			struct winsize ws;
-			memset(&ws, 0, sizeof(ws));
-			d->cols = ws.ws_col = (colsHighByte << 8) | colsLowByte;
-			d->rows = ws.ws_row = (rowsHighByte << 8) | rowsLowByte;
-			ioctl(d->pty, TIOCSWINSZ, &ws);
-
-			d->flags &= ~DF_NAWS;
-			/* warn("NAWS! %hu %hu %s?\n", d->cols, d->rows, buf); */
-			i += 3;
-			goto pop;
-		} else if (buf[i + 1] == DO && buf[i + 2] == TELOPT_SGA) {
-			unsigned char command[] = { IAC, WONT, TELOPT_ECHO, IAC, WILL, TELOPT_SGA };
-			if (descr_map[d->fd].flags & DF_WEBSOCKET)
-				ws_write(d->fd, command, sizeof(command));
-			else
-				WRITE(d->fd, command, sizeof(command));
-			i += 3;
-			goto pop;
-		} else if (buf[i + 1] == DO) {
-			unsigned char command[] = { IAC, WILL, buf[i + 2] };
-			if (descr_map[d->fd].flags & DF_WEBSOCKET)
-				ws_write(d->fd, command, sizeof(command));
-			else
-				WRITE(d->fd, command, sizeof(command));
-			i += 3;
-			goto pop;
-		} else if (buf[i + 1] == DONT) {
-			unsigned char command[] = { IAC, WONT, buf[i + 2] };
-			if (descr_map[d->fd].flags & DF_WEBSOCKET)
-				ws_write(d->fd, command, sizeof(command));
-			else
-				WRITE(d->fd, command, sizeof(command));
-			i += 3;
-			goto pop;
-		} else if (buf[i + 1] == DO || buf[i + 1] == DONT || buf[i + 1] == WILL) {
-			i += 3;
-			goto pop;
-		} else {
-			seq_print(buf + i, ret - i);
-			i += 1;
-			goto pop;
-		}
-		return 0;
-	}
-
-	if (buf[ret - 2] == '\r' && ret >= 3)
-		ret -= 2;
-	buf[ret] = '\0';
-
-	int value;
-
-	if (d->pid > 0) {
-		int wpid = waitpid(d->pid, &value, WNOHANG);
-		if (wpid)
-			d->pid = 0;
-		else {
-			write(d->pty, buf, ret);
-			return 0;
-		}
-	}
-
-	command_t cmd = command_new(d, (char *) buf, ret);
-
-	for (i = 0; i < ret && buf[i] != '\r'; i++);
-	buf[i] = '\0';
-
-	if (!cmd.argc)
-		return 0;
-
-	command_process(&cmd);
-
-	if (cmd.argc != 3)
-		return 0;
-
-	return ret;
-}
-
-descr_t *
-descr_new()
-{
-	struct sockaddr_in addr;
-	socklen_t addr_len = (socklen_t)sizeof(addr);
-	int fd = accept(sockfd, (struct sockaddr *) &addr, &addr_len);
-	descr_t *d;
-
-	if (fd <= 0) {
-		perror("descr_new");
-		return NULL;
-	}
-
-	FD_SET(fd, &activefds);
-
-	d = &descr_map[fd];
-	memset(d, 0, sizeof(descr_t));
-	d->fd = fd;
-
-	d->player = NULL;
-	/* d->cols = 80; */
-	/* d->rows = 24; */
-
-#ifdef CONFIG_SECURE
-	d->cSSL = SSL_new(sslctx);
-	SSL_set_fd(d->cSSL, fd);
-
-	if (SSL_accept(d->cSSL) <= 0) {
-		ERR_print_errors_fp(stderr);
-		SSL_shutdown(d->cSSL);
-		SSL_free(d->cSSL);
-		close(fd);
-		return NULL;
-	}
-#endif
-
-	if (fcntl(fd, F_SETFL, O_NONBLOCK) == -1) {
-		perror("make_nonblocking: fcntl");
-		abort();
-	}
-
-	d->pty = posix_openpt(O_RDWR | O_NOCTTY);
-	if (d->pty == -1)
-		perror("posix_openpt");
-	if (grantpt(d->pty) == -1)
-		perror("grantpt");
-	if (unlockpt(d->pty) == -1)
-		perror("unlockpt");
-
-	int flags;
-	flags = fcntl(d->pty, F_GETFL, 0);
-	fcntl(d->pty, F_SETFL, flags | O_NONBLOCK);
-	FD_SET(d->pty, &activefds);
-	/* FD_SET(d->pty, &readfds); */
-	descr_map[d->pty].fd = fd;
-	descr_map[d->pty].pty = d->pty;
-	descr_map[d->pty].pid = d->pid;
-	descr_map[d->pty].tty = d->tty;
-
-	mcp_frame_init(&d->mcpframe, d);
-	return d;
-}
-
-void
-descr_close(descr_t *d)
-{
-	if (d->flags & DF_CONNECTED) {
-		OBJ *player = d->player;
-		ENT *eplayer = &player->sp.entity;
-		warn("%s(%d) disconnects on fd %d\n",
-		     player->name, object_ref(player), d->fd);
-		OBJ *last_observed = eplayer->last_observed;
-		if (last_observed)
-			observer_remove(last_observed, player);
-
-		eplayer->fd = -1;
-		d->flags = 0;
-		d->player = NULL;
-	} else {
-		d->flags = 0;
-		d->player = NULL;
-		warn("%d never connected\n", d->fd);
-	}
-
-	shutdown(d->fd, 2);
-	close(d->fd);
-	FD_CLR(d->fd, &activefds);
-	FD_CLR(d->fd, &readfds);
-	d->fd = -1;
-	if (d)
-		memset(d, 0, sizeof(descr_t));
-}
-
-int
-make_socket(int port)
-{
-	int opt;
-	struct sockaddr_in server;
-
-	sockfd = socket(AF_INET, SOCK_STREAM, 0);
-
-	if (sockfd < 0) {
-		perror("creating stream socket");
-		exit(3);
-	}
-
-	opt = 1;
-	if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, (char *) &opt, sizeof(opt)) < 0) {
-		perror("setsockopt");
-		exit(1);
-	}
-
-	opt = 1;
-	if (setsockopt(sockfd, SOL_SOCKET, SO_KEEPALIVE, (char *) &opt, sizeof(opt)) < 0) {
-		perror("setsockopt");
-		exit(1);
-	}
-
-	server.sin_family = AF_INET;
-	server.sin_addr.s_addr = INADDR_ANY;
-	server.sin_port = htons(port);
-
-	if (bind(sockfd, (struct sockaddr *) &server, sizeof(server))) {
-		perror("binding stream socket");
-		close(sockfd);
-		exit(4);
-	}
-
-	FD_ZERO(&readfds);
-	FD_ZERO(&writefds);
-	FD_SET(sockfd, &readfds);
-	descr_map[0].fd = sockfd;
-
-	listen(sockfd, 5);
-	return sockfd;
-}
-
-long long current_timestamp() {
-	struct timeval te;
-	gettimeofday(&te, NULL); // get current time
-	long long milliseconds = te.tv_sec*1000LL + te.tv_usec/1000; // calculate milliseconds
-								     // printf("milliseconds: %lld\n", milliseconds);
-	return milliseconds;
-}
-
-
-time_t get_now() {
-	time_t now;
-	time(&now);
-	return now;
-}
-
-void pty_read(int i) {
-	descr_t *d = &descr_map[i];
-	char buf[BUFSIZ * 4];
-
-	if (!FD_ISSET(d->pty, &readfds))
-		return;
-
-	int ret = read(d->pty, buf, sizeof(buf)), value;
-	switch (ret) {
-		case -1: if (errno == EAGAIN) return;
-		case 0: 
-			 if (d->pid > 0 && waitpid(d->pid, &value, WNOHANG)) {
-				 d->pid = 0;
-				 /* FD_CLR(d->pty, &activefds); */
-				 /* FD_CLR(d->pty, &readfds); */
-
-				 unsigned char command[] = { IAC, WONT, TELOPT_ECHO, IAC, WONT, TELOPT_SGA };
-				 if (descr_map[d->fd].flags & DF_WEBSOCKET)
-					 ws_write(d->fd, command, sizeof(command));
-				 else
-					 WRITE(d->fd, command, sizeof(command));
-			 }
-		case 1: return;
-		default:
-			if (descr_map[i].flags & DF_WEBSOCKET)
-				ws_write(i, buf, ret);
-			else
-				WRITE(i, buf, ret);
-	}
-}
-
-int
-shovechars()
-{
-	struct timeval timeout;
-	descr_t *d;
-	int i;
-
-	sockfd = make_socket(TINYPORT);
-
-	if (sockfd <= 0) {
-		perror("make_socket");
-		return sockfd;
-	}
-
-	FD_SET(sockfd, &activefds);
-
-	/* Daemonize */
-	if ((optflags & OPT_DETACH) && daemon(1, 1) != 0)
-		_exit(0);
-
-	mstart = mnow = current_timestamp();
-	/* And here, we do the actual player-interaction loop */
-
-	warn("Done.\n");
-
-	while (shutdown_flag == 0) {
-		/* process_commands(); */
-		mlast = mnow;
-		mnow = current_timestamp();
-		dt = mnow - mlast;
-		macc += dt;
-		if (macc > 1000) {
-			objects_update();
-			st_update();
-			macc -= 1000;
-		}
-
-		if (shutdown_flag)
-			break;
-
-		timeout.tv_sec = 0;
-		timeout.tv_usec = 100;
-
-		readfds = activefds;
-		int select_n = select(FD_SETSIZE, &readfds, NULL, NULL, &timeout);
-
-		switch (select_n) {
-		case -1:
-			switch (errno) {
-			case EAGAIN:
-				return 0;
-			case EINTR:
-				continue;
-			case EBADF:
-				continue;
-			}
-
-			perror("select");
-			return -1;
-		case 0:
-			continue;
-		}
-
-		for (d = descr_map, i = 0;
-		     d < descr_map + FD_SETSIZE;
-		     d++, i++) {
-			if (!FD_ISSET(i, &readfds))
-				continue;
-
-			if (i == sockfd) {
-				descr_new();
-				continue;
-			}
-
-			if (d->fd == i && descr_read(d) < 0) {
-				descr_close(d);
-				continue;
-			}
-
-			pty_read(d->fd);
-		}
-	}
-
-	return 0;
+	warn("%s(%d) disconnects on fd %d\n",
+			player->name, object_ref(player), fd);
+	OBJ *last_observed = eplayer->last_observed;
+	if (last_observed)
+		observer_remove(last_observed, player);
+
+	eplayer->fd = -1;
+	FD_PLAYER(fd) = NULL;
 }

@@ -2,6 +2,7 @@
 #include <ctype.h>
 #include <string.h>
 #include <stdlib.h>
+#include <ndc.h>
 
 #include "io.h"
 #include "copyright.h"
@@ -11,21 +12,20 @@
 #include "defaults.h"
 #include "match.h"
 #include "player.h"
-#include "command.h"
 
 static OBJ *
-match_controlled(OBJ *player, const char *name)
+match_controlled(OBJ *player, char *name)
 {
 	ENT *eplayer = &player->sp.entity;
 	OBJ *match = ematch_all(player, name);
 
 	if (!match) {
-		notify(eplayer, NOMATCH_MESSAGE);
+		ndc_writef(eplayer->fd, NOMATCH_MESSAGE);
 		return NULL;
 	}
 
 	else if (!controls(player, match)) {
-		notify(eplayer, "Permission denied. (You don't control what was matched)");
+		ndc_writef(eplayer->fd, "Permission denied. (You don't control what was matched)\n");
 		return NULL;
 	}
 
@@ -33,26 +33,24 @@ match_controlled(OBJ *player, const char *name)
 }
 
 void
-do_name(command_t *cmd)
+do_name(int fd, int argc, char *argv[])
 {
-	OBJ *player = cmd->player;
-	ENT *eplayer = &player->sp.entity;
-	const char *name = cmd->argv[1];
-	char *newname = cmd->argv[2];
+	OBJ *player = FD_PLAYER(fd);
+	char *name = argv[1];
+	char *newname = argv[2];
 	OBJ *thing = match_controlled(player, name);
 
 	if (!thing)
 		return;
-		;
 
 	/* check for bad name */
 	if (*newname == '\0') {
-		notify(eplayer, "Give it what new name?");
+		ndc_writef(fd, "Give it what new name?\n");
 		return;
 	}
 	/* check for renaming a player */
 	if (!ok_name(newname)) {
-		notify(eplayer, "That is not a reasonable name.");
+		ndc_writef(fd, "That is not a reasonable name.\n");
 		return;
 	}
 
@@ -61,27 +59,27 @@ do_name(command_t *cmd)
 		free((void *) thing->name);
 	}
 	thing->name = strdup(newname);
-	notify(eplayer, "Name set.");
+	ndc_writef(fd, "Name set.\n");
 }
 
 void
-do_chown(command_t *cmd)
+do_chown(int fd, int argc, char *argv[])
 {
-	OBJ *player = cmd->player;
+	OBJ *player = FD_PLAYER(fd);
 	ENT *eplayer = &player->sp.entity;
-	const char *name = cmd->argv[1];
-	const char *newowner = cmd->argv[2];
+	char *name = argv[1];
+	char *newowner = argv[2];
 	OBJ *thing;
 	OBJ *owner;
 
 	if (!*name) {
-		notify(eplayer, "You must specify what you want to take ownership of.");
+		ndc_writef(fd, "You must specify what you want to take ownership of.\n");
 		return;
 	}
 
 	thing = ematch_all(player, name);
 	if (!thing) {
-		notify(eplayer, NOMATCH_MESSAGE);
+		ndc_writef(fd, NOMATCH_MESSAGE);
 		return;
 	}
 
@@ -89,26 +87,26 @@ do_chown(command_t *cmd)
 		owner = player_get(newowner);
 
 		if (!owner) {
-			notify(eplayer, "I couldn't find that player.");
+			ndc_writef(fd, "I couldn't find that player.\n");
 			return;
 		}
 	} else {
 		owner = player->owner;
 	}
 	if (!(eplayer->flags & EF_WIZARD) && player->owner != owner) {
-		notify(eplayer, "Only wizards can transfer ownership to others.");
+		ndc_writef(fd, "Only wizards can transfer ownership to others.\n");
 		return;
 	}
 
 	if ((eplayer->flags & EF_WIZARD) && !God(player) && God(owner)) {
-		notify(eplayer, "God doesn't need an offering or sacrifice.");
+		ndc_writef(fd, "God doesn't need an offering or sacrifice.\n");
 		return;
 	}
 
 	switch (thing->type) {
 	case TYPE_ROOM:
 		if (!(eplayer->flags & EF_WIZARD) && player->location != thing) {
-			notify(eplayer, "You can only chown \"here\".");
+			ndc_writef(fd, "You can only chown \"here\".\n");
 			return;
 		}
 		thing->owner = owner->owner;
@@ -117,21 +115,21 @@ do_chown(command_t *cmd)
 	case TYPE_EQUIPMENT:
 	case TYPE_THING:
 		if (!(eplayer->flags & EF_WIZARD) && thing->location != player) {
-			notify(eplayer, "You aren't carrying that.");
+			ndc_writef(fd, "You aren't carrying that.\n");
 			return;
 		}
 		thing->owner = owner->owner;
 		break;
 	case TYPE_ENTITY:
-		notify(eplayer, "Entities always own themselves.");
+		ndc_writef(fd, "Entities always own themselves.\n");
 		return;
 	case TYPE_GARBAGE:
-		notify(eplayer, "No one wants to own garbage.");
+		ndc_writef(fd, "No one wants to own garbage.\n");
 		return;
 	}
 	if (owner == player)
-		notify(eplayer, "Owner changed to you.");
+		ndc_writef(fd, "Owner changed to you.\n");
 	else {
-		notifyf(eplayer, "Owner changed to %s.", unparse(player, owner));
+		ndc_writef(fd, "Owner changed to %s.\n", unparse(player, owner));
 	}
 }

@@ -6,75 +6,73 @@
 #include "object.h"
 
 /* from entity.c */
-void do_reroll(command_t *);
+void do_reroll(int fd, int argc, char *argv[]);
 
 /* from timequeue.c */
-void do_pose(command_t *);
-void do_score(command_t *);
-void do_view(command_t *);
+void do_pose(int fd, int argc, char *argv[]);
+void do_score(int fd, int argc, char *argv[]);
+void do_view(int fd, int argc, char *argv[]);
 
 /* From create.c */
-extern void do_create(command_t *);
-extern void do_clone(command_t *);
+extern void do_create(int fd, int argc, char *argv[]);
+extern void do_clone(int fd, int argc, char *argv[]);
 
 /* From help.c */
 extern void spit_file(OBJ *player, const char *filename);
-extern void do_help(command_t *);
-extern void do_man(command_t *);
-extern void do_motd(command_t *);
-extern void do_info(command_t *);
+extern void do_man(int fd, int argc, char *argv[]);
+extern void do_motd(int fd, int argc, char *argv[]);
 
 /* From look.c */
-extern void do_look_at(command_t *cmd);
-extern void do_examine(command_t *cmd);
-extern void do_inventory(command_t *cmd);
-extern void do_owned(command_t *);
-extern void do_contents(command_t *);
+extern void do_look_at(int fd, int argc, char *argv[]);
+extern void do_examine(int fd, int argc, char *argv[]);
+extern void do_inventory(int fd, int argc, char *argv[]);
+extern void do_owned(int fd, int argc, char *argv[]);
+extern void do_contents(int fd, int argc, char *argv[]);
 
 /* from item.c */
-extern void do_select(command_t *);
-extern void do_equip(command_t *);
-extern void do_unequip(command_t *);
-extern void do_consume(command_t *);
-extern void do_fill(command_t *);
+extern void do_select(int fd, int argc, char *argv[]);
+extern void do_equip(int fd, int argc, char *argv[]);
+extern void do_unequip(int fd, int argc, char *argv[]);
+extern void do_consume(int fd, int argc, char *argv[]);
+extern void do_fill(int fd, int argc, char *argv[]);
 
 /* from shop.c */
-extern void do_shop(command_t *);
-extern void do_buy(command_t *);
-extern void do_sell(command_t *);
+extern void do_shop(int fd, int argc, char *argv[]);
+extern void do_buy(int fd, int argc, char *argv[]);
+extern void do_sell(int fd, int argc, char *argv[]);
 
 /* from kill.c */
-extern void do_kill(command_t *);
-extern void do_advitam(command_t *cmd);
-extern void do_heal(command_t *);
-extern void do_status(command_t *);
-extern void do_train(command_t *);
-extern void do_sit(command_t *);
-extern void do_stand(command_t *);
+extern void do_kill(int fd, int argc, char *argv[]);
+extern void do_advitam(int fd, int argc, char *argv[]);
+extern void do_heal(int fd, int argc, char *argv[]);
+extern void do_status(int fd, int argc, char *argv[]);
+extern void do_train(int fd, int argc, char *argv[]);
+extern void do_sit(int fd, int argc, char *argv[]);
+extern void do_stand(int fd, int argc, char *argv[]);
 extern int kill_v(OBJ *player, const char *cmdstr);
 
 /* From move.c */
-extern void do_get(command_t *);
-extern void do_drop(command_t *);
-extern void do_recycle(command_t *);
+extern void do_get(int fd, int argc, char *argv[]);
+extern void do_drop(int fd, int argc, char *argv[]);
+extern void do_recycle(int fd, int argc, char *argv[]);
 
 /* From rob.c */
-extern void do_give(command_t *);
+extern void do_give(int fd, int argc, char *argv[]);
 
 /* From set.c */
-extern void do_name(command_t *);
-extern void do_chown(command_t *);
+extern void do_name(int fd, int argc, char *argv[]);
+extern void do_chown(int fd, int argc, char *argv[]);
 
 /* From speech.c */
-extern void do_wall(command_t *cmd);
-extern void do_say(command_t *cmd);
+extern void do_wall(int fd, int argc, char *argv[]);
+extern void do_say(int fd, int argc, char *argv[]);
 
 /* From wiz.c */
-extern void do_teleport(command_t *);
-extern void do_toad(command_t *);
-extern void do_boot(command_t *);
-extern void do_usage(command_t *);
+extern void do_teleport(int fd, int argc, char *argv[]);
+extern void do_toad(int fd, int argc, char *argv[]);
+extern void do_boot(int fd, int argc, char *argv[]);
+extern void do_usage(int fd, int argc, char *argv[]);
 
-/* extern void do_gpt(command_t *); */
+/* extern void do_gpt(int fd, int argc, char *argv[]); */
 
 #endif /* _EXTERNS_H */

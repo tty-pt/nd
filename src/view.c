@@ -8,7 +8,6 @@
 
 #include "params.h"
 #include "debug.h"
-#include "command.h"
 
 #ifndef __OpenBSD__
 #include "bsd/string.h"
@@ -425,11 +424,11 @@ view(OBJ *player)
         /* if (mcp_view(eplayer, &view)) */
         /* if (fbcp_view(eplayer, &view)) */
         if (fbcp_view_buf(eplayer, view_buf))
-		notify(eplayer, view_buf);
+		ndc_writef(eplayer->fd, view_buf);
 }
 
 void
-do_view(command_t *cmd)
+do_view(int fd, int argc, char *argv[])
 {
-        view(cmd->player);
+        view(FD_PLAYER(fd));
 }

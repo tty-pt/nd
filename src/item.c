@@ -1,53 +1,52 @@
 #include <stdlib.h>
 #include "io.h"
+#include <ndc.h>
 
 #include "entity.h"
 #include "mob.h"
 #include "match.h"
 
 void
-do_select(command_t *cmd)
+do_select(int fd, int argc, char *argv[])
 {
-	OBJ *player = cmd->player;
+	OBJ *player = FD_PLAYER(fd);
 	ENT *eplayer = &player->sp.entity;
-	const char *n_s = cmd->argv[1];
+	const char *n_s = argv[1];
 	unsigned n = strtoul(n_s, NULL, 0);
 	eplayer->select = n;
-	notifyf(eplayer, "You select %u.", n);
+	ndc_writef(fd, "You select %u.\n", n);
 }
 
 void
-do_equip(command_t *cmd)
+do_equip(int fd, int argc, char *argv[])
 {
-	OBJ *player = cmd->player;
-	ENT *eplayer = &player->sp.entity;
-	char const *name = cmd->argv[1];
+	OBJ *player = FD_PLAYER(fd);
+	char *name = argv[1];
 	OBJ *eq = ematch_mine(player, name);
 
 	if (!eq) {
-		notify(eplayer, "You are not carrying that.");
+		ndc_writef(fd, "You are not carrying that.\n");
 		return;
 	}
 
 	if (equip(player, eq)) { 
-		notify(eplayer, "You can't equip that.");
+		ndc_writef(fd, "You can't equip that.\n");
 		return;
 	}
 }
 
 void
-do_unequip(command_t *cmd)
+do_unequip(int fd, int argc, char *argv[])
 {
-	OBJ *player = cmd->player;
-	ENT *eplayer = &player->sp.entity;
-	char const *name = cmd->argv[1];
+	OBJ *player = FD_PLAYER(fd);
+	char const *name = argv[1];
 	enum bodypart bp = BODYPART_ID(*name);
 	dbref eq;
 
 	if ((eq = unequip(player, bp)) == NOTHING) {
-		notify(eplayer, "You don't have that equipped.");
+		ndc_writef(fd, "You don't have that equipped.\n");
 		return;
 	}
 
-	notifyf(eplayer, "You unequip %s.", object_get(eq)->name);
+	ndc_writef(fd, "You unequip %s.\n", object_get(eq)->name);
 }

@@ -53,7 +53,7 @@ void enter(OBJ *player, OBJ *loc, enum exit e);
 
 const char * unparse(OBJ *player, OBJ *loc);
 
-void sit(OBJ *player, char const *what);
+void sit(OBJ *player, char *what);
 int stand_silent(OBJ *player);
 void stand(OBJ *who);
 
@@ -71,7 +71,6 @@ enum element element_next(ENT *ref, register unsigned char a);
 void stats_init(ENT *enu, SENT *sk);
 void entity_update(OBJ *player);
 int entity_damage(OBJ *player, OBJ *target, short amt);
-int entity_boot(ENT *eplayer);
 /* void entity_gpt(OBJ *player, int echo_off, char *add_prompt); */
 
 void entities_add(OBJ *where, enum biome, long long pdn);

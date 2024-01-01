@@ -1,6 +1,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <stdlib.h>
+#include <ndc.h>
 
 #ifndef __OpenBSD__
 #include <bsd/string.h>
@@ -10,7 +11,6 @@
 #include "entity.h"
 #include "config.h"
 #include "utils.h"
-#include "command.h"
 
 #include "params.h"
 #include "defaults.h"
@@ -18,23 +18,23 @@
 
 /* TODO improve/remove this. use skeletons to copy objects? */
 void
-do_clone(command_t *cmd)
+do_clone(int fd, int argc, char *argv[])
 {
-	OBJ *player = cmd->player;
+	OBJ *player = FD_PLAYER(fd);
 	ENT *eplayer = &player->sp.entity;
-	char *name = cmd->argv[1];
+	char *name = argv[1];
 	OBJ *thing, *clone;
 	int    cost;
 
 	/* Perform sanity checks */
 
 	if (!(eplayer->flags & (EF_WIZARD | EF_BUILDER))) {
-		notify(eplayer, "That command is restricted to authorized builders.");
+		ndc_writef(fd, "That command is restricted to authorized builders.\n");
 		return;
 	}
 	
 	if (*name == '\0') {
-		notify(eplayer, "Clone what?");
+		ndc_writef(fd, "Clone what?\n");
 		return;
 	} 
 
@@ -47,7 +47,7 @@ do_clone(command_t *cmd)
 			&& !(thing = ematch_near(player, name))
 	   )
 	{
-		notify(eplayer, "I don't know what you mean.");
+		ndc_writef(fd, "I don't know what you mean.\n");
 		return;
 	}
 
@@ -55,20 +55,20 @@ do_clone(command_t *cmd)
 
 	/* things only. */
 	if(thing->type != TYPE_THING) {
-		notify(eplayer, "That is not a cloneable object.");
+		ndc_writef(fd, "That is not a cloneable object.\n");
 		return;
 	}		
 	
 	/* check the name again, just in case reserved name patterns have
 	   changed since the original object was created. */
 	if (!ok_name(thing->name)) {
-		notify(eplayer, "You cannot clone something with such a weird name!");
+		ndc_writef(fd, "You cannot clone something with such a weird name!\n");
 		return;
 	}
 
 	/* no stealing stuff. */
 	if(!controls(player, thing)) {
-		notify(eplayer, "Permission denied. (you can't clone this)");
+		ndc_writef(fd, "Permission denied. (you can't clone this)\n");
 		return;
 	}
 
@@ -79,7 +79,7 @@ do_clone(command_t *cmd)
 	}
 	
 	if (!payfor(player, cost)) {
-		notifyf(eplayer, "Sorry, you don't have enough %s.", PENNIES);
+		ndc_writef(fd, "Sorry, you don't have enough %s.\n", PENNIES);
 		return;
 	} else {
 		/* create the object */
@@ -116,7 +116,7 @@ do_clone(command_t *cmd)
 		PUSH(clone, player->contents);
 
 		/* and we're done */
-		notifyf(eplayer, "%s created with number %d.", thing->name, object_ref(clone));
+		ndc_writef(fd, "%s created with number %d.\n", thing->name, object_ref(clone));
 	}
 }
 
@@ -126,12 +126,12 @@ do_clone(command_t *cmd)
  * Use this to create an object.
  */
 void
-do_create(command_t *cmd)
+do_create(int fd, int argc, char *argv[])
 {
-	OBJ *player = cmd->player;
+	OBJ *player = FD_PLAYER(fd);
 	ENT *eplayer = &player->sp.entity;
-	char *name = cmd->argv[1];
-	char *acost = cmd->argv[2];
+	char *name = argv[1];
+	char *acost =argv[2];
 	OBJ *thing;
 	int cost;
 
@@ -150,23 +150,23 @@ do_create(command_t *cmd)
 
 	cost = atoi(qname);
 	if (!(eplayer->flags & (EF_WIZARD | EF_BUILDER))) {
-		notify(eplayer, "That command is restricted to authorized builders.");
+		ndc_writef(fd, "That command is restricted to authorized builders.\n");
 		return;
 	}
 	if (*name == '\0') {
-		notify(eplayer, "Create what?");
+		ndc_writef(fd, "Create what?\n");
 		return;
 	} else if (!ok_name(name)) {
-		notify(eplayer, "That's a silly name for a thing!");
+		ndc_writef(fd, "That's a silly name for a thing!\n");
 		return;
 	} else if (cost < 0) {
-		notify(eplayer, "You can't create an object for less than nothing!");
+		ndc_writef(fd, "You can't create an object for less than nothing!\n");
 		return;
 	} else if (cost < OBJECT_COST) {
 		cost = OBJECT_COST;
 	}
 	if (!payfor(player, cost)) {
-		notifyf(eplayer, "Sorry, you don't have enough %s.", PENNIES);
+		ndc_writef(fd, "Sorry, you don't have enough %s.\n", PENNIES);
 		return;
 	}
 
@@ -188,5 +188,5 @@ do_create(command_t *cmd)
 	PUSH(thing, player->contents);
 
 	/* and we're done */
-	notifyf(eplayer, "%s created with number %d.", name, object_ref(thing));
+	ndc_writef(fd, "%s created with number %d.\n", name, object_ref(thing));
 }

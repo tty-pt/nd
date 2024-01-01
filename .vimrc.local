@@ -105,12 +105,12 @@ func s:Connect()
 	let id = win_getid()
 	call MuckBuffer()
 	if g:os == "OpenBSD"
-		let muckt = term_start('openssl s_client -connect localhost:4234 -crlf', {
+		let muckt = term_start('openssl s_client -connect localhost:4201 -crlf', {
 					\ "term_kill": "int",
 					\ "curwin": 1,
 					\ })
 	else
-		let muckt = term_start('telnet localhost 4234', {
+		let muckt = term_start('telnet localhost 4201', {
 					\ "term_kill": "int",
 					\ "curwin": 1,
 					\ })
@@ -181,7 +181,7 @@ endfunc
 if !has('macunix')
 	autocmd! QuickfixCmdPost make call Restart()
 
-	File ./src/fbmuck
+	File ./nd
 	" Args \-C ./game
 	GdbStart
 	if g:gdb_sudo == 1

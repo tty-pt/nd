@@ -4,7 +4,6 @@
 #include "nd/noise.h"
 #include "biome.h"
 #include "plant.h"
-#include "hash.h"
 
 struct bio {
 	coord_t tmp;

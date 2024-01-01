@@ -1,19 +1,20 @@
 #include "spacetime.h"
 
+#include "io.h"
+
+#include <xxhash.h>
 #include <stdlib.h>
 #include <ctype.h>
 #include <string.h>
 #include <time.h>
 
 #include "nddb.h"
-#include "io.h"
 #include "debug.h"
 #include "noise.h"
 #include "map.h"
 #include "entity.h"
 #include "defaults.h"
 #include "params.h"
-#include "command.h"
 
 #define PRECOVERY
 
@@ -154,7 +155,7 @@ object_drop(OBJ *where, struct drop **drop)
 
 	for (; *drop; drop++)
 		if (random() < (RAND_MAX >> (*drop)->y)) {
-			noise_t v2 = uhash((const char *) pos, sizeof(pos_t), 3);
+			noise_t v2 = XXH32((const char *) pos, sizeof(pos_t), 3);
                         int yield = (*drop)->yield,
                             yield_v = (*drop)->yield_v;
 
@@ -166,7 +167,7 @@ object_drop(OBJ *where, struct drop **drop)
                         yield += random() & yield_v;
 
                         for (i = 0; i < yield; i++) {
-				v2 = uhash((const char *) pos, sizeof(pos_t), 4 + i);
+				v2 = XXH32((const char *) pos, sizeof(pos_t), 4 + i);
                                 object_add((*drop)->i, where, &v2);
 			}
                 }
@@ -241,9 +242,9 @@ st_update()
 	day_tick += DAYTICK;
 
 	if (day_tick == 0)
-		msg = "The sun rises.";
+		msg = "The sun rises.\n";
 	else if (day_tick == (1 << (DAY_Y - 1)))
-		msg = "The sun sets.";
+		msg = "The sun sets.\n";
 	else
 		return;
 
@@ -251,7 +252,7 @@ st_update()
 		OBJ *o = object_get(i);
 		if (o->type == TYPE_ENTITY) {
 			ENT *eo = &o->sp.entity;
-			notify(eo, msg);
+			ndc_writef(eo->fd, msg);
 		}
 	}
 }
@@ -283,7 +284,7 @@ reward(OBJ *player, const char *msg, int amount)
 {
 	ENT *eplayer = &player->sp.entity;
 	player->value += amount;
-	notifyf(eplayer, "You %s. (+%dp)", msg, amount);
+	ndc_writef(eplayer->fd, "You %s. (+%dp)\n", msg, amount);
 }
 
 static inline int
@@ -292,11 +293,11 @@ fee_fail(OBJ *player, char *desc, char *info, int cost)
 	ENT *eplayer = &player->sp.entity;
 	int v = player->value;
 	if (v < cost) {
-		notifyf(eplayer, "You can't afford to %s. (%dp)", desc, cost);
+		ndc_writef(eplayer->fd, "You can't afford to %s. (%dp)\n", desc, cost);
 		return 1;
 	} else {
 		player->value -= cost;
-		notifyf(eplayer, "%s (-%dp). %s",
+		ndc_writef(eplayer->fd, "%s (-%dp). %s\n",
 			   desc, cost, info);
 		return 0;
 	}
@@ -329,7 +330,7 @@ st_claim(OBJ *player, OBJ *room) {
 
 	if (!(rroom->flags & RF_TEMP)) {
 		if (room->owner != player) {
-			notify(eplayer, "You don't own this room");
+			ndc_writef(eplayer->fd, "You don't own this room\n");
 			return 1;
 		}
 
@@ -407,7 +408,7 @@ exits_infer(OBJ *player, OBJ *here)
 
 static inline void
 stones_add(OBJ *where, struct bio *bio, pos_t p) {
-	noise_t v = uhash((const char *) p, sizeof(pos_t), 0);
+	noise_t v = XXH32((const char *) p, sizeof(pos_t), 0);
 	unsigned char n = v & 0x3, i;
 	static struct object_skeleton stone = {
                 .name = "stone",
@@ -424,7 +425,7 @@ stones_add(OBJ *where, struct bio *bio, pos_t p) {
         if (!(n && (v & 0x18) && (v & 0x20)))
                 return;
 
-	noise_t v2 = uhash((const char *) p, sizeof(pos_t), 0);
+	noise_t v2 = XXH32((const char *) p, sizeof(pos_t), 0);
 
         for (i = 0; i < n; i++, v2 >>= 4)
                 object_add(&stone, where, &v2);
@@ -451,14 +452,13 @@ st_room_at(OBJ *player, pos_t pos)
 }
 
 void
-do_bio(command_t *cmd) {
-	OBJ *player = cmd->player;
-	ENT *eplayer = &player->sp.entity;
+do_bio(int fd, int argc, char *argv[]) {
+	OBJ *player = FD_PLAYER(fd);
 	struct bio *bio;
 	pos_t pos;
 	map_where(pos, player->location);
 	bio = noise_point(pos);
-	notifyf(eplayer, "tmp %d rn %u bio %s(%d)",
+	ndc_writef(fd, "tmp %d rn %u bio %s(%d)\n",
 		bio->tmp, bio->rn, biomes[bio->bio_idx].name, bio->bio_idx);
 }
 
@@ -485,12 +485,12 @@ e_move(OBJ *player, enum exit e) {
 	int door = 0;
 
 	if (eplayer->klock) {
-		notify(eplayer, "You can't move while being targeted.");
+		ndc_writef(eplayer->fd, "You can't move while being targeted.\n");
 		return;
 	}
 
 	if (!map_has(loc) || !(rloc->exits & e)) {
-		notify(eplayer, "You can't go that way.");
+		ndc_writef(eplayer->fd, "You can't go that way.\n");
 		return;
 	}
 
@@ -503,11 +503,11 @@ e_move(OBJ *player, enum exit e) {
 		} else
 			door = 1;
 
-		notifyf(eplayer, "You open the %s.", dwts);
+		ndc_writef(eplayer->fd, "You open the %s.\n", dwts);
 	}
 
-	notifyf(eplayer, "You go %s%s%s.\r\n", ANSI_FG_BLUE ANSI_BOLD, e_name(e), ANSI_RESET);
-	onotifyf(player, "%s goes %s.\r\n", player->name, e_name(e));
+	ndc_writef(eplayer->fd, "You go %s%s%s.\n", ANSI_FG_BLUE ANSI_BOLD, e_name(e), ANSI_RESET);
+	nd_rwritef(player->location, player, "%s goes %s.\n", player->name, e_name(e));
 
 	dest = st_there(loc, e);
 	if (!dest)
@@ -515,10 +515,10 @@ e_move(OBJ *player, enum exit e) {
 
 	enter(player, dest, e);
 
-	onotifyf(player, "%s comes in from the %s.\r\n", player->name, e_name(e_simm(e)));
+	nd_rwritef(player->location, player, "%s comes in from the %s.\n", player->name, e_name(e_simm(e)));
 
 	if (door)
-		notifyf(eplayer, "You close the %s.", dwts);
+		ndc_writef(eplayer->fd, "You close the %s.\n", dwts);
 }
 
 OBJ *
@@ -564,7 +564,7 @@ carve(OBJ *player, enum exit e)
 			return;
 
 		if (player->value < ROOM_COST) {
-			notify(eplayer, "You can't pay for that room");
+			ndc_writef(eplayer->fd, "You can't pay for that room.\n");
 			return;
 		}
 
@@ -608,14 +608,14 @@ uncarve(OBJ *player, enum exit e)
 			return;
 	} else {
 		if (!(rhere->exits & e)) {
-                        notifyf(eplayer, "No exit there");
+                        ndc_writef(eplayer->fd, "No exit there.\n");
                         return;
                 }
 
 		there = st_there(here, e);
 
 		if (!there) {
-			notify(eplayer, "No room there");
+			ndc_writef(eplayer->fd, "No room there.\n");
 			return;
 		}
 		s0 = "at";
@@ -624,7 +624,7 @@ uncarve(OBJ *player, enum exit e)
 	ROO *rthere = &there->sp.room;
 
 	if ((rthere->flags & RF_TEMP) || there->owner != player) {
-		notifyf(eplayer, "You don't own th%s room.", s0);
+		ndc_writef(eplayer->fd, "You don't own th%s room.\n", s0);
 		return;
 	}
 
@@ -665,12 +665,12 @@ unwall(OBJ *player, enum exit e)
 
 	if (!((a && !b && (d || c))
 	    || (c && !d && b))) {
-		notify(eplayer, "You can't do that here.");
+		ndc_writef(eplayer->fd, "You can't do that here.\n");
 		return;
 	}
 
 	if (rhere->exits & e) {
-		notify(eplayer, "There's an exit here already.");
+		ndc_writef(eplayer->fd, "There's an exit here already.\n");
 		return;
 	}
 
@@ -685,7 +685,7 @@ unwall(OBJ *player, enum exit e)
 		return;
 
 	rthere->exits |= e_simm(e);
-	notify(eplayer, "You tear down the wall.");
+	ndc_writef(eplayer->fd, "You tear down the wall.\n");
 }
 
 static inline int
@@ -712,7 +712,7 @@ gexit_claim(OBJ *player, enum exit e)
 			return st_claim(player, there);
 	}
 
-	notify(eplayer, "You can't claim that exit");
+	ndc_writef(eplayer->fd, "You can't claim that exit.\n");
 	return 1;
 }
 
@@ -724,7 +724,7 @@ gexit_claim_walk(OBJ *player, enum exit e)
 	ROO *rhere = &here->sp.room;
 
 	if (!(rhere->exits & e)) {
-		notify(eplayer, "No exit here");
+		ndc_writef(eplayer->fd, "No exit here.\n");
 		return 1;
 	}
 
@@ -761,7 +761,7 @@ e_wall(OBJ *player, enum exit e)
 		rthere->exits &= ~e;
 	}
 
-	notify(eplayer, "You build a wall.");
+	ndc_writef(eplayer->fd, "You build a wall.\n");
 }
 
 static void
@@ -784,7 +784,7 @@ door(OBJ *player, enum exit e)
 		rwhere->doors |= e;
 	}
 
-	notify(eplayer, "You place a door.");
+	ndc_writef(eplayer->fd, "You place a door.\n");
 }
 
 static void
@@ -807,7 +807,7 @@ undoor(OBJ *player, enum exit e)
 		rwhere->doors &= ~e;
 	}
 
-	notify(eplayer, "You remove a door.");
+	ndc_writef(eplayer->fd, "You remove a door.\n");
 }
 
 static int
@@ -818,12 +818,12 @@ tell_pos(OBJ *player, struct cmd_dir cd) {
 	int ret = 1;
 
 	if (target->type != TYPE_ENTITY) {
-		notify(eplayer, "Invalid object type.");
+		ndc_writef(eplayer->fd, "Invalid object type.\n");
 		return 0;
 	}
 
 	map_where(pos, target->location);
-	notifyf(eplayer, "0x%llx", MORTON_READ(pos));
+	ndc_writef(eplayer->fd, "0x%llx\n", MORTON_READ(pos));
 	return ret;
 }
 
@@ -850,7 +850,7 @@ st_teleport(OBJ *player, struct cmd_dir cd)
 		there = st_room_at(player, pos);
 	CBUG(!there);
 	if (!eplayer->gpt)
-		notifyf(eplayer, "Teleporting to 0x%llx.", cd.rep);
+		ndc_writef(eplayer->fd, "Teleporting to 0x%llx.\n", cd.rep);
 	enter(player, there, E_NULL);
 	return ret;
 }
@@ -878,7 +878,7 @@ pull(OBJ *player, struct cmd_dir cd)
 	    || ((there = st_there(here, e))
 		&& room_clean(player, there) == there))
 	{
-		notify(eplayer, "You cannot do that.");
+		ndc_writef(eplayer->fd, "You cannot do that.\n");
 		return 1;
 	}
 

@@ -6,10 +6,10 @@
 
 #include "defaults.h"
 
-DB *playerdb = NULL;
+int player_hd = -1;
 
 OBJ *
-player_create(const char *name)
+player_create(char *name)
 {
 	OBJ *player = object_new();
 	ENT *eplayer = &player->sp.entity;

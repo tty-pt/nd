@@ -3,7 +3,6 @@
 
 #include "object.h"
 #include "attr.h"
-#include "command.h"
 
 #define ELEMENT(idx) (&element_map[idx])
 

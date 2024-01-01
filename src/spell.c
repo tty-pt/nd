@@ -1,3 +1,5 @@
+#include <ndc.h>
+
 #include <string.h>
 #include <stdlib.h>
 
@@ -346,7 +348,7 @@ spells_cast(OBJ *player, OBJ *target)
 	}
 
 	if (!enough_mp)
-		notify(eplayer, "Not enough mana.");
+		ndc_writef(eplayer->fd, "Not enough mana.\n");
 
 	return 0;
 }

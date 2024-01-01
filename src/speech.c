@@ -11,37 +11,27 @@
 #include <string.h>
 #include "player.h"
 #include "debug.h"
-#include "command.h"
 
 /* Commands which involve speaking */
 
 void
-do_say(command_t *cmd)
+do_say(int fd, int argc, char *argv[])
 {
-	OBJ *player = cmd->player;
-	ENT *eplayer = &player->sp.entity;
-	const char *message = cmd->argv[1];
+	OBJ *player = FD_PLAYER(fd);
+	const char *message = argv[1];
 
-	notifyf(eplayer, "You say, \"%s\"", message);
-	onotifyf(player, "%s says, \"%s\"", player->name, message);
-	/* if (eplayer->gpt) { */
-	/* 	char contents[BUFFER_LEN]; */
-	/* 	sprintf(contents, "%s says: %s\n\n", player->name, message); */
-	/* 	entity_gpt(player, 0, contents); */
-	/* } else { */
-	/* 	notifyf(eplayer, "You say, \"%s\"", message); */
-	/* 	onotifyf(player, "%s says, \"%s\"", player->name, message); */
-	/* } */
+	ndc_writef(fd, "You say, \"%s\".", message);
+	nd_rwritef(player->location, player, "%s says, \"%s\"", player->name, message);
 }
 
 void
-do_pose(command_t *cmd)
+do_pose(int fd, int argc, char *argv[])
 {
-	OBJ *player = cmd->player;
+	OBJ *player = FD_PLAYER(fd);
 	/* ENT *eplayer = &player->sp.entity; */
-	const char *message = cmd->argv[1];
+	const char *message = argv[1];
 
-	anotifyf(player->location, "%s %s", player->name, message);
+	nd_rwritef(player->location, player, "%s %s", player->name, message);
 	/* if (eplayer->gpt) { */
 	/* 	char contents[BUFFER_LEN]; */
 	/* 	sprintf(contents, "Describe %s %s.\n\n", player->name, message); */
@@ -51,17 +41,17 @@ do_pose(command_t *cmd)
 }
 
 void
-do_wall(command_t *cmd)
+do_wall(int fd, int argc, char *argv[])
 {
-	OBJ *player = cmd->player, *oi;
+	OBJ *player = FD_PLAYER(fd), *oi;
 	CBUG(player->type != TYPE_ENTITY);
 	ENT *eplayer = &player->sp.entity;
-	const char *message = cmd->argv[1];
+	const char *message = argv[1];
 	char buf[BUFFER_LEN];
 
 
 	if (!(eplayer->flags & EF_WIZARD)) {
-		notify(eplayer, "But what do you want to do with the wall?");
+		ndc_writef(fd, "But what do you want to do with the wall?\n");
 		return;
 	}
 
@@ -69,54 +59,7 @@ do_wall(command_t *cmd)
 	snprintf(buf, sizeof(buf), "%s shouts, \"%s\"", player->name, message);
 	FOR_ALL(oi) {
 		if (oi->type == TYPE_ENTITY)
-			notify(&oi->sp.entity, buf);
-	}
-}
-
-static int
-blank(const char *s)
-{
-	while (*s && isspace(*s))
-		s++;
-
-	return !(*s);
-}
-
-/* doesn't really belong here, but I couldn't figure out where else */
-void
-do_page(command_t *cmd)
-{
-	OBJ *player = cmd->player;
-	ENT *eplayer = &player->sp.entity;
-	const char *arg1 = cmd->argv[1];
-	const char *arg2 = cmd->argv[2];
-	char buf[BUFFER_LEN];
-	OBJ *target;
-
-	if (!payfor(player, LOOKUP_COST)) {
-		notifyf(eplayer, "You don't have enough %s.", PENNIES);
-		return;
-	}
-
-	target = player_get(arg1);
-
-	if (!target) {
-		notify(eplayer, "I don't recognize that name.");
-		return;
-	}
-
-	ENT *etarget = &target->sp.entity;
-
-	if (blank(arg2))
-		snprintf(buf, sizeof(buf), "You sense that %s is looking for you in %s.",
-				player->name, player->location->name);
-	else
-		snprintf(buf, sizeof(buf), "%s pages from %s: \"%s\"", player->name,
-				player->location->name, arg2);
-	if (notify(etarget, buf))
-		notify(eplayer, "Your message has been sent.");
-	else {
-		notifyf(eplayer, "%s is not connected.", target->name);
+			ndc_writef(oi->sp.entity.fd, buf);
 	}
 }
 
@@ -128,8 +71,8 @@ notify_wts(OBJ *who, char const *a, char const *b, char *format, ...)
 	char buf[BUFFER_LEN];
 	va_start(args, format);
 	vsnprintf(buf, sizeof(buf), format, args);
-	notifyf(ewho, "You %s%s.", a, buf);
-	onotifyf(who, "%s %s%s.", who->name, b, buf);
+	ndc_writef(ewho->fd, "You %s%s.\n", a, buf);
+	nd_rwritef(who->location, who, "%s %s%s.", who->name, b, buf);
 	va_end(args);
 }
 
@@ -141,7 +84,7 @@ notify_wts_to(OBJ *who, OBJ *tar, char const *a, char const *b, char *format, ..
 	char buf[BUFFER_LEN];
 	va_start(args, format);
 	vsnprintf(buf, sizeof(buf), format, args);
-	notifyf(ewho, "You %s %s%s.", a, tar->name, buf);
-	onotifyf(who, "%s %s %s%s.", who->name, b, tar->name, buf);
+	ndc_writef(ewho->fd, "You %s %s%s.\n", a, tar->name, buf);
+	nd_rwritef(who->location, who, "%s %s %s%s.", who->name, b, tar->name, buf);
 	va_end(args);
 }
