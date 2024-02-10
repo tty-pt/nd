@@ -4,7 +4,6 @@
 /client/**/*.js
 /client/**/*.wasm
 /bgplg
-/*.html
 /game/geo.db
 /game/netmuck.pid
 /game/muf/*
@@ -16,7 +15,6 @@
 /package-lock.json
 /pre.js
 /node_modules
-/build
 /game/std.db
 .*.sw?
 *.o
@@ -25,3 +23,5 @@ nd
 compile_commands.json
 .clangd
 /htdocs
+/geo.db
+/sessions

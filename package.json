@@ -3,8 +3,23 @@
   "version": "0.0.1",
   "description": "This is TinyMUCK 2.2fb6.00 (FuzzBall 6.00), a programmable, player expandable, multi-user adventure game.  Please see the CHANGES file for a list of changes from the previous version.",
   "main": "htdocs/index.js",
-  "entry": "./js/index.jsx",
+  "entry": "./index.js",
   "template": "./index.html",
+  "development": true,
+  "static": true,
+  "resolve": {
+    "react": "umd/react.production.min.js"
+  },
+  "external": {
+    "react": "React",
+    "@popperjs/core": "Popper",
+    "lodash": "lodash",
+    "@tty-pt/ndc": "ndc",
+    "@tty-pt/sub": "sub",
+    "!xterm": "Terminal",
+    "xterm-addon-fit": "FitAddon",
+    "xterm-addon-web-links": "WebLinksAddon"
+  },
   "directories": {
     "doc": "docs"
   },
@@ -26,19 +41,17 @@
   },
   "homepage": "https://github.com/tty-pt/neverdark#readme",
   "devDependencies": {
-    "@tty-pt/scripts": "^0.4.3",
+    "@tty-pt/scripts": "^0.4.11",
     "webpack": "^5.89.0"
   },
   "dependencies": {
     "@popperjs/core": "^2.11.8",
-    "@tty-pt/ndc": "^0.1.2",
-    "@tty-pt/styles": "^0.3.5",
-    "@tty-pt/sub": "^2.2.5",
-    "process": "^0.11.10",
-    "prop-types": "^15.8.1",
+    "@tty-pt/ndc": "^0.1.6",
+    "@tty-pt/sub": "^2.2.13",
     "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "react-popper": "^2.3.0"
+    "xterm": "^5.3.0",
+    "xterm-addon-fit": "^0.8.0",
+    "xterm-addon-web-links": "^0.9.0"
   },
   "keywords": [
     "neverdark"

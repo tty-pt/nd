@@ -367,7 +367,7 @@ do_auth(int fd, int argc, char *argv[])
 	}
 
 	warn("AUTH '%s'\n", qsession);
-	snprintf(buf, sizeof(buf), "/sessions/%s", qsession);
+	snprintf(buf, sizeof(buf), "./sessions/%s", qsession);
 	fp = fopen(buf, "r");
 
 	if (!fp) {

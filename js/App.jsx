@@ -8,7 +8,6 @@ import tty_proc from "./tty";
 import * as NDC from "@tty-pt/ndc";
 // import canvas from "./canvas";
 // import 'xterm/css/xterm.css';
-import "./vim.css";
 const baseDir = process.env.CONFIG_BASEDIR || "";
 let raw = false;
 
@@ -200,7 +199,7 @@ const atiles = [
 	"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAEklEQVQ4jWNgGAWjYBSMAggAAAQQAAF/TXiOAAAAAElFTkSuQmCC"
 ];
 
-let ws = null;
+const ws = NDC.connect();
 
 function onOpen() {
   const term = termSub.value;
@@ -449,6 +448,7 @@ function useBgImg(obj = {}) {
   return "bg-img-" + bname;
 }
 
+/*
 function Tabs(props) {
 	const { children } = props;
 	const [ activeTab, setActiveTab ] = useState(0);
@@ -474,12 +474,14 @@ function Tabs(props) {
 		}) }
 	</div>);
 }
+*/
 
 function Stat(props) {
 	const { label, value } = props;
 
 	return (<div className="horizontal-small">
-		<div className="tbbold">{label}</div><div>{value}</div>
+    <div className="tbbold">{label}</div>
+    <div>{value}</div>
 	</div>);
 }
 
@@ -859,19 +861,11 @@ function EquipmentButton() {
   </>);
 }
 
-export default
-withMagic(function Game() {
-  const { dbref: here } = hereSub.use();
-  const objects = dbSub.use();
-	const [ modal, isOpen, setOpen ] = useModal(Help, {});
-  const [ referenceElement, setReferenceElement ] = useState(null);
-  const obj = objects[here];
-  const bgClass = useBgImg(obj);
-
-	function keyUpHandler(e) {
-    if (NDC.term.focused || raw)
-      return;
-    switch (e.keyCode) {
+function keyUpHandler(e) {
+  console.log("keyUpHandler", e.keyCode, e, NDC.term.focused);
+  if (NDC.term.focused || raw)
+    return;
+  switch (e.keyCode) {
     case 75: // k
     case 38: // ArrowUp
       if (e.shiftKey)
@@ -905,13 +899,20 @@ withMagic(function Game() {
       break;
     default:
       console.log(e);
-    }
   }
-	useEffect(() => {
-    ws = NDC.connect("ws");
-		window.addEventListener('keyup', keyUpHandler);
-		return () => window.removeEventListener('keyup', keyUpHandler);
-	}, []);
+}
+
+window.addEventListener('keyup', keyUpHandler);
+
+export default
+withMagic(function Game() {
+  const { dbref: here } = hereSub.use();
+  const objects = dbSub.use();
+	const [ modal, isOpen, setOpen ] = useModal(Help, {});
+  const [ referenceElement, setReferenceElement ] = useState(null);
+  const hidRef = useRef();
+  const obj = objects[here];
+  const bgClass = useBgImg(obj);
 
 	function toggle_help() {
 		setOpen(!isOpen);
@@ -936,6 +937,8 @@ withMagic(function Game() {
 
         <Terminal />
       </div>
+
+      <textarea id="hid" ref={hidRef} aria-hidden="true"></textarea>
 
       <div className="vertical-small flex-grow align-items sh33">
         <MiniMap />

@@ -11,12 +11,13 @@ uname != uname
 config	!= cat ${srcdir}/.config | sed -n '/^.*=y$$/p' | sed 's/^\(.*\)=y$$/-D\1/' | tr '\n' ' '
 cflags-Darwin	+= -I/usr/local/opt/berkeley-db@4/include
 CFLAGS := -g -O0 -Wall -Wno-initializer-overrides ${cflags-${uname}} ${config} \
-	-I/usr/local/include -I${srcdir}/include -D_GNU_SOURCE -std=c99 \
+	-I/usr/local/include -I${srcdir}/include \
+	-I${srcdir}/node_modules/@tty-pt/ndc/include -D_GNU_SOURCE -std=c99 \
 	-Wno-gnu-zero-variadic-macro-arguments -Wno-gnu-designator
 ldlibs-Linux := -lbsd
 LDLIBS := -lxxhash -lpcre -lm -ldb -lndc ${ldlibs-${uname}}
 ldflags-Darwin += -L/usr/local/opt/berkeley-db@4/lib
-LDFLAGS	:= ${ldflags-${uname}}
+LDFLAGS	:= ${ldflags-${uname}} -L${srcdir}/node_modules/@tty-pt/ndc
 
 exe := ../nd
 obj-y := object.o entity.o spacetime.o mcp.o map.o \
