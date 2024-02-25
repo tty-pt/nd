@@ -517,11 +517,11 @@ enter(OBJ *player, OBJ *loc, enum exit e)
 	OBJ *old = player->location;
 
 	if (e == E_NULL)
-		nd_rwritef(player->location, player, "%s teleports out.", player->name);
+		nd_rwritef(player->location, player, "%s teleports out.\n", player->name);
 	object_move(player, loc);
 	room_clean(player, old);
 	if (e == E_NULL)
-		nd_rwritef(player->location, player, "%s teleports in.", player->name);
+		nd_rwritef(player->location, player, "%s teleports in.\n", player->name);
 	pos_t pos;
 	map_where(pos, player->location);
 	ndc_move(player->sp.entity.fd, pos_morton(pos));
@@ -669,7 +669,7 @@ void
 stand(OBJ *player) {
 	ENT *eplayer = &player->sp.entity;
 	if (stand_silent(player))
-		ndc_writef(eplayer->fd, "You are already standing.");
+		ndc_writef(eplayer->fd, "You are already standing.\n");
 }
 
 static void
@@ -1040,7 +1040,7 @@ respawn(OBJ *player)
 	ENT *eplayer = &player->sp.entity;
 	OBJ *where;
 
-	nd_rwritef(player->location, player, "%s disappears.", player->name);
+	nd_rwritef(player->location, player, "%s disappears.\n", player->name);
 
 	if (eplayer->flags & EF_PLAYER) {
 		struct cmd_dir cd;
@@ -1054,7 +1054,7 @@ respawn(OBJ *player)
 		object_move(player, where);
 	}
 
-	nd_rwritef(player->location, player, "%s appears.", player->name);
+	nd_rwritef(player->location, player, "%s appears.\n", player->name);
 }
 
 static inline int
@@ -1209,17 +1209,17 @@ entity_update(OBJ *player)
 	ENT *eplayer = &player->sp.entity;
 
 	static char const *thirst_msg[] = {
-		"You are thirsty.",
-		"You are very thirsty.",
-		"you are dehydrated.",
-		"You are dying of thirst."
+		"You are thirsty.\n",
+		"You are very thirsty.\n",
+		"you are dehydrated.\n",
+		"You are dying of thirst.\n"
 	};
 
 	static char const *hunger_msg[] = {
-		"You are hungry.",
-		"You are very hungry.",
-		"You are starving.",
-		"You are starving to death."
+		"You are hungry.\n",
+		"You are very hungry.\n",
+		"You are starving.\n",
+		"You are starving to death.\n"
 	};
 
 	if (!(eplayer->flags & EF_PLAYER)) {

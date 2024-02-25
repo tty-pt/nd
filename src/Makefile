@@ -12,12 +12,12 @@ config	!= cat ${srcdir}/.config | sed -n '/^.*=y$$/p' | sed 's/^\(.*\)=y$$/-D\1/
 cflags-Darwin	+= -I/usr/local/opt/berkeley-db@4/include
 CFLAGS := -g -O0 -Wall -Wno-initializer-overrides ${cflags-${uname}} ${config} \
 	-I/usr/local/include -I${srcdir}/include \
-	-I${srcdir}/node_modules/@tty-pt/ndc/include -D_GNU_SOURCE -std=c99 \
+	-D_GNU_SOURCE -std=c99 \
 	-Wno-gnu-zero-variadic-macro-arguments -Wno-gnu-designator
 ldlibs-Linux := -lbsd
-LDLIBS := -lxxhash -lpcre -lm -ldb -lndc ${ldlibs-${uname}}
+LDLIBS := -lxxhash -lpcre -lm -lc -ldb -lndc ${ldlibs-${uname}}
 ldflags-Darwin += -L/usr/local/opt/berkeley-db@4/lib
-LDFLAGS	:= ${ldflags-${uname}} -L${srcdir}/node_modules/@tty-pt/ndc
+LDFLAGS	:= ${ldflags-${uname}}
 
 exe := ../nd
 obj-y := object.o entity.o spacetime.o mcp.o map.o \
@@ -32,7 +32,9 @@ all: ${exe}
 
 $(exe): ${obj-y}
 	@echo LD $@
-	@${LINK.c} -o $@ $^ ${LDLIBS} -lrt -lutil
+	${LINK.c} -o $@ $^ ${LDLIBS} -lrt -lutil
+	# ${LD} ${LDFLAGS} -o $@ $^ ${LDLIBS} -lrt -lutil
+	pwd
 
 .c.o:
 	@echo CC ${@:%=${RELDIR}/%}

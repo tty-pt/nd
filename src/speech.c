@@ -20,8 +20,8 @@ do_say(int fd, int argc, char *argv[])
 	OBJ *player = FD_PLAYER(fd);
 	const char *message = argv[1];
 
-	ndc_writef(fd, "You say, \"%s\".", message);
-	nd_rwritef(player->location, player, "%s says, \"%s\"", player->name, message);
+	ndc_writef(fd, "You say, \"%s\".\n", message);
+	nd_rwritef(player->location, player, "%s says, \"%s\"\n", player->name, message);
 }
 
 void
@@ -31,7 +31,7 @@ do_pose(int fd, int argc, char *argv[])
 	/* ENT *eplayer = &player->sp.entity; */
 	const char *message = argv[1];
 
-	nd_rwritef(player->location, player, "%s %s", player->name, message);
+	nd_rwritef(player->location, player, "%s %s\n", player->name, message);
 	/* if (eplayer->gpt) { */
 	/* 	char contents[BUFFER_LEN]; */
 	/* 	sprintf(contents, "Describe %s %s.\n\n", player->name, message); */
@@ -57,10 +57,8 @@ do_wall(int fd, int argc, char *argv[])
 
 	warn("WALL from %s(%d): %s", player->name, object_ref(player), message);
 	snprintf(buf, sizeof(buf), "%s shouts, \"%s\"", player->name, message);
-	FOR_ALL(oi) {
-		if (oi->type == TYPE_ENTITY)
-			ndc_writef(oi->sp.entity.fd, buf);
-	}
+	FOR_ALL(oi) if (oi->type == TYPE_ENTITY)
+		ndc_writef(oi->sp.entity.fd, buf);
 }
 
 void
@@ -72,7 +70,7 @@ notify_wts(OBJ *who, char const *a, char const *b, char *format, ...)
 	va_start(args, format);
 	vsnprintf(buf, sizeof(buf), format, args);
 	ndc_writef(ewho->fd, "You %s%s.\n", a, buf);
-	nd_rwritef(who->location, who, "%s %s%s.", who->name, b, buf);
+	nd_rwritef(who->location, who, "%s %s%s.\n", who->name, b, buf);
 	va_end(args);
 }
 
@@ -85,6 +83,6 @@ notify_wts_to(OBJ *who, OBJ *tar, char const *a, char const *b, char *format, ..
 	va_start(args, format);
 	vsnprintf(buf, sizeof(buf), format, args);
 	ndc_writef(ewho->fd, "You %s %s%s.\n", a, tar->name, buf);
-	nd_rwritef(who->location, who, "%s %s %s%s.", who->name, b, tar->name, buf);
+	nd_rwritef(who->location, who, "%s %s %s%s.\n", who->name, b, tar->name, buf);
 	va_end(args);
 }

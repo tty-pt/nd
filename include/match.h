@@ -6,7 +6,7 @@
 #include <string.h>
 #include "object.h"
 
-#define NOMATCH_MESSAGE "I don't know what you mean."
+#define NOMATCH_MESSAGE "I don't know what you mean.\n"
 
 OBJ *ematch_at(OBJ *player, OBJ *where, char *name);
 OBJ *ematch_player(char *name);

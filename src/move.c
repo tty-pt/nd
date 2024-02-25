@@ -102,42 +102,37 @@ do_drop(int fd, int argc, char *argv[])
 		return;
 	}
         
-	switch (thing->type) {
-	case TYPE_CONSUMABLE:
-	case TYPE_EQUIPMENT:
-	case TYPE_ENTITY:
-	case TYPE_THING:
-		if (cont->type != TYPE_ROOM && cont->type != TYPE_ENTITY &&
-			!object_item(cont)) {
-			ndc_writef(fd, "You can't put anything in that.\n");
-			break;
-		}
-		if (object_plc(thing, cont)) {
-			ndc_writef(fd, "You can't put something inside of itself.\n");
-			break;
-		}
-
-		int immediate_dropto = (cont->type == TYPE_ROOM && cont->sp.room.dropto);
-
-		object_move(thing, immediate_dropto ? cont->sp.room.dropto : cont);
-
-		if (object_item(cont)) {
-			ndc_writef(fd, "Put away.\n");
-			return;
-		} else if (cont->type == TYPE_ENTITY) {
-			ENT *econt = &cont->sp.entity;
-			ndc_writef(econt->fd, "%s hands you %s.\n", player->name, thing->name);
-			ndc_writef(fd, "You hand %s to %s.\n", thing->name, cont->name);
-			return;
-		}
-
-		ndc_writef(fd, "Dropped.\n");
-		nd_rwritef(player->location, player, "%s drops %s.\n", player->name, thing->name);
-		break;
-	default:
+	if (thing->type == TYPE_GARBAGE) {
 		ndc_writef(fd, "You can't drop that.\n");
-		break;
+		return;
 	}
+
+	if (cont->type != TYPE_ROOM && cont->type != TYPE_ENTITY &&
+		!object_item(cont)) {
+		ndc_writef(fd, "You can't put anything in that.\n");
+		return;
+	}
+	if (object_plc(thing, cont)) {
+		ndc_writef(fd, "You can't put something inside of itself.\n");
+		return;
+	}
+
+	int immediate_dropto = (cont->type == TYPE_ROOM && cont->sp.room.dropto);
+
+	object_move(thing, immediate_dropto ? cont->sp.room.dropto : cont);
+
+	if (object_item(cont)) {
+		ndc_writef(fd, "Put away.\n");
+		return;
+	} else if (cont->type == TYPE_ENTITY) {
+		ENT *econt = &cont->sp.entity;
+		ndc_writef(econt->fd, "%s hands you %s.\n", player->name, thing->name);
+		ndc_writef(fd, "You hand %s to %s.\n", thing->name, cont->name);
+		return;
+	}
+
+	ndc_writef(fd, "Dropped.\n");
+	nd_rwritef(player->location, player, "%s drops %s.\n", player->name, thing->name);
 }
 
 void
@@ -200,8 +195,6 @@ do_recycle(int fd, int argc, char *argv[])
 		case TYPE_GARBAGE:
 			ndc_writef(fd, "That's already garbage!\n");
 			return;
-			/* NOTREACHED */
-			break;
 		}
 		ndc_writef(fd, "Thank you for recycling %.512s (#%d).\n", thing->name, thing);
 		recycle(player, thing);

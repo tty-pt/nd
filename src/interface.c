@@ -68,6 +68,12 @@ do_man(int fd, int argc, char *argv[]) {
 }
 
 void
+do_env(int fd, int argc, char *argv[]) {
+	char *rargv[] = { "/usr/bin/env", NULL };
+	ndc_pty(fd, rargv);
+}
+
+void
 do_diff(int fd, int argc, char *argv[]) {
 	char *command[] = { "git", "diff", "origin/master", NULL };
 	ndc_pty(fd, command);
@@ -76,7 +82,7 @@ do_diff(int fd, int argc, char *argv[]) {
 struct cmd_slot cmds[] = {
 	{
 		.name = "sh",
-		.cb = &do_sh
+		.cb = &do_sh,
 	}, {
 		.name = "GET",
 		.cb = &do_GET,
@@ -180,6 +186,9 @@ struct cmd_slot cmds[] = {
 		.name = "view",
 		.cb = &do_view,
 	}, {
+		.name = "env",
+		.cb = &do_env,
+	}, {
 		.name = "man",
 		.cb = &do_man,
 	}, {
@@ -264,16 +273,19 @@ init_game()
 int
 main(int argc, char **argv)
 {
-	struct ndc_config config = { .flags = 0 };
+	struct ndc_config config = { .flags = 0, .serve = "/chroot_node_modules" };
 	register char c;
 
-	while ((c = getopt(argc, argv, "dv")) != -1) {
+	while ((c = getopt(argc, argv, "dvC:")) != -1) {
 		switch (c) {
 		case 'd':
 			optflags |= OPT_DETACH;
 			break;
 		case 'v':
 			printf("0.0.1\n");
+			break;
+		case 'C':
+			config.chroot = optarg;
 			break;
 			
 		default:
@@ -395,7 +407,7 @@ do_auth(int fd, int argc, char *argv[])
         }
 
 	FD_PLAYER(fd) = player;
-	ndc_set_flags(fd, ndc_flags(fd) | DF_CONNECTED);
+	ndc_auth(fd, buf);
 	ENT *eplayer = &player->sp.entity;
 	eplayer->fd = fd;
         mcp_stats(player);
@@ -418,6 +430,7 @@ do_avatar(int fd, int argc, char *argv[])
 void
 ndc_update()
 {
+	objects_update();
 }
 
 void ndc_vim(int fd, int argc, char *argv[]) {

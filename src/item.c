@@ -24,15 +24,10 @@ do_equip(int fd, int argc, char *argv[])
 	char *name = argv[1];
 	OBJ *eq = ematch_mine(player, name);
 
-	if (!eq) {
+	if (!eq)
 		ndc_writef(fd, "You are not carrying that.\n");
-		return;
-	}
-
-	if (equip(player, eq)) { 
+	else if (equip(player, eq)) 
 		ndc_writef(fd, "You can't equip that.\n");
-		return;
-	}
 }
 
 void
@@ -43,10 +38,8 @@ do_unequip(int fd, int argc, char *argv[])
 	enum bodypart bp = BODYPART_ID(*name);
 	dbref eq;
 
-	if ((eq = unequip(player, bp)) == NOTHING) {
+	if ((eq = unequip(player, bp)) == NOTHING)
 		ndc_writef(fd, "You don't have that equipped.\n");
-		return;
-	}
-
-	ndc_writef(fd, "You unequip %s.\n", object_get(eq)->name);
+	else
+		ndc_writef(fd, "You unequip %s.\n", object_get(eq)->name);
 }

@@ -148,7 +148,7 @@ const ACTION_MAP = {
   [ACTION.GET]: {
     label: "get",
     icon: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAQUlEQVQ4jWNggIKDh2/9P3j41n8GcgBMM9mGoBswuAwh2UBChhBlENUMwGcwWQYQkiPJFQQNgClGp8lOraMANwAA27bDE5yTd30AAAAASUVORK5CYII=",
-    callback: ref => sendCmd(`get #${sub.value.target}=#${ref}`),
+    callback: ref => sendCmd(sub.value.target ? `get #${sub.value.target} #${ref}` : `get #${ref}`),
   },
   [ACTION.TALK]: {
     label: "talk",
@@ -418,13 +418,15 @@ const BCP_MAP = {
   [BCP.OUT]: { label: "out" },
 };
 
+const bg = document.getElementById("bg");
+
 ndc.setOnMessage(function onMessage(ev) {
   const arr = new Uint8Array(ev.data);
   if (String.fromCharCode(arr[0]) == "#" && String.fromCharCode(arr[1]) == "b") {
     const iden = arr[2];
     console.log("BCP", iden, BCP_MAP[iden]);
     switch (iden) {
-    case 1: { // BCP_BARS
+    case BCP.BARS: {
       let aux;
       barsEmit({
         hp: read_32(arr, aux = 3),
@@ -434,7 +436,7 @@ ndc.setOnMessage(function onMessage(ev) {
       });
       return;
 
-    } case 2: {// BCP_EQUIPMENT
+    } case BCP.EQUIPMENT: {
       let aux;
       barsEmit({
         head: read_32(arr, aux = 3),
@@ -447,7 +449,7 @@ ndc.setOnMessage(function onMessage(ev) {
       });
       return;
 
-    } case 3: {// BCP_STATS
+    } case BCP.STATS: {
       let aux;
       statsEmit({
         str: read_32(arr, aux = 3),
@@ -466,7 +468,7 @@ ndc.setOnMessage(function onMessage(ev) {
       });
       return;
 
-    } case 4: // BCP_ITEM
+    } case BCP.ITEM:
       let aux, base, ret = {};
 
       base = {
@@ -496,6 +498,7 @@ ndc.setOnMessage(function onMessage(ev) {
         if (base.type === 0) {
           hereEmit(base.dbref);
           targetEmit(null);
+          bg.style = `background-image: url('./art/${base.art}')`;
         } else
           targetEmit(base.dbref);
 
@@ -503,27 +506,28 @@ ndc.setOnMessage(function onMessage(ev) {
       }
 
       return;
-    case 6: // BCP_VIEW_BUFFER
+    case BCP.VIEW_BUFFER:
       viewEmit(String.fromCharCode.apply(null, arr.slice(3)));
       return;
-    case 9: // BCP_AUTH_FAILURE
+      case BCP.AUTH_FAILURE:
       authEmit(-1, true);
       return;
-    case 10: // BCP_AUTH_SUCCESS
+    case BCP.AUTH_SUCCESS:
       authEmit(read_32(arr, 3), undefined);
       return;
-    case 11: { // BCP_OUT
+    case BCP.OUT: {
       let aux;
 
-      const { loc, dbref } = {
+      const { dbref } = {
         dbref: read_32(arr, aux = 3),
-        loc: read_32(arr, aux += 4),
+        loc: read_32(arr, aux += 4), // new loc
       };
 
-      const old = sub.value.db[loc];
-      let newContents = { ...old.contents };
+      const obj = sub.value.db[dbref];
+      const oldLoc = sub.value.db[obj.loc];
+      let newContents = { ...oldLoc.contents };
       delete newContents[dbref];
-      dbEmit({ ...old[loc], loc, contents: newContents });
+      dbEmit({ ...oldLoc, contents: newContents });
 
       return;
     }}

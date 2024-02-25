@@ -102,12 +102,12 @@ do_examine(int fd, int argc, char *argv[])
 		{
 			ENT *ething = &thing->sp.entity;
 
-			ndc_writef(fd, "Home: %s", unparse(player, ething->home));
-			ndc_writef(fd, "hp: %d/%d entity flags: %d", ething->hp, HP_MAX(ething), ething->flags);
+			ndc_writef(fd, "Home: %s\n", unparse(player, ething->home));
+			ndc_writef(fd, "hp: %d/%d entity flags: %d\n", ething->hp, HP_MAX(ething), ething->flags);
 
 			/* print location if player can link to it */
 			if (thing->location && controls(player, thing->location))
-				ndc_writef(fd, "Location: %s", unparse(player, thing->location));
+				ndc_writef(fd, "Location: %s\n", unparse(player, thing->location));
 		}
 		break;
 	default:
@@ -139,7 +139,7 @@ do_inventory(int fd, int argc, char *argv[])
                 } else {
                         ndc_writef(fd, "You are carrying:\n");
                         FOR_LIST(thing, thing) {
-                                ndc_writef(fd, unparse(player, thing));
+                                ndc_writef(fd, "%s\n", unparse(player, thing));
                         }
                 }
         }
@@ -209,6 +209,6 @@ do_contents(int fd, int argc, char *argv[])
 		display_objinfo(player, oi);
 		total++;
 	}
-	ndc_writef(fd, "***End of List***");
+	ndc_writef(fd, "***End of List***\n");
 	ndc_writef(fd, "%d objects found.\n", total);
 }

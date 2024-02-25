@@ -150,10 +150,16 @@ func FullQuit()
 	GdbQuit
 endfunc
 
+func MuckRun()
+	Gdb handle SIGPIPE noprint nostop
+	Gdb set confirm off
+	Run
+endfunc
+
 func Kill()
 	if s:SigTerm()
 		GdbQuit
-		Run
+		call MuckRun()
 	endif
 endfunc
 
@@ -163,19 +169,13 @@ func Restart()
 	else
 		Continue
 	endif
-	Run
+	call MuckRun()
 endfunc
 
 func Reset()
 	!./reset.sh
 	Gdb run
-	Run
-endfunc
-
-func ConfigRun()
-	Gdb handle SIGPIPE noprint nostop
-	Gdb set confirm off
-	Run
+	call MuckRun()
 endfunc
 
 if !has('macunix')
@@ -187,7 +187,7 @@ if !has('macunix')
 	if g:gdb_sudo == 1
 		DebugFocus
 	else
-		call ConfigRun()
+		call MuckRun()
 	endif
 endif
 
@@ -201,7 +201,7 @@ nmap 'q :call Quit()<cr>
 tno 'k <c-w>:call Kill()<cr>
 tno 'kk <c-w>:call FullQuit()<cr>
 tno 'q <c-w>:call Quit()<cr>
-tno 'r <c-w>:call ConfigRun()<cr>
+tno 'r <c-w>:call MuckRun()<cr>
 map 'reset :call Reset()<cr>
 
 " jsc
