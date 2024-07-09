@@ -89,7 +89,7 @@ struct cmd_slot cmds[] = {
 		.flags = CF_NOAUTH | CF_NOTRIM,
 	}, {
 		.name = "POST",
-		.cb = &do_GET,
+		.cb = &do_POST,
 		.flags = CF_NOAUTH | CF_NOTRIM,
 	}, {
 		.name = "auth",
