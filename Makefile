@@ -28,9 +28,6 @@ js-$(production): ${js-src}
 ./node_modules/:
 	npm install
 
-index.html: pre-index.html
-	${scripts}/html_tool.sh pre-index.html > $@
-
 backup-date != date +%s
 backup := neverdark-${backup-date}.tar.gz
 backup: ${backup}
