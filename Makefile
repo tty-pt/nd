@@ -19,8 +19,8 @@ $(subdirs-clean): FORCE
 
 clean: ${subdirs-clean}
 
-art-y != find art -type f | tr ' ' '\\ '
-art-y += nd256.png
+# art-y != find art -type f | sed 's/ /\\ /g' | sed 's/\(.*\)/"\1"/'
+# art-y += nd256.png
 
 js-$(production): ${js-src}
 	npm run build
@@ -35,20 +35,22 @@ $(backup):
 	tar czf $@ game/geo.db game/data/std-db.db
 
 DESTDIR ?= /
-PREFIX ?= ${DESTDIR}usr/local
+PREFIX ?= ${DESTDIR}usr
 
-datadir := ${PREFIX}/share/neverdark
-artdir := ${datadir}/art
+# artdir := ${DESTDIR}items/nd/art
 
-$(artdir):
-	mkdir -p $@
-art-install := ${art-y:%=${datadir}/%}
-$(art-install):
-	install -m 644 ${@:${datadir}/%=%} $@
+# $(artdir):
+# 	mkdir -p $@
+# art-install := ${art-y:"%="${artdir}/%}
+# $(art-install):
+	# artdir
+	# install -m 644 ${@:${artdir}/%=%} $@
 
 install: ${artdir} ${art-install}
-	${INSTALL} -m 644 index.html styles.css ${datadir}/
-	${INSTALL} nd ${PREFIX}/bin/neverdark
+	# install -m 644 index.html styles.css ${datadir}/
+	# install nd ${PREFIX}/bin/nd
+	install -d ${DESTDIR}var/nd
+	install -m 644 game/std.db.ok ${DESTDIR}var/nd/std.db.ok
 
 run: all
 	./nd
