@@ -40,3 +40,4 @@ compile_commands.json
 /sys/
 /usr/
 /var/
+/pnpm-lock.yaml

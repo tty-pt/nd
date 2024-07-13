@@ -1,11 +1,11 @@
-srcdir := ..
+srcdir ?= ..
 reldir-OpenBSD := ${PWD:${srcdir}/%=%}
 reldir-Darwin := ${reldir-OpenBSD}
 reldir-Linux := ${reldir-OpenBSD}/src
 RELDIR=${reldir-${uname}}
 
-prefix?=/usr/local
-INSTALL_BINDIR=${prefix}/bin
+prefix ?= /usr/local
+INSTALL_BINDIR := ${prefix}/bin
 
 uname != uname
 config	!= cat ${srcdir}/.config | sed -n '/^.*=y$$/p' | sed 's/^\(.*\)=y$$/-D\1/' | tr '\n' ' '
@@ -20,7 +20,7 @@ ldflags-Darwin += -L/usr/local/opt/berkeley-db@4/lib
 local-ndc-path != realpath ${srcdir}/../ndc
 LDFLAGS	:= ${ldflags-${uname}} -L${local-ndc-path} -Wl,-rpath,${local-ndc-path}
 
-exe := ../nd
+exe := ${srcdir}/nd
 obj-y := object.o entity.o spacetime.o mcp.o map.o \
 	plant.o biome.o noise.o view.o item.o spell.o drink.o \
 	mob.o kill.o shop.o create.o look.o match.o \
@@ -35,7 +35,6 @@ all: ${exe}
 $(exe): ${obj-y}
 	@echo LD $@
 	@${LINK.c} -o $@ $^ ${LDLIBS} -lrt -lutil
-	pwd
 
 .c.o:
 	@echo CC ${@:%=${RELDIR}/%}

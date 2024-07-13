@@ -5,7 +5,7 @@
   "browser": "htdocs/index.js",
   "entry": "index.js",
   "template": "index.html",
-  "publicPath": "/",
+  "publicPath": "./",
   "cdn": {
     "@popperjs/core": true,
     "@tty-pt/ndc": true,

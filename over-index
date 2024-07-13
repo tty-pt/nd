@@ -1,0 +1,24 @@
+#!/bin/sh
+
+FinishIt() {
+	echo ${STATUS_STR}200 Ok
+	echo
+	cat "$@"
+}
+
+case "$1" in
+	"") ;;
+	art)
+		shift
+		urld="`urldecode $DOCUMENT_URI`"
+		test -f "../$urld" || NotFound
+		FinishIt "../$urld" | Fin
+		;;
+
+	*)
+		test -f htdocs/$1 || NotFound
+		FinishIt htdocs/$1 | Fin
+		;;
+esac
+
+cat $PWD/htdocs/index.html
