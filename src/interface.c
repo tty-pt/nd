@@ -298,6 +298,7 @@ main(int argc, char **argv)
 		}
 	}
 
+	ndc_init(&config);
 	players_init();
 
 	if (init_game() < 0) {
@@ -317,10 +318,9 @@ main(int argc, char **argv)
 
 	/* errno = 0; // TODO why? sanity fails to access file */
 
-	setenv("TERM", "xterm-256color", 1);
-
+	setenv("TERM", "xterm+256color", 1);
 	fprintf(stderr, "Done.\n");
-	ndc_main(&config);
+	ndc_main();
 
 	map_close();
 

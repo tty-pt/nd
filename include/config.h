@@ -1,9 +1,9 @@
 #ifndef _CONFIG_H
 #define _CONFIG_H
 
-#define STD_DB "./game/std.db"
-#define STD_DB_OK "./game/std.db.ok"
-#define GEO_DB "./game/geo.db"
+#define STD_DB "/var/nd/std.db"
+#define STD_DB_OK "/var/nd/std.db.ok"
+#define GEO_DB "/var/nd/geo.db"
 
 #define TINYPORT 4201
 #define HUMAN_BEING 1
