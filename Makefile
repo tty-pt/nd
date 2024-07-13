@@ -4,10 +4,13 @@ include .config
 
 subdirs := src/
 
-js-src != find js -type f
-js-$(production) := ./build/static/js/main.js
+all: ${subdirs} htdocs/
 
-all: ${subdirs} index.html ${js-y}
+htdocs/: node_modules/ index.html index.js
+	pnpm build
+
+node_modules/:
+	pnpm i
 
 $(subdirs): FORCE
 	${MAKE} -C $@ ${MFLAGS} all
@@ -18,37 +21,12 @@ $(subdirs-clean): FORCE
 	${Q}${MAKE} -C ${@:%-clean=%} ${MFLAGS} clean
 
 clean: ${subdirs-clean}
-
-# art-y != find art -type f | sed 's/ /\\ /g' | sed 's/\(.*\)/"\1"/'
-# art-y += nd256.png
-
-js-$(production): ${js-src}
-	npm run build
-
-./node_modules/:
-	npm install
-
-backup-date != date +%s
-backup := neverdark-${backup-date}.tar.gz
-backup: ${backup}
-$(backup):
-	tar czf $@ game/geo.db game/data/std-db.db
+	rm -rf htdocs/ node_modules/
 
 DESTDIR ?= /
 PREFIX ?= ${DESTDIR}usr
 
-# artdir := ${DESTDIR}items/nd/art
-
-# $(artdir):
-# 	mkdir -p $@
-# art-install := ${art-y:"%="${artdir}/%}
-# $(art-install):
-	# artdir
-	# install -m 644 ${@:${artdir}/%=%} $@
-
-install: ${artdir} ${art-install}
-	# install -m 644 index.html styles.css ${datadir}/
-	# install nd ${PREFIX}/bin/nd
+install:
 	install -d ${DESTDIR}var/nd
 	install -m 644 game/std.db.ok ${DESTDIR}var/nd/std.db.ok
 
