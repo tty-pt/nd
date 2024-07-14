@@ -635,7 +635,7 @@ class LookAt extends SubscribedElement {
     this.innerHTML = target
       ? `
     <div id="target-title-and-art" class="relative vertical-0 size-super align-items">
-      <div style="background-image: url('${target.art}')" class="absolute position-0 background-unique background-size-fit"></div>
+      <div style="background-image: url('art/${target.art}')" class="absolute position-0 background-unique background-size-fit"></div>
       <div id="target-title" class="absolute position-top-0 position-bottom-0 position-left-0 position-right-0 deep-shadow text-align tm pxs">
         ${target.pname}
       </div>
