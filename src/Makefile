@@ -15,7 +15,7 @@ CFLAGS := -g -O0 -Wall -Wno-initializer-overrides ${cflags-${uname}} ${config} \
 	-D_GNU_SOURCE -std=c99 \
 	-Wno-gnu-zero-variadic-macro-arguments -Wno-gnu-designator
 ldlibs-Linux := -lbsd
-LDLIBS := -lxxhash -lpcre -lm -lc -ldb -lndc ${ldlibs-${uname}}
+LDLIBS := -lxxhash -lpcre -lm -lc -lqhash -ldb -lndc ${ldlibs-${uname}}
 ldflags-Darwin += -L/usr/local/opt/berkeley-db@4/lib
 local-ndc-path != realpath ${srcdir}/../ndc
 LDFLAGS	:= ${ldflags-${uname}} -L${local-ndc-path} -Wl,-rpath,${local-ndc-path}

@@ -59,7 +59,6 @@ enum opts {
 
 void do_bio(int fd, int argc, char *argv[]);
 extern void do_auth(int fd, int argc, char *argv[]);
-extern void do_avatar(int fd, int argc, char *argv[]);
 /* extern void do_gpt(int fd, int argc, char *argv[]); */
 
 void
@@ -95,9 +94,6 @@ struct cmd_slot cmds[] = {
 		.name = "auth",
 		.cb = &do_auth,
 		.flags = CF_NOAUTH,
-	}, {
-		.name = "avatar",
-		.cb = &do_avatar,
 	/* }, { */
 	/* 	.name = "gpt", */
 	/* 	.cb = &do_gpt, */
@@ -365,10 +361,9 @@ avatar(OBJ *player) {
 }
 
 void
-do_auth(int fd, int argc, char *argv[])
+auth(int fd, char *qsession)
 {
 	char buf[BUFSIZ];
-	char *qsession = argv[1];
 	FILE *fp;
 	OBJ *player;
 
@@ -416,15 +411,13 @@ do_auth(int fd, int argc, char *argv[])
         mcp_equipment(player);
 	look_around(player);
 	/* enter_room(player, E_ALL); */
-	do_view(fd, argc, argv);
+	do_view(fd, 0, NULL);
 }
 
 void
-do_avatar(int fd, int argc, char *argv[])
+do_auth(int fd, int argc, char *argv[])
 {
-	OBJ *player = FD_PLAYER(fd);
-	avatar(player);
-	ndc_writef(fd, "Selected avatar %u\n", player->art_id);
+	auth(fd, argv[1]);
 }
 
 void
@@ -452,6 +445,13 @@ void ndc_view(int fd, int argc, char *argv[]) {
 }
 
 void ndc_connect(int fd) {
+}
+
+void ndc_ws_init(int fd) {
+	char *cookie = getenv("HTTP_COOKIE");
+	if (!cookie)
+		return;
+	auth(fd, strchr(cookie, '=') + 1);
 }
 
 void ndc_disconnect(int fd) {
