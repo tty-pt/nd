@@ -7,11 +7,11 @@ all: nd htdocs/
 htdocs/: node_modules/ index.html index.js
 	pnpm build
 
+nd: node_modules/
+	${MAKE} -C src ${MFLAGS} all
+
 node_modules/:
 	pnpm i
-
-nd:
-	${MAKE} -C src ${MFLAGS} all
 
 clean:
 	${Q}${MAKE} -C src ${MFLAGS} clean
@@ -44,4 +44,4 @@ run: all
 
 FORCE:
 
-.PHONY: install backup run clean
+.PHONY: install backup run clean nd

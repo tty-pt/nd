@@ -10,17 +10,19 @@ INSTALL_BINDIR := ${prefix}/bin
 uname != uname
 config	!= cat ${srcdir}/.config | sed -n '/^.*=y$$/p' | sed 's/^\(.*\)=y$$/-D\1/' | tr '\n' ' '
 cflags-Darwin	+= -I/usr/local/opt/berkeley-db@4/include
+node_modules != realpath ${srcdir}/node_modules
+npm-lib := @tty-pt/qhash @tty-pt/ndc
+npm-lib := ${npm-lib:%=${node_modules}/%}
 CFLAGS := -g -O0 -Wall -Wno-initializer-overrides ${cflags-${uname}} ${config} \
-	-I/usr/local/include -I${srcdir}/include \
+	${npm-lib:%=-I%/include} -I/usr/local/include -I${srcdir}/include \
 	-D_GNU_SOURCE -std=c99 \
 	-Wno-gnu-zero-variadic-macro-arguments -Wno-gnu-designator
 ldlibs-Linux := -lbsd
 LDLIBS := -lxxhash -lpcre -lm -lc -lqhash -ldb -lndc ${ldlibs-${uname}}
 ldflags-Darwin += -L/usr/local/opt/berkeley-db@4/lib
-local-ndc-path != realpath ${srcdir}/../ndc
-LDFLAGS	:= ${ldflags-${uname}} -L${local-ndc-path} -Wl,-rpath,${local-ndc-path}
+LDFLAGS	:= ${ldflags-${uname}} ${npm-lib:%=-L%} ${npm-lib:%=-Wl,-rpath,%}
 
-exe := ${srcdir}/nd
+exe := ../nd
 obj-y := object.o entity.o spacetime.o mcp.o map.o \
 	plant.o biome.o noise.o view.o item.o spell.o drink.o \
 	mob.o kill.o shop.o create.o look.o match.o \
@@ -37,8 +39,8 @@ $(exe): ${obj-y}
 	@${LINK.c} -o $@ $^ ${LDLIBS} -lrt -lutil
 
 .c.o:
-	@echo CC ${@:%=${RELDIR}/%}
-	@${COMPILE.c} -o ${@:%=${RELDIR}/%} ${<:%=${RELDIR}/%}
+	@echo CC $@
+	@${COMPILE.c} -o $@ ${<:%=${RELDIR}/%}
 
 CTAGS ?= ctags
 
@@ -46,7 +48,7 @@ tags: ${src}
 	${CTAGS} --c-types=-m ${src} ../include/*.h
 
 .c.d:
-	@echo MKDEP ${@:%=${RELDIR}/%}
+	@echo MKDEP $@
 	@gcc -MM -o $@ ${CFLAGS} -I../include $<
 
 clean:
