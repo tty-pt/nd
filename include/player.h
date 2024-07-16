@@ -3,7 +3,7 @@
 
 #include "object.h"
 
-#include <hash.h>
+#include <qhash.h>
 
 extern int player_hd;
 

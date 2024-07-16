@@ -1,17 +1,22 @@
-#!/bin/make -f
+#!/bin/make
+
+DESTDIR ?= ../../
 
 include .config
 
-all: nd htdocs/
+all: node_modules/ nd htdocs/
 
-htdocs/: node_modules/ index.html index.js
+htdocs/: index.html index.js
 	pnpm build
 
-nd: node_modules/
+nd:
 	${MAKE} -C src ${MFLAGS} all
 
+deps:
+	${MAKE} -C src ${MFLAGS} deps
+
 node_modules/:
-	pnpm i
+	MAKE=${MAKE} pnpm i
 
 clean:
 	${Q}${MAKE} -C src ${MFLAGS} clean
@@ -30,13 +35,16 @@ $(DESTDIR)var/nd/std.db.ok: game/std.db.ok ${DESTDIR}var/nd
 $(DESTDIR)var/nd:
 	install -d ${DESTDIR}var/nd
 
+$(DESTDIR)etc/vim:
+	install -d ${DESTDIR}etc/vim
+
 $(DESTDIR)etc/group:
 	echo "root:X:0:" > $@
 
 $(DESTDIR)etc/passwd:
 	echo "root:X:0:0:root:/root:/bin/bash" > $@
 
-$(DESTDIR)etc/vim/vimrc.local:
+$(DESTDIR)etc/vim/vimrc.local: ${DESTDIR}etc/vim
 	echo "colorscheme pablo" > $@
 
 run: all
@@ -44,4 +52,4 @@ run: all
 
 FORCE:
 
-.PHONY: install backup run clean nd
+.PHONY: install backup run clean nd deps

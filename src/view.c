@@ -8,8 +8,10 @@
 
 #include "params.h"
 #include "debug.h"
+#include <string.h>
 
 #ifndef __OpenBSD__
+#include <string.h>
 #include "bsd/string.h"
 #endif
 
