@@ -52,7 +52,7 @@
   },
   "dependencies": {
     "@popperjs/core": "^2.11.8",
-    "@tty-pt/ndc": "^0.2.8",
+    "@tty-pt/ndc": "^0.2.9",
     "@tty-pt/qhash": "^0.0.3",
     "@tty-pt/sub": "^2.2.40",
     "lodash": "^4.17.21",
