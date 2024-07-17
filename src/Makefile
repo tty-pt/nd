@@ -9,9 +9,9 @@ config	!= cat ${srcdir}/.config | sed -n '/^.*=y$$/p' | sed 's/^\(.*\)=y$$/-D\1/
 cflags-Darwin	+= -I/usr/local/opt/berkeley-db@4/include
 node_modules != realpath ../node_modules
 orig-npm-lib := @tty-pt/qhash @tty-pt/ndc
-var-www-npm-lib := ${orig-npm-lib:%=${node_modules}/%}
+npm-lib := ${orig-npm-lib:%=${node_modules}/%}
 destdir != echo ${DESTDIR} | tr '/' '-'
-npm-lib := ${npm-lib:%=${destdir}%}
+npm-lib := ${${destdir}npm-lib}
 CFLAGS := -g -O0 -Wall -Wno-initializer-overrides ${cflags-${uname}} ${config} \
 	${npm-lib:%=-I%/include} -I/usr/local/include -I${srcdir}/include \
 	-D_GNU_SOURCE -std=c99 \
@@ -39,7 +39,7 @@ $(exe): ${obj-y}
 
 .c.o:
 	@echo CC $@
-	@${COMPILE.c} -o $@ ${<:%=${RELDIR}/%}
+	${COMPILE.c} -o $@ ${<:%=${RELDIR}/%}
 
 CTAGS ?= ctags
 
