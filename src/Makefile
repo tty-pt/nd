@@ -7,9 +7,11 @@ INSTALL_BINDIR := ${prefix}/bin
 uname != uname
 config	!= cat ${srcdir}/.config | sed -n '/^.*=y$$/p' | sed 's/^\(.*\)=y$$/-D\1/' | tr '\n' ' '
 cflags-Darwin	+= -I/usr/local/opt/berkeley-db@4/include
-node_modules != realpath ${srcdir}/node_modules
-npm-lib := @tty-pt/qhash @tty-pt/ndc
-npm-lib := ${npm-lib:%=${node_modules}/%}
+node_modules != realpath ../node_modules
+orig-npm-lib := @tty-pt/qhash @tty-pt/ndc
+var-www-npm-lib := ${orig-npm-lib:%=${node_modules}/%}
+destdir != echo ${DESTDIR} | tr '/' '-'
+npm-lib := ${npm-lib:%=${destdir}%}
 CFLAGS := -g -O0 -Wall -Wno-initializer-overrides ${cflags-${uname}} ${config} \
 	${npm-lib:%=-I%/include} -I/usr/local/include -I${srcdir}/include \
 	-D_GNU_SOURCE -std=c99 \
