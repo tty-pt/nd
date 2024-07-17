@@ -16,7 +16,7 @@ deps:
 	${MAKE} -C src ${MFLAGS} deps
 
 node_modules/:
-	MAKE=${MAKE} pnpm i
+	pnpm i
 
 clean:
 	${Q}${MAKE} -C src ${MFLAGS} clean
