@@ -270,13 +270,24 @@ main(int argc, char **argv)
 	struct ndc_config config = { .flags = 0, .serve = "/chroot_node_modules" };
 	register char c;
 
-	while ((c = getopt(argc, argv, "dvC:")) != -1) {
+	while ((c = getopt(argc, argv, "p:k:c:dvC:")) != -1) {
 		switch (c) {
 		case 'd':
 			optflags |= OPT_DETACH;
 			break;
 		case 'v':
 			printf("0.0.1\n");
+			break;
+		case 'p':
+			config.port = atoi(optarg);
+			break;
+		case 'k':
+			config.flags |= NDC_SSL;
+			config.ssl_key = strdup(optarg);
+			break;
+		case 'c':
+			config.flags |= NDC_SSL;
+			config.ssl_crt = strdup(optarg);
 			break;
 		case 'C':
 			config.chroot = optarg;
