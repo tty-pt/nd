@@ -2,6 +2,7 @@
 
 #include <string.h>
 #include "nddb.h"
+#include "config.h"
 #include "debug.h"
 
 // #define PRECOVERY
@@ -241,14 +242,16 @@ map_mki_code(DB *sec, const DBT *key, const DBT *data, DBT *result)
 
 int
 map_init() {
+	char filename[BUFSIZ];
+	snprintf(filename, sizeof(filename), "%s%s", euid ? nd_config.chroot : "", GEO_DB);
 	int ret = 0;
 	if ((ret = db_create(&ipdb, dbe, 0))
-	    || (ret = ipdb->open(ipdb, NULL, "geo.db", "dp", DB_HASH, DB_CREATE, 0664)))
+	    || (ret = ipdb->open(ipdb, NULL, filename, "dp", DB_HASH, DB_CREATE, 0664)))
 		return ret;
 
 	if ((ret = db_create(&pdb, dbe, 0))
 	    || (ret = pdb->set_bt_compare(pdb, map_cmp))
-	    || (ret = pdb->open(pdb, NULL, "geo.db", "pd", DB_BTREE, DB_CREATE, 0664))
+	    || (ret = pdb->open(pdb, NULL, filename, "pd", DB_BTREE, DB_CREATE, 0664))
 	    || (ret = ipdb->associate(ipdb, NULL, pdb, map_mki_code, DB_CREATE)))
 	
 		pdb->close(pdb, 0);

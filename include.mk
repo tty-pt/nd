@@ -7,9 +7,9 @@ items/nd/nd:
 items/nd/node_modules/:
 	${MAKE} -C items/nd/ node_modules/
 
-all: var/nd/std.db
+all: var/nd/std.db.ok
 
-var/nd/std.db: var/nd
+var/nd/std.db.ok: var/nd
 	cp items/nd/game/std.db.ok $@
 
 etc/group: etc

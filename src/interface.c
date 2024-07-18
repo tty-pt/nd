@@ -225,6 +225,13 @@ struct cmd_slot cmds[] = {
 };
 
 short optflags = 0;
+int euid = 0;
+struct ndc_config nd_config = {
+	.flags = 0,
+	.serve = "/chroot_node_modules"
+};
+char std_db[BUFSIZ];
+char std_db_ok[BUFSIZ];
 
 void
 show_program_usage(char *prog)
@@ -243,11 +250,14 @@ show_program_usage(char *prog)
 int
 init_game()
 {
-	const char *name = STD_DB;
+
+	snprintf(std_db, sizeof(std_db), "%s%s", euid ? nd_config.chroot : "", STD_DB);
+	snprintf(std_db_ok, sizeof(std_db_ok), "%s%s", euid ? nd_config.chroot : "", STD_DB_OK);
+	const char *name = std_db;
 	FILE *f;
 
-	if (access(STD_DB, F_OK) != 0)
-		name = STD_DB_OK;
+	if (access(std_db, F_OK) != 0)
+		name = std_db_ok;
 
 	f = fopen(name, "rb");
 
@@ -267,7 +277,6 @@ init_game()
 int
 main(int argc, char **argv)
 {
-	struct ndc_config config = { .flags = 0, .serve = "/chroot_node_modules" };
 	register char c;
 
 	while ((c = getopt(argc, argv, "p:k:c:dvC:")) != -1) {
@@ -279,18 +288,18 @@ main(int argc, char **argv)
 			printf("0.0.1\n");
 			break;
 		case 'p':
-			config.port = atoi(optarg);
+			nd_config.port = atoi(optarg);
 			break;
 		case 'k':
-			config.flags |= NDC_SSL;
-			config.ssl_key = strdup(optarg);
+			nd_config.flags |= NDC_SSL;
+			nd_config.ssl_key = strdup(optarg);
 			break;
 		case 'c':
-			config.flags |= NDC_SSL;
-			config.ssl_crt = strdup(optarg);
+			nd_config.flags |= NDC_SSL;
+			nd_config.ssl_crt = strdup(optarg);
 			break;
 		case 'C':
-			config.chroot = optarg;
+			nd_config.chroot = optarg;
 			break;
 			
 		default:
@@ -303,11 +312,15 @@ main(int argc, char **argv)
 		}
 	}
 
-	ndc_init(&config);
+	ndc_init(&nd_config);
+	euid = geteuid();
+	if (euid && !nd_config.chroot)
+		nd_config.chroot = ".";
+
 	players_init();
 
 	if (init_game() < 0) {
-		warn("Couldn't load " STD_DB "!\n");
+		warn("Couldn't load %s!\n", std_db);
 		return 2;
 	}
 
@@ -329,7 +342,7 @@ main(int argc, char **argv)
 
 	map_close();
 
-	FILE *f = fopen(STD_DB, "wb");
+	FILE *f = fopen(std_db, "wb");
 
 	if (f == NULL) {
 		perror("fopen");

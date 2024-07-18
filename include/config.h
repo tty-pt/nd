@@ -11,4 +11,8 @@
 #define BIGBUFSIZ 32768
 #define SUPERBIGSIZ 80000 * 8192
 
+#include <ndc.h>
+extern struct ndc_config nd_config;
+extern int euid;
+
 #endif
