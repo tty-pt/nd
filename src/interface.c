@@ -228,7 +228,6 @@ short optflags = 0;
 int euid = 0;
 struct ndc_config nd_config = {
 	.flags = 0,
-	.serve = "/chroot_node_modules"
 };
 char std_db[BUFSIZ];
 char std_db_ok[BUFSIZ];
@@ -443,12 +442,15 @@ do_auth(int fd, int argc, char *argv[])
 }
 
 void
-ndc_update()
+ndc_update(unsigned long long dt)
 {
-	objects_update();
+	objects_update(dt);
 }
 
 void ndc_vim(int fd, int argc, char *argv[]) {
+	if (!(ndc_flags(fd) & DF_AUTHENTICATED))
+		return;
+
 	OBJ *player = FD_PLAYER(fd);
 	int ofs = 1;
 	char const *s = argv[0];
@@ -463,20 +465,25 @@ void ndc_vim(int fd, int argc, char *argv[]) {
 }
 
 void ndc_view(int fd, int argc, char *argv[]) {
+	if (!(ndc_flags(fd) & DF_AUTHENTICATED))
+		return;
+
 	do_look_at(fd, argc, argv);
 }
 
 void ndc_connect(int fd) {
-}
-
-void ndc_ws_init(int fd) {
-	char *cookie = getenv("HTTP_COOKIE");
+	static char *cookie;
+	int headers = ndc_headers(fd);
+	cookie = SHASH_GET(headers, "Cookie");
 	if (!cookie)
 		return;
 	auth(fd, strchr(cookie, '=') + 1);
 }
 
 void ndc_disconnect(int fd) {
+	if (!(ndc_flags(fd) & DF_AUTHENTICATED))
+		return;
+
 	OBJ *player = FD_PLAYER(fd);
 	ENT *eplayer = &player->sp.entity;
 	warn("%s(%d) disconnects on fd %d\n",

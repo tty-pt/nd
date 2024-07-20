@@ -251,7 +251,7 @@ OBJ *objects_write(FILE *f);
 OBJ *objects_read(FILE *f);
 void objects_free(void);
 OBJ *object_copy(OBJ *player, OBJ *obj);
-void objects_update(void);
+void objects_update(unsigned long long dt);
 OBJ *object_parent(OBJ *obj);
 int object_plc(OBJ *source, OBJ *dest); /* parent loop check */
 void object_move(OBJ *what, OBJ *where);

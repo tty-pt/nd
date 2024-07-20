@@ -235,11 +235,11 @@ point_rel_idx(point_t p, point_t s, smorton_t w)
 }
 
 void
-st_update()
+st_update(unsigned long long dt)
 {
 	const char * msg = NULL;
 	dbref i;
-	day_tick += DAYTICK;
+	day_tick += dt;
 
 	if (day_tick == 0)
 		msg = "The sun rises.\n";

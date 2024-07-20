@@ -754,17 +754,17 @@ object_copy(OBJ *player, OBJ *old)
 }
 
 static inline void
-object_update(OBJ *what) {
+object_update(OBJ *what, unsigned long long dt) {
 	if (what->type == TYPE_ENTITY)
-		entity_update(what);
+		entity_update(what, dt);
 }
 
 void
-objects_update()
+objects_update(unsigned long long dt)
 {
 	dbref i;
 	for (i = db_top; i-- > 0;)
-		object_update(object_get(i));
+		object_update(object_get(i), dt);
 }
 
 static inline int

@@ -69,7 +69,7 @@ dbref unequip(OBJ *player, unsigned eql);
 enum element element_next(ENT *ref, register unsigned char a);
 
 void stats_init(ENT *enu, SENT *sk);
-void entity_update(OBJ *player);
+void entity_update(OBJ *player, unsigned long long dt);
 int entity_damage(OBJ *player, OBJ *target, short amt);
 /* void entity_gpt(OBJ *player, int echo_off, char *add_prompt); */
 

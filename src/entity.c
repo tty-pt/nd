@@ -1058,7 +1058,7 @@ respawn(OBJ *player)
 }
 
 static inline int
-huth_notify(OBJ *player, unsigned v, unsigned char y, char const *m[4])
+huth_notify(OBJ *player, unsigned long long v, char const *m[4])
 {
 	ENT *eplayer = &player->sp.entity;
 	int fd = eplayer->fd;
@@ -1181,7 +1181,7 @@ attack(OBJ *player)
 }
 
 static inline void
-kill_update(OBJ *player)
+kill_update(OBJ *player, unsigned long long dt)
 {
 	ENT *eplayer = &player->sp.entity;
 	OBJ *target = eplayer->target;
@@ -1203,7 +1203,7 @@ kill_update(OBJ *player)
 }
 
 void
-entity_update(OBJ *player)
+entity_update(OBJ *player, unsigned long long dt)
 {
 	CBUG(player->type != TYPE_ENTITY);
 	ENT *eplayer = &player->sp.entity;
@@ -1262,12 +1262,12 @@ entity_update(OBJ *player)
 		return;
 
         /* if mob dies, return */
-	if (huth_notify(player, eplayer->thirst += THIRST_INC, THIRST_Y, thirst_msg)
-		|| huth_notify(player, eplayer->hunger += HUNGER_INC, HUNGER_Y, hunger_msg)
+	if (huth_notify(player, eplayer->thirst += dt, thirst_msg)
+		|| huth_notify(player, eplayer->hunger += dt, hunger_msg)
                 || debufs_process(player))
                         return;
 
-	kill_update(player);
+	kill_update(player, dt);
 }
 
 void

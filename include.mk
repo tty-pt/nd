@@ -1,26 +1,78 @@
+nd-chroot_mkdir_OpenBSD += dev
+chroot_mkdir += ${nd-chroot_mkdir_${uname}} etc
+ptys := ptyp0 ptyp1 ptyp2 ptyp3 ptyp4 ptyp5 \
+	ptyp6 ptyp7 ptyp8 ptyp9
+mounts-OpenBSD := ptm ${ptys}
+mounts-OpenBSD := ${mounts-OpenBSD:%=dev/%}
+mounts-Linux := dev sys proc dev/ptmx dev/pts
+mounts := ${mounts-${uname}} dev/urandom dev/null dev/zero
+sorted-mounts != echo ${mounts-${uname}} | tr ' ' '\n' | sort -r
+
 bin/nd: items/nd/nd etc/group etc/passwd etc/vim/vimrc.local
 	cp items/nd/nd $@
 
-items/nd/nd:
+items/nd/nd: FORCE
 	${MAKE} -C items/nd PWD=${PWD:%=%/items/nd}
 
-items/nd/node_modules/:
-	${MAKE} -C items/nd/ node_modules/
+all: bin/nd var/nd/std.db.ok
 
-all: var/nd/std.db.ok
-
-var/nd/std.db.ok: var/nd
+var/nd/std.db.ok: var/nd/
 	cp items/nd/game/std.db.ok $@
 
-etc/group: etc
+etc/group: etc/
 	echo "root:X:0:" > $@
 
-etc/passwd: etc
+etc/passwd: etc/
 	echo "root:X:0:0:root:/root:/bin/bash" > $@
 
-etc/vim/vimrc.local: etc/vim
+etc/vim/vimrc.local: etc/vim/
 	echo "colorscheme pablo" > $@
 
-chroot_mkdir += var/nd
+chroot_mkdir += var/nd etc/vim
+
+dev/pts:
+	@if ! mount | grep -q "on ${PWD}/$@ type"; then \
+		mkdir -p $@ 2>/dev/null || true ; \
+		echo ${sudo} mount -t devpts devpts $@ ; \
+		${sudo} mount -t devpts devpts $@ ; \
+		fi
+
+dev/ptmx:
+	@if test ! -c $@; then \
+		cmd="mknod $@ c 5 2 $@ && chmod 666 $@" ; \
+		echo ${sudo} sh -c \"$$cmd\" ; \
+		${sudo} sh -c \"$$cmd\" ; \
+		fi
+
+dev/urandom:
+	${sudo} mknod $@ c 45 0
+
+dev/null:
+	${sudo} mknod $@ c 2 2
+
+dev/zero:
+	${sudo} mknod $@ c 2 12
+
+dev/ptm:
+	${sudo} mknod $@ c 81 0
+
+$(ptys:%=dev/%):
+	${sudo} mknod $@ c 6 ${@:dev/ptyp%=%}
+
+run: all
+	${sudo-${USER}} ./bin/nd -C ${PWD} -p 8000
+
+srun: all ss_key.pem ss_cert.pem
+	${sudo} ./bin/nd -C ${PWD} -c ss_cert.pem -k ss_key.pem
+
+osrun: all
+	${sudo} ./bin/nd -C ${PWD} -c /etc/ssl/tty.pt.crt -k /etc/ssl/private/tty.pt.key
+
+ss_key.pem:
+	openssl genpkey -algorithm RSA -out ss_key.pem -aes256
+
+ss_cert.pem: ss_key.pem
+	openssl req -new -key ss_key.pem -out ss_csr.pem
+	openssl req -x509 -key ss_key.pem -in ss_csr.pem -out ss_cert.pem -days 365
 
 mod-bin += nd
