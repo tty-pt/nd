@@ -935,6 +935,7 @@ entity_kill(OBJ *player, OBJ *target)
 	etarget->target = NULL;
 	etarget->hp = 1;
 	etarget->mp = 1;
+	etarget->hunger_n = etarget->thirst_n = 0;
 	etarget->thirst = etarget->hunger = 0;
 
 	debufs_end(etarget);
@@ -1058,10 +1059,12 @@ respawn(OBJ *player)
 }
 
 static inline int
-huth_notify(OBJ *player, unsigned long long v, char const *m[4])
+huth_notify(OBJ *player, unsigned char *n_r, unsigned long long v, char const *m[4])
 {
 	ENT *eplayer = &player->sp.entity;
 	int fd = eplayer->fd;
+	unsigned long long rn = *n_r;
+
 
 	static unsigned const n[] = {
 		1 << (DAY_Y - 1),
@@ -1069,22 +1072,32 @@ huth_notify(OBJ *player, unsigned long long v, char const *m[4])
 		1 << (DAY_Y - 3)
 	};
 
-	register unsigned aux;
-
-	if (v == n[2])
-		ndc_writef(fd, m[0]);
-	else if (v == (aux = n[1]))
-		ndc_writef(fd, m[1]);
-	else if (v == (aux += n[0]))
-		ndc_writef(fd, m[2]);
-	else if (v == (aux += n[2]))
-		ndc_writef(fd, m[3]);
-	else if (v > aux) {
+	if (rn >= 4) {
 		short val = -(HP_MAX(eplayer) >> 3);
 		return entity_damage(NULL, player, val);
 	}
 
-        return 0;
+	if (rn >= 3) {
+		if (v >= 2 * n[1] + n[2]) {
+			ndc_writef(fd, m[3]);
+			*n_r += 1;
+		}
+	} else if (rn >= 2) {
+		if (v >= 2 * n[1]) {
+			ndc_writef(fd, m[2]);
+			*n_r += 1;
+		}
+	} else if (rn >= 1) {
+		if (v >= n[1]) {
+			ndc_writef(fd, m[1]);
+			*n_r += 1;
+		}
+	} else if (v >= n[2]) {
+		ndc_writef(fd, m[0]);
+		*n_r += 1;
+	}
+
+	return 0;
 }
 
 static inline unsigned char
@@ -1262,8 +1275,8 @@ entity_update(OBJ *player, unsigned long long dt)
 		return;
 
         /* if mob dies, return */
-	if (huth_notify(player, eplayer->thirst += dt, thirst_msg)
-		|| huth_notify(player, eplayer->hunger += dt, hunger_msg)
+	if (huth_notify(player, &eplayer->thirst_n, eplayer->thirst += dt, thirst_msg)
+		|| huth_notify(player, &eplayer->hunger_n, eplayer->hunger += dt, hunger_msg)
                 || debufs_process(player))
                         return;
 

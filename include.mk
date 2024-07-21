@@ -1,12 +1,16 @@
 nd-chroot_mkdir_OpenBSD += dev
 chroot_mkdir += ${nd-chroot_mkdir_${uname}} etc
-ptys := ptyp0 ptyp1 ptyp2 ptyp3 ptyp4 ptyp5 \
-	ptyp6 ptyp7 ptyp8 ptyp9
-mounts-OpenBSD := ptm ${ptys}
+ttys := 0 1 2 3 4 5 6 7 8 9
+ptys := ${ttys:%=ptyp%}
+ttys := ${ttys:%=ttyp%}
+mounts-OpenBSD := ptm ${ptys} ${ttys} tty
 mounts-OpenBSD := ${mounts-OpenBSD:%=dev/%}
 mounts-Linux := dev sys proc dev/ptmx dev/pts
 mounts := ${mounts-${uname}} dev/urandom dev/null dev/zero
 sorted-mounts != echo ${mounts-${uname}} | tr ' ' '\n' | sort -r
+shell-OpenBSD := /bin/ksh
+shell-Linux := /bin/bash
+shell := ${shell-${uname}}
 
 bin/nd: items/nd/nd etc/group etc/passwd etc/vim/vimrc.local
 	cp items/nd/nd $@
@@ -23,7 +27,7 @@ etc/group: etc/
 	echo "root:X:0:" > $@
 
 etc/passwd: etc/
-	echo "root:X:0:0:root:/root:/bin/bash" > $@
+	echo "root:X:0:0:root:/root:${shell}" > $@
 
 etc/vim/vimrc.local: etc/vim/
 	echo "colorscheme pablo" > $@
@@ -58,6 +62,12 @@ dev/ptm:
 
 $(ptys:%=dev/%):
 	${sudo} mknod $@ c 6 ${@:dev/ptyp%=%}
+
+$(ttys:%=dev/%):
+	${sudo} mknod $@ c 5 ${@:dev/ttyp%=%}
+
+dev/tty:
+	${sudo} mknod $@ c 1 0
 
 run: all
 	${sudo-${USER}} ./bin/nd -C ${PWD} -p 8000

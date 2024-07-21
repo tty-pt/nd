@@ -157,6 +157,7 @@ typedef struct entity {
 	unsigned lvl, spend, cxp;
 	unsigned attr[ATTR_MAX];
 	unsigned equipment[ES_MAX];
+	unsigned char hunger_n, thirst_n;
 	char *gpt;
 } ENT;
 
