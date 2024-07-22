@@ -12,7 +12,7 @@ shell-OpenBSD := /bin/ksh
 shell-Linux := /bin/bash
 shell := ${shell-${uname}}
 
-bin/nd: items/nd/nd etc/group etc/passwd etc/vim/vimrc.local
+bin/nd: items/nd/nd etc/ etc/group etc/passwd etc/vim/vimrc.local
 	cp items/nd/nd $@
 
 items/nd/nd: FORCE
@@ -23,10 +23,10 @@ all: bin/nd var/nd/std.db.ok
 var/nd/std.db.ok: var/nd/
 	cp items/nd/game/std.db.ok $@
 
-etc/group: etc/
+etc/group:
 	echo "root:X:0:" > $@
 
-etc/passwd: etc/
+etc/passwd:
 	echo "root:X:0:0:root:/root:${shell}" > $@
 
 etc/vim/vimrc.local: etc/vim/
