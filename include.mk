@@ -8,26 +8,17 @@ mounts-OpenBSD := ${mounts-OpenBSD:%=dev/%}
 mounts-Linux := dev sys proc dev/ptmx dev/pts
 mounts := ${mounts-${uname}}
 sorted-mounts != echo ${mounts-${uname}} | tr ' ' '\n' | sort -r
-shell-OpenBSD := /bin/ksh
-shell-Linux := /bin/bash
-shell := ${shell-${uname}}
 
-bin/nd: items/nd/nd etc/ etc/group etc/passwd etc/vim/vimrc.local
+bin/nd: items/nd/nd etc/ etc/vim/vimrc.local
 	cp items/nd/nd $@
 
 items/nd/nd: FORCE
 	${MAKE} -C items/nd PWD=${PWD:%=%/items/nd}
 
-all: bin/nd var/nd/std.db.ok ${mounts}
+all: bin/nd var/nd/std.db.ok mounts
 
 var/nd/std.db.ok: var/nd/
 	cp items/nd/game/std.db.ok $@
-
-etc/group:
-	echo "root:X:0:" > $@
-
-etc/passwd:
-	echo "root:X:0:0:root:/root:${shell}" > $@
 
 etc/vim/vimrc.local: etc/vim/
 	echo "colorscheme pablo" > $@
@@ -66,8 +57,19 @@ $(ptys:%=dev/%):
 $(ttys:%=dev/%):
 	${sudo} mknod $@ c 5 ${@:dev/ttyp%=%}
 
+mounts: ${mounts}
+
+mounts-clean:
+	test -z "${sorted-mounts}" || \
+		${sudo} umount ${sorted-mounts}
+	rm -rf ${mounts}
+
+clean: mounts-clean
+
 dev/tty:
-	${sudo} mknod $@ c 1 0
+	${sudo} mknod $@ c 1 0 || true
+	${sudo} chmod 666 $@
+	${sudo} chown root:wheel $@
 
 run: all
 	${sudo-${USER}} ./bin/nd -C ${PWD} -p 8000
