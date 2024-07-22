@@ -3,10 +3,10 @@ chroot_mkdir += ${nd-chroot_mkdir_${uname}} etc
 ttys := 0 1 2 3 4 5 6 7 8 9
 ptys := ${ttys:%=ptyp%}
 ttys := ${ttys:%=ttyp%}
-mounts-OpenBSD := ptm ${ptys} ${ttys} tty
+mounts-OpenBSD := ptm ${ptys} ${ttys} tty urandom null zero
 mounts-OpenBSD := ${mounts-OpenBSD:%=dev/%}
 mounts-Linux := dev sys proc dev/ptmx dev/pts
-mounts := ${mounts-${uname}} dev/urandom dev/null dev/zero
+mounts := ${mounts-${uname}}
 sorted-mounts != echo ${mounts-${uname}} | tr ' ' '\n' | sort -r
 shell-OpenBSD := /bin/ksh
 shell-Linux := /bin/bash
@@ -18,7 +18,7 @@ bin/nd: items/nd/nd etc/ etc/group etc/passwd etc/vim/vimrc.local
 items/nd/nd: FORCE
 	${MAKE} -C items/nd PWD=${PWD:%=%/items/nd}
 
-all: bin/nd var/nd/std.db.ok
+all: bin/nd var/nd/std.db.ok ${mounts}
 
 var/nd/std.db.ok: var/nd/
 	cp items/nd/game/std.db.ok $@
