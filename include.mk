@@ -3,11 +3,13 @@ chroot_mkdir += ${nd-chroot_mkdir_${uname}} etc
 ttys := 0 1 2 3 4 5 6 7 8 9
 ptys := ${ttys:%=ptyp%}
 ttys := ${ttys:%=ttyp%}
-mounts-OpenBSD := ptm ${ptys} ${ttys} tty urandom null zero
-mounts-OpenBSD := ${mounts-OpenBSD:%=dev/%}
-mounts-Linux := dev sys proc dev/ptmx dev/pts
+nods-OpenBSD := ptm ${ptys} ${ttys} tty urandom null zero
+nods-OpenBSD := ${nods-OpenBSD:%=dev/%}
+nods-Linux := dev/ptmx dev/pts
+nods := ${nods-${uname}}
+mounts-Linux := dev sys proc
 mounts := ${mounts-${uname}}
-sorted-mounts != echo ${mounts-${uname}} | tr ' ' '\n' | sort -r
+mkdir-OpenBSD := dev
 
 bin/nd: items/nd/nd etc/ etc/vim/vimrc.local
 	cp items/nd/nd $@
@@ -15,7 +17,7 @@ bin/nd: items/nd/nd etc/ etc/vim/vimrc.local
 items/nd/nd: FORCE
 	${MAKE} -C items/nd PWD=${PWD:%=%/items/nd}
 
-all: bin/nd var/nd/std.db.ok mounts
+all: bin/nd var/nd/std.db.ok mounts dev/ nods
 
 var/nd/std.db.ok: var/nd/
 	cp items/nd/game/std.db.ok $@
@@ -57,14 +59,16 @@ $(ptys:%=dev/%):
 $(ttys:%=dev/%):
 	${sudo} mknod $@ c 5 ${@:dev/ttyp%=%}
 
+${mkdir-${uname}}:
+	mkdir $@
+
 mounts: ${mounts}
+nods: ${nods}
 
-mounts-clean:
-	test -z "${sorted-mounts}" || \
-		${sudo} umount ${sorted-mounts}
-	rm -rf ${mounts}
+nods-clean:
+	rm -rf ${nods}
 
-clean: mounts-clean
+clean: nods-clean
 
 dev/tty:
 	${sudo} mknod $@ c 1 0 || true

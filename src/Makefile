@@ -35,7 +35,7 @@ $(exe): ${obj-y}
 
 .c.o:
 	@echo CC $@
-	${COMPILE.c} -o $@ ${<:%=${RELDIR}/%}
+	@${COMPILE.c} -o $@ ${<:%=${RELDIR}/%}
 
 CTAGS ?= ctags
 
