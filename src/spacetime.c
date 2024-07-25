@@ -855,6 +855,11 @@ st_teleport(OBJ *player, struct cmd_dir cd)
 	return ret;
 }
 
+void st_start(OBJ *player) {
+	struct cmd_dir cmd_dir = { .rep = 0 };
+	st_teleport(player, cmd_dir);
+}
+
 static int
 pull(OBJ *player, struct cmd_dir cd)
 {

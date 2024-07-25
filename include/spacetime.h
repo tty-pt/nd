@@ -96,5 +96,6 @@ morton_t point_rel_idx(point_t p, point_t s, smorton_t w);
 void st_update(unsigned long long dt);
 int st_v(OBJ *player, const char *dir);
 int st_teleport(OBJ *player, struct cmd_dir cd);
+void st_start(OBJ *player);
 
 #endif

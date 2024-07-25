@@ -69,9 +69,9 @@ notify_wts(OBJ *who, char const *a, char const *b, char *format, ...)
 	char buf[BUFFER_LEN];
 	va_start(args, format);
 	vsnprintf(buf, sizeof(buf), format, args);
+	va_end(args);
 	ndc_writef(ewho->fd, "You %s%s.\n", a, buf);
 	nd_rwritef(who->location, who, "%s %s%s.\n", who->name, b, buf);
-	va_end(args);
 }
 
 void
@@ -82,7 +82,7 @@ notify_wts_to(OBJ *who, OBJ *tar, char const *a, char const *b, char *format, ..
 	char buf[BUFFER_LEN];
 	va_start(args, format);
 	vsnprintf(buf, sizeof(buf), format, args);
+	va_end(args);
 	ndc_writef(ewho->fd, "You %s %s%s.\n", a, tar->name, buf);
 	nd_rwritef(who->location, who, "%s %s %s%s.\n", who->name, b, tar->name, buf);
-	va_end(args);
 }

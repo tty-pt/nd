@@ -939,10 +939,12 @@ entity_kill(OBJ *player, OBJ *target)
 	etarget->thirst = etarget->hunger = 0;
 
 	debufs_end(etarget);
-	object_move(target, object_get((dbref) 0));
+	st_start(target);
+	/* object_move(target, object_get((dbref) 0)); */
 	room_clean(target, loc);
 	look_around(target);
 	mcp_bars(etarget);
+	view(target);
 
 	return target;
 }

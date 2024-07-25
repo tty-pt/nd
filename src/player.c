@@ -24,5 +24,7 @@ player_create(char *name)
 	PUSH(player, object_get(PLAYER_START)->contents);
 	player_put(player);
 
+	st_start(player);
+
 	return player;
 }

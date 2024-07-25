@@ -492,6 +492,6 @@ void ndc_disconnect(int fd) {
 	if (last_observed)
 		observer_remove(last_observed, player);
 
-	eplayer->fd = -1;
+	eplayer->fd = 0;
 	FD_PLAYER(fd) = NULL;
 }
