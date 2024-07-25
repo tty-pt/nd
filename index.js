@@ -5,6 +5,7 @@ import "xterm/css/xterm.css";
 import "@tty-pt/ndc/ndc.css";
 import "./vim.css";
 import "./styles.css";
+import pkg from "./package.json";
 
 const ws = ndc.connect();
 ndc.open(document.getElementById("term"));
@@ -89,95 +90,57 @@ const dbEmit = sub.makeEmit((obj, current) => {
 
 // actions {{{
 const ACTION = {
-  LOOK: "LOOK",
-  KILL: "KILL",
-  SHOP: "SHOP",
-  DRINK: "DRINK",
-  OPEN: "OPEN",
-  CHOP: "CHOP",
-  FILL: "FILL",
-  GET: "GET",
-  TALK: "TALK",
-  PUT: "PUT",
-  EQUIP: "EQUIP",
-  DROP: "DROP",
-  EAT: "EAT",
-  DIE: "DIE",
-  INVENTORY: "INVENTORY",
+  LOOK: "👁",
+  INSPECT: "🔍",
+  KILL: "⚔️",
+  SHOP: "💰",
+  DRINK: "🧪",
+  OPEN: "📦",
+  CHOP: "🪓",
+  FILL: "💧",
+  GET: "🖐️",
+  TALK: "👄",
+  PUT: "👐",
+  EQUIP: "👕",
+  DROP: "🪣",
+  EAT: "🥄 ",
+  DIE: "☠️",
+  INVENTORY: "🎒",
   K: "K",
   J: "J",
-  WALK: "WALK",
+  WALK: "🗺️",
 };
 
 const ACTION_INDEX = [
-  ACTION.LOOK, ACTION.KILL, ACTION.SHOP, ACTION.DRINK, ACTION.OPEN,
+  ACTION.INSPECT, ACTION.KILL, ACTION.SHOP, ACTION.DRINK, ACTION.OPEN,
   ACTION.CHOP, ACTION.FILL, ACTION.GET, ACTION.TALK, ACTION.PUT,
   ACTION.EQUIP, ACTION.DROP, ACTION.EAT, ACTION.DIE, ACTION.INVENTORY,
-  ACTION.K, ACTION.J, ACTION.WALK,
+  ACTION.K, ACTION.J, ACTION.WALK, ACTION.LOOK
 ];
 
 const ACTION_MAP = {
-  [ACTION.LOOK]: {
-    label: "look",
-    icon: 	"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAQklEQVQ4jWNgGL7g4OFb/9ExWZpwYZyaiXEBhiH4NBNSA+fg8wpWW5H1ETIAl98xvEHIEJyacfmdEB8vICsdjFAAAGW58imbroFwAAAAAElFTkSuQmCC",
+  [ACTION.LOOK]: { label: "look" },
+  [ACTION.INSPECT]: {
+	  label: "inspect",
+	  callback: ref => sendCmd(`look #${ref}`),
   },
-  [ACTION.KILL]: {
-    label: "kill",
-    icon: 	"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAWElEQVQ4jWNgoAY4ePjW/4OHb/0nWw+MQ6whWNUTawhedYQMIcoSXIpI8ia6YlLDCMMQcmKJdGdTxQW4/IyNT7KziXYJMemAoBewOROfHG5BAi4lRT1OAAA/Xu7MVtQQRgAAAABJRU5ErkJggg==",
-  },
-  [ACTION.SHOP]: {
-    label: "shop",
-    icon: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAOUlEQVQ4jWNgGJTg4OFb/3FhkjXjEiNaMzFyWBXB+Li8RHsDKPYCIZfQxwCSvYBLIcWJiSTNQw8AAO8uLsItXTaGAAAAAElFTkSuQmCC",
-  },
-  [ACTION.DRINK]: {
-    label: "drink",
-    icon: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAR0lEQVQ4jWNgIBIcPHzrPzImWREyn2wDyHIBuhhJBhDUgM8QdDZJmim2nWwDcBlCkmZ0Q8iynSRN2AwYGP9T3QAYnyQDyAEAd7gQfVonw9EAAAAASUVORK5CYII=",
-  },
-  [ACTION.OPEN]: {
-    label: "open",
-    icon: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAVElEQVQ4jaXRywkAMAgDUPffStzCZey1FE3UCt7Cw48IKTUPNQ+Wo8AauYEV8gIQycJVQ6ALwwlWq7DAGEBIegO07+iV3wBDWgBC2kCFjIAMGQOoDj9EP5M9YZdfAAAAAElFTkSuQmCC",
-  },
-  [ACTION.CHOP]: {
-    label: "chop",
-    icon: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAANElEQVQ4jWNgGLTg4OFb/5ExyRoGjwHIcmQZgi5HsiHY5EgyBJccQUOIsWBwGEKRAcMEAABAgauIKxMDjQAAAABJRU5ErkJggg==",
-  },
-  [ACTION.FILL]: {
-    label: "fill",
-    icon: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAUElEQVQ4jWNgwAEOHr71H5cc0QBmCEWGUcUlZNuMjskyBJmmnwHYnEySNw4evvX/////TLhcRFAzJfLUMYAQxmsAIUMIaqaKAdgMIkkjKQAABfenzXQV7xsAAAAASUVORK5CYII=",
-  },
+  [ACTION.KILL]: { label: "kill" },
+  [ACTION.SHOP]: { label: "shop" },
+  [ACTION.DRINK]: { label: "drink" },
+  [ACTION.OPEN]: { label: "open" },
+  [ACTION.CHOP]: { label: "chop" },
+  [ACTION.FILL]: { label: "fill" },
   [ACTION.GET]: {
     label: "get",
-    icon: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAQUlEQVQ4jWNggIKDh2/9P3j41n8GcgBMM9mGoBswuAwh2UBChhBlENUMwGcwWQYQkiPJFQQNgClGp8lOraMANwAA27bDE5yTd30AAAAASUVORK5CYII=",
     callback: ref => sendCmd(sub.value.target ? `get #${sub.value.target} #${ref}` : `get #${ref}`),
   },
-  [ACTION.TALK]: {
-    label: "talk",
-    icon: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAM0lEQVQ4jWNgGFTg4OFb/4nFOA0g1iK8EoRsHhgXkGQAxS6gyACKo5FYV1DkBeprHtoAAOijqCv2+qTkAAAAAElFTkSuQmCC",
-  },
-  [ACTION.PUT]: {
-    label: "put",
-    icon: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAWElEQVQ4jc3QwQ0AMAQFUPtvJbawjF4qaUVQcair/18EwB4kFiQW6IyW24gF/kKewQwpQWNABJcBWxq7IgU03C5HUH2ZZJBYwrPOx1no6mWI3bv5yiVebgFV9xc3cxaEggAAAABJRU5ErkJggg==",
-  },
-  [ACTION.EQUIP]: {
-    label: "equip",
-    icon: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAALElEQVQ4jWNgGF7g4OFb/5ExsXI4FeHDRLuCJM3EGEJWWIxEA3AZQrTmEQYAvLnktS1HPJUAAAAASUVORK5CYII=",
-  },
-  [ACTION.DROP]: {
-    label: "drop",
-    icon: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAATElEQVQ4jWNggIKDh2/9P3j41n8GcgBMM9mGoBswuAwh2UBChhBlENUMwGcw0Qaga6KaKwgaAFNMtmZ8BtHPAOSAI9sgipI2ukuwAQABHugSAyRIzQAAAABJRU5ErkJggg==",
-  },
-  [ACTION.EAT]: {
-    label: "eat",
-    icon: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAQUlEQVQ4jWNgoDY4ePjWf7LkYRLoNLoasg2AaR6iBiBrpq0BuBQOEQPQFeIzHKcBMMWEXEeyAfhcR7Iisg3AJQcA7LE1fLFqxRoAAAAASUVORK5CYII=",
-  },
-  [ACTION.DIE]: {
-    label: "die",
-    icon: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAR0lEQVQ4jWNgoCU4ePjWfximSDNZhlDFAGw02a4gWTNJtuOzBZ84hhwxziXKS9gUURyVJGlEt5EkQwgFKE6DSLGForRBdQAAjPakzh7dkTsAAAAASUVORK5CYII=",
-  },
-  [ACTION.INVENTORY]: {
-    label: "inventory",
-    icon: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAANElEQVQ4jWNgGFTg4OFb/4nBBA0hRw7FBWTJE+U8fOqI0YxX7agBVDKAomhElqQoKdMdAADVVJq360zbaQAAAABJRU5ErkJggg==",
-  },
+  [ACTION.TALK]: { label: "talk" },
+  [ACTION.PUT]: { label: "put" },
+  [ACTION.EQUIP]: { label: "equip" },
+  [ACTION.DROP]: { label: "drop" },
+  [ACTION.EAT]: { label: "eat" },
+  [ACTION.DIE]: { label: "die" },
+  [ACTION.INVENTORY]: { label: "inventory" },
   [ACTION.K]: {
     label: "K",
     icon: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAASUlEQVQ4jWNgoBU4ePjWf2RMsSFUcwFRLkNXgG4ANjbRzsZrAC7N+LxDlM0EXUOKs3GKE+tsYgwmLEkzA0hNvlgNIKSJ9gaQigF3uf+dQNoz9QAAAABJRU5ErkJggg==",
@@ -186,10 +149,7 @@ const ACTION_MAP = {
     label: "J",
     icon: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAATElEQVQ4jWNgoDU4ePjWf4o0wzDVNCOL4zQYnwJkMawGEDIdqwEwBqnORjGAWGdjFSfF2QQNwOYdUg0mLEkzA4hKJIQMIKSJ9gaQigFrg/+dXV9AmAAAAABJRU5ErkJggg==",
   },
-  [ACTION.WALK]: {
-    label: "walk",
-    icon: "./art/walking.png",
-  },
+  [ACTION.WALK]: { label: "walk" },
 };
 // }}}
 
@@ -498,7 +458,7 @@ ndc.setOnMessage(function onMessage(ev) {
         if (base.type === 0) {
           hereEmit(base.dbref);
           targetEmit(null);
-          bg.style = `background-image: url('./art/${base.art}')`;
+          bg.style = `background-image: url('${pkg.publicPath}/art/${base.art}')`;
         } else
           targetEmit(base.dbref);
 
@@ -537,29 +497,37 @@ ndc.setOnMessage(function onMessage(ev) {
 // }}}
 
 function mayDash(str) {
-  return str ? "-" + str : "";
+  return str;
 }
+
+// function mayDash(str) {
+//   return str ? "-" + str : "";
+// }
 
 class Button extends SubscribedElement {
   static get observedAttributes() {
-    return ['size', 'square', "icon", "src"];
+    return ['size', 'square', "icon", "src", "x", "text-size", "pad", "fit", "hid"];
   }
 
   render() {
     super.render();
-    const size = mayDash(this.getAttribute('size') ?? "medium");
+    const textSize = mayDash(this.getAttribute('text-size') ?? "17");
+    const size = mayDash(this.getAttribute('size') ?? "8");
+    const sizeCls = this.getAttribute("size") ?  "s" + size : "";
+    const padSize = mayDash(this.getAttribute('pad') ?? "8");
     const square = this.getAttribute('square');
     const icon = this.textContent.trim();
     const src = this.getAttribute('src') ?? ACTION_MAP[icon]?.icon;
-    const fit = this.getAttribute('fit') === null ? null : "-fit";
+    const fit = this.getAttribute('fit') === null ? null : "f";
     const shape = square ? "" : "round";
     const content = src ? "" : icon;
-    const vis = src || icon;
-    const cls = `background-size${fit ?? size} size${size} font-size${size} `
-      + `${shape} ${vis ? "" : "transparent"}`;
+    const customCls = this.getAttribute("x");
+    const hid = this.getAttribute("hid") !== null;
+    const cls = `btn bs${fit ?? size} p${padSize} ${sizeCls} ts${textSize} `
+      + `${shape} ${customCls} ${hid ? "transparent" : ""}`;
 
     this.innerHTML = `<button style="background-image: url('${src}')" `
-      + `class="${cls}" tabindex="${vis ? "" : -1}">${content}</button>`;
+      + `class="${cls}" tabindex="${hid ? -1 : ""}">${content}</button>`;
   }
 }
 
@@ -578,7 +546,7 @@ class Avatar extends Button {
   }
 
   setImageClass(obj) {
-    const src = "./art/" + (obj?.art ?? obj?.avatar ?? "unknown.jpg");
+    const src = pkg.publicPath + "/art/" + (obj?.art ?? obj?.avatar ?? "unknown.jpg");
     this.setAttribute("src", src);
   }
 }
@@ -593,9 +561,10 @@ class Equipment extends Avatar {
       this.setAttribute("ref", "unknown");
     } else
       this.setAttribute("ref", null);
-    this.setAttribute("size", "medium");
+    this.setAttribute("size", "24");
     this.setAttribute("square", true);
     this.setAttribute("onclick", `sendCmd('unequip ${location}')`);
+    this.setAttribute("ontouchend", `sendCmd('unequip ${location}')`);
     this.render();
   }
 }
@@ -612,7 +581,7 @@ class Stat extends HTMLElement {
     const value = 0;
 
     this.innerHTML = `
-    <div class="horizontal-small">
+    <div class="f h8">
       <div class="tbbold">${name}</div>
       <div>${value}</div>
     </div>`;
@@ -634,9 +603,9 @@ class LookAt extends SubscribedElement {
     const target = this.target ? this.db[this.target] : null;
     this.innerHTML = target
       ? `
-    <div id="target-title-and-art" class="relative vertical-0 size-super align-items">
-      <div style="background-image: url('art/${target.art}')" class="absolute position-0 background-unique background-size-fit"></div>
-      <div id="target-title" class="absolute position-top-0 position-bottom-0 position-left-0 position-right-0 deep-shadow text-align tm pxs">
+    <div id="target-title-and-art" class="rel v0 size-super fic">
+      <div style="background-image: url('${pkg.publicPath}/art/${target.art}')" class="abs a background-unique bsf"></div>
+      <div id="target-title" class="abs a deep-shadow tac tm pxs">
         ${target.pname}
       </div>
     </div>`
@@ -671,8 +640,8 @@ class Item extends SubscribedElement {
     const background = this.parent.active === this.getAttribute("ref") ? "c0" : "";
     const text = this.item.pname + (this.item.shop ? " " + this.item.price + "P" : "");
     this.innerHTML = `
-    <a class="horizontal align-items round-pad pad display relative ${background}" onclick="">
-      <nd-avatar size="biggest" ref="${this.item.dbref}"></nd-avatar>
+    <a class="f h fic round-pad p display rel ${background}" onclick="">
+      <nd-avatar size="64" ref="${this.item.dbref}"></nd-avatar>
       <span>${text}</span>
     </a>`;
   }
@@ -712,11 +681,12 @@ class ContentActions extends SubscribedElement {
     const actionsEl = actions.map(action => (`<nd-button
       ref="${this.active}"
       onclick="actionCallback('${action}', ${this.active})"
+      ontouchend="actionCallback('${action}', ${this.active})"
     >${action}</nd-button>`)).join("\n");
 
     this.innerHTML = `
-    <div class="margin-right-small popper">
-      <div class="horizontal-small flex-wrap icec">${actionsEl}</div>
+    <div class="mr8 popper">
+      <div class="f h8 fw icec">${actionsEl}</div>
     </div>`;
   }
 }
@@ -763,7 +733,7 @@ class Contents extends SubscribedElement {
       return `<nd-item ref="${ref}" ${activeAttr}></nd-item>`;
     }).join("\n");
     this.innerHTML = `
-    <div class="vertical-0 flex-grow overflow icec">${contentsEl}</div>
+    <div class="v0 fg overflow icec">${contentsEl}</div>
     <nd-content-actions class="hidden"></nd-content-actions>
     `;
     this.actions = this.querySelector("nd-content-actions");
@@ -826,25 +796,25 @@ const modalParent = modals.help.parentElement;
 let currentModal = modals.help;
 
 globalThis.modal_open = id => {
-  modalParent.classList.remove("display-none");
-  currentModal.classList.add("display-none");
+  modalParent.classList.remove("dn");
+  currentModal.classList.add("dn");
   currentModal = modals[id];
-  currentModal.classList.remove("display-none");
+  currentModal.classList.remove("dn");
 };
 
 globalThis.modal_close = () => {
-  modalParent.classList.add("display-none");
+  modalParent.classList.add("dn");
 };
 
 const directions = document.getElementById("directions");
 const actions = document.getElementById("actions");
 
 globalThis.directions_show = () => {
-  directions.classList.remove("display-none");
-  actions.classList.add("display-none");
+  directions.classList.remove("dn");
+  actions.classList.add("dn");
 };
 
 document.addEventListener("click", () => {
-  directions.classList.add("display-none");
-  actions.classList.remove("display-none");
+  directions.classList.add("dn");
+  actions.classList.remove("dn");
 });

@@ -1,143 +1,128 @@
-<!DOCTYPE html>
-<html lang="en">
-	<head>
-		<meta charset="utf8"/>
-		<title>Neverdark</title>
-		<meta name="viewport" content="width=device-width, user-scalable=no viewport-fit=cover">
-		<meta name="mobile-web-app-capable" content="yes">
-		<meta name="apple-mobile-web-app-capable" content="yes">
-		<link rel="manifest" href="./manifest.json">
-		<link rel="shortcut icon" type="image/png" href="./nd256.png"/>
-		<link rel="stylesheet" href="https://unpkg.com/@tty-pt/ndc@0.1.14/htdocs/ndc.css" />
-		<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.1.0/css/xterm.css" />
-	</head>
-	<body class="cf cb svf vertical-0">
-		<div id="main" class="svf horizontal-small flex-grow overflow-hidden">
-			<div id="bg" class="absolute opacity-2 position-left-0 position-right-0 position-top-0 position-bottom-0 background-size-fit"></div>
-			<div class="pad-small horizontal-small absolute position-left-0 position-right-0 position-top-0 position-bottom-0">
-				<div class="vertical-small flex-grow shf overflow">
-					<div id="title" class="tm text-align"></div>
-					<div id="bars"></div>
-					<pre id="term" class="flex-grow overflow"></pre>
-				</div>
+<div id="main" class="f h8 fg oh">
+	<div id="bg" class="abs opacity-2 a bsf"></div>
+	<div class="p8 f h8 abs a">
+		<div class="f v8 fg shf overflow">
+			<div id="title" class="tm tac"></div>
+			<div id="bars"></div>
+			<pre id="term" class="fg overflow"></pre>
+		</div>
 
-				<textarea id="hid" aria-hidden="true"></textarea>
+		<textarea id="hid" aria-hidden="true"></textarea>
 
-				<div class="vertical-small flex-grow align-items sh33">
-					<nd-look-at></nd-look-at>
-					<nd-contents class="flex-grow overflow"></nd-contents>
-					<div id="directions" class="vertical-small tar tnow display-none">
-						<div class="horizontal-small">
-							<nd-button></nd-button>
-							<nd-button onclick="sendCmd('k')">&uarr;</nd-button>
-							<nd-button onclick="sendCmd('K')">K</nd-button>
-						</div>
-						<div class="horizontal-small">
-							<nd-button onclick="sendCmd('h')">&larr;</nd-button>
-							<nd-button></nd-button>
-							<nd-button onclick="sendCmd('l')">&rarr;</nd-button>
-						</div>
-						<div class="horizontal-small">
-							<nd-button></nd-button>
-							<nd-button onclick="sendCmd('j')">&darr;</nd-button>
-							<nd-button onclick="sendCmd('J')">J</nd-button>
-						</div>
-					</div>
-					<div id="actions" class="horizontal-small flex-wrap justify-content">
-						<nd-button onclick="modal_open('help')">?</nd-button>
-						<nd-button onclick="modal_open('stats')">s</nd-button>
-						<nd-button onclick="modal_open('equipment')">EQUIP</nd-button>
-						<nd-button onclick="sendCmd('inventory')">OPEN</nd-button>
-						<nd-button onclick="sendCmd('look')">LOOK</nd-button>
-						<nd-button onclick="event.stopPropagation(); directions_show()">WALK</nd-button>
-					</div>
+		<div class="f v8 fg fic sh33">
+			<nd-look-at></nd-look-at>
+			<nd-contents class="fg overflow"></nd-contents>
+			<div id="directions" class="f v8 tar tnow dn fab">
+				<div class="f h8">
+					<nd-button hid></nd-button>
+					<nd-button onclick="sendCmd('k')">&uarr;</nd-button>
+					<nd-button onclick="sendCmd('K')">K</nd-button>
 				</div>
+				<div class="f h8">
+					<nd-button onclick="sendCmd('h')">&larr;</nd-button>
+					<nd-button hid></nd-button>
+					<nd-button onclick="sendCmd('l')">&rarr;</nd-button>
+				</div>
+				<div class="f h8">
+					<nd-button hid></nd-button>
+					<nd-button onclick="sendCmd('j')">&darr;</nd-button>
+					<nd-button onclick="sendCmd('J')">J</nd-button>
+				</div>
+			</div>
+			<div id="actions" class="f h8 v8 fw fcc">
+				<nd-button onclick="modal_open('help')">❓</nd-button>
+				<nd-button onclick="modal_open('stats')">📋</nd-button>
+				<nd-button onclick="modal_open('equipment')">👕</nd-button>
+				<nd-button onclick="sendCmd('inventory')">📦</nd-button>
+				<nd-button onclick="sendCmd('look')">👁</nd-button>
+				<nd-button onclick="event.stopPropagation(); directions_show()">🗺️</nd-button>
 			</div>
 		</div>
-		<div class="modal absolute svf vertical-0 align-items c fcc overflow-hidden display-none" onclick="modal_close()">
-			<div id="help" class="pad background-semi focus display-none">
-				<b>Help</b><br />
-				<br />
-				Input "X" to teleport to the starting position.<br />
+	</div>
+</div>
+<div class="modal abs svf f v0 fic c fcc oh dn" onclick="modal_close()">
+	<div id="help" class="p background-semi focus dn">
+		<b>Help</b><br />
+		<br />
+		Input "X" to teleport to the starting position.<br />
 
-				<br />
-				<b>More details: Normal mode:</b><br />
-				<p>
-				<b>i</b> to access your inventory.<br />
-				<b>I</b> to enter Input mode.<br />
-				<b>o</b> to look "out".<br />
-				<b>Left</b> or <b>h</b> to move west.<br />
-				<b>Right</b> or <b>l</b> to move east.<br />
-				<b>Up</b> or <b>k</b> to move north.<br />
-				<b>Down</b> or <b>j</b> to move south.<br />
-				<b>Shift+Up</b> or <b>K</b> to move up.<br />
-				<b>Shift+Down</b> or <b>J</b> to move down.<br />
-				</p>
-				<b>Input mode:</b><br />
-				<p>
-				<b>Esc</b> to go back to normal mode.<br />
-				<b>Left</b> to move west.<br />
-				<b>Right</b> to move east.<br />
-				<b>Up</b> to move north.<br />
-				<b>Down</b> to move south.<br />
-				<b>Shift+Up</b> to move up.<br />
-				<b>Shift+Down</b> to move down.<br />
-				other terminal bindings.<br />
-				</p>
-				<br />
-				You can check out the code <a href="https://github.com/tty-pt/neverdark">here</a>.<br />
-				<br />
-				The help command is very useful. Try issuing "help help".<br />
+		<br />
+		<b>More details: Normal mode:</b><br />
+		<p>
+		<b>i</b> to access your inventory.<br />
+		<b>I</b> to enter Input mode.<br />
+		<b>o</b> to look "out".<br />
+		<b>Left</b> or <b>h</b> to move west.<br />
+		<b>Right</b> or <b>l</b> to move east.<br />
+		<b>Up</b> or <b>k</b> to move north.<br />
+		<b>Down</b> or <b>j</b> to move south.<br />
+		<b>Shift+Up</b> or <b>K</b> to move up.<br />
+		<b>Shift+Down</b> or <b>J</b> to move down.<br />
+		</p>
+		<b>Input mode:</b><br />
+		<p>
+		<b>Esc</b> to go back to normal mode.<br />
+		<b>Left</b> to move west.<br />
+		<b>Right</b> to move east.<br />
+		<b>Up</b> to move north.<br />
+		<b>Down</b> to move south.<br />
+		<b>Shift+Up</b> to move up.<br />
+		<b>Shift+Down</b> to move down.<br />
+		other terminal bindings.<br />
+		</p>
+		<br />
+		You can check out the code <a href="https://github.com/tty-pt/neverdark">here</a>.<br />
+		<br />
+		The help command is very useful. Try issuing "help help".<br />
 
-				<p><b>also see help X, walking, w</b> </p>
-			</div>
-			<div id="equipment" class="pad vertical c background-semi focus display-none">
-				<div class="horizontal">
-					<div class="size-big"></div>
-					<div class="size-big"></div>
-					<nd-equipment location="head"></nd-equipment>
-					<div class="size-big"></div>
-					<div class="size-big"></div>
-				</div>
-				<div class="horizontal">
-					<nd-equipment location="right-hand"></nd-equipment>
-					<nd-equipment></nd-equipment>
-					<nd-equipment location="neck"></nd-equipment>
-					<nd-equipment location="back"></nd-equipment>
-					<nd-equipment></nd-equipment>
-				</div>
-				<div class="horizontal">
-					<nd-equipment location="right-finger"></nd-equipment>
-					<div class="size-big"></div>
-					<nd-equipment location="chest"></nd-equipment>
-					<div class="size-big"></div>
-					<nd-equipment location="lfinger"></nd-equipment>
-				</div>
-				<div class="horizontal">
-					<div class="size-big"></div>
-					<div class="size-big"></div>
-					<nd-equipment location="pants"></nd-equipment>
-					<div class="size-big"></div>
-					<div class="size-big"></div>
-				</div>
-			</div>
-			<div id="stats" class="pad horizontal background-semi focus display-none">
-				<div class="vertical flex-grow">
-					<nd-stat name="str"></nd-stat>
-					<nd-stat name="con"></nd-stat>
-					<nd-stat name="dex"></nd-stat>
-					<nd-stat name="int"></nd-stat>
-					<nd-stat name="wiz"></nd-stat>
-					<nd-stat name="cha"></nd-stat>
-				</div>
-				<div class="vertical flex-grow">
-					<nd-stat name="dodge"></nd-stat>
-					<nd-stat name="dmg"></nd-stat>
-					<nd-stat name="mdmg"></nd-stat>
-					<nd-stat name="def"></nd-stat>
-					<nd-stat name="mdef"></nd-stat>
-				</div>
-			</div>
+		<p><b>also see help X, walking, w</b> </p>
+	</div>
+	<div id="equipment" class="p f v c background-semi focus dn">
+		<div class="f h">
+			<div class="p8 s24"></div>
+			<div class="p8 s24"></div>
+			<nd-equipment location="head"></nd-equipment>
+			<div class="p8 s24"></div>
+			<div class="p8 s24"></div>
 		</div>
-	</body>
-</html>
+		<div class="f h">
+			<nd-equipment location="right-hand"></nd-equipment>
+			<nd-equipment></nd-equipment>
+			<nd-equipment location="neck"></nd-equipment>
+			<nd-equipment location="back"></nd-equipment>
+			<nd-equipment></nd-equipment>
+		</div>
+		<div class="f h">
+			<nd-equipment location="right-finger"></nd-equipment>
+			<div class="p8 s24"></div>
+			<nd-equipment location="chest"></nd-equipment>
+			<div class="p8 s24"></div>
+			<nd-equipment location="lfinger"></nd-equipment>
+		</div>
+		<div class="f h">
+			<div class="p8 s24"></div>
+			<div class="p8 s24"></div>
+			<nd-equipment location="pants"></nd-equipment>
+			<div class="p8 s24"></div>
+			<div class="p8 s24"></div>
+		</div>
+	</div>
+	<div id="stats" class="p f h background-semi focus dn">
+		<div class="f v fg">
+			<nd-stat name="str"></nd-stat>
+			<nd-stat name="con"></nd-stat>
+			<nd-stat name="dex"></nd-stat>
+			<nd-stat name="int"></nd-stat>
+			<nd-stat name="wiz"></nd-stat>
+			<nd-stat name="cha"></nd-stat>
+		</div>
+		<div class="f v fg">
+			<nd-stat name="dodge"></nd-stat>
+			<nd-stat name="dmg"></nd-stat>
+			<nd-stat name="mdmg"></nd-stat>
+			<nd-stat name="def"></nd-stat>
+			<nd-stat name="mdef"></nd-stat>
+		</div>
+	</div>
+</div>
+<link rel="stylesheet" href="https://tty.pt/vim.css">

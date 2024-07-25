@@ -5,16 +5,9 @@
   "browser": "htdocs/index.js",
   "entry": "index.js",
   "template": "index.html",
-  "publicPath": "./",
+  "publicPath": "/nd/",
   "cdn": {
-    "@popperjs/core": true,
-    "@tty-pt/ndc": true,
-    "@tty-pt/sub": true,
-    "react": "umd/react.production.min.js",
-    "lodash": true,
-    "xterm": true,
-    "xterm-addon-fit": true,
-    "xterm-addon-web-links": true
+    "react": "umd/react.production.min.js"
   },
   "external": {
     "react": "global React",
@@ -47,12 +40,12 @@
   },
   "homepage": "https://github.com/tty-pt/neverdark#readme",
   "devDependencies": {
-    "@tty-pt/scripts": "^0.6.0-40",
+    "@tty-pt/scripts": "^0.6.4",
     "webpack": "^5.89.0"
   },
   "dependencies": {
     "@popperjs/core": "^2.11.8",
-    "@tty-pt/ndc": "^0.3.8",
+    "@tty-pt/ndc": "^0.3.9",
     "@tty-pt/qhash": "^0.0.4",
     "@tty-pt/sub": "^2.2.40",
     "lodash": "^4.17.21",

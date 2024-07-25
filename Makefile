@@ -2,9 +2,9 @@
 
 include .config
 
-all: node_modules/ nd htdocs/
+all: node_modules/ nd htdocs/index.html
 
-htdocs/: index.html index.js
+htdocs/index.html htdocs/index.js: index.html index.js
 	pnpm build
 
 nd:
