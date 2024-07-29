@@ -348,7 +348,7 @@ spells_cast(OBJ *player, OBJ *target)
 	}
 
 	if (!enough_mp)
-		ndc_writef(eplayer->fd, "Not enough mana.\n");
+		nd_writef(player, "Not enough mana.\n");
 
 	return 0;
 }

@@ -250,10 +250,8 @@ st_update(unsigned long long dt)
 
 	for (i = 0; i < db_top; i++) {
 		OBJ *o = object_get(i);
-		if (o->type == TYPE_ENTITY) {
-			ENT *eo = &o->sp.entity;
-			ndc_writef(eo->fd, msg);
-		}
+		if (o->type == TYPE_ENTITY)
+			nd_writef(o, msg);
 	}
 }
 
@@ -282,22 +280,20 @@ st_there(OBJ *where, enum exit e)
 static inline void
 reward(OBJ *player, const char *msg, int amount)
 {
-	ENT *eplayer = &player->sp.entity;
 	player->value += amount;
-	ndc_writef(eplayer->fd, "You %s. (+%dp)\n", msg, amount);
+	nd_writef(player, "You %s. (+%dp)\n", msg, amount);
 }
 
 static inline int
 fee_fail(OBJ *player, char *desc, char *info, int cost)
 {
-	ENT *eplayer = &player->sp.entity;
 	int v = player->value;
 	if (v < cost) {
-		ndc_writef(eplayer->fd, "You can't afford to %s. (%dp)\n", desc, cost);
+		nd_writef(player, "You can't afford to %s. (%dp)\n", desc, cost);
 		return 1;
 	} else {
 		player->value -= cost;
-		ndc_writef(eplayer->fd, "%s (-%dp). %s\n",
+		nd_writef(player, "%s (-%dp). %s\n",
 			   desc, cost, info);
 		return 0;
 	}
@@ -325,12 +321,11 @@ wall_around(OBJ *player, enum exit e)
 
 static int
 st_claim(OBJ *player, OBJ *room) {
-	ENT *eplayer = &player->sp.entity;
 	ROO *rroom = &room->sp.room;
 
 	if (!(rroom->flags & RF_TEMP)) {
 		if (room->owner != player) {
-			ndc_writef(eplayer->fd, "You don't own this room\n");
+			nd_writef(player, "You don't own this room\n");
 			return 1;
 		}
 
@@ -458,7 +453,7 @@ do_bio(int fd, int argc, char *argv[]) {
 	pos_t pos;
 	map_where(pos, player->location);
 	bio = noise_point(pos);
-	ndc_writef(fd, "tmp %d rn %u bio %s(%d)\n",
+	nd_writef(player, "tmp %d rn %u bio %s(%d)\n",
 		bio->tmp, bio->rn, biomes[bio->bio_idx].name, bio->bio_idx);
 }
 
@@ -485,12 +480,12 @@ e_move(OBJ *player, enum exit e) {
 	int door = 0;
 
 	if (eplayer->klock) {
-		ndc_writef(eplayer->fd, "You can't move while being targeted.\n");
+		nd_writef(player, "You can't move while being targeted.\n");
 		return;
 	}
 
 	if (!map_has(loc) || !(rloc->exits & e)) {
-		ndc_writef(eplayer->fd, "You can't go that way.\n");
+		nd_writef(player, "You can't go that way.\n");
 		return;
 	}
 
@@ -503,10 +498,10 @@ e_move(OBJ *player, enum exit e) {
 		} else
 			door = 1;
 
-		ndc_writef(eplayer->fd, "You open the %s.\n", dwts);
+		nd_writef(player, "You open the %s.\n", dwts);
 	}
 
-	ndc_writef(eplayer->fd, "You go %s%s%s.\n", ANSI_FG_BLUE ANSI_BOLD, e_name(e), ANSI_RESET);
+	nd_writef(player, "You go %s%s%s.\n", ANSI_FG_BLUE ANSI_BOLD, e_name(e), ANSI_RESET);
 	nd_rwritef(player->location, player, "%s goes %s.\n", player->name, e_name(e));
 
 	dest = st_there(loc, e);
@@ -518,7 +513,7 @@ e_move(OBJ *player, enum exit e) {
 	nd_rwritef(player->location, player, "%s comes in from the %s.\n", player->name, e_name(e_simm(e)));
 
 	if (door)
-		ndc_writef(eplayer->fd, "You close the %s.\n", dwts);
+		nd_writef(player, "You close the %s.\n", dwts);
 }
 
 OBJ *
@@ -553,7 +548,6 @@ walk(OBJ *player, enum exit e) {
 static void
 carve(OBJ *player, enum exit e)
 {
-	ENT *eplayer = &player->sp.entity;
 	OBJ *there = NULL,
 	    *here = player->location;
 	ROO *rhere = &here->sp.room;
@@ -564,7 +558,7 @@ carve(OBJ *player, enum exit e)
 			return;
 
 		if (player->value < ROOM_COST) {
-			ndc_writef(eplayer->fd, "You can't pay for that room.\n");
+			nd_writef(player, "You can't pay for that room.\n");
 			return;
 		}
 
@@ -592,7 +586,6 @@ carve(OBJ *player, enum exit e)
 static void
 uncarve(OBJ *player, enum exit e)
 {
-	ENT *eplayer = &player->sp.entity;
 	const char *s0 = "is";
 	OBJ *there,
 	    *here = player->location;
@@ -608,14 +601,14 @@ uncarve(OBJ *player, enum exit e)
 			return;
 	} else {
 		if (!(rhere->exits & e)) {
-                        ndc_writef(eplayer->fd, "No exit there.\n");
+                        nd_writef(player, "No exit there.\n");
                         return;
                 }
 
 		there = st_there(here, e);
 
 		if (!there) {
-			ndc_writef(eplayer->fd, "No room there.\n");
+			nd_writef(player, "No room there.\n");
 			return;
 		}
 		s0 = "at";
@@ -624,7 +617,7 @@ uncarve(OBJ *player, enum exit e)
 	ROO *rthere = &there->sp.room;
 
 	if ((rthere->flags & RF_TEMP) || there->owner != player) {
-		ndc_writef(eplayer->fd, "You don't own th%s room.\n", s0);
+		nd_writef(player, "You don't own th%s room.\n", s0);
 		return;
 	}
 
@@ -643,7 +636,6 @@ uncarve(OBJ *player, enum exit e)
 static void
 unwall(OBJ *player, enum exit e)
 {
-	ENT *eplayer = &player->sp.entity;
 	int a, b, c, d;
 	OBJ *there,
 	    *here = player->location;
@@ -665,12 +657,12 @@ unwall(OBJ *player, enum exit e)
 
 	if (!((a && !b && (d || c))
 	    || (c && !d && b))) {
-		ndc_writef(eplayer->fd, "You can't do that here.\n");
+		nd_writef(player, "You can't do that here.\n");
 		return;
 	}
 
 	if (rhere->exits & e) {
-		ndc_writef(eplayer->fd, "There's an exit here already.\n");
+		nd_writef(player, "There's an exit here already.\n");
 		return;
 	}
 
@@ -685,13 +677,12 @@ unwall(OBJ *player, enum exit e)
 		return;
 
 	rthere->exits |= e_simm(e);
-	ndc_writef(eplayer->fd, "You tear down the wall.\n");
+	nd_writef(player, "You tear down the wall.\n");
 }
 
 static inline int
 gexit_claim(OBJ *player, enum exit e)
 {
-	ENT *eplayer = &player->sp.entity;
 	int a, b, c, d;
 	OBJ *here = st_there(player, e),
 	    *there = player->location;
@@ -712,19 +703,18 @@ gexit_claim(OBJ *player, enum exit e)
 			return st_claim(player, there);
 	}
 
-	ndc_writef(eplayer->fd, "You can't claim that exit.\n");
+	nd_writef(player, "You can't claim that exit.\n");
 	return 1;
 }
 
 static inline int
 gexit_claim_walk(OBJ *player, enum exit e)
 {
-	ENT *eplayer = &player->sp.entity;
 	OBJ *here = player->location;
 	ROO *rhere = &here->sp.room;
 
 	if (!(rhere->exits & e)) {
-		ndc_writef(eplayer->fd, "No exit here.\n");
+		nd_writef(player, "No exit here.\n");
 		return 1;
 	}
 
@@ -745,7 +735,6 @@ gexit_claim_walk(OBJ *player, enum exit e)
 static void
 e_wall(OBJ *player, enum exit e)
 {
-	ENT *eplayer = &player->sp.entity;
 	if (gexit_claim_walk(player, e))
 		return;
 
@@ -761,14 +750,12 @@ e_wall(OBJ *player, enum exit e)
 		rthere->exits &= ~e;
 	}
 
-	ndc_writef(eplayer->fd, "You build a wall.\n");
+	nd_writef(player, "You build a wall.\n");
 }
 
 static void
 door(OBJ *player, enum exit e)
 {
-	ENT *eplayer = &player->sp.entity;
-
 	if (gexit_claim_walk(player, e))
 		return;
 
@@ -784,14 +771,12 @@ door(OBJ *player, enum exit e)
 		rwhere->doors |= e;
 	}
 
-	ndc_writef(eplayer->fd, "You place a door.\n");
+	nd_writef(player, "You place a door.\n");
 }
 
 static void
 undoor(OBJ *player, enum exit e)
 {
-	ENT *eplayer = &player->sp.entity;
-
 	if (gexit_claim_walk(player, e))
 		return;
 
@@ -807,23 +792,22 @@ undoor(OBJ *player, enum exit e)
 		rwhere->doors &= ~e;
 	}
 
-	ndc_writef(eplayer->fd, "You remove a door.\n");
+	nd_writef(player, "You remove a door.\n");
 }
 
 static int
 tell_pos(OBJ *player, struct cmd_dir cd) {
-	ENT *eplayer = &player->sp.entity;
 	pos_t pos;
 	OBJ *target = cd.rep == 1 ? player : object_get((dbref) cd.rep);
 	int ret = 1;
 
 	if (target->type != TYPE_ENTITY) {
-		ndc_writef(eplayer->fd, "Invalid object type.\n");
+		nd_writef(player, "Invalid object type.\n");
 		return 0;
 	}
 
 	map_where(pos, target->location);
-	ndc_writef(eplayer->fd, "0x%llx\n", MORTON_READ(pos));
+	nd_writef(player, "0x%llx\n", MORTON_READ(pos));
 	return ret;
 }
 
@@ -850,7 +834,7 @@ st_teleport(OBJ *player, struct cmd_dir cd)
 		there = st_room_at(player, pos);
 	CBUG(!there);
 	if (!eplayer->gpt)
-		ndc_writef(eplayer->fd, "Teleporting to 0x%llx.\n", cd.rep);
+		nd_writef(player, "Teleporting to 0x%llx.\n", cd.rep);
 	enter(player, there, E_NULL);
 	return ret;
 }
@@ -863,7 +847,6 @@ void st_start(OBJ *player) {
 static int
 pull(OBJ *player, struct cmd_dir cd)
 {
-	ENT *eplayer = &player->sp.entity;
 	pos_t pos;
 	enum exit e = cd.e;
 	OBJ *there, *here, *what;
@@ -883,7 +866,7 @@ pull(OBJ *player, struct cmd_dir cd)
 	    || ((there = st_there(here, e))
 		&& room_clean(player, there) == there))
 	{
-		ndc_writef(eplayer->fd, "You cannot do that.\n");
+		nd_writef(player, "You cannot do that.\n");
 		return 1;
 	}
 

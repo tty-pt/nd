@@ -14,7 +14,7 @@ do_select(int fd, int argc, char *argv[])
 	const char *n_s = argv[1];
 	unsigned n = strtoul(n_s, NULL, 0);
 	eplayer->select = n;
-	ndc_writef(fd, "You select %u.\n", n);
+	nd_writef(player, "You select %u.\n", n);
 }
 
 void
@@ -25,9 +25,9 @@ do_equip(int fd, int argc, char *argv[])
 	OBJ *eq = ematch_mine(player, name);
 
 	if (!eq)
-		ndc_writef(fd, "You are not carrying that.\n");
+		nd_writef(player, "You are not carrying that.\n");
 	else if (equip(player, eq)) 
-		ndc_writef(fd, "You can't equip that.\n");
+		nd_writef(player, "You can't equip that.\n");
 }
 
 void
@@ -39,7 +39,7 @@ do_unequip(int fd, int argc, char *argv[])
 	dbref eq;
 
 	if ((eq = unequip(player, bp)) == NOTHING)
-		ndc_writef(fd, "You don't have that equipped.\n");
+		nd_writef(player, "You don't have that equipped.\n");
 	else
-		ndc_writef(fd, "You unequip %s.\n", object_get(eq)->name);
+		nd_writef(player, "You unequip %s.\n", object_get(eq)->name);
 }

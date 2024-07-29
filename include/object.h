@@ -141,7 +141,7 @@ struct effect {
 
 typedef struct entity {
 	struct object *home;
-	int fd;
+	unsigned fds;
 	struct object *last_observed, *dialog_target;
         const char *dialog;
 

@@ -44,7 +44,7 @@ do_kill(int fd, int argc, char *argv[])
 		: player;
 
 	if (object_ref(here) == 0 || (rhere->flags & RF_HAVEN)) {
-		ndc_writef(fd, "You may not kill here.\n");
+		nd_writef(player, "You may not kill here.\n");
 		return;
 	}
 
@@ -54,7 +54,7 @@ do_kill(int fd, int argc, char *argv[])
 	    || player == target
 	    || target->type != TYPE_ENTITY)
 	{
-		ndc_writef(fd, "You can't target that.\n");
+		nd_writef(player, "You can't target that.\n");
 		return;
 	}
 
@@ -68,7 +68,7 @@ do_status(int fd, int argc, char *argv[])
 	OBJ *player = FD_PLAYER(fd);
 	ENT *eplayer = &player->sp.entity;
 	// TODO optimize MOB_EV / MOB_EM
-	ndc_writef(fd, "hp %u/%u\tmp %u/%u\tstuck 0x%x\n"
+	nd_writef(player, "hp %u/%u\tmp %u/%u\tstuck 0x%x\n"
 		"dodge %d\tcombo 0x%x \tdebuf_mask 0x%x\n"
 		"damage %d\tmdamage %d\tmdmg_mask 0x%x\n"
 		"defense %d\tmdefense %d\tmdef_mask 0x%x\n"
@@ -98,7 +98,7 @@ do_heal(int fd, int argc, char *argv[])
 	if (!(eplayer->flags & EF_WIZARD)
 	    || !target
 	    || target->type != TYPE_ENTITY) {
-                ndc_writef(fd, "You can't do that.\n");
+                nd_writef(player, "You can't do that.\n");
                 return;
         }
 
@@ -108,7 +108,7 @@ do_heal(int fd, int argc, char *argv[])
 	etarget->hunger = etarget->thirst = 0;
 	debufs_end(etarget);
 	notify_wts_to(player, target, "heal", "heals", "");
-	mcp_bars(etarget);
+	mcp_bars(target);
 }
 
 void
@@ -122,12 +122,12 @@ do_advitam(int fd, int argc, char *argv[])
 	if (!(eplayer->flags & EF_WIZARD)
 	    || !target
 	    || target->owner != player) {
-		ndc_writef(fd, "You can't do that.\n");
+		nd_writef(player, "You can't do that.\n");
 		return;
 	}
 
 	birth(target);
-	ndc_writef(fd, "You infuse %s with life.\n", target->name);
+	nd_writef(player, "You infuse %s with life.\n", target->name);
 }
 
 void
@@ -146,7 +146,7 @@ do_train(int fd, int argc, char *argv[]) {
 	case 'w': attr = ATTR_WIZ; break;
 	case 'h': attr = ATTR_CHA; break;
 	default:
-		  ndc_writef(fd, "Invalid attribute.\n");
+		  nd_writef(player, "Invalid attribute.\n");
 		  return;
 	}
 
@@ -154,7 +154,7 @@ do_train(int fd, int argc, char *argv[]) {
 	int amount = *amount_s ? atoi(amount_s) : 1;
 
 	if (amount > avail) {
-		  ndc_writef(fd, "Not enough points.\n");
+		  nd_writef(player, "Not enough points.\n");
 		  return;
 	}
 
@@ -171,7 +171,7 @@ do_train(int fd, int argc, char *argv[]) {
 	}
 
 	eplayer->spend = avail - amount;
-	ndc_writef(fd, "Your %s increases %d time(s).\n", attrib, amount);
+	nd_writef(player, "Your %s increases %d time(s).\n", attrib, amount);
         mcp_stats(player);
 }
 
@@ -179,18 +179,17 @@ int
 kill_v(OBJ *player, char const *opcs)
 {
 	ENT *eplayer = &player->sp.entity;
-	int fd = eplayer->fd;
 	char *end;
 	if (isdigit(*opcs)) {
 		unsigned combo = strtol(opcs, &end, 0);
 		eplayer->combo = combo;
-		ndc_writef(fd, "Set combo to 0x%x.\n", combo);
+		nd_writef(player, "Set combo to 0x%x.\n", combo);
 		return end - opcs;
 	} else if (*opcs == 'c' && isdigit(opcs[1])) {
 		unsigned slot = strtol(opcs + 1, &end, 0);
                 OBJ *target = eplayer->target;
 		if (player->location == 0) {
-			ndc_writef(fd, "You may not cast spells in room 0.\n");
+			nd_writef(player, "You may not cast spells in room 0.\n");
 		} else {
 			spell_cast(player, target, slot);
 		}

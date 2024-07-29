@@ -33,43 +33,42 @@ do_teleport(int fd, int argc, char *argv[]) {
 		victim = player;
 		to = arg1;
 	} else if (!(victim = ematch_all(player, arg1))) {
-		ndc_writef(fd, NOMATCH_MESSAGE);
+		nd_writef(player, NOMATCH_MESSAGE);
 		return;
 	} else
 		to = arg2;
 
 	if(!God(player) && God(victim->owner)) {
-		ndc_writef(fd, "God has already set that where He wants it to be.\n");
+		nd_writef(player, "God has already set that where He wants it to be.\n");
 		return;
 	}
 
 	destination = ematch_all(player, to);
 
 	if (!destination) {
-		ndc_writef(fd, NOMATCH_MESSAGE);
+		nd_writef(player, NOMATCH_MESSAGE);
 		return;
 	}
 
 	switch (victim->type) {
 	case TYPE_ENTITY:
 		{
-			ENT *evictim = &victim->sp.entity;
 			if (!controls(player, victim) ||
 					!controls(player, destination) ||
 					!controls(player, victim->location) ||
 					(object_item(destination) && !controls(player, destination->location))) {
-				ndc_writef(fd, "Permission denied. (must control victim, dest, victim's loc, and dest's loc)\n");
+				nd_writef(player, "Permission denied. (must control victim, dest, victim's loc, and dest's loc)\n");
 				break;
 			}
 			if (destination->type != TYPE_ROOM) {
-				ndc_writef(fd, "Bad destination.\n");
+				nd_writef(player, "Bad destination.\n");
 				break;
 			}
 			if (object_plc(victim, destination)) {
-				ndc_writef(fd, "Objects can't contain themselves.\n");
+				nd_writef(player, "Objects can't contain themselves.\n");
 				break;
 			}
-			ndc_writef(evictim->fd, "You feel a wrenching sensation...\n");
+			nd_writef(victim, "You feel a wrenching sensation...\n");
 			enter(victim, destination, E_NULL);
 		}
 		break;
@@ -77,18 +76,18 @@ do_teleport(int fd, int argc, char *argv[]) {
 	case TYPE_EQUIPMENT:
 	case TYPE_THING:
 		if (object_plc(victim, destination)) {
-			ndc_writef(fd, "You can't make a container contain itself!\n");
+			nd_writef(player, "You can't make a container contain itself!\n");
 			break;
 		}
 		if (destination->type != TYPE_ROOM
 			&& destination->type != TYPE_ENTITY
 			&& !object_item(destination)) {
-			ndc_writef(fd, "Bad destination.\n");
+			nd_writef(player, "Bad destination.\n");
 			break;
 		}
 		if (!(controls(player, destination) &&
 			  (controls(player, victim) || controls(player, victim->location)))) {
-			ndc_writef(fd, "Permission denied. (must control dest and be able to link to it, or control dest's loc)\n");
+			nd_writef(player, "Permission denied. (must control dest and be able to link to it, or control dest's loc)\n");
 			break;
 		}
 		/* check for non-sticky dropto */
@@ -98,14 +97,14 @@ do_teleport(int fd, int argc, char *argv[]) {
 				destination = rdestination->dropto;
 		}
 		object_move(victim, destination);
-		ndc_writef(fd, "Teleported.\n");
+		nd_writef(player, "Teleported.\n");
 		break;
 	case TYPE_GARBAGE:
-		ndc_writef(fd, "That object is in a place where magic cannot reach it.\n");
+		nd_writef(player, "That object is in a place where magic cannot reach it.\n");
 		break;
 	case TYPE_ROOM:
 	default:
-		ndc_writef(fd, "You can't teleport that.\n");
+		nd_writef(player, "You can't teleport that.\n");
 		break;
 	}
 }
@@ -119,31 +118,27 @@ do_boot(int fd, int argc, char *argv[]) {
 	OBJ *victim;
 
 	if (!(eplayer->flags & EF_WIZARD)) {
-		ndc_writef(fd, "Only a Wizard player can boot someone off.\n");
+		nd_writef(player, "Only a Wizard player can boot someone off.\n");
 		return;
 	}
 
 	victim = player_get(name);
 
 	if (!victim) {
-		ndc_writef(fd, "That player does not exist.\n");
+		nd_writef(player, "That player does not exist.\n");
 		return;
 	}
 
-	if (victim->type != TYPE_ENTITY) {
-		ndc_writef(fd, "You can only boot entities!\n");
-	}
+	if (victim->type != TYPE_ENTITY)
+		nd_writef(player, "You can only boot entities!\n");
 
-	ENT *evictim = &victim->sp.entity;
-
-	if (God(victim)) {
-		ndc_writef(fd, "You can't boot God!\n");
-	}
+	if (God(victim))
+		nd_writef(player, "You can't boot God!\n");
 
 	else {
-		ndc_writef(evictim->fd, "You have been booted off the game.\n");
-		ndc_close(evictim->fd);
-		ndc_writef(fd, "You booted %s off!", victim->name);
+		nd_writef(victim, "You have been booted off the game.\n");
+		nd_close(victim);
+		nd_writef(player, "You booted %s off!", victim->name);
 	}
 }
 
@@ -201,19 +196,19 @@ do_toad(int fd, int argc, char *argv[]) {
 	CBUG(player->type != TYPE_ENTITY);
 
 	if (!(eplayer->flags & EF_WIZARD)) {
-		ndc_writef(fd, "Only a Wizard player can turn an entity into a toad.\n");
+		nd_writef(player, "Only a Wizard player can turn an entity into a toad.\n");
 		return;
 	}
 
 	victim = player_get(name);
 
 	if (!victim) {
-		ndc_writef(fd, "That player does not exist.\n");
+		nd_writef(player, "That player does not exist.\n");
 		return;
 	}
 
 	if (God(victim)) {
-		ndc_writef(fd, "You cannot @toad God.\n");
+		nd_writef(player, "You cannot @toad God.\n");
 		if(!God(player)) {
 			warn("TOAD ATTEMPT: %s(#%d) tried to toad God.", player->name, object_ref(player));
 		}
@@ -226,18 +221,18 @@ do_toad(int fd, int argc, char *argv[]) {
 	} else {
 		recipient = player_get(recip);
 		if (!recipient || recipient == victim) {
-			ndc_writef(fd, "That recipient does not exist.\n");
+			nd_writef(player, "That recipient does not exist.\n");
 			return;
 		}
 	}
 
 	if (victim->type != TYPE_ENTITY)
-		ndc_writef(fd, "You can only turn entities into toads!\n");
+		nd_writef(player, "You can only turn entities into toads!\n");
 
 	ENT *evictim = &victim->sp.entity;
 
 	if (!(God(player)) && (evictim->flags & EF_WIZARD)) {
-		ndc_writef(fd, "You can't turn a Wizard into a toad.\n");
+		nd_writef(player, "You can't turn a Wizard into a toad.\n");
 	} else {
 		/* we're ok */
 		/* do it */
@@ -257,17 +252,15 @@ do_toad(int fd, int argc, char *argv[]) {
 		}
 
 		/* ndc_writef people */
-		ndc_writef(evictim->fd, "You have been turned into a toad.\n");
-		ndc_writef(fd, "You turned %s into a toad!", victim->name);
+		nd_writef(victim, "You have been turned into a toad.\n");
+		nd_writef(player, "You turned %s into a toad!", victim->name);
 		warn("TOADED: %s(%d) by %s(%d)", victim->name, object_ref(victim), player->name, object_ref(player));
 		/* reset name */
 		player_delete(victim);
 		snprintf(buf, sizeof(buf), "A slimy toad named %s", victim->name);
 		free((void *) victim->name);
 		victim->name = strdup(buf);
-
-		ndc_close(evictim->fd);
-
+		nd_close(victim);
 		victim->type = TYPE_THING;
 		victim->owner = player;	/* you get it */
 		victim->value = 1; /* don't let him keep his immense wealth */
@@ -281,21 +274,21 @@ do_usage(int fd, int argc, char *argv[]) {
 	struct rusage usage;
 
 	if (!(eplayer->flags & EF_WIZARD)) {
-		ndc_writef(fd, "Permission denied. (@usage is wizard-only)\n");
+		nd_writef(player, "Permission denied. (@usage is wizard-only)\n");
 		return;
 	}
 	getrusage(RUSAGE_SELF, &usage);
 
-	ndc_writef(fd, "Performed %d input servicings.", usage.ru_inblock);
-	ndc_writef(fd, "Performed %d output servicings.", usage.ru_oublock);
-	ndc_writef(fd, "Sent %d messages over a socket.", usage.ru_msgsnd);
-	ndc_writef(fd, "Received %d messages over a socket.", usage.ru_msgrcv);
-	ndc_writef(fd, "Received %d signals.", usage.ru_nsignals);
-	ndc_writef(fd, "Page faults NOT requiring physical I/O: %d", usage.ru_minflt);
-	ndc_writef(fd, "Page faults REQUIRING physical I/O: %d", usage.ru_majflt);
-	ndc_writef(fd, "Swapped out of main memory %d times.", usage.ru_nswap);
-	ndc_writef(fd, "Voluntarily context switched %d times.", usage.ru_nvcsw);
-	ndc_writef(fd, "Involuntarily context switched %d times.", usage.ru_nivcsw);
-	ndc_writef(fd, "User time used: %d sec.", usage.ru_utime.tv_sec);
-	ndc_writef(fd, "System time used: %d sec.", usage.ru_stime.tv_sec);
+	nd_writef(player, "Performed %d input servicings.", usage.ru_inblock);
+	nd_writef(player, "Performed %d output servicings.", usage.ru_oublock);
+	nd_writef(player, "Sent %d messages over a socket.", usage.ru_msgsnd);
+	nd_writef(player, "Received %d messages over a socket.", usage.ru_msgrcv);
+	nd_writef(player, "Received %d signals.", usage.ru_nsignals);
+	nd_writef(player, "Page faults NOT requiring physical I/O: %d", usage.ru_minflt);
+	nd_writef(player, "Page faults REQUIRING physical I/O: %d", usage.ru_majflt);
+	nd_writef(player, "Swapped out of main memory %d times.", usage.ru_nswap);
+	nd_writef(player, "Voluntarily context switched %d times.", usage.ru_nvcsw);
+	nd_writef(player, "Involuntarily context switched %d times.", usage.ru_nivcsw);
+	nd_writef(player, "User time used: %d sec.", usage.ru_utime.tv_sec);
+	nd_writef(player, "System time used: %d sec.", usage.ru_stime.tv_sec);
 }

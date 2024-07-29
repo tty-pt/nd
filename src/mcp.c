@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <ctype.h>
 #include <string.h>
+#include <qhash.h>
 #include "debug.h"
 #include "io.h"
 
@@ -63,14 +64,53 @@ msgarg_escape(char* buf, int bufsize, const char* in)
 	return len;
 }
 
-static int
-fbcp(int fd, size_t len, unsigned char iden, void *data)
+static void
+nd_tdwritef(OBJ *player, const char *fmt, va_list args) {
+	static char buf[BUFSIZ];
+	ssize_t len = vsnprintf(buf, sizeof(buf), fmt, args);
+	if (!player->sp.entity.fds)
+		return;
+	struct hash_cursor c = hash_iter_start(player->sp.entity.fds);
+	while (hash_iter_get(&c)) {
+		int fd = * (int *) c.key;
+		if (ndc_flags(fd) & DF_WEBSOCKET)
+			continue;
+		ndc_write(fd, buf, len);
+	}
+}
+
+static void
+nd_twritef(OBJ *player, const char *fmt, ...) {
+	va_list va;
+	va_start(va, fmt);
+	nd_tdwritef(player, fmt, va);
+	va_end(va);
+}
+
+static void
+nd_wwrite(OBJ *player, void *msg, size_t len) {
+	ENT *eplayer = &player->sp.entity;
+
+	if (!eplayer->fds)
+		return;
+
+	struct hash_cursor c = hash_iter_start(eplayer->fds);
+
+	while (hash_iter_get(&c)) {
+		register int fd = * (int *) c.key;
+		if ((ndc_flags(fd) & DF_WEBSOCKET))
+			ndc_write(fd, msg, len);
+	}
+}
+
+static void
+fbcp(OBJ *player, size_t len, unsigned char iden, void *data)
 {
 	char bcp_buf[2 + sizeof(iden) + len];
 	memcpy(bcp_buf, "#b", 2);
 	memcpy(bcp_buf + 2, &iden, sizeof(iden));
 	memcpy(bcp_buf + 2 + sizeof(iden), data, len);
-	return ndc_write(fd, bcp_buf, 1 + sizeof(iden) + len);
+	nd_wwrite(player, bcp_buf, 1 + sizeof(iden) + len);
 }
 
 static int
@@ -99,13 +139,11 @@ _fbcp_item(char *bcp_buf, OBJ *obj, unsigned char dynflags)
 	case TYPE_ROOM: {
 		ROO *roo = &obj->sp.room;
 		memcpy(p += aux1, &roo->exits, sizeof(roo->exits));
-		warn("BCP_ROOM %u\n", roo->exits);
 		p += sizeof(roo->exits);
 		break;
 	}
 	case TYPE_ENTITY: {
 		ENT *ent = &obj->sp.entity;
-		warn("BCP_ENTITY %u %lu\n", ent->flags, sizeof(ent->flags));
 		memcpy(p += aux1, &ent->flags, sizeof(ent->flags));
 		p += sizeof(ent->flags);
 		break;
@@ -116,11 +154,12 @@ _fbcp_item(char *bcp_buf, OBJ *obj, unsigned char dynflags)
 	return p - bcp_buf;
 }
 
-static int
-fbcp_item(int fd, OBJ *obj, unsigned char dynflags)
+static void
+fbcp_item(OBJ *player, OBJ *obj, unsigned char dynflags)
 {
 	static char bcp_buf[SUPERBIGSIZ];
-	return ndc_write(fd, bcp_buf, _fbcp_item(bcp_buf, obj, dynflags));
+	int ret = _fbcp_item(bcp_buf, obj, dynflags);
+	nd_wwrite(player, bcp_buf, ret);
 }
 
 static int // 2 + sizeof(iden) + sizeof(int) * 2
@@ -139,8 +178,8 @@ _fbcp_out(char *bcp_buf, OBJ *obj)
 	return p - bcp_buf;
 }
 
-static int
-fbcp_auth_success(int fd, dbref who)
+static void
+fbcp_auth_success(OBJ *player, dbref who)
 {
 	unsigned char iden = BCP_AUTH_SUCCESS;
 	static char bcp_buf[2 + sizeof(iden) + sizeof(who)];
@@ -149,10 +188,10 @@ fbcp_auth_success(int fd, dbref who)
 	memcpy(p += 2, &iden, sizeof(iden));
 	memcpy(p += sizeof(iden), &who, sizeof(who));
 	p += sizeof(who);
-	return ndc_write(fd, bcp_buf, p - bcp_buf);
+	nd_wwrite(player, bcp_buf, p - bcp_buf);
 }
 
-static int
+static void
 fbcp_auth_failure(int fd, int reason)
 {
 	unsigned char iden = BCP_AUTH_FAILURE;
@@ -162,12 +201,13 @@ fbcp_auth_failure(int fd, int reason)
 	memcpy(p += 2, &iden, sizeof(iden));
 	memcpy(p += sizeof(iden), &reason, sizeof(reason));
 	p += sizeof(reason);
-	return ndc_write(fd, bcp_buf, p - bcp_buf);
+	ndc_write(fd, bcp_buf, p - bcp_buf);
 }
 
-static int
-fbcp_stats(ENT *eplayer)
+static void
+fbcp_stats(OBJ *player)
 {
+	ENT *eplayer = &player->sp.entity;
 	unsigned char iden = BCP_STATS;
 	static char bcp_buf[2 + sizeof(iden) + sizeof(eplayer->attr) + sizeof(short) * 7];
 	char *p = bcp_buf;
@@ -182,12 +222,13 @@ fbcp_stats(ENT *eplayer)
 	memcpy(p += sizeof(short), &eplayer->e[AF_DMG].value, sizeof(short));
 	memcpy(p += sizeof(short), &eplayer->e[AF_DEF].value, sizeof(short));
 	p += sizeof(short);
-	return ndc_write(eplayer->fd, bcp_buf, p - bcp_buf);
+	nd_write(player, bcp_buf, p - bcp_buf);
 }
 
-static int
-fbcp_bars(ENT *eplayer)
+static void
+fbcp_bars(OBJ *player)
 {
+	ENT *eplayer = &player->sp.entity;
 	unsigned char iden = BCP_BARS;
 	static char bcp_buf[2 + sizeof(iden) + sizeof(int) * 4];
 	char *p = bcp_buf;
@@ -201,37 +242,29 @@ fbcp_bars(ENT *eplayer)
 	aux = HP_MAX(eplayer);
 	memcpy(p += sizeof(eplayer->mp), &aux, sizeof(aux));
 	p += sizeof(aux);
-	return ndc_write(eplayer->fd, bcp_buf, p - bcp_buf);
+	nd_write(player, bcp_buf, p - bcp_buf);
 }
 
-int
-fbcp_view(ENT *eplayer, view_t *view)
+void
+fbcp_view(OBJ *player, view_t *view)
 {
-	if (!(ndc_flags(eplayer->fd) & DF_WEBSOCKET))
-                return 1;
-	fbcp(eplayer->fd, sizeof(view_t), BCP_VIEW, view);
-        return 0;
+	fbcp(player, sizeof(view_t), BCP_VIEW, view);
 }
 
-int
-fbcp_view_buf(ENT *eplayer, char *view_buf)
+void
+fbcp_view_buf(OBJ *player, char *view_buf)
 {
-	if (!(ndc_flags(eplayer->fd) & DF_WEBSOCKET))
-                return 1;
-	fbcp(eplayer->fd, strlen(view_buf), BCP_VIEW_BUFFER, view_buf);
-        return 0;
+	fbcp(player, strlen(view_buf), BCP_VIEW_BUFFER, view_buf);
+	nd_twritef(player, view_buf);
 }
 
-int
+void
 mcp_look(OBJ *player, OBJ *loc)
 {
 	ENT *eplayer = &player->sp.entity;
 	OBJ *thing;
 
-	int fd = eplayer->fd;
-	if (!(ndc_flags(eplayer->fd) & DF_WEBSOCKET))
-                return 1;
-	fbcp_item(fd, loc, 1);
+	fbcp_item(player, loc, 1);
 	switch (loc->type) {
 	case TYPE_ROOM: break;
 	case TYPE_ENTITY: // falls through
@@ -241,13 +274,31 @@ mcp_look(OBJ *player, OBJ *loc)
 	}
 
         if (loc != player && loc->type == TYPE_ENTITY && !(eplayer->flags & EF_WIZARD))
-                return 0;
+                return;
 
 	// use callbacks for mcp like this versus telnet
         FOR_LIST(thing, loc->contents)
-		fbcp_item(fd, thing, 0);
+		fbcp_item(player, thing, 0);
 
-        return 0;
+	nd_twritef(player, "%s\n", unparse(player, loc));
+	if (*loc->description && loc->description)
+		nd_twritef(player, loc->description);
+
+        char buf[BUFSIZ];
+        size_t buf_l = 0;
+
+	/* check to see if there is anything there */
+	if (loc->contents) {
+                FOR_LIST(thing, loc->contents) {
+			if (thing == player)
+				continue;
+			buf_l += snprintf(&buf[buf_l], BUFSIZ - buf_l,
+					"%s\r\n", unparse(player, thing));
+                }
+	}
+
+        buf[buf_l] = '\0';
+        nd_twritef(player, "Contents: %s", buf);
 }
 
 static void
@@ -259,12 +310,7 @@ fbcp_room(OBJ *room, char *msg, size_t len)
 		if (tmp->type != TYPE_ENTITY)
 			continue;
 
-		int fd = tmp->sp.entity.fd;
-
-		if (!(ndc_flags(fd) & DF_WEBSOCKET))
-			continue;
-
-		ndc_write(fd, msg, len);
+		nd_wwrite(tmp, msg, len);
 	}
 }
 
@@ -279,12 +325,7 @@ fbcp_observers(OBJ *thing, char *msg, size_t len)
 		if (tmp->type != TYPE_ENTITY)
 			continue;
 
-		int fd = tmp->sp.entity.fd;
-
-		if (!(ndc_flags(fd) & DF_WEBSOCKET))
-			continue;
-
-		ndc_write(fd, msg, len);
+		nd_wwrite(tmp, msg, len);
 	}
 }
 
@@ -310,74 +351,59 @@ mcp_content_in(OBJ *loc, OBJ *thing) {
 		fbcp_observers(loc, bcp_buf, len);
 }
 
-int
+void
 mcp_auth_fail(int descr, int reason) {
-	if (!(ndc_flags(descr) & DF_WEBSOCKET))
-                return 1;
 	fbcp_auth_failure(descr, reason);
-        return 0;
 }
 
-int
+void
 mcp_auth_success(OBJ *player) {
-	ENT *eplayer = &player->sp.entity;
-	if (!(ndc_flags(eplayer->fd) & DF_WEBSOCKET))
-                return 1;
-	fbcp_auth_success(eplayer->fd, object_ref(player));
-        return 0;
+	fbcp_auth_success(player, object_ref(player));
 }
 
-int
+void
 mcp_stats(OBJ *player) {
-	ENT *eplayer = &player->sp.entity;
-	if (!(ndc_flags(eplayer->fd) & DF_WEBSOCKET))
-                return 1;
-	fbcp_stats(eplayer);
-        return 0;
+	fbcp_stats(player);
 }
 
-int
-mcp_bars(ENT *eplayer) {
-	if (!(ndc_flags(eplayer->fd) & DF_WEBSOCKET))
-                return 1;
-	fbcp_bars(eplayer);
-        return 0;
+void
+mcp_bars(OBJ *player) {
+	fbcp_bars(player);
 }
 
-int
+void
 mcp_equipment(OBJ *player)
 {
 	ENT *eplayer = &player->sp.entity;
-	int fd = eplayer->fd;
 	int aux;
-	if (!(ndc_flags(eplayer->fd) & DF_WEBSOCKET))
-                return 1;
-	fbcp(fd, sizeof(eplayer->equipment), BCP_EQUIPMENT, eplayer->equipment);
+
+	if (!eplayer->fds)
+		return;
+
+	fbcp(player, sizeof(eplayer->equipment), BCP_EQUIPMENT, eplayer->equipment);
 	
 	aux = eplayer->equipment[ES_HEAD];
 	if (aux && aux != NOTHING)
-		fbcp_item(fd, object_get(aux), 0);
+		fbcp_item(player, object_get(aux), 0);
 	aux = eplayer->equipment[ES_NECK];
 	if (aux && aux != NOTHING)
-		fbcp_item(fd, object_get(aux), 0);
+		fbcp_item(player, object_get(aux), 0);
 	aux = eplayer->equipment[ES_CHEST];
 	if (aux && aux != NOTHING)
-		fbcp_item(fd, object_get(aux), 0);
+		fbcp_item(player, object_get(aux), 0);
 	aux = eplayer->equipment[ES_BACK];
 	if (aux && aux != NOTHING)
-		fbcp_item(fd, object_get(aux), 0);
+		fbcp_item(player, object_get(aux), 0);
 	aux = eplayer->equipment[ES_RHAND];
 	if (aux && aux != NOTHING)
-		fbcp_item(fd, object_get(aux), 0);
+		fbcp_item(player, object_get(aux), 0);
 	aux = eplayer->equipment[ES_LFINGER];
 	if (aux && aux != NOTHING)
-		fbcp_item(fd, object_get(aux), 0);
+		fbcp_item(player, object_get(aux), 0);
 	aux = eplayer->equipment[ES_RFINGER];
 	if (aux && aux != NOTHING)
-		fbcp_item(fd, object_get(aux), 0);
+		fbcp_item(player, object_get(aux), 0);
 	aux = eplayer->equipment[ES_PANTS];
 	if (aux && aux != NOTHING)
-		fbcp_item(fd, object_get(aux), 0);
-
-	return 0;
+		fbcp_item(player, object_get(aux), 0);
 }

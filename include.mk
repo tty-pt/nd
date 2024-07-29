@@ -85,7 +85,7 @@ osrun: all
 	${sudo} ./bin/nd -C ${PWD} -c /etc/ssl/tty.pt.crt -k /etc/ssl/private/tty.pt.key
 
 osdbg: all
-	${sudo} egdb -ex "handle SIGPIPE nostop print pass" -ex "run" --args ./bin/nd -C ${PWD} -c /etc/ssl/tty.pt.crt -k /etc/ssl/private/tty.pt.key
+	${sudo} egdb -ex "handle SIGPIPE nostop print pass" -ex "set pagination off" -ex "run" --args ./bin/nd -C ${PWD} -c /etc/ssl/tty.pt.crt -k /etc/ssl/private/tty.pt.key
 
 ss_key.pem:
 	openssl genpkey -algorithm RSA -out ss_key.pem -aes256

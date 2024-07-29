@@ -257,8 +257,7 @@ object_add(SKEL *sk, OBJ *where, void *arg)
 			enu->msv = sk->sp.equipment.msv;
 			enu->rare = rarity_get();
 			CBUG(!where || where->type != TYPE_ENTITY);
-			ENT *ewhere = &where->sp.entity;
-			if (ewhere->fd > 0 && equip(where, nu))
+			equip(where, nu)
 				;
 		}
 
@@ -654,10 +653,10 @@ object_read(FILE * f)
 			ENT *eo = &o->sp.entity;
 			eo->home = object_get(ref_read(f));
 			/* warn("entity home\n"); */
-			eo->fd = 0;
 			eo->last_observed = NULL;
 			eo->gpt = NULL;
 			eo->flags = ref_read(f);
+			fprintf(stderr, "READ ENT %s %d\n", o->name, eo->flags);
 			eo->lvl = ref_read(f);
 			eo->cxp = ref_read(f);
 			eo->spend = ref_read(f);
@@ -676,8 +675,10 @@ object_read(FILE * f)
 			}
 			/* warn("entity! flags %d ref %d\n", eo->flags, ref_read(f)); */
 			o->owner = o;
-			if (eo->flags & EF_PLAYER)
+			if (eo->flags & EF_PLAYER) {
 				player_put(o);
+				eo->fds = 0;
+			}
 			birth(o);
 			/* warn("ENTITY\n"); */
 		}

@@ -29,12 +29,12 @@ do_clone(int fd, int argc, char *argv[])
 	/* Perform sanity checks */
 
 	if (!(eplayer->flags & (EF_WIZARD | EF_BUILDER))) {
-		ndc_writef(fd, "That command is restricted to authorized builders.\n");
+		nd_writef(player, "That command is restricted to authorized builders.\n");
 		return;
 	}
 	
 	if (*name == '\0') {
-		ndc_writef(fd, "Clone what?\n");
+		nd_writef(player, "Clone what?\n");
 		return;
 	} 
 
@@ -47,7 +47,7 @@ do_clone(int fd, int argc, char *argv[])
 			&& !(thing = ematch_near(player, name))
 	   )
 	{
-		ndc_writef(fd, "I don't know what you mean.\n");
+		nd_writef(player, "I don't know what you mean.\n");
 		return;
 	}
 
@@ -55,20 +55,20 @@ do_clone(int fd, int argc, char *argv[])
 
 	/* things only. */
 	if(thing->type != TYPE_THING) {
-		ndc_writef(fd, "That is not a cloneable object.\n");
+		nd_writef(player, "That is not a cloneable object.\n");
 		return;
 	}		
 	
 	/* check the name again, just in case reserved name patterns have
 	   changed since the original object was created. */
 	if (!ok_name(thing->name)) {
-		ndc_writef(fd, "You cannot clone something with such a weird name!\n");
+		nd_writef(player, "You cannot clone something with such a weird name!\n");
 		return;
 	}
 
 	/* no stealing stuff. */
 	if(!controls(player, thing)) {
-		ndc_writef(fd, "Permission denied. (you can't clone this)\n");
+		nd_writef(player, "Permission denied. (you can't clone this)\n");
 		return;
 	}
 
@@ -79,7 +79,7 @@ do_clone(int fd, int argc, char *argv[])
 	}
 	
 	if (!payfor(player, cost)) {
-		ndc_writef(fd, "Sorry, you don't have enough %s.\n", PENNIES);
+		nd_writef(player, "Sorry, you don't have enough %s.\n", PENNIES);
 		return;
 	} else {
 		/* create the object */
@@ -116,7 +116,7 @@ do_clone(int fd, int argc, char *argv[])
 		PUSH(clone, player->contents);
 
 		/* and we're done */
-		ndc_writef(fd, "%s created with number %d.\n", thing->name, object_ref(clone));
+		nd_writef(player, "%s created with number %d.\n", thing->name, object_ref(clone));
 	}
 }
 
@@ -150,23 +150,23 @@ do_create(int fd, int argc, char *argv[])
 
 	cost = atoi(qname);
 	if (!(eplayer->flags & (EF_WIZARD | EF_BUILDER))) {
-		ndc_writef(fd, "That command is restricted to authorized builders.\n");
+		nd_writef(player, "That command is restricted to authorized builders.\n");
 		return;
 	}
 	if (*name == '\0') {
-		ndc_writef(fd, "Create what?\n");
+		nd_writef(player, "Create what?\n");
 		return;
 	} else if (!ok_name(name)) {
-		ndc_writef(fd, "That's a silly name for a thing!\n");
+		nd_writef(player, "That's a silly name for a thing!\n");
 		return;
 	} else if (cost < 0) {
-		ndc_writef(fd, "You can't create an object for less than nothing!\n");
+		nd_writef(player, "You can't create an object for less than nothing!\n");
 		return;
 	} else if (cost < OBJECT_COST) {
 		cost = OBJECT_COST;
 	}
 	if (!payfor(player, cost)) {
-		ndc_writef(fd, "Sorry, you don't have enough %s.\n", PENNIES);
+		nd_writef(player, "Sorry, you don't have enough %s.\n", PENNIES);
 		return;
 	}
 
@@ -188,5 +188,5 @@ do_create(int fd, int argc, char *argv[])
 	PUSH(thing, player->contents);
 
 	/* and we're done */
-	ndc_writef(fd, "%s created with number %d.\n", name, object_ref(thing));
+	nd_writef(player, "%s created with number %d.\n", name, object_ref(thing));
 }

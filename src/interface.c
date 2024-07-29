@@ -329,10 +329,6 @@ main(int argc, char **argv)
 		exit(1);
 	}
 
-	/* signal(SIGPIPE, SIG_IGN); */
-	/* signal(SIGHUP, SIG_IGN); */
-	/* signal(SIGUSR1, SIG_DFL); */
-
 	/* errno = 0; // TODO why? sanity fails to access file */
 
 	setenv("TERM", "xterm+256color", 1);
@@ -355,25 +351,67 @@ main(int argc, char **argv)
 	return 0;
 }
 
-static inline void
-nd_ldwritef(OBJ *first, OBJ *exception, const char *format, va_list va) {
+void
+nd_write(OBJ *player, char *str, size_t len) {
+	if (!player->sp.entity.fds)
+		return;
+
+	struct hash_cursor c = hash_iter_start(player->sp.entity.fds);
+
+	while (hash_iter_get(&c))
+		ndc_write(* (int *) c.key, str, len);
+}
+
+
+void
+nd_dwritef(OBJ *player, const char *fmt, va_list args) {
+	static char buf[BUFSIZ];
+	ssize_t len = vsnprintf(buf, sizeof(buf), fmt, args);
+	if (!player->sp.entity.fds)
+		return;
+	struct hash_cursor c = hash_iter_start(player->sp.entity.fds);
+
+	while (hash_iter_get(&c))
+		ndc_write(* (int *) c.key, buf, len);
+}
+
+void
+nd_writef(OBJ *player, const char *fmt, ...)
+{
+	va_list va;
+	va_start(va, fmt);
+	nd_dwritef(player, fmt, va);
+	va_end(va);
+}
+
+void
+nd_rwrite(OBJ *room, OBJ *exception, char *str, size_t len) {
+	OBJ *first = room->contents;
 	FOR_LIST(first, first) {
 		if (first->type != TYPE_ENTITY || first == exception)
 			continue;
-		ENT *efirst = &first->sp.entity;
-		if (efirst->fd <= 0)
-			continue;
-		ndc_dwritef(efirst->fd, format, va);
+		nd_write(first, str, len);
 	}
 }
 
 void
 nd_rwritef(OBJ *room, OBJ *exception, char *format, ...)
 {
+	char buf[BUFFER_LEN];
+	size_t len;
 	va_list args;
 	va_start(args, format);
-	nd_ldwritef(room->contents, exception, format, args);
+	len = vsnprintf(buf, sizeof(buf), format, args);
 	va_end(args);
+	nd_rwrite(room, exception, buf, len);
+}
+
+void
+nd_close(OBJ *player) {
+	struct hash_cursor c = hash_iter_start(player->sp.entity.fds);
+
+	while (hash_iter_get(&c))
+		ndc_close(* (int *) c.key);
 }
 
 static inline void
@@ -381,7 +419,7 @@ avatar(OBJ *player) {
 	player->art_id = 1 + (random() % art_max("avatar"));
 }
 
-void
+OBJ *
 auth(int fd, char *qsession)
 {
 	char buf[BUFSIZ];
@@ -389,9 +427,9 @@ auth(int fd, char *qsession)
 	OBJ *player;
 
 	if (!*qsession) {
-		ndc_writef(fd, "Please log in.\n");
+		ndc_writef(fd, "No key provided.\n");
 		mcp_auth_fail(fd, 3);
-		return;
+		return NULL;
 	}
 
 	warn("AUTH '%s'\n", qsession);
@@ -401,7 +439,7 @@ auth(int fd, char *qsession)
 	if (!fp) {
 		ndc_writef(fd, "No such session\n");
 		mcp_auth_fail(fd, 1);
-		return;
+		return NULL;
 	}
 
 	fscanf(fp, "%s", buf);
@@ -416,23 +454,22 @@ auth(int fd, char *qsession)
 		birth(player);
 		spells_birth(player);
 		avatar(player);
-	} else if (player->sp.entity.fd > 0) {
-                ndc_writef(fd, "That player is already connected.\n");
-                mcp_auth_fail(fd, 2);
-                return;
         }
 
 	FD_PLAYER(fd) = player;
 	ndc_auth(fd, buf);
 	ENT *eplayer = &player->sp.entity;
-	eplayer->fd = fd;
+	if (!eplayer->fds)
+		eplayer->fds = hash_init();
+	hash_put(eplayer->fds, &fd, sizeof(fd), (void *) 1);
         mcp_stats(player);
-        mcp_bars(eplayer);
+        mcp_bars(player);
         mcp_auth_success(player);
         mcp_equipment(player);
 	look_around(player);
 	/* enter_room(player, E_ALL); */
 	do_view(fd, 0, NULL);
+	return player;
 }
 
 void
@@ -474,9 +511,10 @@ void ndc_view(int fd, int argc, char *argv[]) {
 void ndc_connect(int fd) {
 	static char *cookie;
 	int headers = ndc_headers(fd);
-	cookie = SHASH_GET(headers, "Cookie");
+	cookie = (char *) SHASH_GET(headers, "Cookie");
 	if (!cookie)
 		return;
+
 	auth(fd, strchr(cookie, '=') + 1);
 }
 
@@ -492,6 +530,7 @@ void ndc_disconnect(int fd) {
 	if (last_observed)
 		observer_remove(last_observed, player);
 
-	eplayer->fd = 0;
 	FD_PLAYER(fd) = NULL;
+	hash_close(eplayer->fds);
+	eplayer->fds = 0;
 }

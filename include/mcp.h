@@ -61,19 +61,19 @@ typedef struct McpFrame_T {
 
 void mcp_frame_init(McpFrame * mfr, connection_t con);
 
-int mcp_view(ENT *eplayer, char *buf);
-int mcp_art(int descr, const char *art);
-int mcp_look(OBJ *player, OBJ *target);
+void mcp_view(ENT *eplayer, char *buf);
+void mcp_art(int descr, const char *art);
+void mcp_look(OBJ *player, OBJ *target);
 void mcp_content_out(OBJ *loc, OBJ *thing);
 void mcp_content_in(OBJ *loc, OBJ *thing);
-int mcp_auth_fail(int descr, int reason);
-int mcp_auth_success(OBJ *player);
-int mcp_stats(OBJ *player);
-int mcp_bars(ENT *eplayer);
-int mcp_dialog_start(OBJ *player, OBJ *npc, const char *dialog);
-int mcp_dialog_stop(OBJ *player);
-int mcp_equipment(OBJ *player);
-int fbcp_view(ENT *eplayer, view_t *view);
-int fbcp_view_buf(ENT *eplayer, char *view);
+void mcp_auth_fail(int descr, int reason);
+void mcp_auth_success(OBJ *player);
+void mcp_stats(OBJ *player);
+void mcp_bars(OBJ *player);
+void mcp_dialog_start(OBJ *player, OBJ *npc, const char *dialog);
+void mcp_dialog_stop(OBJ *player);
+void mcp_equipment(OBJ *player);
+void fbcp_view(OBJ *player, view_t *view);
+void fbcp_view_buf(OBJ *player, char *view);
 
 #endif							/* MCP_H */

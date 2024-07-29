@@ -18,19 +18,19 @@ do_consume(int fd, int argc, char *argv[])
 	int aux;
 
 	if (!*name || !(vial = ematch_mine(player, name))) {
-		ndc_writef(fd, "Consume what?\n");
+		nd_writef(player, "Consume what?\n");
 		return;
 	}
 
 	if (vial->type != TYPE_CONSUMABLE) {
-		ndc_writef(fd, "You can not consume that.\n");
+		nd_writef(player, "You can not consume that.\n");
 		return;
 	}
 
 	cvial = &vial->sp.consumable;
 
 	if (!cvial->quantity) {
-		ndc_writef(fd, "%s is empty.\n", vial->name);
+		nd_writef(player, "%s is empty.\n", vial->name);
 		return;
 	}
 
@@ -62,31 +62,31 @@ do_fill(int fd, int argc, char *argv[])
 	unsigned m;
 
 	if (!vial) {
-		ndc_writef(fd, "Fill what?\n");
+		nd_writef(player, "Fill what?\n");
 		return;
 	}
 
 	if (vial->type != TYPE_CONSUMABLE) {
-		ndc_writef(fd, "You can not fill that up.\n");
+		nd_writef(player, "You can not fill that up.\n");
 		return;
 	}
 
 	cvial = &vial->sp.consumable;
 
 	if (!(m = cvial->capacity)) {
-		ndc_writef(fd, "You can not fill that up.\n");
+		nd_writef(player, "You can not fill that up.\n");
 		return;
 	}
 
 	if (cvial->quantity) {
-		ndc_writef(fd, "%s is not empty.\n", vial->name);
+		nd_writef(player, "%s is not empty.\n", vial->name);
 		return;
 	}
 
 	OBJ *source = ematch_near(player, source_s);
 
 	if (!source || source->type != TYPE_CONSUMABLE) {
-		ndc_writef(fd, "Invalid source.\n");
+		nd_writef(player, "Invalid source.\n");
 		return;
 	}
 

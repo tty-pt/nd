@@ -19,7 +19,7 @@ players_init()
 static inline OBJ *
 player_get(char *name)
 {
-	return SHASH_GET(player_hd, name);
+	return (OBJ *) SHASH_GET(player_hd, name);
 }
 
 static inline void

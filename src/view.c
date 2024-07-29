@@ -399,7 +399,6 @@ _view_build(OBJ *player,
 void
 view(OBJ *player)
 {
-	ENT *eplayer = &player->sp.entity;
 	struct bio bd[VIEW_M], *n_p = bd,
 		   *n_max = &bd[VIEW_BDI + 1];
 	pos_t pos, opos;
@@ -425,8 +424,7 @@ view(OBJ *player)
 	char *view_buf = view_draw(view);
         /* if (mcp_view(eplayer, &view)) */
         /* if (fbcp_view(eplayer, &view)) */
-        if (fbcp_view_buf(eplayer, view_buf))
-		ndc_writef(eplayer->fd, view_buf);
+        fbcp_view_buf(player, view_buf);
 }
 
 void

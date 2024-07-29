@@ -20,7 +20,7 @@ do_say(int fd, int argc, char *argv[])
 	OBJ *player = FD_PLAYER(fd);
 	const char *message = argv[1];
 
-	ndc_writef(fd, "You say, \"%s\".\n", message);
+	nd_writef(player, "You say, \"%s\".\n", message);
 	nd_rwritef(player->location, player, "%s says, \"%s\"\n", player->name, message);
 }
 
@@ -51,38 +51,36 @@ do_wall(int fd, int argc, char *argv[])
 
 
 	if (!(eplayer->flags & EF_WIZARD)) {
-		ndc_writef(fd, "But what do you want to do with the wall?\n");
+		nd_writef(player, "But what do you want to do with the wall?\n");
 		return;
 	}
 
 	warn("WALL from %s(%d): %s", player->name, object_ref(player), message);
 	snprintf(buf, sizeof(buf), "%s shouts, \"%s\"", player->name, message);
 	FOR_ALL(oi) if (oi->type == TYPE_ENTITY)
-		ndc_writef(oi->sp.entity.fd, buf);
+		nd_writef(oi, buf);
 }
 
 void
 notify_wts(OBJ *who, char const *a, char const *b, char *format, ...)
 {
-	ENT *ewho = &who->sp.entity;
 	va_list args;
 	char buf[BUFFER_LEN];
 	va_start(args, format);
 	vsnprintf(buf, sizeof(buf), format, args);
 	va_end(args);
-	ndc_writef(ewho->fd, "You %s%s.\n", a, buf);
+	nd_writef(who, "You %s%s.\n", a, buf);
 	nd_rwritef(who->location, who, "%s %s%s.\n", who->name, b, buf);
 }
 
 void
 notify_wts_to(OBJ *who, OBJ *tar, char const *a, char const *b, char *format, ...)
 {
-	ENT *ewho = &who->sp.entity;
 	va_list args;
 	char buf[BUFFER_LEN];
 	va_start(args, format);
 	vsnprintf(buf, sizeof(buf), format, args);
 	va_end(args);
-	ndc_writef(ewho->fd, "You %s %s%s.\n", a, tar->name, buf);
+	nd_writef(who, "You %s %s%s.\n", a, tar->name, buf);
 	nd_rwritef(who->location, who, "%s %s %s%s.\n", who->name, b, tar->name, buf);
 }

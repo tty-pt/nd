@@ -45,8 +45,8 @@
   },
   "dependencies": {
     "@popperjs/core": "^2.11.8",
-    "@tty-pt/ndc": "^0.3.10",
-    "@tty-pt/qhash": "^0.0.4",
+    "@tty-pt/ndc": "^0.3.12",
+    "@tty-pt/qhash": "^0.1.0",
     "@tty-pt/sub": "^2.2.40",
     "lodash": "^4.17.21",
     "react": "^18.2.0",

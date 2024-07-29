@@ -21,7 +21,7 @@ do_get(int fd, int argc, char *argv[])
 			&& !(thing = ematch_mine(player, what))
 	   )
 	{
-		ndc_writef(fd, NOMATCH_MESSAGE);
+		nd_writef(player, NOMATCH_MESSAGE);
 		return;
 	}
 
@@ -29,7 +29,7 @@ do_get(int fd, int argc, char *argv[])
 
 	// is this needed?
 	if (thing->location != player->location && !(eplayer->flags & EF_WIZARD)) {
-		ndc_writef(fd, "That is too far away from you.\n");
+		nd_writef(player, "That is too far away from you.\n");
 		return;
 	}
 
@@ -38,16 +38,16 @@ do_get(int fd, int argc, char *argv[])
 		if (!thing)
 			return;
 		if (cont->type == TYPE_ENTITY) {
-			ndc_writef(fd, "You can't steal from the living.\n");
+			nd_writef(player, "You can't steal from the living.\n");
 			return;
 		}
 	}
 	if (thing->location == player) {
-		ndc_writef(fd, "You already have that!\n");
+		nd_writef(player, "You already have that!\n");
 		return;
 	}
 	if (object_plc(thing, player)) {
-		ndc_writef(fd, "You can't pick yourself up by your bootstraps!\n");
+		nd_writef(player, "You can't pick yourself up by your bootstraps!\n");
 		return;
 	}
 	switch (thing->type) {
@@ -55,24 +55,24 @@ do_get(int fd, int argc, char *argv[])
 	case TYPE_PLANT:
 		if (God(player)) {
 			object_move(thing, player);
-			ndc_writef(fd, "Taken.\n");
+			nd_writef(player, "Taken.\n");
 		} else
-			ndc_writef(fd, "You can't pick that up.\n");
+			nd_writef(player, "You can't pick that up.\n");
 		break;
 	case TYPE_SEAT:
 		if (thing->owner != player)
-			ndc_writef(fd, "You can't pick that up.\n");
+			nd_writef(player, "You can't pick that up.\n");
 		else {
 			object_move(thing, player);
-			ndc_writef(fd, "Taken.\n");
+			nd_writef(player, "Taken.\n");
 		}
 		break;
 	case TYPE_ROOM:
-		ndc_writef(fd, "You can't take that!\n");
+		nd_writef(player, "You can't take that!\n");
 		break;
 	default:
 		object_move(thing, player);
-		ndc_writef(fd, "Taken.\n");
+		nd_writef(player, "Taken.\n");
 		break;
 	}
 }
@@ -87,7 +87,7 @@ do_drop(int fd, int argc, char *argv[])
 	    *thing, *cont;
 
 	if (!(thing = ematch_mine(player, name))) {
-		ndc_writef(fd, NOMATCH_MESSAGE);
+		nd_writef(player, NOMATCH_MESSAGE);
 		return;
 	}
 
@@ -98,22 +98,22 @@ do_drop(int fd, int argc, char *argv[])
 			&& !(cont = ematch_near(player, obj))
 	   )
 	{
-		ndc_writef(fd, "I don't know what you mean.\n");
+		nd_writef(player, "I don't know what you mean.\n");
 		return;
 	}
         
 	if (thing->type == TYPE_GARBAGE) {
-		ndc_writef(fd, "You can't drop that.\n");
+		nd_writef(player, "You can't drop that.\n");
 		return;
 	}
 
 	if (cont->type != TYPE_ROOM && cont->type != TYPE_ENTITY &&
 		!object_item(cont)) {
-		ndc_writef(fd, "You can't put anything in that.\n");
+		nd_writef(player, "You can't put anything in that.\n");
 		return;
 	}
 	if (object_plc(thing, cont)) {
-		ndc_writef(fd, "You can't put something inside of itself.\n");
+		nd_writef(player, "You can't put something inside of itself.\n");
 		return;
 	}
 
@@ -122,16 +122,15 @@ do_drop(int fd, int argc, char *argv[])
 	object_move(thing, immediate_dropto ? cont->sp.room.dropto : cont);
 
 	if (object_item(cont)) {
-		ndc_writef(fd, "Put away.\n");
+		nd_writef(player, "Put away.\n");
 		return;
 	} else if (cont->type == TYPE_ENTITY) {
-		ENT *econt = &cont->sp.entity;
-		ndc_writef(econt->fd, "%s hands you %s.\n", player->name, thing->name);
-		ndc_writef(fd, "You hand %s to %s.\n", thing->name, cont->name);
+		nd_writef(cont, "%s hands you %s.\n", player->name, thing->name);
+		nd_writef(player, "You hand %s to %s.\n", thing->name, cont->name);
 		return;
 	}
 
-	ndc_writef(fd, "Dropped.\n");
+	nd_writef(player, "Dropped.\n");
 	nd_rwritef(player->location, player, "%s drops %s.\n", player->name, thing->name);
 }
 
@@ -148,31 +147,31 @@ do_recycle(int fd, int argc, char *argv[])
 			&& !(thing = ematch_mine(player, name))
 	   )
 	{
-		ndc_writef(fd, NOMATCH_MESSAGE);
+		nd_writef(player, NOMATCH_MESSAGE);
 		return;
 	}
 
 
 	if(!God(player) && God(thing->owner)) {
-		ndc_writef(fd, "Only God may reclaim God's property.\n");
+		nd_writef(player, "Only God may reclaim God's property.\n");
 		return;
 	}
 
 	if (!controls(player, thing)) {
-		ndc_writef(fd, "You can not do that.\n");
+		nd_writef(player, "You can not do that.\n");
 	} else {
 		switch (thing->type) {
 		case TYPE_ROOM:
 			if (thing->owner != player->owner) {
-				ndc_writef(fd, "Permission denied. (You don't control the room you want to recycle)\n");
+				nd_writef(player, "Permission denied. (You don't control the room you want to recycle)\n");
 				return;
 			}
 			if (thing == PLAYER_START) {
-				ndc_writef(fd, "That is the player start room, and may not be recycled.\n");
+				nd_writef(player, "That is the player start room, and may not be recycled.\n");
 				return;
 			}
 			if (thing == GLOBAL_ENVIRONMENT) {
-				ndc_writef(fd, "If you want to do that, why don't you just delete the database instead?  Room #0 contains everything, and is needed for database sanity.\n");
+				nd_writef(player, "If you want to do that, why don't you just delete the database instead?  Room #0 contains everything, and is needed for database sanity.\n");
 				return;
 			}
 			break;
@@ -182,21 +181,21 @@ do_recycle(int fd, int argc, char *argv[])
 		case TYPE_THING:
 		case TYPE_SEAT:
 			if (thing->owner != player->owner) {
-				ndc_writef(fd, "Permission denied. (You can't recycle a thing you don't control)\n");
+				nd_writef(player, "Permission denied. (You can't recycle a thing you don't control)\n");
 				return;
 			}
 			break;
 		case TYPE_ENTITY:
 			if (thing->sp.entity.flags & EF_PLAYER) {
-				ndc_writef(fd, "You can't recycle a player!\n");
+				nd_writef(player, "You can't recycle a player!\n");
 				return;
 			}
 			break;
 		case TYPE_GARBAGE:
-			ndc_writef(fd, "That's already garbage!\n");
+			nd_writef(player, "That's already garbage!\n");
 			return;
 		}
-		ndc_writef(fd, "Thank you for recycling %.512s (#%d).\n", thing->name, thing);
+		nd_writef(player, "Thank you for recycling %.512s (#%d).\n", thing->name, thing);
 		recycle(player, thing);
 	}
 }

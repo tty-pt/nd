@@ -6,6 +6,8 @@
 #include <string.h>
 #include <stdlib.h>
 
+#include <qhash.h>
+
 #include "spacetime.h"
 #include "mcp.h"
 #include "map.h"
@@ -76,7 +78,6 @@ void
 recycle(OBJ *player, OBJ *thing)
 {
 	extern OBJ *recyclable;
-	ENT *eplayer = &player->sp.entity;
 	static int depth = 0;
 	OBJ *first, *rest;
 	int looplimit;
@@ -179,7 +180,7 @@ recycle(OBJ *player, OBJ *thing)
 			if (efirst->flags & EF_PLAYER) {
 				enter(first, efirst->home, E_NULL);
 				if (first->location == thing) {
-					ndc_writef(eplayer->fd, "Escaping teleport loop!  Going home.\n");
+					nd_writef(player, "Escaping teleport loop!  Going home.\n");
 					object_move(first, object_get(PLAYER_START));
 				}
 				continue;
@@ -512,6 +513,19 @@ enter(OBJ *player, OBJ *loc, enum exit e)
 #endif
 
 void
+nd_move(OBJ *player) {
+	if (!player->sp.entity.fds)
+		return;
+
+	struct hash_cursor c = hash_iter_start(player->sp.entity.fds);
+	pos_t pos;
+
+	map_where(pos, player->location);
+	while (hash_iter_get(&c))
+		ndc_move(* (int *) c.key, pos_morton(pos));
+}
+
+void
 enter(OBJ *player, OBJ *loc, enum exit e)
 {
 	OBJ *old = player->location;
@@ -522,9 +536,7 @@ enter(OBJ *player, OBJ *loc, enum exit e)
 	room_clean(player, old);
 	if (e == E_NULL)
 		nd_rwritef(player->location, player, "%s teleports in.\n", player->name);
-	pos_t pos;
-	map_where(pos, player->location);
-	ndc_move(player->sp.entity.fd, pos_morton(pos));
+	nd_move(player);
 }
 
 int
@@ -606,10 +618,9 @@ void
 sit(OBJ *player, char *name)
 {
 	ENT *eplayer = &player->sp.entity;
-	int fd = eplayer->fd;
 
 	if (eplayer->flags & EF_SITTING) {
-		ndc_writef(fd, "You are already sitting.\n");
+		nd_writef(player, "You are already sitting.\n");
 		return;
 	}
 
@@ -625,14 +636,14 @@ sit(OBJ *player, char *name)
 	OBJ *seat = ematch_near(player, name);
 
 	if (!seat || seat->type != TYPE_SEAT) {
-		ndc_writef(fd, "You can't sit on that.\n");
+		nd_writef(player, "You can't sit on that.\n");
 		return;
 	}
 
 	SEA *sseat = &seat->sp.seat;
 
 	if (sseat->quantity >= sseat->capacity) {
-		ndc_writef(fd, "No seats available.\n");
+		nd_writef(player, "No seats available.\n");
 		return;
 	}
 
@@ -667,55 +678,15 @@ stand_silent(OBJ *player)
 
 void
 stand(OBJ *player) {
-	ENT *eplayer = &player->sp.entity;
 	if (stand_silent(player))
-		ndc_writef(eplayer->fd, "You are already standing.\n");
-}
-
-static void
-look_contents(OBJ *player, OBJ *loc, char *contents_name)
-{
-	ENT *eplayer = &player->sp.entity;
-        char buf[BUFSIZ];
-        size_t buf_l = 0;
-	OBJ *thing;
-
-	/* check to see if there is anything there */
-	if (loc->contents) {
-                FOR_LIST(thing, loc->contents) {
-			if (thing == player)
-				continue;
-			buf_l += snprintf(&buf[buf_l], BUFSIZ - buf_l,
-					"%s\r\n", unparse(player, thing));
-                }
-	}
-
-        buf[buf_l] = '\0';
-
-        ndc_writef(eplayer->fd, "%s%s", contents_name, buf);
-}
-
-void
-look_room(OBJ *player, OBJ *loc)
-{
-	ENT *eplayer = &player->sp.entity;
-	int fd = eplayer->fd;
-	char const *description = "";
-	CBUG(loc->type != TYPE_ROOM);
-
-	if (mcp_look(player, loc)) {
-		ndc_writef(fd, "%s\n", unparse(player, loc));
-		if (*description && description)
-			ndc_writef(fd, description);
-		look_contents(player, loc, "You see:\r\n");
-	}
+		nd_writef(player, "You are already standing.\n");
 }
 
 void
 look_around(OBJ *player)
 {
 	if (player->location->type == TYPE_ROOM)
-		look_room(player, player->location);
+		mcp_look(player, player->location);
 }
 
 int
@@ -783,7 +754,7 @@ equip(OBJ *who, OBJ *eq)
 	EQUIP(ewho, eql) = object_ref(eq);
 	eeq->flags |= EQF_EQUIPPED;
 
-	ndc_writef(ewho->fd, "You equip %s.\n", eq->name);
+	nd_writef(who, "You equip %s.\n", eq->name);
 	mcp_stats(who);
 	mcp_content_out(who, eq);
 	mcp_equipment(who);
@@ -832,8 +803,10 @@ unequip(OBJ *player, unsigned eql)
 }
 
 static inline unsigned
-entity_xp(ENT *eplayer, ENT *etarget)
+entity_xp(OBJ *player, ENT *etarget)
 {
+	ENT *eplayer = &player->sp.entity;
+
 	// alternatively (2000/x)*y/x
 	if (!eplayer->lvl)
 		return 0;
@@ -846,13 +819,14 @@ entity_xp(ENT *eplayer, ENT *etarget)
 }
 
 static inline void
-_entity_award(ENT *eplayer, unsigned const xp)
+_entity_award(OBJ *player, unsigned const xp)
 {
+	ENT *eplayer = &player->sp.entity;
 	unsigned cxp = eplayer->cxp;
-	ndc_writef(eplayer->fd, "You gain %u xp!\n", xp);
+	nd_writef(player, "You gain %u xp!\n", xp);
 	cxp += xp;
 	while (cxp >= 1000) {
-		ndc_writef(eplayer->fd, "You level up!\n");
+		nd_writef(player, "You level up!\n");
 		cxp -= 1000;
 		eplayer->lvl += 1;
 		eplayer->spend += 2;
@@ -861,9 +835,9 @@ _entity_award(ENT *eplayer, unsigned const xp)
 }
 
 static inline void
-entity_award(ENT *eplayer, ENT *etarget)
+entity_award(OBJ *player, ENT *etarget)
 {
-	_entity_award(eplayer, entity_xp(eplayer, etarget));
+	_entity_award(player, entity_xp(player, etarget));
 }
 
 static inline OBJ *
@@ -910,7 +884,7 @@ entity_kill(OBJ *player, OBJ *target)
 
 	if (player) {
 		CBUG(player->type != TYPE_ENTITY)
-		entity_award(eplayer, etarget);
+		entity_award(player, etarget);
 		eplayer->target = NULL;
 	}
 
@@ -943,7 +917,7 @@ entity_kill(OBJ *player, OBJ *target)
 	/* object_move(target, object_get((dbref) 0)); */
 	room_clean(target, loc);
 	look_around(target);
-	mcp_bars(etarget);
+	mcp_bars(target);
 	view(target);
 
 	return target;
@@ -973,23 +947,15 @@ entity_damage(OBJ *player, OBJ *target, short amt)
 	if (target) {
 		etarget->hp = hp;
 		CBUG(target->type != TYPE_ENTITY);
-		mcp_bars(etarget);
+		mcp_bars(target);
 	}
 
 	if (player && (player->type != TYPE_GARBAGE)) {
 		CBUG(player->type != TYPE_ENTITY);
-		ENT *eplayer = &player->sp.entity;
-		mcp_bars(eplayer);
+		mcp_bars(player);
 	}
 
 	return ret;
-}
-
-static void
-look_simple(int fd, OBJ *thing)
-{
-	if (thing->description)
-		ndc_writef(fd, thing->description);
 }
 
 void
@@ -1009,30 +975,15 @@ do_look_at(int fd, int argc, char *argv[])
 			&& !(thing = ematch_mine(player, name))
 		  )
 	{
-		ndc_writef(fd, NOMATCH_MESSAGE);
+		nd_writef(player, NOMATCH_MESSAGE);
 		return;
 	}
 
 	switch (thing->type) {
 	case TYPE_ROOM:
-		look_room(player, thing);
 		view(player);
-		break;
-	case TYPE_ENTITY:
-		if (mcp_look(player, thing)) {
-			look_simple(fd, thing);
-			look_contents(player, thing, "Carrying:");
-		}
-		break;
-	case TYPE_CONSUMABLE:
-	case TYPE_EQUIPMENT:
-	case TYPE_THING:
-		if (mcp_look(player, thing))
-			look_simple(fd, thing);
-		break;
 	default:
-		if (mcp_look(player, thing))
-			look_simple(fd, thing);
+		mcp_look(player, thing);
 		break;
 	}
 }
@@ -1064,7 +1015,6 @@ static inline int
 huth_notify(OBJ *player, unsigned char *n_r, unsigned long long v, char const *m[4])
 {
 	ENT *eplayer = &player->sp.entity;
-	int fd = eplayer->fd;
 	unsigned long long rn = *n_r;
 
 
@@ -1081,21 +1031,21 @@ huth_notify(OBJ *player, unsigned char *n_r, unsigned long long v, char const *m
 
 	if (rn >= 3) {
 		if (v >= 2 * n[1] + n[2]) {
-			ndc_writef(fd, m[3]);
+			nd_writef(player, m[3]);
 			*n_r += 1;
 		}
 	} else if (rn >= 2) {
 		if (v >= 2 * n[1]) {
-			ndc_writef(fd, m[2]);
+			nd_writef(player, m[2]);
 			*n_r += 1;
 		}
 	} else if (rn >= 1) {
 		if (v >= n[1]) {
-			ndc_writef(fd, m[1]);
+			nd_writef(player, m[1]);
 			*n_r += 1;
 		}
 	} else if (v >= n[2]) {
-		ndc_writef(fd, m[0]);
+		nd_writef(player, m[0]);
 		*n_r += 1;
 	}
 
@@ -1352,12 +1302,12 @@ do_reroll(int fd, int argc, char *argv[])
 			&& !(thing = ematch_near(player, what))
 			&& !(thing = ematch_mine(player, what))
 	   ) {
-		ndc_writef(fd, NOMATCH_MESSAGE);
+		nd_writef(player, NOMATCH_MESSAGE);
 		return;
 	}
 
 	if (player != thing && !(eplayer->flags & EF_WIZARD)) {
-		ndc_writef(fd, "You can not do that.\n");
+		nd_writef(player, "You can not do that.\n");
 		return;
 	}
 
