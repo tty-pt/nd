@@ -11,21 +11,17 @@ mounts-Linux := dev sys proc
 mounts := ${mounts-${uname}}
 mkdir-OpenBSD := dev
 
-bin/nd: items/nd/nd etc/ etc/vim/vimrc.local
-	cp items/nd/nd $@
-
 items/nd/nd: FORCE
 	${MAKE} -C items/nd PWD=${PWD:%=%/items/nd}
 
-all: bin/nd var/nd/std.db.ok mounts dev/ nods
+all: items/nd/nd var/nd/std.db.ok mounts dev/ nods etc/ etc/vim/vimrc.local
 
-var/nd/std.db.ok: var/nd/
+var/nd/std.db.ok:
+	mkdir -p var/nd || true
 	cp items/nd/game/std.db.ok $@
 
 etc/vim/vimrc.local: etc/vim/
 	echo "colorscheme pablo" > $@
-
-chroot_mkdir += var/nd etc/vim
 
 dev/pts:
 	@if ! mount | grep -q "on ${PWD}/$@ type"; then \
@@ -76,16 +72,16 @@ dev/tty:
 	${sudo} chown root:wheel $@
 
 run: all
-	${sudo-${USER}} ./bin/nd -C ${PWD} -p 8000
+	${sudo-${USER}} ./items/nd/nd -C ${PWD} -p 8000
 
 srun: all ss_key.pem ss_cert.pem
-	${sudo} ./bin/nd -C ${PWD} -c ss_cert.pem -k ss_key.pem
+	${sudo} ./items/nd/nd -C ${PWD} -c ss_cert.pem -k ss_key.pem
 
 osrun: all
-	${sudo} ./bin/nd -C ${PWD} -c /etc/ssl/tty.pt.crt -k /etc/ssl/private/tty.pt.key
+	${sudo} ./items/nd/nd -C ${PWD} -c /etc/ssl/tty.pt.crt -k /etc/ssl/private/tty.pt.key
 
 osdbg: all
-	${sudo} egdb -ex "handle SIGPIPE nostop print pass" -ex "set pagination off" -ex "run" --args ./bin/nd -C ${PWD} -c /etc/ssl/tty.pt.crt -k /etc/ssl/private/tty.pt.key
+	${sudo} egdb -ex "handle SIGPIPE nostop print pass" -ex "set pagination off" -ex "run" --args ./items/nd/nd -C ${PWD} -c /etc/ssl/tty.pt.crt -k /etc/ssl/private/tty.pt.key
 
 ss_key.pem:
 	openssl genpkey -algorithm RSA -out ss_key.pem -aes256
@@ -93,5 +89,3 @@ ss_key.pem:
 ss_cert.pem: ss_key.pem
 	openssl req -new -key ss_key.pem -out ss_csr.pem
 	openssl req -x509 -key ss_key.pem -in ss_csr.pem -out ss_cert.pem -days 365
-
-mod-bin += nd
