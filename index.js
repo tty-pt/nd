@@ -19,7 +19,7 @@ const sub = new Sub({
   me: null,
   authFail: true,
   stats: {},
-  bars: { hp: 1, mp: 1 },
+  bars: { hp: 1, hpMax: 1, mp: 1, mpMax: 1 },
   here: null,
   target: null,
   equipment: {},
@@ -41,7 +41,10 @@ const statsEmit = sub.makeEmit(
 );
 
 const barsEmit = sub.makeEmit(
-  (bars, current) => ({ ...current, bars }),
+  (bars, current) => {
+	  console.log("barsEmit", bars);
+	  return ({ ...current, bars });
+  },
 );
 
 const hereEmit = sub.makeEmit(
@@ -329,11 +332,15 @@ function tty_proc(input) {
 
 // onMessage {{{
 function read_16(arr, start) {
-  return ((arr[start + 1] << 8) | arr[start]) << 32;
+  return (arr[start + 1] << 8) | arr[start];
 }
 
 function read_32(arr, start) {
   return ((arr[start + 3] << 24) | (arr[start + 2] << 16) | (arr[start + 1] << 8) | arr[start]) << 32;
+}
+
+function read_u16(arr, start) {
+  return (arr[start + 1] << 8) | arr[start];
 }
 
 function read_u32(arr, start) {
@@ -389,16 +396,16 @@ ndc.setOnMessage(function onMessage(ev) {
     case BCP.BARS: {
       let aux;
       barsEmit({
-        hp: read_32(arr, aux = 3),
-        hpMax: read_32(arr, aux += 4),
-        mp: read_32(arr, aux += 4),
-        mpMax: read_32(arr, aux += 4),
+        hp: read_u16(arr, aux = 3),
+        hpMax: read_u16(arr, aux += 2),
+        mp: read_u16(arr, aux += 2),
+        mpMax: read_u16(arr, aux += 2),
       });
       return;
 
     } case BCP.EQUIPMENT: {
       let aux;
-      barsEmit({
+      equipmentEmit({
         head: read_32(arr, aux = 3),
         neck: read_32(arr, aux += 4),
         chest: read_32(arr, aux += 4),
@@ -504,6 +511,36 @@ function mayDash(str) {
 //   return str ? "-" + str : "";
 // }
 
+class Bar extends SubscribedElement {
+  static get observedAttributes() {
+    return ['type', 'x'];
+  }
+
+  connectedCallback() {
+    const type = this.getAttribute('type');
+    this.subscribe(sub, "value", "bars." + type);
+    this.subscribe(sub, "max", "bars." + type + "Max");
+    this.render();
+  }
+
+
+  render() {
+    const type = this.getAttribute('type');
+    const cls = this.getAttribute("x");
+    const width = this.value / this.max;
+    console.log("BARS", type, this.value, this.max, width);
+
+    this.innerHTML = `<div class="rel">`
+      + `<div style="width: ${width * 100}%" class="sv ${cls}"></div>`
+      + `<div class="abs a ${cls} tr5"></div>`
+      + `<div class="ts9 shad abs tac a cf15">${this.value}/${this.max}</div>`
+      + `</div>`;
+  }
+}
+
+customElements.define('nd-bar', Bar);
+
+
 class Button extends SubscribedElement {
   static get observedAttributes() {
     return ['size', 'square', "icon", "src", "x", "text-size", "pad", "fit", "hid"];
@@ -571,8 +608,10 @@ class Equipment extends Avatar {
 
 customElements.define('nd-equipment', Equipment);
 
-class Stat extends HTMLElement {
+class Stat extends SubscribedElement {
   connectedCallback() {
+    const name = this.getAttribute('name');
+    this.subscribe(sub, "value", `stats.${name}`);
     this.render();
   }
 
@@ -583,7 +622,7 @@ class Stat extends HTMLElement {
     this.innerHTML = `
     <div class="f h8">
       <div class="tbbold">${name}</div>
-      <div>${value}</div>
+      <div>${this.value}</div>
     </div>`;
   }
 }

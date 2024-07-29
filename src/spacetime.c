@@ -95,6 +95,7 @@ exit_t exit_map[] = {
 };
 
 unsigned short day_tick = 0;
+double tick = 0;
 
 static __inline__ ucoord_t
 unsign(coord_t n)
@@ -235,7 +236,7 @@ point_rel_idx(point_t p, point_t s, smorton_t w)
 }
 
 void
-st_update(unsigned long long dt)
+st_update(double dt)
 {
 	const char * msg = NULL;
 	dbref i;

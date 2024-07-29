@@ -14,10 +14,10 @@
 #define G(x) xsqrtx(x)
 
 #define HP_G(v) 10 * G(v)
-#define HP_MAX(ent) HP_G(ent->attr[ATTR_CON])
+#define HP_MAX(ent) ((unsigned short) HP_G(ent->attr[ATTR_CON]))
 
 #define MP_G(v) HP_G(v)
-#define MP_MAX(ent) MP_G(ent->attr[ATTR_WIZ])
+#define MP_MAX(ent) ((unsigned short) MP_G(ent->attr[ATTR_WIZ]))
 
 #define SPELL_G(v) G(v)
 #define SPELL_DMG(p, sp) SPELL_G(p->attr[ATTR_INT]) + HS(sp)
@@ -69,7 +69,7 @@ dbref unequip(OBJ *player, unsigned eql);
 enum element element_next(ENT *ref, register unsigned char a);
 
 void stats_init(ENT *enu, SENT *sk);
-void entity_update(OBJ *player, unsigned long long dt);
+void entity_update(OBJ *player, double dt);
 int entity_damage(OBJ *player, OBJ *target, short amt);
 /* void entity_gpt(OBJ *player, int echo_off, char *add_prompt); */
 

@@ -74,6 +74,7 @@ struct cmd_dir {
 };
 
 extern unsigned short day_tick;
+extern double tick;
 extern enum exit e_map[];
 extern exit_t exit_map[];
 
@@ -93,7 +94,7 @@ const char * e_name(enum exit e);
 const char * e_other(enum exit e);
 morton_t point_rel_idx(point_t p, point_t s, smorton_t w);
 
-void st_update(unsigned long long dt);
+void st_update(double dt);
 int st_v(OBJ *player, const char *dir);
 int st_teleport(OBJ *player, struct cmd_dir cd);
 void st_start(OBJ *player);

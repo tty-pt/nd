@@ -18,7 +18,15 @@ void
 do_say(int fd, int argc, char *argv[])
 {
 	OBJ *player = FD_PLAYER(fd);
-	const char *message = argv[1];
+	char message[BUFSIZ];
+	*message = '\0';
+
+	for (int i = 1; i < argc; i++) {
+		strcat(message, argv[i]);
+		if (i + 1 < argc)
+			strcat(message, " ");
+	}
+
 
 	nd_writef(player, "You say, \"%s\".\n", message);
 	nd_rwritef(player->location, player, "%s says, \"%s\"\n", player->name, message);
@@ -29,7 +37,14 @@ do_pose(int fd, int argc, char *argv[])
 {
 	OBJ *player = FD_PLAYER(fd);
 	/* ENT *eplayer = &player->sp.entity; */
-	const char *message = argv[1];
+	char message[BUFSIZ];
+	*message = '\0';
+
+	for (int i = 1; i < argc; i++) {
+		strcat(message, argv[i]);
+		if (i + 1 < argc)
+			strcat(message, " ");
+	}
 
 	nd_rwritef(player->location, player, "%s %s\n", player->name, message);
 	/* if (eplayer->gpt) { */
@@ -46,9 +61,15 @@ do_wall(int fd, int argc, char *argv[])
 	OBJ *player = FD_PLAYER(fd), *oi;
 	CBUG(player->type != TYPE_ENTITY);
 	ENT *eplayer = &player->sp.entity;
-	const char *message = argv[1];
 	char buf[BUFFER_LEN];
+	char message[BUFSIZ];
+	*message = '\0';
 
+	for (int i = 1; i < argc; i++) {
+		strcat(message, argv[i]);
+		if (i + 1 < argc)
+			strcat(message, " ");
+	}
 
 	if (!(eplayer->flags & EF_WIZARD)) {
 		nd_writef(player, "But what do you want to do with the wall?\n");

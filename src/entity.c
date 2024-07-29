@@ -71,6 +71,8 @@ birth(OBJ *player)
 		CBUG(equip_affect(eplayer, eeq));
 	}
 
+	mcp_bars(player);
+
         return eplayer;
 }
 
@@ -927,7 +929,7 @@ int
 entity_damage(OBJ *player, OBJ *target, short amt)
 {
 	ENT *etarget = &target->sp.entity;
-	short hp = etarget->hp;
+	int hp = etarget->hp;
 	int ret = 0;
 	hp += amt;
 
@@ -947,13 +949,10 @@ entity_damage(OBJ *player, OBJ *target, short amt)
 	if (target) {
 		etarget->hp = hp;
 		CBUG(target->type != TYPE_ENTITY);
-		mcp_bars(target);
 	}
 
-	if (player && (player->type != TYPE_GARBAGE)) {
+	if (player && (player->type != TYPE_GARBAGE))
 		CBUG(player->type != TYPE_ENTITY);
-		mcp_bars(player);
-	}
 
 	return ret;
 }
@@ -1146,7 +1145,7 @@ attack(OBJ *player)
 }
 
 static inline void
-kill_update(OBJ *player, unsigned long long dt)
+kill_update(OBJ *player, double dt)
 {
 	ENT *eplayer = &player->sp.entity;
 	OBJ *target = eplayer->target;
@@ -1164,14 +1163,23 @@ kill_update(OBJ *player, unsigned long long dt)
 		etarget->target = player;
 
 	stand_silent(player);
+
+	unsigned short ohp = etarget->hp;
+	unsigned short omp = eplayer->mp;
 	attack(player);
+	if (eplayer->mp != omp)
+		mcp_bars(player);
+	if (etarget->hp != ohp)
+		mcp_bars(target);
 }
 
 void
-entity_update(OBJ *player, unsigned long long dt)
+entity_update(OBJ *player, double dt)
 {
 	CBUG(player->type != TYPE_ENTITY);
 	ENT *eplayer = &player->sp.entity;
+	unsigned short ohp = eplayer->hp;
+	unsigned short omp = eplayer->mp;
 
 	static char const *thirst_msg[] = {
 		"You are thirsty.\n",
@@ -1210,15 +1218,13 @@ entity_update(OBJ *player, unsigned long long dt)
 		}
 	}
 
-	if (ndc_tick % 16 == 0 && (eplayer->flags & EF_SITTING)) {
-		int div = 10;
+	if (eplayer->flags & EF_SITTING) {
+		int div = 100;
 		int max, cur;
-		entity_damage(NULL, player, HP_MAX(eplayer) / div);
-
+		entity_damage(NULL, player, dt * HP_MAX(eplayer) / div);
 		max = MP_MAX(eplayer);
 		cur = eplayer->mp + (max / div);
 		eplayer->mp = cur > max ? max : cur;
-
 	}
 
         CBUG(player->type == TYPE_GARBAGE);
@@ -1227,12 +1233,15 @@ entity_update(OBJ *player, unsigned long long dt)
 		return;
 
         /* if mob dies, return */
-	if (huth_notify(player, &eplayer->thirst_n, eplayer->thirst += dt, thirst_msg)
-		|| huth_notify(player, &eplayer->hunger_n, eplayer->hunger += dt, hunger_msg)
+	if (huth_notify(player, &eplayer->thirst_n, eplayer->thirst += dt * THIRST_INC, thirst_msg)
+		|| huth_notify(player, &eplayer->hunger_n, eplayer->hunger += dt * HUNGER_INC, hunger_msg)
                 || debufs_process(player))
                         return;
 
 	kill_update(player, dt);
+
+	if (eplayer->hp != ohp || eplayer->mp != omp)
+		mcp_bars(player);
 }
 
 void
@@ -1289,22 +1298,9 @@ entities_add(OBJ *where, enum biome biome, long long pdn) {
 }
 
 void
-do_reroll(int fd, int argc, char *argv[])
-{
-	OBJ *player = FD_PLAYER(fd);
+reroll(OBJ *player, OBJ *thing) {
 	ENT *eplayer = &player->sp.entity;
-	char *what = argv[1];
-	OBJ *thing;
 	int i;
-
-	if (
-			!(thing = ematch_me(player, what))
-			&& !(thing = ematch_near(player, what))
-			&& !(thing = ematch_mine(player, what))
-	   ) {
-		nd_writef(player, NOMATCH_MESSAGE);
-		return;
-	}
 
 	if (player != thing && !(eplayer->flags & EF_WIZARD)) {
 		nd_writef(player, "You can not do that.\n");
@@ -1318,4 +1314,24 @@ do_reroll(int fd, int argc, char *argv[])
 	EFFECT(eplayer, DMG).value = DMG_BASE(eplayer);
 	EFFECT(eplayer, DODGE).value = DODGE_BASE(eplayer);
 	mcp_stats(player);
+	mcp_bars(player);
+}
+
+void
+do_reroll(int fd, int argc, char *argv[])
+{
+	OBJ *player = FD_PLAYER(fd);
+	char *what = argv[1];
+	OBJ *thing = player;
+
+	if (
+			argc > 1 && !(thing = ematch_me(player, what))
+			&& !(thing = ematch_near(player, what))
+			&& !(thing = ematch_mine(player, what))
+	   ) {
+		nd_writef(player, NOMATCH_MESSAGE);
+		return;
+	}
+
+	reroll(player, thing);
 }

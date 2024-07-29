@@ -232,14 +232,14 @@ fbcp_bars(OBJ *player)
 	unsigned char iden = BCP_BARS;
 	static char bcp_buf[2 + sizeof(iden) + sizeof(int) * 4];
 	char *p = bcp_buf;
-	int aux;
+	unsigned short aux;
 	memcpy(p, "#b", 2);
 	memcpy(p += 2, &iden, sizeof(iden));
 	memcpy(p += sizeof(iden), &eplayer->hp, sizeof(eplayer->hp));
 	aux = HP_MAX(eplayer);
 	memcpy(p += sizeof(eplayer->hp), &aux, sizeof(aux));
 	memcpy(p += sizeof(aux), &eplayer->mp, sizeof(eplayer->mp));
-	aux = HP_MAX(eplayer);
+	aux = MP_MAX(eplayer);
 	memcpy(p += sizeof(eplayer->mp), &aux, sizeof(aux));
 	p += sizeof(aux);
 	nd_write(player, bcp_buf, p - bcp_buf);
@@ -281,7 +281,7 @@ mcp_look(OBJ *player, OBJ *loc)
 		fbcp_item(player, thing, 0);
 
 	nd_twritef(player, "%s\n", unparse(player, loc));
-	if (*loc->description && loc->description)
+	if (loc->description && *loc->description)
 		nd_twritef(player, loc->description);
 
         char buf[BUFSIZ];

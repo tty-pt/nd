@@ -755,13 +755,13 @@ object_copy(OBJ *player, OBJ *old)
 }
 
 static inline void
-object_update(OBJ *what, unsigned long long dt) {
+object_update(OBJ *what, double dt) {
 	if (what->type == TYPE_ENTITY)
 		entity_update(what, dt);
 }
 
 void
-objects_update(unsigned long long dt)
+objects_update(double dt)
 {
 	dbref i;
 	for (i = db_top; i-- > 0;)

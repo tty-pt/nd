@@ -6,6 +6,7 @@
 #include "object.h"
 
 /* from entity.c */
+void reroll(OBJ *player, OBJ *thing);
 void do_reroll(int fd, int argc, char *argv[]);
 
 /* from timequeue.c */

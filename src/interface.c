@@ -56,6 +56,7 @@ enum opts {
 };
 
 void do_bio(int fd, int argc, char *argv[]);
+extern void do_avatar(int fd, int argc, char *argv[]);
 extern void do_auth(int fd, int argc, char *argv[]);
 /* extern void do_gpt(int fd, int argc, char *argv[]); */
 
@@ -95,6 +96,9 @@ struct cmd_slot cmds[] = {
 	/* }, { */
 	/* 	.name = "gpt", */
 	/* 	.cb = &do_gpt, */
+	}, {
+		.name = "avatar",
+		.cb = &do_avatar,
 	}, {
 		.name = "advitam",
 		.cb = &do_advitam,
@@ -419,6 +423,14 @@ avatar(OBJ *player) {
 	player->art_id = 1 + (random() % art_max("avatar"));
 }
 
+void
+do_avatar(int fd, int argc, char *argv[]) {
+	OBJ *player = FD_PLAYER(fd);
+	avatar(player);
+	mcp_content_out(player->location, player);
+	mcp_content_in(player->location, player);
+}
+
 OBJ *
 auth(int fd, char *qsession)
 {
@@ -454,6 +466,10 @@ auth(int fd, char *qsession)
 		birth(player);
 		spells_birth(player);
 		avatar(player);
+		reroll(player, player);
+		ENT *eplayer = &player->sp.entity;
+		eplayer->hp = HP_MAX(eplayer);
+		eplayer->mp = MP_MAX(eplayer);
         }
 
 	FD_PLAYER(fd) = player;
@@ -463,10 +479,10 @@ auth(int fd, char *qsession)
 		eplayer->fds = hash_init();
 	hash_put(eplayer->fds, &fd, sizeof(fd), (void *) 1);
         mcp_stats(player);
-        mcp_bars(player);
         mcp_auth_success(player);
         mcp_equipment(player);
 	look_around(player);
+        mcp_bars(player);
 	/* enter_room(player, E_ALL); */
 	do_view(fd, 0, NULL);
 	return player;
@@ -481,7 +497,13 @@ do_auth(int fd, int argc, char *argv[])
 void
 ndc_update(unsigned long long dt)
 {
-	objects_update(dt);
+	double fdt = dt / 1000000.0;
+	tick += fdt;
+	if (tick > 1.0) {
+		tick -= 1.0;
+		objects_update(1.0);
+		st_update(1.0);
+	}
 }
 
 void ndc_vim(int fd, int argc, char *argv[]) {
@@ -531,6 +553,15 @@ void ndc_disconnect(int fd) {
 		observer_remove(last_observed, player);
 
 	FD_PLAYER(fd) = NULL;
-	hash_close(eplayer->fds);
-	eplayer->fds = 0;
+	int no_fds = 1;
+	struct hash_cursor c = hash_iter_start(eplayer->fds);
+	while (hash_iter_get(&c)) {
+		no_fds = 0;
+		break;
+	}
+	hash_del(eplayer->fds, &fd, sizeof(fd));
+	if (no_fds) {
+		hash_close(eplayer->fds);
+		eplayer->fds = 0;
+	}
 }
