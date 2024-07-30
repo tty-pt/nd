@@ -41,10 +41,7 @@ const statsEmit = sub.makeEmit(
 );
 
 const barsEmit = sub.makeEmit(
-  (bars, current) => {
-	  console.log("barsEmit", bars);
-	  return ({ ...current, bars });
-  },
+  (bars, current) => ({ ...current, bars })
 );
 
 const hereEmit = sub.makeEmit(
@@ -391,7 +388,6 @@ ndc.setOnMessage(function onMessage(ev) {
   const arr = new Uint8Array(ev.data);
   if (String.fromCharCode(arr[0]) == "#" && String.fromCharCode(arr[1]) == "b") {
     const iden = arr[2];
-    console.log("BCP", iden, BCP_MAP[iden]);
     switch (iden) {
     case BCP.BARS: {
       let aux;
@@ -528,7 +524,6 @@ class Bar extends SubscribedElement {
     const type = this.getAttribute('type');
     const cls = this.getAttribute("x");
     const width = this.value / this.max;
-    console.log("BARS", type, this.value, this.max, width);
 
     this.innerHTML = `<div class="rel">`
       + `<div style="width: ${width * 100}%" class="sv ${cls}"></div>`
@@ -783,7 +778,6 @@ class Contents extends SubscribedElement {
 customElements.define('nd-contents', Contents);
 
 function keyUpHandler(e) {
-  console.log("keyUpHandler", e.keyCode, e, ndc.term.focused);
   if (ndc.term.focused)
     return;
   switch (e.keyCode) {
