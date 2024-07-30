@@ -13,40 +13,39 @@
 #include "debug.h"
 
 /* Commands which involve speaking */
+char *
+argscat(int argc, char *argv[]) {
+	static char message[BUFFER_LEN];
+	int rem = sizeof(message);
+	memset(message, '\0', sizeof(message));
+	
+	for (int i = 1; i < argc; i++) {
+		int ret = snprintf(message + sizeof(message) - rem, rem, " %s", argv[i]);
+		if (ret <= 0)
+			return message;
+		rem -= ret;
+	}
+
+	return message;
+}
 
 void
 do_say(int fd, int argc, char *argv[])
 {
 	OBJ *player = FD_PLAYER(fd);
-	char message[BUFSIZ];
-	*message = '\0';
-
-	for (int i = 1; i < argc; i++) {
-		strcat(message, argv[i]);
-		if (i + 1 < argc)
-			strcat(message, " ");
-	}
-
-
-	nd_writef(player, "You say, \"%s\".\n", message);
-	nd_rwritef(player->location, player, "%s says, \"%s\"\n", player->name, message);
+	char *message = argscat(argc, argv);
+	nd_writef(player, "You say:%s.\n", message);
+	nd_rwritef(player->location, player, "%s says:%s\n", player->name, message);
 }
 
 void
 do_pose(int fd, int argc, char *argv[])
 {
 	OBJ *player = FD_PLAYER(fd);
+	char *message = argscat(argc, argv);
 	/* ENT *eplayer = &player->sp.entity; */
-	char message[BUFSIZ];
-	*message = '\0';
 
-	for (int i = 1; i < argc; i++) {
-		strcat(message, argv[i]);
-		if (i + 1 < argc)
-			strcat(message, " ");
-	}
-
-	nd_rwritef(player->location, player, "%s %s\n", player->name, message);
+	nd_rwritef(player->location, player, "%s%s\n", player->name, message);
 	/* if (eplayer->gpt) { */
 	/* 	char contents[BUFFER_LEN]; */
 	/* 	sprintf(contents, "Describe %s %s.\n\n", player->name, message); */
@@ -62,14 +61,7 @@ do_wall(int fd, int argc, char *argv[])
 	CBUG(player->type != TYPE_ENTITY);
 	ENT *eplayer = &player->sp.entity;
 	char buf[BUFFER_LEN];
-	char message[BUFSIZ];
-	*message = '\0';
-
-	for (int i = 1; i < argc; i++) {
-		strcat(message, argv[i]);
-		if (i + 1 < argc)
-			strcat(message, " ");
-	}
+	char *message = argscat(argc, argv);
 
 	if (!(eplayer->flags & EF_WIZARD)) {
 		nd_writef(player, "But what do you want to do with the wall?\n");
@@ -77,7 +69,7 @@ do_wall(int fd, int argc, char *argv[])
 	}
 
 	warn("WALL from %s(%d): %s", player->name, object_ref(player), message);
-	snprintf(buf, sizeof(buf), "%s shouts, \"%s\"", player->name, message);
+	snprintf(buf, sizeof(buf), "%s shouts: %s", player->name, message);
 	FOR_ALL(oi) if (oi->type == TYPE_ENTITY)
 		nd_writef(oi, buf);
 }
