@@ -811,7 +811,7 @@ function keyUpHandler(e) {
       break;
     case 73: // i
       if (e.shiftKey)
-        termSub.value.focus();
+        term.value.focus();
       else
         sendCmd("inventory");
       break;
@@ -825,14 +825,17 @@ function keyUpHandler(e) {
 window.addEventListener('keyup', keyUpHandler);
 
 const modals = {
-  "help": document.getElementById("help"),
   "equipment": document.getElementById("equipment"),
   "stats": document.getElementById("stats"),
 };
 
-const modalParent = modals.help.parentElement;
+window.help_show = function () {
+	ndc.term.focus();
+	sendCmd("help begin");
+};
 
-let currentModal = modals.help;
+const modalParent = modals.equipment.parentElement;
+let currentModal = modals.equipment;
 
 globalThis.modal_open = id => {
   modalParent.classList.remove("dn");

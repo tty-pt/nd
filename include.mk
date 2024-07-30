@@ -14,7 +14,10 @@ mkdir-OpenBSD := dev
 items/nd/nd: FORCE
 	${MAKE} -C items/nd PWD=${PWD:%=%/items/nd}
 
-all: items/nd/nd var/nd/std.db.ok mounts dev/ nods etc/ etc/vim/vimrc.local
+-include items/nd/man/include.mk
+
+all: items/nd/nd var/nd/std.db.ok mounts dev/ nods etc/ etc/vim/vimrc.local \
+	${pages:%=usr/share/man/man10/%.10} usr/share/man/mandoc.db
 
 var/nd/std.db.ok:
 	mkdir -p var/nd || true
@@ -42,9 +45,11 @@ dev/urandom:
 
 dev/null:
 	${sudo} mknod $@ c 2 2
+	${sudo} chmod 666 $@
 
 dev/zero:
 	${sudo} mknod $@ c 2 12
+	${sudo} chmod 666 $@
 
 dev/ptm:
 	${sudo} mknod $@ c 81 0
@@ -89,3 +94,4 @@ ss_key.pem:
 ss_cert.pem: ss_key.pem
 	openssl req -new -key ss_key.pem -out ss_csr.pem
 	openssl req -x509 -key ss_key.pem -in ss_csr.pem -out ss_cert.pem -days 365
+

@@ -1,0 +1,12 @@
+.TH POSE 10 "July 2024" "1.0" "Neverdark Manual"
+.SH NAME
+pose \- Strike a pose
+.SH SYNOPSIS
+\fBpose\fP [...words]
+.SH DESCRIPTION
+.PP
+Strike a pose (say you are doing something).
+.SH SEE ALSO
+.BR say,walk (10)
+.SH AUTHOR
+quirinpa <quirinpa@tty.pt>

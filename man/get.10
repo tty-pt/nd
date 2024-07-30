@@ -1,0 +1,13 @@
+.TH GET 10 "July 2024" "1.0" "Neverdark Manual"
+.SH NAME
+get \- Get something
+.SH SYNOPSIS
+\fBget\fP [container] target
+.SH DESCRIPTION
+.PP
+Get target object into your inventory. You may specify to get it
+from a certain container.
+.SH SEE ALSO
+.BR walk,look,put,drop (10)
+.SH AUTHOR
+quirinpa <quirinpa@tty.pt>

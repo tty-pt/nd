@@ -1,0 +1,12 @@
+.TH DROP 10 "July 2024" "1.0" "Neverdark Manual"
+.SH NAME
+drop \- drop something
+.SH SYNOPSIS
+\fBdrop\fP [target]
+.SH DESCRIPTION
+.PP
+Drop \fItarget\fP into the ground.
+.SH SEE ALSO
+.BR walk,get,put (10)
+.SH AUTHOR
+quirinpa <quirinpa@tty.pt>

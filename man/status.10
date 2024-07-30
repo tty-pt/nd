@@ -1,0 +1,12 @@
+.TH STATUS 10 "July 2024" "1.0" "Neverdark Manual"
+.SH NAME
+status \- Show your hp, mp, dmg, def, mdef, active debug mask, etc.
+.SH SYNOPSIS
+.B status
+.SH DESCRIPTION
+.PP
+\fBstatus\fP is a command for checking basic character stats
+.SH SEE ALSO
+.BR fight (10)
+.SH AUTHOR
+quirinpa <quirinpa@tty.pt>

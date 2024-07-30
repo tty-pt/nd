@@ -6,6 +6,8 @@ FinishIt() {
 	cat "$@"
 }
 
+test ! -z "$REMOTE_USER" || SeeOther /login?ret=/nd
+
 case "$1" in
 	"") ;;
 	art)

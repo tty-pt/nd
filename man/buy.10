@@ -1,0 +1,12 @@
+.TH BUY 10 "July 2024" "1.0" "Neverdark Manual"
+.SH NAME
+buy \- Buy an item from a vendor
+.SH SYNOPSIS
+\fBbuy\fI target
+.SH DESCRIPTION
+.PP
+Buy \fItarget\fP item from the nearest vendor.
+.SH SEE ALSO
+.BR sell,shop,get,walk (10)
+.SH AUTHOR
+quirinpa <quirinpa@tty.pt>

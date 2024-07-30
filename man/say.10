@@ -1,0 +1,12 @@
+.TH SAY 10 "July 2024" "1.0" "Neverdark Manual"
+.SH NAME
+say \- Say something to people in this location
+.SH SYNOPSIS
+\fBsay\fI [...words]
+.SH DESCRIPTION
+.PP
+Chat with people in your location.
+.SH SEE ALSO
+.BR pose,walk (10)
+.SH AUTHOR
+quirinpa <quirinpa@tty.pt>

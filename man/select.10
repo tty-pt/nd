@@ -1,0 +1,14 @@
+.TH SELECT 10 "July 2024" "1.0" "Neverdark Manual"
+.SH NAME
+select \- Select index for matching
+.SH SYNOPSIS
+.B select
+.I index
+.SH DESCRIPTION
+.PP
+\fBselect\fP will set the desired index when doing the next match
+.SH SEE ALSO
+.BR get,equip,unequip,sell,buy,look (10)
+.SH AUTHOR
+quirinpa <quirinpa@tty.pt>
+

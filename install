@@ -1,6 +1,9 @@
 /bin/bash
 env
 vim
+man
+/usr/share/man
+/usr/share/terminfo/x/xterm-256color
 /usr/share/terminfo/x/xterm+256color
 /usr/share/vim/vim82/colors
 /usr/share/vim/vim82/defaults.vim

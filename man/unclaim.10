@@ -1,0 +1,14 @@
+.TH UNCLAIM 10 "July 2024" "1.0" "Neverdark Manual"
+.SH NAME
+unclaim \- Unlaim destination room
+.SH SYNOPSIS
+\fBR\fI[number]\fPdirection
+.SH DESCRIPTION
+.PP
+This command is only available in character mode. It allows you to
+\fBunclaim\fP the destination room.
+.SH SEE ALSO
+.BR walk,claim,door,undoor,wall,unwall (10)
+.SH AUTHOR
+quirinpa <quirinpa@tty.pt>
+

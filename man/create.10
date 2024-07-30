@@ -1,0 +1,12 @@
+.TH CREATE 10 "July 2024" "1.0" "Neverdark Manual"
+.SH NAME
+create \- create an object from thin air
+.SH SYNOPSIS
+\fBcreate\fI name [cost]
+.SH DESCRIPTION
+.PP
+Create object with name \fIname\fP and cost \fIcost\fP.
+.SH SEE ALSO
+.BR recycle,chown,advitam,name,clone (10)
+.SH AUTHOR
+quirinpa <quirinpa@tty.pt>

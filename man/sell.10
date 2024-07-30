@@ -1,0 +1,12 @@
+.TH SELL 10 "July 2024" "1.0" "Neverdark Manual"
+.SH NAME
+sell \- Sell an item to a vendor
+.SH SYNOPSIS
+\fBsell\fI target
+.SH DESCRIPTION
+.PP
+Sell \fItarget\fP item to the nearest vendor.
+.SH SEE ALSO
+.BR buy,shop,get,walk (10)
+.SH AUTHOR
+quirinpa <quirinpa@tty.pt>

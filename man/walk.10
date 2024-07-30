@@ -1,0 +1,24 @@
+.TH WALK 10 "July 2024" "1.0" "Neverdark Manual"
+.SH NAME
+walk \- Walk you in a certain direction
+.SH SYNOPSIS
+\fI[number]\fBdirection
+.SH DESCRIPTION
+.PP
+This command is only available in character mode. It allows you to
+move geographically. The \fBdirection\fP can be:
+.PP
+west (h), south (j), north (n, k),
+.br
+east (e, l), up (u, k) or down (d, j)
+.PP
+If you specify \fInumber\fP you will walk that amount of steps.
+.PP
+You can combine multiple directions and steps to make a whole journey!
+.PP
+If using the web client, you may also use the arrows to move,
+provided the terminal is not selected.
+.SH SEE ALSO
+.BR stand,sit,claim,door,wall (10)
+.SH AUTHOR
+quirinpa <quirinpa@tty.pt>

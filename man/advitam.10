@@ -1,0 +1,13 @@
+.TH ADVITAM 10 "July 2024" "1.0" "Neverdark Manual"
+.SH NAME
+advitam \- Adds life to an object
+.SH SYNOPSIS
+.B advitam
+.I target
+.SH DESCRIPTION
+.PP
+\fBadvitam\fP adds life to \fBtarget\fP object.
+.SH SEE ALSO
+.BR fight,get (10)
+.SH AUTHOR
+quirinpa <quirinpa@tty.pt>

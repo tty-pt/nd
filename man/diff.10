@@ -1,0 +1,12 @@
+.TH DIFF 10 "July 2024" "1.0" "Neverdark Manual"
+.SH NAME
+diff \- Check changes
+.SH SYNOPSIS
+.B diff
+.SH DESCRIPTION
+.PP
+\fBdiff\fP Check if there are changes against origin/master.
+.SH SEE ALSO
+.BR help,sh (10)
+.SH AUTHOR
+quirinpa <quirinpa@tty.pt>

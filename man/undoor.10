@@ -1,0 +1,14 @@
+.TH UNDOOR 10 "July 2024" "1.0" "Neverdark Manual"
+.SH NAME
+undoor \- Remove a door
+.SH SYNOPSIS
+\fBD\fI[number]\fPdirection
+.SH DESCRIPTION
+.PP
+This command is only available in character mode. It allows you to
+\fBundoor\fP (meaning to remove a door) between the destination
+and the preceding position.
+.SH SEE ALSO
+.BR walk,claim,unclaim,door,wall,unwall (10)
+.SH AUTHOR
+quirinpa <quirinpa@tty.pt>

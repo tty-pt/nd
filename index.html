@@ -31,7 +31,7 @@
 				</div>
 			</div>
 			<div id="actions" class="f h8 v8 fw fcc">
-				<nd-button onclick="modal_open('help')">❓</nd-button>
+				<nd-button onclick="help_show()">❓</nd-button>
 				<nd-button onclick="modal_open('stats')">📋</nd-button>
 				<nd-button onclick="modal_open('equipment')">👕</nd-button>
 				<nd-button onclick="sendCmd('inventory')">📦</nd-button>
@@ -42,42 +42,6 @@
 	</div>
 </div>
 <div class="modal abs svf f v0 fic c fcc oh dn" onclick="modal_close()">
-	<div id="help" class="p background-semi focus dn">
-		<b>Help</b><br />
-		<br />
-		Input "X" to teleport to the starting position.<br />
-
-		<br />
-		<b>More details: Normal mode:</b><br />
-		<p>
-		<b>i</b> to access your inventory.<br />
-		<b>I</b> to enter Input mode.<br />
-		<b>o</b> to look "out".<br />
-		<b>Left</b> or <b>h</b> to move west.<br />
-		<b>Right</b> or <b>l</b> to move east.<br />
-		<b>Up</b> or <b>k</b> to move north.<br />
-		<b>Down</b> or <b>j</b> to move south.<br />
-		<b>Shift+Up</b> or <b>K</b> to move up.<br />
-		<b>Shift+Down</b> or <b>J</b> to move down.<br />
-		</p>
-		<b>Input mode:</b><br />
-		<p>
-		<b>Esc</b> to go back to normal mode.<br />
-		<b>Left</b> to move west.<br />
-		<b>Right</b> to move east.<br />
-		<b>Up</b> to move north.<br />
-		<b>Down</b> to move south.<br />
-		<b>Shift+Up</b> to move up.<br />
-		<b>Shift+Down</b> to move down.<br />
-		other terminal bindings.<br />
-		</p>
-		<br />
-		You can check out the code <a href="https://github.com/tty-pt/neverdark">here</a>.<br />
-		<br />
-		The help command is very useful. Try issuing "help help".<br />
-
-		<p><b>also see help X, walking, w</b> </p>
-	</div>
 	<div id="equipment" class="p f v c background-semi focus dn">
 		<div class="f h">
 			<div class="p8 s24"></div>

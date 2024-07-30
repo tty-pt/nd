@@ -1,0 +1,13 @@
+.TH TOAD 10 "July 2024" "1.0" "Neverdark Manual"
+.SH NAME
+toad \- turn a player into a slimy toad
+.SH SYNOPSIS
+\fBtoad\fP player
+.SH DESCRIPTION
+.PP
+Boot \fIplayer\fP and turn him into a toad (ban).
+.SH SEE ALSO
+.BR walk,look,get,boot (10)
+.SH AUTHOR
+quirinpa <quirinpa@tty.pt>
+

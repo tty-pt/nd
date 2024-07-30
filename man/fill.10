@@ -1,0 +1,12 @@
+.TH FILL 10 "July 2024" "1.0" "Neverdark Manual"
+.SH NAME
+fill \- fill a container with something
+.SH SYNOPSIS
+\fBfill\fI container source
+.SH DESCRIPTION
+.PP
+Fill \fIcontainer\fP with what is in \fIsource\fP.
+.SH SEE ALSO
+.BR consume,get,look,walk (10)
+.SH AUTHOR
+quirinpa <quirinpa@tty.pt>

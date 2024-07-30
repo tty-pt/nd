@@ -1,0 +1,12 @@
+.TH AVATAR 10 "July 2024" "1.0" "Neverdark Manual"
+.SH NAME
+avatar \- Set your avatar
+.SH SYNOPSIS
+\fBavatar\fP
+.SH DESCRIPTION
+.PP
+Set your avatar to a random one.
+.SH SEE ALSO
+.BR reroll (10)
+.SH AUTHOR
+quirinpa <quirinpa@tty.pt>

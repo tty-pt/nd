@@ -62,18 +62,14 @@ extern void do_auth(int fd, int argc, char *argv[]);
 
 void
 do_man(int fd, int argc, char *argv[]) {
-	ndc_pty(fd, argv);
-}
+	char *rargv[] = { "/usr/bin/man", "-s", "10", argv[1], NULL };
 
-void
-do_env(int fd, int argc, char *argv[]) {
-	char *rargv[] = { "/usr/bin/env", NULL };
 	ndc_pty(fd, rargv);
 }
 
 void
 do_diff(int fd, int argc, char *argv[]) {
-	char *command[] = { "git", "diff", "origin/master", NULL };
+	char *command[] = { "git", "-C", "/items/nd", "diff", "origin/master", NULL };
 	ndc_pty(fd, command);
 }
 
@@ -175,7 +171,7 @@ struct cmd_slot cmds[] = {
 		.name = "inventory",
 		.cb = &do_inventory,
 	}, {
-		.name = "kill",
+		.name = "fight",
 		.cb = &do_kill,
 	}, {
 		.name = "look",
@@ -184,10 +180,10 @@ struct cmd_slot cmds[] = {
 		.name = "view",
 		.cb = &do_view,
 	}, {
-		.name = "env",
-		.cb = &do_env,
-	}, {
 		.name = "man",
+		.cb = &do_man,
+	}, {
+		.name = "help",
 		.cb = &do_man,
 	}, {
 		.name = "pose",
@@ -335,7 +331,7 @@ main(int argc, char **argv)
 
 	/* errno = 0; // TODO why? sanity fails to access file */
 
-	setenv("TERM", "xterm+256color", 1);
+	setenv("TERM", "xterm-256color", 1);
 	fprintf(stderr, "Done.\n");
 	ndc_main();
 

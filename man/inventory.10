@@ -1,0 +1,12 @@
+.TH INVENTORY 10 "July 2024" "1.0" "Neverdark Manual"
+.SH NAME
+inventory \- Look at yourself and see what you carry.
+.SH SYNOPSIS
+\fBinventory\fP
+.SH DESCRIPTION
+.PP
+Look at your inventory
+.SH SEE ALSO
+.BR walk,look (10)
+.SH AUTHOR
+quirinpa <quirinpa@tty.pt>

@@ -1,0 +1,15 @@
+.TH HELP 10 "July 2024" "1.0" "Neverdark Manual"
+.SH NAME
+help \- Similar to the man command, this triggers this help system
+.SH SYNOPSIS
+.B help
+.I [section]
+.I subject
+.SH DESCRIPTION
+.PP
+\fBhelp\fP Will open the man page about \fIsubject\fP. Optionally,
+match a specific \fIsection\fP.
+.SH SEE ALSO
+.BR man,starting (10)
+.SH AUTHOR
+quirinpa <quirinpa@tty.pt>

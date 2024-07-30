@@ -1,0 +1,12 @@
+.TH CONSUME 10 "July 2024" "1.0" "Neverdark Manual"
+.SH NAME
+consume \- eat or drink something
+.SH SYNOPSIS
+\fBconsume\fI target
+.SH DESCRIPTION
+.PP
+Eat or drink \fItarget\fP.
+.SH SEE ALSO
+.BR fill,get,look,walk (10)
+.SH AUTHOR
+quirinpa <quirinpa@tty.pt>

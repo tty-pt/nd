@@ -1,0 +1,13 @@
+.TH BOOT 10 "July 2024" "1.0" "Neverdark Manual"
+.SH NAME
+boot \- boot (disconnect) a player
+.SH SYNOPSIS
+\fBboot\fP target
+.SH DESCRIPTION
+.PP
+Boot \fItarget\fP player out of the game (kick).
+.SH SEE ALSO
+.BR walk,look,get,toad (10)
+.SH AUTHOR
+quirinpa <quirinpa@tty.pt>
+

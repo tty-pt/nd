@@ -1,0 +1,13 @@
+.TH NAME 10 "July 2024" "1.0" "Neverdark Manual"
+.SH NAME
+name \- rename an object
+.SH SYNOPSIS
+\fBname\fI target new_name
+.SH DESCRIPTION
+.PP
+Change name of \fItarget\fP to \fInew_name\fP.
+.SH SEE ALSO
+.BR walk,look,get,create,advitam (10)
+.SH AUTHOR
+quirinpa <quirinpa@tty.pt>
+

@@ -1,0 +1,12 @@
+.TH SIT 10 "July 2024" "1.0" "Neverdark Manual"
+.SH NAME
+sit \- Sit down
+.SH SYNOPSIS
+\fBsit\fI
+.SH DESCRIPTION
+.PP
+Sit down (recovers some stats). You can't fight or walk while sitting.
+.SH SEE ALSO
+.BR stand,walk,fight (10)
+.SH AUTHOR
+quirinpa <quirinpa@tty.pt>
