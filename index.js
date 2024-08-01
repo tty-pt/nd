@@ -92,7 +92,7 @@ const dbEmit = sub.makeEmit((obj, current) => {
 const ACTION = {
   LOOK: "👁",
   INSPECT: "🔍",
-  KILL: "⚔️",
+  FIGHT: "⚔️",
   SHOP: "💰",
   DRINK: "🧪",
   OPEN: "📦",
@@ -112,7 +112,7 @@ const ACTION = {
 };
 
 const ACTION_INDEX = [
-  ACTION.INSPECT, ACTION.KILL, ACTION.SHOP, ACTION.DRINK, ACTION.OPEN,
+  ACTION.INSPECT, ACTION.FIGHT, ACTION.SHOP, ACTION.DRINK, ACTION.OPEN,
   ACTION.CHOP, ACTION.FILL, ACTION.GET, ACTION.TALK, ACTION.PUT,
   ACTION.EQUIP, ACTION.DROP, ACTION.EAT, ACTION.DIE, ACTION.INVENTORY,
   ACTION.K, ACTION.J, ACTION.WALK, ACTION.LOOK
@@ -124,7 +124,7 @@ const ACTION_MAP = {
 	  label: "inspect",
 	  callback: ref => sendCmd(`look #${ref}`),
   },
-  [ACTION.KILL]: { label: "kill" },
+  [ACTION.FIGHT]: { label: "fight" },
   [ACTION.SHOP]: { label: "shop" },
   [ACTION.DRINK]: { label: "drink" },
   [ACTION.OPEN]: { label: "open" },
