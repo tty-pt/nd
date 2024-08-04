@@ -261,5 +261,7 @@ struct icon object_icon(OBJ *thing);
 void observer_add(OBJ *observable, OBJ *observer);
 int observer_remove(OBJ *observable, OBJ *observer);
 unsigned art_max(char *name);
+int objects_init();
+void objects_sync();
 
 #endif

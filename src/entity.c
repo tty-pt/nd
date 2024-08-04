@@ -519,7 +519,7 @@ nd_move(OBJ *player) {
 	if (!player->sp.entity.fds)
 		return;
 
-	struct hash_cursor c = hash_iter_start(player->sp.entity.fds);
+	struct hash_cursor c = hash_iter_cstart(player->sp.entity.fds, NULL);
 	pos_t pos;
 
 	map_where(pos, player->location);
@@ -532,6 +532,7 @@ enter(OBJ *player, OBJ *loc, enum exit e)
 {
 	OBJ *old = player->location;
 
+	st_run(player, "leave");
 	if (e == E_NULL)
 		nd_rwritef(player->location, player, "%s teleports out.\n", player->name);
 	object_move(player, loc);
@@ -539,6 +540,8 @@ enter(OBJ *player, OBJ *loc, enum exit e)
 	if (e == E_NULL)
 		nd_rwritef(player->location, player, "%s teleports in.\n", player->name);
 	nd_move(player);
+	st_run(player, "enter");
+	entities_aggro(player);
 }
 
 int

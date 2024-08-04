@@ -270,6 +270,13 @@ map_close()
 		|| ipdb->close(ipdb, 0);
 }
 
+int
+map_sync()
+{
+	return pdb->sync(pdb, 0)
+		|| ipdb->sync(ipdb, 0);
+}
+
 static void
 _map_put(morton_t code, dbref thing, int flags)
 {
@@ -302,8 +309,9 @@ map_put(pos_t p, OBJ *thing, int flags)
 }
 
 morton_t
-_map_where(dbref room)
+map_mwhere(OBJ *where)
 {
+	dbref room = object_ref(where);
 	int bad;
 	DBT key;
 	DBT data;
@@ -326,13 +334,13 @@ _map_where(dbref room)
 
 int
 map_has(OBJ *room) {
-	return _map_where(object_ref(room)) != 130056652770671ULL;
+	return map_mwhere(room) != 130056652770671ULL;
 }
 
 void
 map_where(pos_t p, OBJ *room)
 {
-	morton_t x = _map_where(object_ref(room));
+	morton_t x = map_mwhere(room);
 	morton_pos(p, x);
 }
 
@@ -385,7 +393,7 @@ int
 map_delete(OBJ *what)
 {
 	DBT key;
-	morton_t code = _map_where(object_ref(what));
+	morton_t code = map_mwhere(what);
 	memset(&key, 0, sizeof(key));
 	key.data = &code;
 	key.size = sizeof(code);

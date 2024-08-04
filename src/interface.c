@@ -50,6 +50,7 @@
 #include "player.h"
 #include "debug.h"
 #include "utils.h"
+#include "spacetime.h"
 
 enum opts {
 	OPT_DETACH = 1,
@@ -58,6 +59,7 @@ enum opts {
 void do_bio(int fd, int argc, char *argv[]);
 extern void do_avatar(int fd, int argc, char *argv[]);
 extern void do_auth(int fd, int argc, char *argv[]);
+extern void do_save(int fd, int argc, char *argv[]);
 /* extern void do_gpt(int fd, int argc, char *argv[]); */
 
 void
@@ -195,6 +197,9 @@ struct cmd_slot cmds[] = {
 		.name = "say",
 		.cb = &do_say,
 	}, {
+		.name = "save",
+		.cb = &do_save,
+	}, {
 		.name = "score",
 		.cb = &do_score,
 	}, {
@@ -203,6 +208,9 @@ struct cmd_slot cmds[] = {
 	}, {
 		.name = "select",
 		.cb = &do_select,
+	}, {
+		.name = "stchown",
+		.cb = &do_stchown,
 	}, {
 		.name = "shop",
 		.cb = &do_shop,
@@ -229,8 +237,6 @@ int euid = 0;
 struct ndc_config nd_config = {
 	.flags = 0,
 };
-char std_db[BUFSIZ];
-char std_db_ok[BUFSIZ];
 
 void
 show_program_usage(char *prog)
@@ -244,33 +250,6 @@ show_program_usage(char *prog)
 	fprintf(stderr, "        -v        display this server's version.\n");
 	fprintf(stderr, "        -?        display this message.\n");
 	exit(1);
-}
-
-int
-init_game()
-{
-
-	snprintf(std_db, sizeof(std_db), "%s%s", euid ? nd_config.chroot : "", STD_DB);
-	snprintf(std_db_ok, sizeof(std_db_ok), "%s%s", euid ? nd_config.chroot : "", STD_DB_OK);
-	const char *name = std_db;
-	FILE *f;
-
-	if (access(std_db, F_OK) != 0)
-		name = std_db_ok;
-
-	f = fopen(name, "rb");
-
-	if (f == NULL) {
-                warn("No such file\n");
-                return -1;
-        }
-
-	objects_free();
-	srand(getpid());			/* init random number generator */
-
-	CBUG(!objects_read(f));
-
-	return 0;
 }
 
 int
@@ -317,17 +296,13 @@ main(int argc, char **argv)
 		nd_config.chroot = ".";
 
 	players_init();
-
-	if (init_game() < 0) {
-		warn("Couldn't load %s!\n", std_db);
-		return 2;
-	}
-
+	objects_init();
 	int ret = map_init();
 	if (ret) {
 		warn("map_init %s", db_strerror(ret));
 		exit(1);
 	}
+	st_init();
 
 	/* errno = 0; // TODO why? sanity fails to access file */
 
@@ -335,17 +310,9 @@ main(int argc, char **argv)
 	fprintf(stderr, "Done.\n");
 	ndc_main();
 
+	st_close();
 	map_close();
-
-	FILE *f = fopen(std_db, "wb");
-
-	if (f == NULL) {
-		perror("fopen");
-		return 1;
-	}
-
-	objects_write(f);
-	fclose(f);
+	objects_sync();
 	sync();
 
 	return 0;
@@ -356,7 +323,7 @@ nd_write(OBJ *player, char *str, size_t len) {
 	if (!player->sp.entity.fds)
 		return;
 
-	struct hash_cursor c = hash_iter_start(player->sp.entity.fds);
+	struct hash_cursor c = hash_iter_cstart(player->sp.entity.fds, NULL);
 
 	while (hash_iter_get(&c))
 		ndc_write(* (int *) c.key, str, len);
@@ -369,7 +336,7 @@ nd_dwritef(OBJ *player, const char *fmt, va_list args) {
 	ssize_t len = vsnprintf(buf, sizeof(buf), fmt, args);
 	if (!player->sp.entity.fds)
 		return;
-	struct hash_cursor c = hash_iter_start(player->sp.entity.fds);
+	struct hash_cursor c = hash_iter_cstart(player->sp.entity.fds, NULL);
 
 	while (hash_iter_get(&c))
 		ndc_write(* (int *) c.key, buf, len);
@@ -408,10 +375,24 @@ nd_rwritef(OBJ *room, OBJ *exception, char *format, ...)
 
 void
 nd_close(OBJ *player) {
-	struct hash_cursor c = hash_iter_start(player->sp.entity.fds);
+	struct hash_cursor c = hash_iter_cstart(player->sp.entity.fds, NULL);
 
 	while (hash_iter_get(&c))
 		ndc_close(* (int *) c.key);
+}
+
+void
+do_save(int fd, int argc, char *argv[]) {
+	OBJ *player = FD_PLAYER(fd);
+
+	if (object_ref(player) != 1) {
+		fprintf(stderr, "Only God can save\n");
+		return;
+	}
+
+	objects_sync();
+	st_sync();
+	map_sync();
 }
 
 static inline void
@@ -481,6 +462,7 @@ auth(int fd, char *qsession)
         mcp_bars(player);
 	/* enter_room(player, E_ALL); */
 	do_view(fd, 0, NULL);
+	st_run(player, "auth");
 	return player;
 }
 
@@ -550,7 +532,7 @@ void ndc_disconnect(int fd) {
 
 	FD_PLAYER(fd) = NULL;
 	int no_fds = 1;
-	struct hash_cursor c = hash_iter_start(eplayer->fds);
+	struct hash_cursor c = hash_iter_cstart(eplayer->fds, NULL);
 	while (hash_iter_get(&c)) {
 		no_fds = 0;
 		break;

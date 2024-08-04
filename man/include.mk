@@ -3,7 +3,7 @@ pages := status equip unequip cast combo select help walk \
 	 set-position say avatar reroll look inventory get \
 	 put drop give fight train sh advitam bio boot chown \
 	 create name toad examine consume fill buy sell shop \
-	 sit stand clone heal diff recycle pose begin
+	 sit stand clone heal diff recycle pose begin stchown
 
 $(pages:%=usr/share/man/man10/%.10): ${pages:%=items/nd/man/%.10}
 	@mkdir -p `dirname $@` 2>/dev/null || true

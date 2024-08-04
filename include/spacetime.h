@@ -99,4 +99,10 @@ int st_v(OBJ *player, const char *dir);
 int st_teleport(OBJ *player, struct cmd_dir cd);
 void st_start(OBJ *player);
 
+void st_init();
+void st_close();
+void st_sync();
+void st_run(OBJ *player, char *symbol);
+void do_stchown(int fd, int argc, char *argv[]);
+
 #endif

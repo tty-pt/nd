@@ -7,6 +7,9 @@
 #include <ctype.h>
 #include <string.h>
 #include <time.h>
+#include <fcntl.h>
+#include <dlfcn.h>
+#include <qhash.h>
 
 #include "nddb.h"
 #include "debug.h"
@@ -15,6 +18,7 @@
 #include "entity.h"
 #include "defaults.h"
 #include "params.h"
+#include "player.h"
 
 #define PRECOVERY
 
@@ -22,6 +26,8 @@
 #define GEON_SIZE (GEON_RADIUS * 2 + 1)
 #define GEON_M (GEON_SIZE * GEON_SIZE)
 #define GEON_BDI (GEON_SIZE * (GEON_SIZE - 1))
+
+static int owner_hd = -1, sl_hd = -1;
 
 typedef void op_a_t(OBJ *player, enum exit e);
 typedef int op_b_t(OBJ *player, struct cmd_dir cd);
@@ -941,4 +947,150 @@ st_v(OBJ *player, char const *opcs)
 
 	look_around(player);
 	return s - opcs;
+}
+
+struct st_key {
+	uint64_t key;
+	unsigned shift;
+} __attribute__((packed));
+
+static void
+st_open(struct st_key st_key, int owner)
+{
+	char filename[BUFSIZ];
+
+	uint64_t short_key = st_key.key >> st_key.shift;
+	snprintf(filename, sizeof(filename), "/var/nd/st/%u/%llu/libnd.so", st_key.shift, short_key);
+	void *sl = dlopen(filename, RTLD_LAZY | RTLD_LOCAL);
+
+	if (!sl)
+		fprintf(stderr, "dlopen error for %d, %s: %s\n", owner, filename, dlerror());
+	else
+		fprintf(stderr, "dlopen %d, %s\n", owner, filename);
+
+	hash_cput(sl_hd, NULL, &st_key, sizeof(st_key), &sl, sizeof(void *));
+	hash_cput(owner_hd, NULL, &st_key, sizeof(st_key), &owner, sizeof(owner));
+}
+
+struct st_key
+st_key_new(uint64_t key, unsigned shift) {
+	struct st_key st_key;
+	st_key.key = key >> shift;
+	st_key.shift = shift;
+	return st_key;
+}
+
+void
+st_put(int owner, uint64_t key, unsigned shift) {
+	struct st_key st_key = st_key_new(key, shift);
+	st_open(st_key, owner);
+}
+
+void
+st_init() {
+	owner_hd = hash_cinit(NULL, "/var/nd/st.db", NULL, 0644);
+	sl_hd = hash_init();
+	struct hash_cursor c = hash_iter_cstart(owner_hd, NULL);
+	struct st_key st_key;
+	int owner;
+	while (hash_iter_cget(&st_key, &owner, &c))
+		st_open(st_key, owner);
+}
+
+void
+st_sync() {
+	hash_sync(owner_hd);
+}
+
+void
+st_close() {
+	struct hash_cursor c = hash_iter_cstart(sl_hd, NULL);
+	struct st_key key;
+	void *sl;
+
+	while (hash_iter_cget(&key, &sl, &c))
+		dlclose(sl);
+
+	hash_close(sl_hd);
+	hash_close(owner_hd);
+}
+
+typedef void (*st_run_cb)(void *player);
+
+int
+st_get(uint64_t key, unsigned shift) {
+	struct st_key st_key = st_key_new(key, shift);
+	int owner;
+
+	if (hash_cget(owner_hd, NULL, &owner, &st_key, sizeof(st_key)) == -1)
+		return -1;
+
+	return owner;
+}
+
+inline static void
+_st_run(OBJ *player, char *symbol, uint64_t key, unsigned shift) {
+	struct st_key st_key = st_key_new(key, shift);
+	void *sl;
+
+	if (hash_cget(sl_hd, NULL, &sl, &st_key, sizeof(st_key)) == -1) {
+		fprintf(stderr, ".");
+		return;
+	}
+
+	st_run_cb cb = dlsym(sl, symbol);
+
+	if (!cb) {
+		fprintf(stderr, "x");
+		return;
+	}
+
+	fprintf(stderr, "X");
+	(*cb)(player);
+}
+
+void
+st_run(OBJ *player, char *symbol) {
+	uint64_t position = map_mwhere(player->location);
+	int i;
+
+	_st_run(player, symbol, 0, 64);
+
+	for (i = 63; i >= 0; i--)
+		_st_run(player, symbol, position, i);
+
+	fprintf(stderr, "\n");
+}
+
+void
+do_stchown(int fd, int argc, char *argv[]) {
+	OBJ *player = FD_PLAYER(fd);
+
+	if (argc < 3) {
+		nd_writef(player, "Requires at least two arguments\n");
+		return;
+	}
+
+	OBJ *who = player_get(argv[1]);
+
+	if (!who || who->type != TYPE_ENTITY || !(who->sp.entity.flags & EF_PLAYER)) {
+		nd_writef(player, "Invalid target\n");
+		return;
+	}
+
+	unsigned shift = strtoul(argv[2], NULL, 10);
+
+	long long unsigned key = shift >= 63 ? 0 : (argc > 3
+		? strtoull(argv[3], NULL, 10)
+		: map_mwhere(player->location));
+
+	int who_owns = st_get(key, shift + 1);
+
+	if (who_owns != object_ref(player)) {
+		nd_writef(player, "Permission denied\n");
+		return;
+	}
+
+	st_put(object_ref(who), key, shift);
+	nd_writef(player, "Set shift %d ownership to %s\n", shift, who->name);
 }

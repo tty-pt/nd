@@ -6,6 +6,7 @@
 #include <ctype.h>
 #include <string.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 #include "params.h"
 #include "defaults.h"
@@ -32,6 +33,8 @@ enum actions {
 struct object *db = 0;
 dbref db_top = 0;
 OBJ *recyclable = NULL;
+char std_db[BUFSIZ];
+char std_db_ok[BUFSIZ];
 
 #ifndef DB_INITIAL_SIZE
 #define DB_INITIAL_SIZE 10000
@@ -479,6 +482,47 @@ objects_write(FILE * f)
 
 	fflush(f);
 	return object_get(db_top);
+}
+
+int
+objects_init()
+{
+
+	snprintf(std_db, sizeof(std_db), "%s%s", euid ? nd_config.chroot : "", STD_DB);
+	snprintf(std_db_ok, sizeof(std_db_ok), "%s%s", euid ? nd_config.chroot : "", STD_DB_OK);
+	const char *name = std_db;
+	FILE *f;
+
+	if (access(std_db, F_OK) != 0)
+		name = std_db_ok;
+
+	f = fopen(name, "rb");
+
+	if (f == NULL) {
+                warn("No such file\n");
+                return -1;
+        }
+
+	objects_free();
+	srand(getpid());			/* init random number generator */
+
+	CBUG(!objects_read(f));
+
+	return 0;
+}
+
+void
+objects_sync()
+{
+	FILE *f = fopen(std_db, "wb");
+
+	if (f == NULL) {
+		perror("fopen");
+		return;
+	}
+
+	objects_write(f);
+	fclose(f);
 }
 
 #define STRING_READ(x) strdup(string_read(x))

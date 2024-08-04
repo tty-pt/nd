@@ -95,3 +95,4 @@ ss_cert.pem: ss_key.pem
 	openssl req -new -key ss_key.pem -out ss_csr.pem
 	openssl req -x509 -key ss_key.pem -in ss_csr.pem -out ss_cert.pem -days 365
 
+mod-install += items/nd/install
