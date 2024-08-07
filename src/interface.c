@@ -323,7 +323,7 @@ nd_write(OBJ *player, char *str, size_t len) {
 	if (!player->sp.entity.fds)
 		return;
 
-	struct hash_cursor c = hash_iter_cstart(player->sp.entity.fds, NULL);
+	struct hash_cursor c = hash_iter_start(player->sp.entity.fds);
 
 	while (hash_iter_get(&c))
 		ndc_write(* (int *) c.key, str, len);
@@ -336,7 +336,7 @@ nd_dwritef(OBJ *player, const char *fmt, va_list args) {
 	ssize_t len = vsnprintf(buf, sizeof(buf), fmt, args);
 	if (!player->sp.entity.fds)
 		return;
-	struct hash_cursor c = hash_iter_cstart(player->sp.entity.fds, NULL);
+	struct hash_cursor c = hash_iter_start(player->sp.entity.fds);
 
 	while (hash_iter_get(&c))
 		ndc_write(* (int *) c.key, buf, len);
@@ -375,7 +375,7 @@ nd_rwritef(OBJ *room, OBJ *exception, char *format, ...)
 
 void
 nd_close(OBJ *player) {
-	struct hash_cursor c = hash_iter_cstart(player->sp.entity.fds, NULL);
+	struct hash_cursor c = hash_iter_start(player->sp.entity.fds);
 
 	while (hash_iter_get(&c))
 		ndc_close(* (int *) c.key);
@@ -532,7 +532,7 @@ void ndc_disconnect(int fd) {
 
 	FD_PLAYER(fd) = NULL;
 	int no_fds = 1;
-	struct hash_cursor c = hash_iter_cstart(eplayer->fds, NULL);
+	struct hash_cursor c = hash_iter_start(eplayer->fds);
 	while (hash_iter_get(&c)) {
 		no_fds = 0;
 		break;

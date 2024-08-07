@@ -70,7 +70,7 @@ nd_tdwritef(OBJ *player, const char *fmt, va_list args) {
 	ssize_t len = vsnprintf(buf, sizeof(buf), fmt, args);
 	if (!player->sp.entity.fds)
 		return;
-	struct hash_cursor c = hash_iter_cstart(player->sp.entity.fds, NULL);
+	struct hash_cursor c = hash_iter_start(player->sp.entity.fds);
 	while (hash_iter_get(&c)) {
 		int fd = * (int *) c.key;
 		if (ndc_flags(fd) & DF_WEBSOCKET)
@@ -94,7 +94,7 @@ nd_wwrite(OBJ *player, void *msg, size_t len) {
 	if (!eplayer->fds)
 		return;
 
-	struct hash_cursor c = hash_iter_cstart(eplayer->fds, NULL);
+	struct hash_cursor c = hash_iter_start(eplayer->fds);
 
 	while (hash_iter_get(&c)) {
 		register int fd = * (int *) c.key;

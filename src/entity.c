@@ -519,7 +519,7 @@ nd_move(OBJ *player) {
 	if (!player->sp.entity.fds)
 		return;
 
-	struct hash_cursor c = hash_iter_cstart(player->sp.entity.fds, NULL);
+	struct hash_cursor c = hash_iter_start(player->sp.entity.fds);
 	pos_t pos;
 
 	map_where(pos, player->location);

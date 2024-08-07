@@ -968,8 +968,8 @@ st_open(struct st_key st_key, int owner)
 	else
 		fprintf(stderr, "dlopen %d, %s\n", owner, filename);
 
-	hash_cput(sl_hd, NULL, &st_key, sizeof(st_key), &sl, sizeof(void *));
-	hash_cput(owner_hd, NULL, &st_key, sizeof(st_key), &owner, sizeof(owner));
+	hash_cput(sl_hd, &st_key, sizeof(st_key), &sl, sizeof(void *));
+	hash_cput(owner_hd, &st_key, sizeof(st_key), &owner, sizeof(owner));
 }
 
 struct st_key
@@ -988,9 +988,9 @@ st_put(int owner, uint64_t key, unsigned shift) {
 
 void
 st_init() {
-	owner_hd = hash_cinit(NULL, "/var/nd/st.db", NULL, 0644);
+	owner_hd = hash_cinit("/var/nd/st.db", NULL, 0644);
 	sl_hd = hash_init();
-	struct hash_cursor c = hash_iter_cstart(owner_hd, NULL);
+	struct hash_cursor c = hash_iter_start(owner_hd);
 	struct st_key st_key;
 	int owner;
 	while (hash_iter_cget(&st_key, &owner, &c))
@@ -1004,7 +1004,7 @@ st_sync() {
 
 void
 st_close() {
-	struct hash_cursor c = hash_iter_cstart(sl_hd, NULL);
+	struct hash_cursor c = hash_iter_start(sl_hd);
 	struct st_key key;
 	void *sl;
 
@@ -1022,7 +1022,7 @@ st_get(uint64_t key, unsigned shift) {
 	struct st_key st_key = st_key_new(key, shift);
 	int owner;
 
-	if (hash_cget(owner_hd, NULL, &owner, &st_key, sizeof(st_key)) == -1)
+	if (hash_cget(owner_hd, &owner, &st_key, sizeof(st_key)) == -1)
 		return -1;
 
 	return owner;
@@ -1033,7 +1033,7 @@ _st_can(int ref, uint64_t key, unsigned shift) {
 	struct st_key st_key = st_key_new(key, shift);
 	int owner;
 
-	if (hash_cget(owner_hd, NULL, &owner, &st_key, sizeof(st_key)) == -1)
+	if (hash_cget(owner_hd, &owner, &st_key, sizeof(st_key)) == -1)
 		return 0;
 
 	return owner == ref;
@@ -1060,7 +1060,7 @@ _st_run(OBJ *player, char *symbol, uint64_t key, unsigned shift) {
 	struct st_key st_key = st_key_new(key, shift);
 	void *sl;
 
-	if (hash_cget(sl_hd, NULL, &sl, &st_key, sizeof(st_key)) == -1) {
+	if (hash_cget(sl_hd, &sl, &st_key, sizeof(st_key)) == -1) {
 		fprintf(stderr, ".");
 		return;
 	}
