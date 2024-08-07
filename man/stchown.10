@@ -2,7 +2,7 @@
 .SH NAME
 stchown \- change ownership of a spacetime area
 .SH SYNOPSIS
-\fBstchown\fI target shift [position]
+\fBstchown\fI target [shift] [position]
 .SH DESCRIPTION
 .PP
 Change the ownership of a spacetime area to \fItarget\fP.
@@ -13,6 +13,7 @@ And to set rules on what the governors below him can do in
 their own libraries.
 .PP
 shift is a number from 64 (entirety) to 0 (specific position).
+It defaults to your lowest shift minus 1.
 .PP
 Only those that own a containing area
 can set ownership of those within.

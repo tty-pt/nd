@@ -1028,6 +1028,33 @@ st_get(uint64_t key, unsigned shift) {
 	return owner;
 }
 
+inline static int
+_st_can(int ref, uint64_t key, unsigned shift) {
+	struct st_key st_key = st_key_new(key, shift);
+	int owner;
+
+	if (hash_cget(owner_hd, NULL, &owner, &st_key, sizeof(st_key)) == -1)
+		return 0;
+
+	return owner == ref;
+}
+
+static long int
+st_hish_shift(OBJ *player)
+{
+	uint64_t position = map_mwhere(player->location);
+	int ref = object_ref(player);
+
+	if (_st_can(ref, 0, 64))
+		return 64;
+
+	for (int i = 63; i >= 0; i--)
+		if (_st_can(ref, position, i))
+			return i;
+
+	return -1;
+}
+
 inline static void
 _st_run(OBJ *player, char *symbol, uint64_t key, unsigned shift) {
 	struct st_key st_key = st_key_new(key, shift);
@@ -1066,8 +1093,8 @@ void
 do_stchown(int fd, int argc, char *argv[]) {
 	OBJ *player = FD_PLAYER(fd);
 
-	if (argc < 3) {
-		nd_writef(player, "Requires at least two arguments\n");
+	if (argc < 2) {
+		nd_writef(player, "Requires at least an argument\n");
 		return;
 	}
 
@@ -1078,15 +1105,15 @@ do_stchown(int fd, int argc, char *argv[]) {
 		return;
 	}
 
-	unsigned shift = strtoul(argv[2], NULL, 10);
+	long int high_shift = st_hish_shift(player);
+
+	unsigned shift = argc < 3 ? high_shift - 1 : strtoul(argv[2], NULL, 10);
 
 	long long unsigned key = shift >= 63 ? 0 : (argc > 3
 		? strtoull(argv[3], NULL, 10)
 		: map_mwhere(player->location));
 
-	int who_owns = st_get(key, shift + 1);
-
-	if (who_owns != object_ref(player)) {
+	if (high_shift < shift) {
 		nd_writef(player, "Permission denied\n");
 		return;
 	}
