@@ -10,6 +10,8 @@
 #include <fcntl.h>
 #include <dlfcn.h>
 #include <qhash.h>
+#include <pwd.h>
+#include <sys/stat.h>
 
 #include "nddb.h"
 #include "debug.h"
@@ -19,6 +21,7 @@
 #include "defaults.h"
 #include "params.h"
 #include "player.h"
+#include "nd.h"
 
 #define PRECOVERY
 
@@ -38,6 +41,7 @@ typedef struct {
 	} op;
 	int type;
 } op_t;
+OBJ *g_player;
 
 enum exit e_map[] = {
 	[0 ... 254] = E_NULL,
@@ -954,6 +958,25 @@ struct st_key {
 	unsigned shift;
 } __attribute__((packed));
 
+void
+echo(const char *fmt, ...) {
+	va_list va;
+	va_start(va, fmt);
+	nd_dwritef(g_player, fmt, va);
+	va_end(va);
+};
+
+void
+oecho(const char *format, ...) {
+	char buf[BUFFER_LEN];
+	size_t len;
+	va_list args;
+	va_start(args, format);
+	len = vsnprintf(buf, sizeof(buf), format, args);
+	va_end(args);
+	nd_rwrite(g_player->location, g_player, buf, len);
+}
+
 static void
 st_open(struct st_key st_key, int owner)
 {
@@ -965,8 +988,11 @@ st_open(struct st_key st_key, int owner)
 
 	if (!sl)
 		fprintf(stderr, "dlopen error for %d, %s: %s\n", owner, filename, dlerror());
-	else
+	else {
 		fprintf(stderr, "dlopen %d, %s\n", owner, filename);
+		struct nd *ind = dlsym(sl, "nd");
+		*ind = nd;
+	}
 
 	hash_cput(sl_hd, &st_key, sizeof(st_key), &sl, sizeof(void *));
 	hash_cput(owner_hd, &st_key, sizeof(st_key), &owner, sizeof(owner));
@@ -982,17 +1008,28 @@ st_key_new(uint64_t key, unsigned shift) {
 
 void
 st_put(int owner, uint64_t key, unsigned shift) {
+	char buf[BUFSIZ];
 	struct st_key st_key = st_key_new(key, shift);
+	size_t len = snprintf(buf, sizeof(buf), "var/nd/st/%u/", shift);
+	mkdir(buf, 0750);
+	snprintf(buf + len, sizeof(buf) - len, "%llu", key >> shift);
+	mkdir(buf, 0750);
+	struct passwd *pw = getpwnam(object_get(owner)->name);
+	chown(buf, pw->pw_uid, pw->pw_gid);
 	st_open(st_key, owner);
 }
 
 void
 st_init() {
+	nd.echo = &echo;
+	nd.oecho = &oecho;
+
 	owner_hd = hash_cinit("/var/nd/st.db", NULL, 0644);
 	sl_hd = hash_init();
 	struct hash_cursor c = hash_iter_start(owner_hd);
 	struct st_key st_key;
 	int owner;
+
 	while (hash_iter_cget(&st_key, &owner, &c))
 		st_open(st_key, owner);
 }
@@ -1040,9 +1077,8 @@ _st_can(int ref, uint64_t key, unsigned shift) {
 }
 
 static long int
-st_hish_shift(OBJ *player)
+st_hish_shift(OBJ *player, uint64_t position)
 {
-	uint64_t position = map_mwhere(player->location);
 	int ref = object_ref(player);
 
 	if (_st_can(ref, 0, 64))
@@ -1080,6 +1116,7 @@ void
 st_run(OBJ *player, char *symbol) {
 	uint64_t position = map_mwhere(player->location);
 	int i;
+	g_player = player;
 
 	_st_run(player, symbol, 0, 64);
 
@@ -1105,13 +1142,15 @@ do_stchown(int fd, int argc, char *argv[]) {
 		return;
 	}
 
-	long int high_shift = st_hish_shift(player);
-
-	unsigned shift = argc < 3 ? high_shift - 1 : strtoul(argv[2], NULL, 10);
-
-	long long unsigned key = shift >= 63 ? 0 : (argc > 3
+	uint64_t position = argc > 2
 		? strtoull(argv[3], NULL, 10)
-		: map_mwhere(player->location));
+		: map_mwhere(player->location);
+
+	long int high_shift = st_hish_shift(player, position);
+
+	unsigned shift = argc < 3 ? high_shift : strtoul(argv[2], NULL, 10);
+
+	long long unsigned key = shift > 63 ? 0 : position;
 
 	if (high_shift < shift) {
 		nd_writef(player, "Permission denied\n");
@@ -1120,4 +1159,38 @@ do_stchown(int fd, int argc, char *argv[]) {
 
 	st_put(object_ref(who), key, shift);
 	nd_writef(player, "Set shift %d ownership to %s\n", shift, who->name);
+}
+
+void
+do_streload(int fd, int argc, char *argv[]) {
+	OBJ *player = FD_PLAYER(fd);
+
+	uint64_t position = argc > 2
+		? strtoull(argv[2], NULL, 10)
+		: map_mwhere(player->location);
+
+	long int high_shift = st_hish_shift(player, position);
+
+	unsigned shift = argc < 2 ? high_shift : strtoul(argv[1], NULL, 10);
+
+	long long unsigned key = shift > 63 ? 0 : position;
+
+	struct st_key st_key = st_key_new(key, shift);
+	int owner;
+	void *sl;
+
+	if (hash_cget(owner_hd, &owner, &st_key, sizeof(st_key)) == -1
+			|| owner != object_ref(player))
+	{
+		nd_writef(player, "Permission denied\n");
+		return;
+	}
+
+	if (hash_cget(sl_hd, &sl, &st_key, sizeof(st_key)) == -1) {
+		nd_writef(player, "Not open\n");
+		return;
+	}
+
+	dlclose(sl);
+	st_open(st_key, owner);
 }

@@ -212,6 +212,9 @@ struct cmd_slot cmds[] = {
 		.name = "stchown",
 		.cb = &do_stchown,
 	}, {
+		.name = "streload",
+		.cb = &do_streload,
+	}, {
 		.name = "shop",
 		.cb = &do_shop,
 	}, {
@@ -386,7 +389,7 @@ do_save(int fd, int argc, char *argv[]) {
 	OBJ *player = FD_PLAYER(fd);
 
 	if (object_ref(player) != 1) {
-		fprintf(stderr, "Only God can save\n");
+		nd_writef(player, "Only God can save\n");
 		return;
 	}
 

@@ -13,7 +13,7 @@ And to set rules on what the governors below him can do in
 their own libraries.
 .PP
 shift is a number from 64 (entirety) to 0 (specific position).
-It defaults to your lowest shift minus 1.
+It defaults to your highest shift minus 1.
 .PP
 Only those that own a containing area
 can set ownership of those within.

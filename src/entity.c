@@ -80,7 +80,6 @@ void
 recycle(OBJ *player, OBJ *thing)
 {
 	extern OBJ *recyclable;
-	static int depth = 0;
 	OBJ *first, *rest;
 	int looplimit;
 
@@ -88,7 +87,6 @@ recycle(OBJ *player, OBJ *thing)
 	OBJ *owner = thing->owner;
 	ENT *eowner = &owner->sp.entity;
 
-	depth++;
 	switch (thing->type) {
 	case TYPE_ROOM:
 		{
@@ -194,8 +192,6 @@ recycle(OBJ *player, OBJ *thing)
 
 
 	object_move(thing, NULL);
-
-	depth--;
 
 	object_free(thing);
 	object_clear(thing);

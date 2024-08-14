@@ -40,12 +40,12 @@
   },
   "homepage": "https://github.com/tty-pt/neverdark#readme",
   "devDependencies": {
-    "@tty-pt/scripts": "^0.6.4",
+    "@tty-pt/scripts": "^0.6.6",
     "webpack": "^5.89.0"
   },
   "dependencies": {
     "@popperjs/core": "^2.11.8",
-    "@tty-pt/ndc": "^0.3.20",
+    "@tty-pt/ndc": "^0.3.24",
     "@tty-pt/qhash": "^0.1.2",
     "@tty-pt/sub": "^2.2.40",
     "lodash": "^4.17.21",

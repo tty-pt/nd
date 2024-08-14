@@ -9,7 +9,8 @@ nods-Linux := dev/ptmx dev/pts
 nods := ${nods-${uname}}
 mounts-Linux := dev sys proc
 mounts := ${mounts-${uname}}
-mkdir-OpenBSD := dev
+mkdir- := var/nd/st
+mkdir-OpenBSD := dev ${mkdir-}
 
 items/nd/nd: FORCE
 	${MAKE} -C items/nd PWD=${PWD:%=%/items/nd}
@@ -17,7 +18,8 @@ items/nd/nd: FORCE
 -include items/nd/man/include.mk
 
 all: items/nd/nd var/nd/std.db.ok mounts dev/ nods etc/ etc/vim/vimrc.local \
-	${pages:%=usr/share/man/man10/%.10} usr/share/man/mandoc.db
+	${pages:%=usr/share/man/man10/%} usr/share/man/mandoc.db \
+	usr/include/nd.h
 
 var/nd/std.db.ok:
 	mkdir -p var/nd || true
@@ -61,7 +63,7 @@ $(ttys:%=dev/%):
 	${sudo} mknod $@ c 5 ${@:dev/ttyp%=%}
 
 ${mkdir-${uname}}:
-	mkdir $@
+	mkdir -p $@
 
 mounts: ${mounts}
 nods: ${nods}
@@ -94,5 +96,8 @@ ss_key.pem:
 ss_cert.pem: ss_key.pem
 	openssl req -new -key ss_key.pem -out ss_csr.pem
 	openssl req -x509 -key ss_key.pem -in ss_csr.pem -out ss_cert.pem -days 365
+
+usr/include/nd.h: items/nd/include/nd.h
+	cp items/nd/include/nd.h $@
 
 mod-install += items/nd/install

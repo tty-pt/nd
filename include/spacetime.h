@@ -104,5 +104,6 @@ void st_close();
 void st_sync();
 void st_run(OBJ *player, char *symbol);
 void do_stchown(int fd, int argc, char *argv[]);
+void do_streload(int fd, int argc, char *argv[]);
 
 #endif
