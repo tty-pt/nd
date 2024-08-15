@@ -29,10 +29,9 @@
 
 #include "noise.h"
 #define NOISE_IMPLEMENTATION
-#include "nd/noise.h"
+#include "noise_decl.h"
 #include <string.h>
 #include "xxhash.h"
-#include "debug.h"
 
 #define HASH XXH32
 
@@ -186,7 +185,6 @@ noise_full(size_t i, point_t s, ucoord_t obits)
 static inline noise_t
 view_idx(point_t pos)
 {
-	CBUG(chunks_r.s[Y_COORD] > pos[Y_COORD]);
 	return (pos[Y_COORD] - chunks_r.s[Y_COORD]) * chunks_r.l[X_COORD]
 		+ pos[X_COORD] - chunks_r.s[X_COORD];
 }
@@ -207,7 +205,6 @@ view_print(struct bio *to, point_t pos)
 	ucoord_t ol;
 
 	ol = chunks_r.l[WDIM];
-	CBUG(ol < CHUNK_SIZE);
 
 	for (y = 0; y < VIEW_SIZE; y++, bo += ol - VIEW_SIZE)
 		for (x = 0; x < VIEW_SIZE; x++, bd++, bo++)
@@ -276,7 +273,6 @@ noise_chunks(point_t pos)
 	bio = chunks_bio_raw;
 
 	if (n[X_COORD] > 1) {
-		CBUG(n[X_COORD] != 2);
 		spread(n[Y_COORD]);
 		bio = chunks_bio;
 	}

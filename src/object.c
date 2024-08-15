@@ -1,22 +1,22 @@
-/* $Header$ */
+#include "uapi/object.h"
 
-#include "copyright.h"
-#include "config.h"
-
-#include <ctype.h>
-#include <string.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 
-#include "params.h"
-#include "defaults.h"
+#include <qhash.h>
 
-#include "spell.h"
-#include "player.h"
-#include "debug.h"
-#include "plant.h"
-#include "noise.h"
+#include "config.h"
 #include "mcp.h"
+#include "noise.h"
+#include "params.h"
+#include "player.h"
+#include "uapi/entity.h"
+#include "uapi/io.h"
+#include "uapi/map.h"
+
+#define STD_DB "/var/nd/std.db"
+#define STD_DB_OK "/var/nd/std.db.ok"
 
 enum actions {
         ACT_LOOK = 1,
@@ -31,101 +31,25 @@ enum actions {
 };
 
 struct object *db = 0;
-dbref db_top = 0;
-OBJ *recyclable = NULL;
 char std_db[BUFSIZ];
 char std_db_ok[BUFSIZ];
 
-#ifndef DB_INITIAL_SIZE
-#define DB_INITIAL_SIZE 10000
-#endif							/* DB_INITIAL_SIZE */
+LHASH_DEF(obj, OBJ);
+LHASH_ASSOC_DEF(obs, obj, obj);
+LHASH_ASSOC_DEF(contents, obj, obj);
 
-dbref db_size = DB_INITIAL_SIZE;
-
-static inline OBJ *
-_object_parent(OBJ *obj)
-{
-	if (!obj)
-		return NULL;
-	return obj->location;
+int obj_exists(unsigned ref) {
+	return !!lhash_get(&obj_lhash, ref);
 }
 
-OBJ *
-object_parent(OBJ *obj)
+unsigned
+object_new(OBJ *newobj)
 {
-	OBJ *ptr, *oldptr;
-
-	ptr = _object_parent(obj);
-	do {
-		obj = _object_parent(obj);
-	} while (obj != (oldptr = ptr = _object_parent(ptr)) &&
-		 obj != (ptr = _object_parent(ptr)) &&
-		 obj && object_item(obj));
-	if (obj && (obj == oldptr || obj == ptr)) {
-		obj = object_get(GLOBAL_ENVIRONMENT);
-	}
-	return obj;
-}
-
-
-static void
-objects_grow(dbref newtop)
-{
-	struct object *newdb;
-
-	if (newtop > db_top) {
-		db_top = newtop;
-		if (!db) {
-			/* make the initial one */
-			db_size = DB_INITIAL_SIZE;
-			while (db_top > db_size)
-				db_size += 1000;
-			if ((db = (struct object *) malloc(db_size * sizeof(struct object))) == 0) {
-				abort();
-			}
-		}
-		/* maybe grow it */
-		if (db_top > db_size) {
-			/* make sure it's big enough */
-			while (db_top > db_size)
-				db_size += 1000;
-			if ((newdb = (struct object *) realloc((void *) db,
-												   db_size * sizeof(struct object))) == 0) {
-				abort();
-			}
-			db = newdb;
-		}
-	}
-}
-
-void
-object_clear(OBJ *o)
-{
-	memset(o, 0, sizeof(struct object));
-
-	o->name = 0;
-	o->first_observer = NULL;
-	o->contents = o->location = o->next = NULL;
-	o->owner = object_get(GOD);
-}
-
-OBJ *
-object_new(void)
-{
-	OBJ *newobj;
-
-	if (recyclable) {
-		newobj = recyclable;
-		recyclable = newobj->next;
-		object_free(newobj);
-	} else {
-		newobj = object_get(db_top);
-		objects_grow(db_top + 1);
-	}
-
-	/* clear it out */
-	object_clear(newobj);
-	return newobj;
+	memset(newobj, 0, sizeof(OBJ));
+	newobj->name = NULL;
+	newobj->location = NOTHING;
+	newobj->owner = ROOT;
+	return obj_new(newobj);
 }
 
 static inline int
@@ -171,6 +95,8 @@ coord_t biome_temp_ceil[16] = {
 	117, 117, 117, 117,
 	170, 170, 170, 170,
 };
+
+unsigned _bio_idx(coord_t tmp_f, coord_t tmp_c, ucoord_t rain_f, ucoord_t rain_c, coord_t tmp, ucoord_t rain);
 
 static inline unsigned
 biome_art_idx(struct bio *bio) {
@@ -227,11 +153,12 @@ struct core_art core_art[] = {
 	{ 14, "stick" },
 };
 
-int art_hd = -1;
+unsigned art_hd = -1;
 
 unsigned art_max(char *name) {
-	struct core_art *core_art_item = (struct core_art *) SHASH_GET(art_hd, name);
-	return core_art_item->max;
+	unsigned max;
+	hash_cget(art_hd, &max, name, strlen(name));
+	return max;
 }
 
 static inline unsigned
@@ -239,79 +166,84 @@ art_idx(OBJ *obj) {
 	return 1 + (random() % art_max(obj->name));
 }
 
-OBJ *
-object_add(SKEL *sk, OBJ *where, void *arg)
-{
-	OBJ *nu = object_new();
-	nu->name = strdup(sk->name);
-	nu->description = strdup(sk->description);
-	nu->location = where;
-	nu->owner = object_get(GOD);
-	nu->type = TYPE_THING;
-	if (where)
-		PUSH(nu, where->contents);
+void stats_init(ENT *enu, SENT *sk);
 
-	switch (sk->type) {
-	case S_TYPE_EQUIPMENT:
+unsigned
+object_add(OBJ *nu, unsigned skel_id, unsigned where_ref, void *arg)
+{
+	SKEL skel = skel_get(skel_id);
+	unsigned nu_ref = object_new(nu);
+	nu->name = strdup(skel.name);
+	nu->description = strdup(skel.description);
+	nu->location = where_ref;
+	nu->owner = ROOT;
+	nu->type = TYPE_THING;
+	if (where_ref != NOTHING)
+		contents_add(nu->location, nu_ref);
+
+	switch (skel.type) {
+	case STYPE_SPELL:
+		break;
+	case STYPE_EQUIPMENT:
 		{
 			EQU *enu = &nu->sp.equipment;
 			nu->type = TYPE_EQUIPMENT;
-			enu->eqw = sk->sp.equipment.eqw;
-			enu->msv = sk->sp.equipment.msv;
+			enu->eqw = skel.sp.equipment.eqw;
+			enu->msv = skel.sp.equipment.msv;
 			enu->rare = rarity_get();
-			CBUG(!where || where->type != TYPE_ENTITY);
-			equip(where, nu)
-				;
+			equip(where_ref, nu_ref);
 		}
 
 		break;
-	case S_TYPE_CONSUMABLE:
+	case STYPE_CONSUMABLE:
 		{
 			CON *cnu = &nu->sp.consumable;
 			nu->type = TYPE_CONSUMABLE;
-			cnu->food = sk->sp.consumable.food;
-			cnu->drink = sk->sp.consumable.drink;
+			cnu->food = skel.sp.consumable.food;
+			cnu->drink = skel.sp.consumable.drink;
 		}
 
 		break;
-	case S_TYPE_ENTITY:
+	case STYPE_ENTITY:
 		{
-			ENT *enu = &nu->sp.entity;
+			ENT ent;
+			memset(&ent, 0, sizeof(ent));
 			nu->type = TYPE_ENTITY;
-			stats_init(enu, &sk->sp.entity);
-			enu->flags = sk->sp.entity.flags;
-			enu->wtso = sk->sp.entity.wt;
-			birth(nu);
-			spells_birth(nu);
-			object_drop(nu, sk->sp.entity.drop);
-			enu->home = where;
+			stats_init(&ent, &skel.sp.entity);
+			ent.flags = skel.sp.entity.flags;
+			ent.wtso = skel.sp.entity.wt;
+			ent.sat = NOTHING;
+			ent.last_observed = NOTHING;
+			birth(&ent);
+			object_drop(nu_ref, skel_id);
+			ent.home = where_ref;
+			ent_set(nu_ref, &ent);
 			nu->art_id = art_idx(nu);
 		}
 
 		break;
-	case S_TYPE_PLANT:
+	case STYPE_PLANT:
 		{
 			noise_t v = * (noise_t *) arg;
 			nu->type = TYPE_PLANT;
-			object_drop(nu, sk->sp.plant.drop);
-			nu->owner = object_get(GOD);
+			object_drop(nu_ref, skel_id);
+			nu->owner = ROOT;
 			nu->art_id = 1 + (v & 0xf) % art_max(nu->name);
 		}
 
 		break;
-        case S_TYPE_BIOME:
+        case STYPE_BIOME:
 		{
 			struct bio *bio = arg;
 			ROO *rnu = &nu->sp.room;
 			nu->type = TYPE_ROOM;
 			rnu->exits = rnu->doors = 0;
-			rnu->dropto = NULL;
 			rnu->flags = RF_TEMP;
 			nu->art_id = biome_art_idx(bio);
 		}
 
 		break;
-	case S_TYPE_MINERAL:
+	case STYPE_MINERAL:
 		{
 			noise_t v = * (noise_t *) arg;
 			nu->type = TYPE_MINERAL;
@@ -320,7 +252,7 @@ object_add(SKEL *sk, OBJ *where, void *arg)
 
 		break;
 
-	case S_TYPE_OTHER:
+	case STYPE_OTHER:
 		if (arg) {
 			noise_t v = * (noise_t *) arg;
 			nu->art_id = 1 + (v & 0xf) % art_max(nu->name);
@@ -330,22 +262,24 @@ object_add(SKEL *sk, OBJ *where, void *arg)
 		break;
 	}
 
-	if (sk->type != S_TYPE_BIOME)
-		mcp_content_in(where, nu);
+	obj_set(nu_ref, nu);
+	if (skel.type != STYPE_BIOME)
+		mcp_content_in(where_ref, nu_ref);
 
-	return nu;
+	return nu_ref;
 }
 
 char *
-object_art(OBJ *thing)
+object_art(unsigned thing_ref)
 {
+	OBJ thing = obj_get(thing_ref);
 	static char art[BUFSIZ];
 	char *type = NULL;
 
-	switch (thing->type) {
+	switch (thing.type) {
 	case TYPE_ENTITY:
 		type = "entity";
-		snprintf(art, sizeof(art), "%s/%s/%u.jpeg", type, thing->art_id && thing->sp.entity.flags & EF_PLAYER ? "avatar" : thing->name, thing->art_id);
+		snprintf(art, sizeof(art), "%s/%s/%u.jpeg", type, thing.art_id && ent_get(thing_ref).flags & EF_PLAYER ? "avatar" : thing.name, thing.art_id);
 		return art;
 	case TYPE_ROOM: type = "biome"; break;
 	case TYPE_PLANT: type = "plant"; break;
@@ -353,14 +287,14 @@ object_art(OBJ *thing)
 	default: type = "other"; break;
 	}
 
-	snprintf(art, sizeof(art), "%s/%s/%u.jpeg", type, thing->name, thing->art_id);
+	snprintf(art, sizeof(art), "%s/%s/%u.jpeg", type, thing.name, thing.art_id);
 	return art;
 }
 
 void
-putref(FILE * f, dbref ref)
+putref(FILE * f, unsigned ref)
 {
-	if (fprintf(f, "%d\n", ref) < 0) {
+	if (fprintf(f, "%u\n", ref) < 0) {
 		abort();
 	}
 }
@@ -379,39 +313,40 @@ putstring(FILE * f, const char *s)
 }
 
 static void
-object_write(FILE * f, OBJ *obj)
+object_write(FILE * f, unsigned ref)
 {
 	int j;
-	putstring(f, obj->name);
-	putref(f, object_ref(obj->location));
-	putref(f, object_ref(obj->contents));
-	putref(f, object_ref(obj->next));
-	putref(f, obj->value);
-	putref(f, obj->type);
-	putref(f, obj->flags);
-	putref(f, obj->art_id);
+	OBJ obj = obj_get(ref);
+	putstring(f, obj.name);
+	putref(f, obj.location);
+	putref(f, NOTHING);
+	putref(f, NOTHING);
+	putref(f, obj.value);
+	putref(f, obj.type);
+	putref(f, obj.flags);
+	putref(f, obj.art_id);
 
-	switch (obj->type) {
+	switch (obj.type) {
 	case TYPE_ENTITY:
 		{
-			ENT *ent = &obj->sp.entity;
-			putref(f, object_ref(ent->home));
-			putref(f, ent->flags);
-			putref(f, ent->lvl);
-			putref(f, ent->cxp);
-			putref(f, ent->spend);
+			ENT ent = ent_get(ref);
+			putref(f, ent.home);
+			putref(f, ent.flags);
+			putref(f, ent.lvl);
+			putref(f, ent.cxp);
+			putref(f, ent.spend);
 			for (j = 0; j < ATTR_MAX; j++)
-				putref(f, ent->attr[j]);
-			putref(f, ent->wtso);
-			putref(f, object_ref(ent->sat));
+				putref(f, ent.attr[j]);
+			putref(f, ent.wtso);
+			putref(f, ent.sat);
 			for (j = 0; j < 8; j++)
-				putref(f, ent->spells[j]._sp - spell_skeleton_map);
+				putref(f, ent.spells[j].skel);
 		}
 		break;
 
 	case TYPE_PLANT:
 		{
-			PLA *pla = &obj->sp.plant;
+			PLA *pla = &obj.sp.plant;
 			putref(f, pla->plid);
 			putref(f, pla->size);
 		}
@@ -419,7 +354,7 @@ object_write(FILE * f, OBJ *obj)
 
 	case TYPE_SEAT:
 		{
-			SEA *sea = &obj->sp.seat;
+			SEA *sea = &obj.sp.seat;
 			putref(f, sea->quantity);
 			putref(f, sea->capacity);
 		}
@@ -427,31 +362,31 @@ object_write(FILE * f, OBJ *obj)
 
 	case TYPE_CONSUMABLE:
 		{
-			CON *con = &obj->sp.consumable;
+			CON *con = &obj.sp.consumable;
 			putref(f, con->food);
 			putref(f, con->drink);
 		}
 		break;
 	case TYPE_EQUIPMENT:
 		{
-			EQU *equ = &obj->sp.equipment;
+			EQU *equ = &obj.sp.equipment;
 			putref(f, equ->eqw);
 			putref(f, equ->msv);
 		}
 		break;
 	case TYPE_THING:
-		putref(f, object_ref(obj->owner));
+		putref(f, obj.owner);
 		break;
 
 	case TYPE_ROOM:
 		{
-			ROO *roo = &obj->sp.room;
-			putref(f, object_ref(roo->dropto));
+			ROO *roo = &obj.sp.room;
+			putref(f, NOTHING);
 			putref(f, roo->flags);
 			putref(f, roo->exits);
 			putref(f, roo->doors);
 			putref(f, roo->floor);
-			putref(f, object_ref(obj->owner));
+			putref(f, obj.owner);
 		}
 		break;
 	}
@@ -460,33 +395,26 @@ object_write(FILE * f, OBJ *obj)
 static inline void
 db_write_list(FILE * f)
 {
-	OBJ *obj;
+	unsigned ref;
 
-	FOR_ALL(obj) {
-		if (fprintf(f, "#%d\n", object_ref(obj)) < 0)
+	struct hash_cursor c = obj_iter();
+	OBJ oi;
+	while ((ref = obj_next(&oi, &c)) != NOTHING) {
+		if (fprintf(f, "#%u\n", ref) < 0)
 			abort();
-		object_write(f, obj);
+		object_write(f, ref);
 	}
 }
 
-
-OBJ *
-objects_write(FILE * f)
-{
-	putref(f, db_top);
-
-	db_write_list(f);
-
-	fseek(f, 0L, 2);
-	putstring(f, "***END OF DUMP***");
-
-	fflush(f);
-	return object_get(db_top);
-}
+static unsigned objects_read(FILE *f);
 
 int
 objects_init()
 {
+	obj_lhash = lhash_init();
+	contents_ahd = hash_cinit(NULL, NULL, 0644, QH_DUP);
+	obs_ahd = hash_cinit(NULL, NULL, 0644, QH_DUP);
+	art_hd = hash_init();
 
 	snprintf(std_db, sizeof(std_db), "%s%s", euid ? nd_config.chroot : "", STD_DB);
 	snprintf(std_db_ok, sizeof(std_db_ok), "%s%s", euid ? nd_config.chroot : "", STD_DB_OK);
@@ -498,15 +426,17 @@ objects_init()
 
 	f = fopen(name, "rb");
 
-	if (f == NULL) {
-                warn("No such file\n");
+	if (f == NULL)
                 return -1;
-        }
 
-	objects_free();
 	srand(getpid());			/* init random number generator */
 
-	CBUG(!objects_read(f));
+	objects_read(f);
+	unsigned ref;
+	struct hash_cursor c = obj_iter();
+	OBJ oi;
+	while ((ref = obj_next(&oi, &c)) != NOTHING)
+		contents_add(oi.location, ref);
 
 	return 0;
 }
@@ -521,78 +451,24 @@ objects_sync()
 		return;
 	}
 
-	objects_write(f);
+	putref(f, 3);
+
+	db_write_list(f);
+
+	fseek(f, 0L, 2);
+	putstring(f, "***END OF DUMP***");
+
+	fflush(f);
 	fclose(f);
 }
 
 #define STRING_READ(x) strdup(string_read(x))
 
-void
-object_free(OBJ *o)
-{
-	if (o->name)
-		free((void *) o->name);
-
-	if (o->description)
-		free((void *) o->description);
-
-	if (o->type != TYPE_ROOM) {
-		struct observer_node *obs, *aux;
-		for (obs = o->first_observer; obs; obs = aux) {
-			aux = obs->next;
-			free(obs);
-		}
-	}
-}
-
-void
-observer_add(OBJ *observable, OBJ *observer) {
-	struct observer_node *node = (struct observer_node *)
-		malloc(sizeof(struct observer_node));
-	node->next = observable->first_observer;
-	node->who = observer;
-	observable->first_observer = node;
-}
-
-int
-observer_remove(OBJ *observable, OBJ *observer) {
-	struct observer_node *cur, *prev = NULL;
-
-	for (cur = observable->first_observer; cur; ) {
-		if (cur->who == observer) {
-			if (prev) {
-				prev->next = cur->next;
-				free(cur);
-				return 0;
-			}
-		}
-		prev = cur;
-		cur = cur->next;
-	}
-
-	return 1;
-}
-
-void
-objects_free(void)
-{
-	OBJ *obj;
-
-	if (db) {
-		FOR_ALL(obj)
-			object_free(obj);
-		free((void *) db);
-		db = 0;
-		db_top = 0;
-	}
-	recyclable = NULL;
-}
-
-dbref
+unsigned
 ref_read(FILE * f)
 {
 	char buf[BUFSIZ];
-	CBUG(!fgets(buf, sizeof(buf), f));
+	fgets(buf, sizeof(buf), f);
 	return (atol(buf));
 }
 
@@ -626,132 +502,112 @@ string_read(FILE * f)
 static void
 object_read(FILE * f)
 {
-	dbref ref = ref_read(f);
-	OBJ *o = object_get(ref);
+	OBJ o;
+	memset(&o, 0, sizeof(struct object));
+	unsigned ref = obj_new(&o);
 	int j = 0;
 
-	object_clear(o);
+	ref_read(f);
 
-	/* make space */
-	objects_grow(ref + 1);
+	o.owner = ROOT;
+	o.name = STRING_READ(f);
+	o.location = ref_read(f);
+	ref_read(f);
+	ref_read(f);
+	o.value = ref_read(f);
+	o.type = ref_read(f);
+	o.flags = ref_read(f);
+	o.art_id = ref_read(f);
 
-	o->name = STRING_READ(f);
-	o->location = object_get(ref_read(f));
-	o->contents = object_get(ref_read(f));
-	o->next = object_get(ref_read(f));
-	o->value = ref_read(f);
-	o->type = ref_read(f);
-	o->flags = ref_read(f);
-	o->art_id = ref_read(f);
-	/* warn("db_read_object_foxen %d %s location %d contents %d next %d type %d\n", ref, o->name, */
-	/* 		object_ref(o->location), */
-	/* 		object_ref(o->contents), */
-	/* 		object_ref(o->next), */
-	/* 		o->type); */
-
-	switch (o->type) {
+	switch (o.type) {
 	case TYPE_PLANT:
 		{
-			PLA *po = &o->sp.plant;
+			PLA *po = &o.sp.plant;
 			po->plid = ref_read(f);
 			po->size = ref_read(f);
 		}
-		return;
+		break;
 	case TYPE_SEAT:
 		{
-			SEA *ps = &o->sp.seat;
+			SEA *ps = &o.sp.seat;
 			ps->quantity = ref_read(f);
 			ps->capacity = ref_read(f);
 		}
-		return;
+		break;
 	case TYPE_CONSUMABLE:
 		{
-			CON *co = &o->sp.consumable;
+			CON *co = &o.sp.consumable;
 			co->food = ref_read(f);
 			co->drink = ref_read(f);
 		}
-		return;
+		break;
 	case TYPE_EQUIPMENT:
 		{
-			EQU *eo = &o->sp.equipment;
+			EQU *eo = &o.sp.equipment;
 			eo->eqw = ref_read(f);
 			eo->msv = ref_read(f);
 		}
-		return;
+		break;
 	case TYPE_THING:
-		o->owner = object_get(ref_read(f));
-		return;
+		o.owner = ref_read(f);
+		break;
 	case TYPE_ROOM:
 		{
-			ROO *ro = &o->sp.room;
-			ro->dropto = object_get(ref_read(f));
+			ROO *ro = &o.sp.room;
+			ref_read(f);
 			ro->flags = ref_read(f);
 			ro->exits = ref_read(f);
 			ro->doors = ref_read(f);
 			ro->floor = ref_read(f);
-			o->owner = object_get(ref_read(f));
-		}
-		return;
-	case TYPE_ENTITY:
-		{
-			ENT *eo = &o->sp.entity;
-			eo->home = object_get(ref_read(f));
-			/* warn("entity home\n"); */
-			eo->last_observed = NULL;
-			eo->gpt = NULL;
-			eo->flags = ref_read(f);
-			fprintf(stderr, "READ ENT %s %d\n", o->name, eo->flags);
-			eo->lvl = ref_read(f);
-			eo->cxp = ref_read(f);
-			eo->spend = ref_read(f);
-			for (j = 0; j < ATTR_MAX; j++)
-				eo->attr[j] = ref_read(f);
-			eo->wtso = ref_read(f);
-			eo->sat = object_get(ref_read(f));
-			for (j = 0; j < 8; j++) {
-				struct spell *sp = &eo->spells[j];
-				int ref = ref_read(f);
-				struct spell_skeleton *_sp = SPELL_SKELETON(ref);
-				/* warn("entity! flags %d ref %d sp %p\n", eo->flags, ref); */
-				sp->_sp = _sp;
-				sp->val = SPELL_DMG(eo, _sp);
-				sp->cost = SPELL_COST(sp->val, _sp->y, _sp->flags & AF_BUF);
-			}
-			/* warn("entity! flags %d ref %d\n", eo->flags, ref_read(f)); */
-			o->owner = o;
-			if (eo->flags & EF_PLAYER) {
-				player_put(o);
-				eo->fds = 0;
-			}
-			birth(o);
-			/* warn("ENTITY\n"); */
+			o.owner = ref_read(f);
 		}
 		break;
-	case TYPE_GARBAGE:
-		return;
+	case TYPE_ENTITY:
+		{
+			ENT ent;
+			memset(&ent, 0, sizeof(ent));
+			ent.home = ref_read(f);
+			ent_reset(&ent);
+			ent.flags = ref_read(f);
+			ent.lvl = ref_read(f);
+			ent.cxp = ref_read(f);
+			ent.spend = ref_read(f);
+			for (j = 0; j < ATTR_MAX; j++)
+				ent.attr[j] = ref_read(f);
+			ent.wtso = ref_read(f);
+			ent.sat = ref_read(f);
+			for (j = 0; j < 8; j++) {
+				struct spell *sp = &ent.spells[j];
+				sp->skel = ref_read(f);
+			}
+			o.owner = ref;
+			birth(&ent);
+			if (ent.flags & EF_PLAYER)
+				player_put(o.name, ref);
+			ent_set(ref, &ent);
+		}
 	}
+
+	obj_set(ref, &o);
 }
 
-OBJ *
+static unsigned
 objects_read(FILE * f)
 {
-	int i;
-	dbref grow;
 	const char *special;
 	char c;
 
-	art_hd = hash_init();
-
 	int hash_i = 0;
-	for (; hash_i < sizeof(core_art) / sizeof(struct core_art); hash_i++)
-		SHASH_PUT(art_hd, core_art[hash_i].name, &core_art[hash_i]);
+	for (; hash_i < sizeof(core_art) / sizeof(struct core_art); hash_i++) {
+		struct core_art *art = &core_art[hash_i];
+		hash_cput(art_hd, art->name, strlen(art->name), &art->max, sizeof(art->max));
+	}
 
 	/* Parse the header */
-	grow = ref_read(f);
-	objects_grow( grow );
+	ref_read(f);
 
 	c = getc(f);			/* get next char */
-	for (i = 0;; i++) {
+	for (;;) {
 		switch (c) {
 		case NUMBER_TOKEN:
 			/* another entry, yawn */
@@ -761,215 +617,134 @@ objects_read(FILE * f)
 		case '*':
 			special = STRING_READ(f);
 			if (strcmp(special, "**END OF DUMP***")) {
-				warn("found end of dump\n");
 				free((void *) special);
-				return NULL;
+				return NOTHING;
 			} else {
 				free((void *) special);
 				special = STRING_READ(f);
 				if (special)
 					free((void *) special);
-				for (i = 0; i < db_top; i++) {
-					OBJ *o = object_get(i);
-					if (o->type == TYPE_GARBAGE) {
-						o->next = recyclable;
-						recyclable = o;
-					}
-				}
-				return object_get(db_top);
+				return 1;
 			}
 			break;
 		default:
-			warn("default '%c'\n", c);
-			return NULL;
+			return NOTHING;
 			/* break; */
 		}
 		c = getc(f);
 	}							/* for */
 }								/* db_read */
 
-OBJ *
-object_copy(OBJ *player, OBJ *old)
+unsigned
+object_copy(OBJ *nu, unsigned old_ref)
 {
-	OBJ *nu = object_new();
-	nu->name = strdup(old->name);
-	nu->contents = nu->next = nu->location = NULL;
-	nu->owner = old->owner;
-        return nu;
+	OBJ old = obj_get(old_ref);
+	unsigned ref = object_new(nu);
+	nu->name = strdup(old.name);
+	nu->location = NOTHING;
+	nu->owner = old.owner;
+        return ref;
 }
 
-static inline void
-object_update(OBJ *what, double dt) {
-	if (what->type == TYPE_ENTITY)
-		entity_update(what, dt);
-}
+void entity_update(unsigned player_ref, double dt);
 
 void
 objects_update(double dt)
 {
-	dbref i;
-	for (i = db_top; i-- > 0;)
-		object_update(object_get(i), dt);
-}
-
-static inline int
-object_llc(OBJ *source, OBJ *dest)
-{
-	unsigned int level = 0;
-	unsigned int place = 0;
-	OBJ *pstack[MAX_PARENT_DEPTH+2];
-
-	if (source == dest) {
-		return 1;
-	}
-
-	if (!dest)
-		return 0;
-
-	pstack[0] = source;
-	pstack[1] = dest;
-
-	while (level < MAX_PARENT_DEPTH) {
-		dest = dest->location;
-		if (!dest || object_ref(dest) == (dbref) 0) {   /* Reached the top of the chain. */
-			return 0;
-		}
-		/* Check to see if we've found this item before.. */
-		for (place = 0; place < (level+2); place++) {
-			if (pstack[place] == dest) {
-				return 1;
-			}
-		}
-		pstack[level+2] = dest;
-		level++;
-	}
-	return 1;
-}
-
-int
-object_plc(OBJ *source, OBJ *dest)
-{   
-	unsigned int level = 0;
-	unsigned int place = 0;
-	OBJ *pstack[MAX_PARENT_DEPTH+2];
-
-	if (object_llc(source, dest)) {
-		return 1;
-	}
-
-	if (source == dest) {
-		return 1;
-	}
-	pstack[0] = source;
-	pstack[1] = dest;
-
-	while (level < MAX_PARENT_DEPTH) {
-		dest = object_parent(dest);
-		if (!dest)
-			return 0;
-		if (object_ref(dest) == (dbref) 0) {   /* Reached the top of the chain. */
-			return 0;
-		}
-		/* Check to see if we've found this item before.. */
-		for (place = 0; place < (level+2); place++) {
-			if (pstack[place] == dest) {
-				return 1;
-			}
-		}
-		pstack[level+2] = dest;
-		level++;
-	}
-	return 1;
-}
-
-/* remove the first occurence of what in list headed by first */
-static inline OBJ *
-remove_first(OBJ *first, OBJ *what)
-{
-	OBJ *prev;
-
-	/* special case if it's the first one */
-	if (first == what) {
-		return first->next;
-	} else {
-		/* have to find it */
-		FOR_LIST(prev, first) {
-			if (prev->next == what) {
-				prev->next = what->next;
-				return first;
-			}
-		}
-		return first;
-	}
+	OBJ obj;
+	unsigned obj_ref;
+	struct hash_cursor c = obj_iter();
+	while ((obj_ref = obj_next(&obj, &c)) != NOTHING)
+		if (!obj.name)
+			continue;
+		else if (obj.type == TYPE_ENTITY)
+			entity_update(obj_ref, dt);
 }
 
 void
-object_move(OBJ *what, OBJ *where)
+object_move(unsigned what_ref, unsigned where_ref)
 {
-	OBJ *loc;
+	OBJ what = obj_get(what_ref);
 
-	/* do NOT move garbage */
-	CBUG(!what);
-	CBUG(what->type == TYPE_GARBAGE);
-
-	loc = what->location;
-
-        if (loc) {
-                mcp_content_out(loc, what);
-		loc->contents = remove_first(loc->contents, what);
+        if (what.location != NOTHING) {
+                mcp_content_out(what.location, what_ref);
+		contents_remove(what.location, what_ref);
         }
 
+	struct hash_cursor c = obs_iter(what_ref);
+	unsigned first_ref;
+	while ((first_ref = obs_next(&c)) != NOTHING) {
+		ENT efirst = ent_get(first_ref);
+		efirst.last_observed = what.location;
+		obs_remove(what_ref, first_ref);
+		ent_set(first_ref, &efirst);
+	}
+
 	/* test for special cases */
-	if (!where) {
-		what->location = NULL;
+	if (where_ref == NOTHING) {
+		unsigned first_ref;
+
+		struct hash_cursor c = contents_iter(what_ref);
+		while ((first_ref = contents_next(&c)) != NOTHING)
+			object_move(first_ref, NOTHING);
+
+		switch (what.type) {
+		case TYPE_ENTITY:
+			ent_del(what_ref);
+			break;
+		case TYPE_ROOM:
+			map_delete(what_ref);
+		}
+		if (what.name)
+			free((void *) what.name);
+		if (what.description)
+			free((void *) what.description);
+		lhash_del(&obj_lhash, what_ref);
 		return;
 	}
 
-	if (object_plc(what, where)) {
-		if (what->type == TYPE_ENTITY) {
-			where = what->sp.entity.home;
-			ENT *ewhat = &what->sp.entity;
-			if ((ewhat->flags & EF_SITTING))
-				stand(what);
+	what.location = where_ref;
+	obj_set(what_ref, &what);
+
+	if (what.type == TYPE_ENTITY) {
+		ENT ewhat = ent_get(what_ref);
+		if (ewhat.last_observed != NOTHING)
+			obs_remove(ewhat.last_observed, what_ref);
+		if ((ewhat.flags & EF_SITTING)) {
+			stand(what_ref, &ewhat);
+			ent_set(what_ref, &ewhat);
 		}
-		else
-			where = object_get(GLOBAL_ENVIRONMENT);
 	}
 
-	/* now put what in where */
-	PUSH(what, where->contents);
-	what->location = where;
-	mcp_content_in(where, what);
+	contents_add(where_ref, what_ref);
+	mcp_content_in(where_ref, what_ref);
 }
 
 struct icon
-object_icon(OBJ *what)
+object_icon(unsigned what_ref)
 {
+	OBJ what = obj_get(what_ref);
         static char buf[BUFSIZ];
         struct icon ret = {
                 .actions = ACT_LOOK,
                 .icon = ANSI_RESET ANSI_BOLD "?",
         };
-        dbref aux;
-        switch (what->type) {
+        unsigned aux;
+        switch (what.type) {
         case TYPE_ROOM:
                 ret.icon = ANSI_FG_YELLOW "-";
                 break;
         case TYPE_ENTITY:
-		{
-			ENT *ewhat = &what->sp.entity;
-
-			ret.actions |= ACT_KILL;
-			ret.icon = ANSI_BOLD ANSI_FG_YELLOW "!";
-			if (ewhat->flags & EF_SHOP) {
-				ret.actions |= ACT_SHOP;
-				ret.icon = ANSI_BOLD ANSI_FG_GREEN "$";
-			}
+		ret.actions |= ACT_KILL;
+		ret.icon = ANSI_BOLD ANSI_FG_YELLOW "!";
+		if (ent_get(what_ref).flags & EF_SHOP) {
+			ret.actions |= ACT_SHOP;
+			ret.icon = ANSI_BOLD ANSI_FG_GREEN "$";
 		}
                 break;
 	case TYPE_CONSUMABLE:
 		{
-			CON *cwhat = &what->sp.consumable;
+			CON *cwhat = &what.sp.consumable;
 			if (cwhat->drink) {
 				ret.actions |= ACT_FILL;
 				ret.icon = ANSI_BOLD ANSI_FG_BLUE "~";
@@ -981,10 +756,10 @@ object_icon(OBJ *what)
 		break;
 	case TYPE_PLANT:
 		{
-			PLA *pwhat = &what->sp.plant;
+			PLA *pwhat = &what.sp.plant;
 			aux = pwhat->plid;
-			struct object_skeleton *obj_skel = PLANT_SKELETON(aux);
-			struct plant_skeleton *pl = &obj_skel->sp.plant;
+			SKEL skel = skel_get(aux);
+			SPLA *pl = &skel.sp.plant;
 
 			ret.actions |= ACT_CHOP;
 			snprintf(buf, sizeof(buf), "%s%c%s", pl->pre,
@@ -1000,19 +775,4 @@ object_icon(OBJ *what)
                 break;
         }
         return ret;
-}
-
-OBJ *
-object_get(register dbref ref)
-{
-	return ref == NOTHING ? NULL : &db[ref];
-}
-
-dbref
-object_ref(register OBJ *obj)
-{
-	if (obj)
-		return (dbref) (obj - db);
-	else
-		return NOTHING;
 }

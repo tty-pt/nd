@@ -1,45 +1,59 @@
-#include <stdlib.h>
-#include "io.h"
-#include <ndc.h>
+#include "uapi/io.h"
 
-#include "entity.h"
-#include "mob.h"
-#include "match.h"
+#include <stdlib.h>
+
+#include "uapi/entity.h"
+#include "uapi/match.h"
+
+#define BODYPART_ID(_c) ch_bodypart_map[(int) _c]
+
+enum bodypart ch_bodypart_map[] = {
+	[0 ... 254] = 0,
+	['h'] = BP_HEAD,
+	['n'] = BP_NECK,
+	['c'] = BP_CHEST,
+	['b'] = BP_BACK,
+	['w'] = BP_WEAPON,
+	['l'] = BP_LFINGER,
+	['r'] = BP_RFINGER,
+	['g'] = BP_LEGS,
+};
 
 void
 do_select(int fd, int argc, char *argv[])
 {
-	OBJ *player = FD_PLAYER(fd);
-	ENT *eplayer = &player->sp.entity;
+	unsigned player_ref = fd_player(fd);
 	const char *n_s = argv[1];
 	unsigned n = strtoul(n_s, NULL, 0);
-	eplayer->select = n;
-	nd_writef(player, "You select %u.\n", n);
+	ENT eplayer = ent_get(player_ref);
+	eplayer.select = n;
+	ent_set(player_ref, &eplayer);
+	nd_writef(player_ref, "You select %u.\n", n);
 }
 
 void
 do_equip(int fd, int argc, char *argv[])
 {
-	OBJ *player = FD_PLAYER(fd);
+	unsigned player_ref = fd_player(fd);
 	char *name = argv[1];
-	OBJ *eq = ematch_mine(player, name);
+	unsigned eq_ref = ematch_mine(player_ref, name);
 
-	if (!eq)
-		nd_writef(player, "You are not carrying that.\n");
-	else if (equip(player, eq)) 
-		nd_writef(player, "You can't equip that.\n");
+	if (eq_ref == NOTHING)
+		nd_writef(player_ref, "You are not carrying that.\n");
+	else if (equip(player_ref, eq_ref)) 
+		nd_writef(player_ref, "You can't equip that.\n");
 }
 
 void
 do_unequip(int fd, int argc, char *argv[])
 {
-	OBJ *player = FD_PLAYER(fd);
+	unsigned player_ref = fd_player(fd);
 	char const *name = argv[1];
 	enum bodypart bp = BODYPART_ID(*name);
-	dbref eq;
+	unsigned eq_ref;
 
-	if ((eq = unequip(player, bp)) == NOTHING)
-		nd_writef(player, "You don't have that equipped.\n");
+	if ((eq_ref = unequip(player_ref, bp)) == NOTHING)
+		nd_writef(player_ref, "You don't have that equipped.\n");
 	else
-		nd_writef(player, "You unequip %s.\n", object_get(eq)->name);
+		nd_writef(player_ref, "You unequip %s.\n", obj_get(eq_ref).name);
 }

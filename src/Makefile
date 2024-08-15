@@ -18,11 +18,11 @@ ldflags-Darwin += -L/usr/local/opt/berkeley-db@4/lib
 LDFLAGS	:= -L/usr/local/lib ${ldflags-${uname}} ${npm-lib:%=-L%} ${npm-lib:%=-Wl,-rpath,%}
 
 exe := ../nd
-obj-y := object.o entity.o spacetime.o mcp.o map.o \
+obj-y := skel.o object.o entity.o spacetime.o mcp.o map.o \
 	plant.o biome.o noise.o view.o item.o spell.o drink.o \
 	mob.o kill.o shop.o create.o look.o match.o \
-	move.o player.o utils.o rob.o set.o speech.o wiz.o \
-	copyright.o interface.o
+	move.o utils.o rob.o set.o speech.o wiz.o \
+	interface.o wts.o
 
 src = ${obj-y:%.o=%.c}
 LD := ${CC}
