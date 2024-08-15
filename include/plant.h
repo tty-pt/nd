@@ -30,6 +30,6 @@ plants_shuffle(struct plant_data *,
 		morton_t v);
 
 void
-plants_add(OBJ *where, void *bio, pos_t pos);
+plants_add(dbref where_ref, void *bio, pos_t pos);
 
 #endif

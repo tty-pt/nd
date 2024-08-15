@@ -9,58 +9,63 @@
 void
 do_give(int fd, int argc, char *argv[])
 {
-	OBJ *player = FD_PLAYER(fd);
-	ENT *eplayer = &player->sp.entity;
+	dbref player_ref = FD_PLAYER(fd), who_ref;
+	int wizard = ent_get(player_ref).flags & EF_WIZARD;
 	char *recipient = argv[1];
 	int amount = atoi(argv[2]);
-	OBJ *who;
 
-	if (amount < 0 && !(eplayer->flags & EF_WIZARD)) {
-		nd_writef(player, "Invalid amount.\n");
+	if (amount < 0 && !wizard) {
+		nd_writef(player_ref, "Invalid amount.\n");
 		return;
 	}
 
 	if (
-			!(who = ematch_me(player, recipient))
-			&& !(who = ematch_near(player, recipient))
+			(who_ref = ematch_me(player_ref, recipient)) == NOTHING
+			&& (who_ref = ematch_near(player_ref, recipient)) == NOTHING
 	   )
 	{
-		nd_writef(player, NOMATCH_MESSAGE);
+		nd_writef(player_ref, NOMATCH_MESSAGE);
 		return;
 	}
 
-	if (!(eplayer->flags & EF_WIZARD)) {
-		if (who->type != TYPE_ENTITY) {
-			nd_writef(player, "You can only give to other entities.\n");
+	OBJ who = obj_get(who_ref);
+
+	if (!wizard) {
+		if (who.type != TYPE_ENTITY) {
+			nd_writef(player_ref, "You can only give to other entities.\n");
 			return;
-		} else if (who->value + amount > MAX_PENNIES) {
-			nd_writef(player, "That player doesn't need that many %s!\n", PENNIES);
+		} else if (who.value + amount > MAX_PENNIES) {
+			nd_writef(player_ref, "That player doesn't need that many %s!\n", PENNIES);
 			return;
 		}
 	}
 
-	if (!payfor(player, amount)) {
-		nd_writef(player, "You don't have that many %s to give!\n", PENNIES);
+	OBJ player = obj_get(player_ref);
+
+	if (!payfor(player_ref, &player, amount)) {
+		nd_writef(player_ref, "You don't have that many %s to give!\n", PENNIES);
 		return;
 	}
 
-	if (who->type != TYPE_ENTITY) {
-		nd_writef(player, "You can't give %s to that!\n", PENNIES);
+	obj_set(player_ref, &player);
+	if (who.type != TYPE_ENTITY) {
+		nd_writef(player_ref, "You can't give %s to that!\n", PENNIES);
 		return;
 	}
 
-	who->value += amount;
+	who.value += amount;
+	obj_set(who_ref, &who);
 
 	if (amount >= 0) {
-		nd_writef(player, "You give %d %s to %s.\n",
-				amount, amount == 1 ? PENNY : PENNIES, who->name);
+		nd_writef(player_ref, "You give %d %s to %s.\n",
+				amount, amount == 1 ? PENNY : PENNIES, who.name);
 
-		nd_writef(who, "%s gives you %d %s.\n",
-				player->name, amount, amount == 1 ? PENNY : PENNIES);
+		nd_writef(who_ref, "%s gives you %d %s.\n",
+				player.name, amount, amount == 1 ? PENNY : PENNIES);
 	} else {
-		nd_writef(player, "You take %d %s from %s.\n",
-				-amount, amount == -1 ? PENNY : PENNIES, who->name);
-		nd_writef(who, "%s takes %d %s from you!\n",
-				player->name, -amount, -amount == 1 ? PENNY : PENNIES);
+		nd_writef(player_ref, "You take %d %s from %s.\n",
+				-amount, amount == -1 ? PENNY : PENNIES, who.name);
+		nd_writef(who_ref, "%s takes %d %s from you!\n",
+				player.name, -amount, -amount == 1 ? PENNY : PENNIES);
 	}
 }

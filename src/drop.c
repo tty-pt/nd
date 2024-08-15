@@ -1,3 +1,5 @@
+#include "uapi/wts.h"
+
 #define ARMORSET(s, _type, min_stat, y) \
 	struct object_skeleton s ## _helmet = { \
 		.name = #s " armor helmet", \

@@ -40,10 +40,10 @@ extern struct spell_skeleton spell_skeleton_map[];
 
 void debuf_end(ENT *player, unsigned i);
 void debufs_end(ENT *player);
-int debufs_process(OBJ *player);
-void debuf_notify(OBJ *player, struct debuf *d, short val);
-int spell_cast(OBJ *player, OBJ *target, unsigned slot);
-int spells_cast(OBJ *player, OBJ *target);
-void spells_birth(OBJ *object);
+int debufs_process(dbref player_ref, ENT *eplayer);
+void debuf_notify(dbref player_ref, struct debuf *d, short val);
+int spell_cast(dbref player_ref, ENT *eplayer, dbref target_ref, unsigned slot);
+int spells_cast(dbref player_ref, ENT *eplayer, dbref target_ref);
+void spells_birth(ENT *entity);
 
 #endif

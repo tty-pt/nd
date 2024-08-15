@@ -13,61 +13,61 @@
 #include "entity.h"
 #include "player.h"
 
-OBJ *
-ematch_me(OBJ *player, char *str)
+dbref
+ematch_me(dbref player_ref, char *str)
 {
 	if (!strcmp(str, "me"))
-		return player;
+		return player_ref;
 	else
-		return NULL;
+		return NOTHING;
 }
 
-OBJ *
-ematch_here(OBJ *player, char *str)
+dbref
+ematch_here(dbref player_ref, char *str)
 {
 	if (!strcmp(str, "here"))
-		return player->location;
+		return obj_get(player_ref).location;
 	else
-		return NULL;
+		return NOTHING;
 }
 
-OBJ *
-ematch_mine(OBJ *player, char *str)
+dbref
+ematch_mine(dbref player_ref, char *str)
 {
-	return ematch_at(player, player, str);
+	return ematch_at(player_ref, player_ref, str);
 }
 
-OBJ *
-ematch_near(OBJ *player, char *str)
+dbref
+ematch_near(dbref player_ref, char *str)
 {
-	return ematch_at(player, player->location, str);
+	return ematch_at(player_ref, obj_get(player_ref).location, str);
 }
 
 /* all ematch
  * (not found by the linker if it is not static?)
  */
-OBJ *
-ematch_all(OBJ *player, char *name)
+dbref
+ematch_all(dbref player_ref, char *name)
 {
-	OBJ *res;
+	dbref res;
 
 	if (
-			(res = ematch_me(player, name))
-			|| (res = ematch_here(player, name))
-			|| (res = ematch_absolute(name))
-			|| (res = ematch_near(player, name))
-			|| (res = ematch_mine(player, name))
-			|| (res = ematch_player(name))
+			(res = ematch_me(player_ref, name)) != NOTHING
+			|| (res = ematch_here(player_ref, name)) != NOTHING
+			|| (res = ematch_absolute(name)) != NOTHING
+			|| (res = ematch_near(player_ref, name)) != NOTHING
+			|| (res = ematch_mine(player_ref, name)) != NOTHING
+			|| (res = ematch_player(name)) != NOTHING
 	   )
 		return res;
 
 	else
-		return NULL;
+		return NOTHING;
 }
 
 
 /* TODO move to match.h as static inline */
-OBJ *
+dbref
 ematch_player(char *name)
 {
 	return player_get(name);
@@ -96,18 +96,18 @@ parse_dbref(const char *s)
 }
 
 /* returns nnn if name = #nnn, else NOTHING */
-OBJ *
+dbref
 ematch_absolute(char *name)
 {
 	dbref match;
 	if (*name == NUMBER_TOKEN) {
 		match = parse_dbref(name + 1);
-		if (match < 0 || match >= db_top)
-			return NULL;
+		if (match < 0 || match >= db_top || !obj_exists(match))
+			return NOTHING;
 		else
-			return object_get(match);
+			return match;
 	} else
-		return NULL;
+		return NOTHING;
 }
 
 /* accepts only nonempty matches starting at the beginning of a word */
@@ -128,39 +128,37 @@ string_match(register const char *src, register const char *sub)
 	return 0;
 }
 
-static OBJ *
-ematch_list(OBJ *player, OBJ *first, char *name)
-{
-	OBJ *absolute;
-	ENT *mob = &player->sp.entity;
-	unsigned nth = mob->select;
-	mob->select = 0;
+dbref
+ematch_at(dbref player_ref, dbref where_ref, char *name) {
+	dbref what_ref = ematch_absolute(name),
+	      absolute_ref, tmp_ref = NOTHING;
 
-	absolute = ematch_absolute(name);
-	if (!controls(player, absolute))
-		absolute = NULL;
+	if (what_ref != NOTHING && obj_get(what_ref).location == where_ref)
+		return what_ref;
 
-	FOR_LIST(first, first) {
-		if (first == absolute) {
-			return first;
-		} else if (string_match(first->name, name)) {
-			if (nth <= 0)
-				return first;
+	ENT ent = ent_get(player_ref);
+	unsigned nth = ent.select;
+	ent.select = 0;
+	ent_set(player_ref, &ent);
+
+	absolute_ref = ematch_absolute(name);
+
+	if (absolute_ref != NOTHING && !controls(player_ref, absolute_ref))
+		absolute_ref = NOTHING;
+
+	struct hash_cursor c = contents_iter(where_ref);
+	while ((tmp_ref = contents_next(&c)) != NOTHING) {
+		if (tmp_ref == absolute_ref) {
+			hash_fin(&c);
+			break;
+		} else if (string_match(obj_get(tmp_ref).name, name)) {
+			if (nth <= 0) {
+				hash_fin(&c);
+				break;
+			}
 			nth--;
 		}
 	}
 
-	return NULL;
-}
-
-OBJ *
-ematch_at(OBJ *player, OBJ *where, char *name) {
-	OBJ *what;
-
-	what = ematch_absolute(name);
-
-	if (what && what->location == where)
-		return what;
-
-	return ematch_list(player, where->contents, name);
+	return tmp_ref;
 }

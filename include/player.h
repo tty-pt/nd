@@ -3,9 +3,10 @@
 
 #include "object.h"
 
+#include <string.h>
 #include <qhash.h>
 
-extern int player_hd;
+extern long player_hd;
 
 OBJ *player_connect(const char *qsession);
 OBJ *player_create(char *name);
@@ -16,22 +17,24 @@ players_init()
 	player_hd = hash_init();
 }
 
-static inline OBJ *
+static inline dbref
 player_get(char *name)
 {
-	return (OBJ *) SHASH_GET(player_hd, name);
+	dbref res = NOTHING;
+	hash_cget(player_hd, &res, name, strlen(name));
+	return res;
 }
 
 static inline void
-player_put(OBJ *player)
+player_put(char *name, dbref player_ref)
 {
-	SHASH_PUT(player_hd, player->name, player);
+	hash_cput(player_hd, name, strlen(name), &player_ref, sizeof(player_ref));
 }
 
 static inline void
-player_delete(OBJ *player)
+player_delete(char *name)
 {
-	SHASH_DEL(player_hd, player->name);
+	hash_sdel(player_hd, name);
 }
 
 #endif

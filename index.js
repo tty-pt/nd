@@ -388,6 +388,7 @@ ndc.setOnMessage(function onMessage(ev) {
   const arr = new Uint8Array(ev.data);
   if (String.fromCharCode(arr[0]) == "#" && String.fromCharCode(arr[1]) == "b") {
     const iden = arr[2];
+    // console.log('BCP', BCP_MAP[iden]);
     switch (iden) {
     case BCP.BARS: {
       let aux;

@@ -278,40 +278,38 @@ map_sync()
 }
 
 static void
-_map_put(morton_t code, dbref thing, int flags)
+_map_put(morton_t code, dbref thing_ref, int flags)
 {
 	DBT key;
 	DBT data;
 	int ret;
 
-	CBUG(object_get(thing)->type != TYPE_ROOM);
-
 	memset(&key, 0, sizeof(DBT));
 	memset(&data, 0, sizeof(DBT));
 
-	key.data = &thing;
-	key.size = sizeof(thing);
+	key.data = &thing_ref;
+	key.size = sizeof(thing_ref);
 	data.data = &code;
 	data.size = sizeof(code);
 
 	ret = ipdb->put(ipdb, NULL, &key, &data, flags);
 	if (ret) {
-		debug("room %d %s", thing, db_strerror(ret));
+		debug("room %d %s", thing_ref, db_strerror(ret));
 	}
 	CBUG(ret);
 }
 
 void
-map_put(pos_t p, OBJ *thing, int flags)
+map_put(pos_t p, dbref thing, int flags)
 {
 	morton_t code = pos_morton(p);
-	_map_put(code, object_ref(thing), flags);
+	_map_put(code, thing, flags);
 }
 
 morton_t
-map_mwhere(OBJ *where)
+map_mwhere(dbref where)
 {
-	dbref room = object_ref(where);
+	dbref room = where;
 	int bad;
 	DBT key;
 	DBT data;
@@ -333,18 +331,18 @@ map_mwhere(OBJ *where)
 }
 
 int
-map_has(OBJ *room) {
+map_has(dbref room) {
 	return map_mwhere(room) != 130056652770671ULL;
 }
 
 void
-map_where(pos_t p, OBJ *room)
+map_where(pos_t p, dbref room)
 {
 	morton_t x = map_mwhere(room);
 	morton_pos(p, x);
 }
 
-OBJ *
+dbref
 map_get(pos_t p)
 {
 	morton_t at = pos_morton(p);
@@ -352,11 +350,11 @@ map_get(pos_t p)
 	DBT pkey;
 	DBT data;
 	DBT key;
-	OBJ *ref;
+	dbref ref;
 	int res;
 
 	if (pdb->cursor(pdb, NULL, &cur, 0))
-		return NULL;
+		return NOTHING;
 
 	memset(&pkey, 0, sizeof(DBT));
 	memset(&key, 0, sizeof(DBT));
@@ -369,20 +367,19 @@ map_get(pos_t p)
 		res = cur->c_pget(cur, &key, &pkey, &data, DB_SET);
 		switch (res) {
 		case 0:
-			ref = object_get(* (dbref *) pkey.data);
+			ref = * (dbref *) pkey.data;
 #ifdef PRECOVERY
-			if (ref->type != TYPE_ROOM) {
+			OBJ obj = obj_get(ref);
+			if (obj.type != TYPE_ROOM) {
 				debug("GARBAGE %d REMOVED ;)", ref);
 				cur->c_del(cur, 0);
 				continue;
 			}
-#else
-			CBUG(ref->type != TYPE_ROOM);
 #endif
 			return ref;
 		case DB_NOTFOUND:
 			cur->close(cur);
-			return NULL;
+			return NOTHING;
 		default:
 			BUG("%s", db_strerror(res));
 		}
@@ -390,7 +387,7 @@ map_get(pos_t p)
 }
 
 int
-map_delete(OBJ *what)
+map_delete(dbref what)
 {
 	DBT key;
 	morton_t code = map_mwhere(what);

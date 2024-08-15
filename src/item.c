@@ -9,37 +9,36 @@
 void
 do_select(int fd, int argc, char *argv[])
 {
-	OBJ *player = FD_PLAYER(fd);
-	ENT *eplayer = &player->sp.entity;
+	dbref player_ref = FD_PLAYER(fd);
 	const char *n_s = argv[1];
 	unsigned n = strtoul(n_s, NULL, 0);
-	eplayer->select = n;
-	nd_writef(player, "You select %u.\n", n);
+	ENT_SETF(player_ref, select, n);
+	nd_writef(player_ref, "You select %u.\n", n);
 }
 
 void
 do_equip(int fd, int argc, char *argv[])
 {
-	OBJ *player = FD_PLAYER(fd);
+	dbref player_ref = FD_PLAYER(fd);
 	char *name = argv[1];
-	OBJ *eq = ematch_mine(player, name);
+	dbref eq_ref = ematch_mine(player_ref, name);
 
-	if (!eq)
-		nd_writef(player, "You are not carrying that.\n");
-	else if (equip(player, eq)) 
-		nd_writef(player, "You can't equip that.\n");
+	if (eq_ref == NOTHING)
+		nd_writef(player_ref, "You are not carrying that.\n");
+	else if (equip(player_ref, eq_ref)) 
+		nd_writef(player_ref, "You can't equip that.\n");
 }
 
 void
 do_unequip(int fd, int argc, char *argv[])
 {
-	OBJ *player = FD_PLAYER(fd);
+	dbref player_ref = FD_PLAYER(fd);
 	char const *name = argv[1];
 	enum bodypart bp = BODYPART_ID(*name);
-	dbref eq;
+	dbref eq_ref;
 
-	if ((eq = unequip(player, bp)) == NOTHING)
-		nd_writef(player, "You don't have that equipped.\n");
+	if ((eq_ref = unequip(player_ref, bp)) == NOTHING)
+		nd_writef(player_ref, "You don't have that equipped.\n");
 	else
-		nd_writef(player, "You unequip %s.\n", object_get(eq)->name);
+		nd_writef(player_ref, "You unequip %s.\n", obj_get(eq_ref).name);
 }

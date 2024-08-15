@@ -21,11 +21,14 @@
 #include "debug.h"
 #include "mob.h"
 #include "utils.h"
+#include "uapi/wts.h"
 
-#define HUNGER_Y	4
-#define THIRST_Y	2
-#define HUNGER_INC	(1 << (DAYTICK_Y - HUNGER_Y))
-#define THIRST_INC	(1 << (DAYTICK_Y - THIRST_Y))
+unsigned huth_y[2] = {
+	DAYTICK_Y + 2,
+	DAYTICK_Y + 3
+};
+
+long tmp_hds;
 
 static const char *rarity_str[] = {
 	ANSI_BOLD ANSI_FG_BLACK "Poor" ANSI_RESET,
@@ -36,24 +39,35 @@ static const char *rarity_str[] = {
 	ANSI_BOLD ANSI_FG_MAGENTA "Mythical" ANSI_RESET
 };
 
-struct wts phys_wts[] = {
-	{ "punch", "punches" },
-	{ "peck", "pecks at" },
-	{ "slash", "slashes" },
-	{ "bite", "bites" },
-	{ "strike", "strikes" },
-};
+ENT ent_get(dbref ref) {
+	ENT ent;
+	hash_cget(tmp_hds, &ent, &ref, sizeof(ref));
+	return ent;
+}
 
-ENT *
-birth(OBJ *player)
+void ent_set(dbref ref, ENT *tmp) {
+	hash_cput(tmp_hds, &ref, sizeof(ref), tmp, sizeof(ENT));
+}
+
+void ent_del(dbref ref) {
+	hash_del(tmp_hds, &ref, sizeof(ref));
+}
+
+void ent_tmp_reset(ENT *ent) {
+	ent->last_observed = NOTHING;
+	ent->select = 0;
+	ent->huth_n[0] = ent->huth_n[1] = 0;
+}
+
+void birth(ENT *eplayer)
 {
-	ENT *eplayer = &player->sp.entity;
-	eplayer->wts = phys_wts[eplayer->wtso];
-	eplayer->hunger = eplayer->thirst = 0;
+	eplayer->huth[HUTH_THIRST] = eplayer->huth[HUTH_HUNGER] = eplayer->select =
+		eplayer->huth_n[HUTH_THIRST] = eplayer->huth_n[HUTH_HUNGER] = 0;
 	eplayer->combo = 0;
 	eplayer->hp = HP_MAX(eplayer);
 	eplayer->mp = MP_MAX(eplayer);
-	eplayer->sat = eplayer->target = NULL;
+	eplayer->target = NOTHING;
+	eplayer->sat = NOTHING;
 
 	EFFECT(eplayer, DMG).value = DMG_BASE(eplayer);
 	EFFECT(eplayer, DODGE).value = DODGE_BASE(eplayer);
@@ -66,486 +80,60 @@ birth(OBJ *player)
 		if (eq <= 0)
 			continue;
 
-		OBJ *oeq = object_get(eq);
-		EQU *eeq = &oeq->sp.equipment;
+		OBJ oeq = obj_get(eq);
+		EQU *eeq = &oeq.sp.equipment;
 		CBUG(equip_affect(eplayer, eeq));
 	}
-
-	mcp_bars(player);
-
-        return eplayer;
-}
-
-void
-recycle(OBJ *player, OBJ *thing)
-{
-	extern OBJ *recyclable;
-	OBJ *first, *rest;
-	int looplimit;
-
-	CBUG(!thing->owner);
-	OBJ *owner = thing->owner;
-	ENT *eowner = &owner->sp.entity;
-
-	switch (thing->type) {
-	case TYPE_ROOM:
-		{
-			ROO *rthing = &thing->sp.room;
-			if (!(eowner->flags & EF_WIZARD))
-				owner->value += ROOM_COST;
-			if (rthing->flags & RF_TEMP)
-				for (first = thing->contents; first; first = rest) {
-					rest = first->next;
-
-					if (first->type == TYPE_ENTITY) {
-						ENT *efirst = &first->sp.entity;
-						if (efirst->flags & EF_PLAYER)
-							continue;
-					}
-
-					recycle(player, first);
-				}
-			if (thing->location)
-				nd_rwritef(thing->location, NULL, "You feel a wrenching sensation...\n");
-			map_delete(thing);
-		}
-
-		break;
-	case TYPE_PLANT:
-	case TYPE_SEAT:
-	case TYPE_CONSUMABLE:
-	case TYPE_EQUIPMENT:
-	case TYPE_THING:
-	case TYPE_MINERAL:
-		if (!(eowner->flags & EF_WIZARD))
-			owner->value += thing->value;
-
-		OBJ *thingloc = thing->location;
-
-		if (thingloc->type != TYPE_ROOM)
-			break;
-
-		ROO *rthingloc = &thingloc->sp.room;
-
-		if (rthingloc->flags & RF_TEMP) {
-			for (first = thing->contents; first; first = rest) {
-				rest = first->next;
-				recycle(player, first);
-			}
-		}
-
-		break;
-	}
-
-	FOR_ALL(rest) {
-		switch (rest->type) {
-		case TYPE_ROOM:
-			{
-				ROO *rrest = &rest->sp.room;
-				if (rrest->dropto == thing)
-					rrest->dropto = NULL;
-				if (rest->owner == thing)
-					rest->owner = object_get(GOD);
-			}
-
-			break;
-		case TYPE_PLANT:
-		case TYPE_SEAT:
-		case TYPE_CONSUMABLE:
-		case TYPE_EQUIPMENT:
-		case TYPE_THING:
-		case TYPE_MINERAL:
-			if (rest->owner == thing)
-				rest->owner = object_get(GOD);
-			break;
-		case TYPE_ENTITY:
-			{
-				ENT *erest = &rest->sp.entity;
-				if (erest->home == thing)
-					erest->home = object_get(PLAYER_START);
-			}
-
-			break;
-		}
-		if (rest->contents == thing)
-			rest->contents = thing->next;
-		if (rest->next == thing)
-			rest->next = thing->next;
-	}
-
-	looplimit = db_top;
-	while ((looplimit-- > 0) && (first = thing->contents)) {
-		if (first->type == TYPE_ENTITY) {
-			ENT *efirst = &first->sp.entity;
-			if (efirst->flags & EF_PLAYER) {
-				enter(first, efirst->home, E_NULL);
-				if (first->location == thing) {
-					nd_writef(player, "Escaping teleport loop!  Going home.\n");
-					object_move(first, object_get(PLAYER_START));
-				}
-				continue;
-			}
-		}
-
-		recycle(player, first);
-	}
-
-
-	object_move(thing, NULL);
-
-	object_free(thing);
-	object_clear(thing);
-	thing->name = (char*) strdup("<garbage>");
-	thing->description = (char *) strdup("<recyclable>");
-	thing->type = TYPE_GARBAGE;
-	thing->next = recyclable;
-	recyclable = thing;
 }
 
 static inline int
-entities_aggro(OBJ *player)
+entities_aggro(dbref player_ref)
 {
-	ENT *eplayer = &player->sp.entity;
-	OBJ *here = player->location;
-	OBJ *tmp;
+	ENT eplayer = ent_get(player_ref);
+	dbref tmp_ref;
 	int klock = 0;
 
-	FOR_LIST(tmp, here->contents) {
-		if (tmp->type != TYPE_ENTITY)
+	struct hash_cursor c = contents_iter(obj_get(player_ref).location);
+	while ((tmp_ref = contents_next(&c)) != NOTHING) {
+		if (obj_get(tmp_ref).type != TYPE_ENTITY)
 			continue;
 
-		ENT *etmp = &tmp->sp.entity;
+		ENT etmp = ent_get(tmp_ref);
 
-		if (etmp->flags & EF_AGGRO) {
-			etmp->target = player;
+		if (etmp.flags & EF_AGGRO) {
+			etmp.target = player_ref;
 			klock++;
 		}
+
+		ent_set(tmp_ref, &etmp);
 	}
 
-	eplayer->klock += klock;
+	eplayer.klock += klock;
+	ent_set(player_ref, &eplayer);
 	return klock;
 }
 
-#if 0
 void
-enter_room(OBJ *player, enum exit e)
+enter(dbref player_ref, dbref loc_ref, enum exit e)
 {
-	ENT *eplayer = &player->sp.entity;
-	char contents[BIGBUFSIZ];
-	OBJ *oi;
-	int count = 0;
+	OBJ player = obj_get(player_ref);
+	dbref old_loc_ref = player.location;
 
-	if (eplayer->gpt) {
-		free(eplayer->gpt);
-		eplayer->gpt = NULL;
-	}
-
-	sprintf(contents, "This is a fantasy story narrated by an artificial intelligence.\n");
-	sprintf(contents, "%sIt takes place in a '%s'",
-			contents, player->location->name);
-	if (player->location->description && *player->location->description)
-		sprintf(contents, "%s that is described as '%s' and ",
-			contents, player->location->description);
-	else
-		sprintf(contents, "%s that ", contents);
-	sprintf(contents, "%shas the following contents:\n", contents);
-
-	FOR_LIST(oi, player->location->contents) {
-		count++;
-		switch (oi->type) {
-		case TYPE_ENTITY:
-			{
-				ENT *ei = &oi->sp.entity;
-				if (ei->flags & EF_PLAYER) {
-					sprintf(contents, "%sA player named %s", contents, oi->name);
-					if (e != E_ALL) {
-						sprintf(contents, "%s, who just ", contents);
-						if (e == E_NULL)
-							sprintf(contents, "%steleported in", contents);
-						else
-							sprintf(contents, "%scame in from the %s", contents, e_name(e_simm(e)));
-					}
-				} else
-					sprintf(contents, "%sA %s", contents, oi->name);
-
-				if (player->description)
-					sprintf(contents, "%s, described as '%s'", contents, oi->name);
-				if (eplayer->flags & EF_SITTING)
-					sprintf(contents, "%s, who is sitting down", contents);
-
-				sprintf(contents, "%s.\n", contents);
-			}
-			break;
-		case TYPE_PLANT:
-			sprintf(contents, "%sA plant or tree named %s.\n", contents, oi->name);
-			break;
-		default:
-			sprintf(contents, "%sA %s.\n", contents, oi->name);
-		}
-	}
-
-	/* sprintf(contents, "%s\n" */
-	/* 		"Narrate this information as if in a fantasy novel.\n" */
-	/* 		, contents); */
-	sprintf(contents, "%s\n"
-			"Describe this.\n"
-			, contents);
-
-	entity_gpt(player, 1, contents);
-}
-
-enum SPEAK {
-	ME = 1,
-	OTHER = 2,
-	BOTH = 3,
-};
-
-/* struct speech { */
-/* 	OBJ *player; */
-/* 	char *me, *other; */
-/* 	size_t me_rem, other_rem; */
-/* } */
-
-/* void */
-/* speak(struct *speech, int flags, char *fmt_str, ...) { */
-/* 	va_list args; */
-/* 	va_start(args, format); */
-/* 	if (flags & ME) */
-/* 		vsnprintf(speech->me, me_rem, format, args); */
-/* 	else if (flags & OTHER) */
-/* 		vsnprintf(speech->other, other_rem, format, args); */
-/* 	va_end(args); */
-/* } */
-
-/* void */
-/* tell(struct *speech, char *fmt_str, ...) { */
-/* 	va_list args; */
-/* 	va_start(args, format); */
-/* 	if (flags & ME) { */
-/* 		char *name = "you"; */
-/* 		vsnprintf(speech->me, speech->me_rem, format, name, args); */
-/* 	} else if (flags & OTHER) { */
-/* 		char *name = speech->player->name; */
-/* 		vsnprintf(speech->other, speech->other_rem, format, name, args); */
-/* 	} */
-/* 	va_end(args); */
-/* } */
-
-/* void */
-/* verb(struct *speech, char *verb) { */
-/* 	// there could be an fd that writes to all players or all players in that location */
-/* 	fprintf(fd */
-/* 	vsnprintf(speech->me, speech->me_rem, format, name, args); */
-/* } */
-
-enum word_type {
-	WOT_VERB = 0,
-	WOT_NOUN = 1,
-	WOT_ADJECTIVE = 2,
-	WOT_ADVERB = 3,
-	WOT_PRONOUN = 4,
-	WOT_PREPOSITION = 5,
-	WOT_CONJUNCTION = 6,
-	WOT_INTERJECTION = 7,
-	WOT_SPECIAL = 8,
-};
-
-struct core_word {
-	char *str;
-	enum word_type type;
-	char *antonym;
-	/* char *replacer(OBJ *player, char *word); */
-};
-
-/* enum verb_tense = { */
-/* 	VT_PRESENT = 0; */
-/* }; */
-	/* union { */
-	/* 	enum verb_tense; */
-	/* } sp; */
-
-struct core_word core_words[] = {
-	/* { */
-	/* 	.str = "me", */
-	/* 	.type = WOT_SPECIAL, replace_me */
-	/* }, */
-	{
-		.str = "teleport",
-		.type = WOT_VERB,
-	},
-	{
-		.str = "go",
-		.antonym = "come",
-		.type = WOT_VERB
-	},
-	{
-		.str = "come",
-		.antonym = "go",
-		.type = WOT_VERB
-	},
-	{
-		.str = "out",
-		.antonym = "in",
-		.type = WOT_PREPOSITION
-	},
-	{
-		.str = "in",
-		.antonym = "out",
-		.type = WOT_PREPOSITION
-	},
-	{
-		.str = "from",
-		.antonym = "into",
-		.type = WOT_PREPOSITION
-	},
-	{
-		.str = "into",
-		.antonym = "from",
-		.type = WOT_PREPOSITION
-	},
-	{
-		.str = "the",
-		.type = WOT_PREPOSITION
-	},
-};
-
-char *third[] = { "ss", "sh", "ch", " x", " z" };
-
-DB *words_db = NULL;
-
-static inline struct core_word *word_get(char *word) {
-	return hash_get(words_db, word);
-}
-
-// keep a notion of who the players are in the client
-static inline word_process(OBJ *player, int flags, char *word) {
-	ENT *eplayer = &player->sp.entity;
-	struct core_word *core_word = word_get(word);
-	size_t len = strlen(word);
-
-	switch (core_word->type) {
-		case (WOT_VERB) {
-			if (flags & ME) {
-				const ch = eplayer->proc->final ? 'Y' : 'y';
-				dprintf(eplayer->proc->fd, "%cou %s", ch, word);
-			} else if (flags & OTHER) {
-				char last[3] = { len > 1 ? word[len - 2] : ' ', word[len - 1], '\0' };
-				dprintf(player->location->proc->fd, "%s %s%ss", player->name, word, hash_get(third_db, last) ? "e" : "");
-			}
-		}
-	}
-}
-
-static inline text_process(OBJ *player, int flags, char *text) {
-	struct speech *speech = flags & ME ? player->speech : player->location->speech;
-	char word[32], *w = word;
-
-	do {
-		switch (*text) {
-			case '\0': break;
-			case ' ':
-				*text = '\0';
-				word_process(player, flags, word);
-				w = word;
-				text++;
-				continue;
-			case '.':
-			case ';':
-				player->speech->final = 1;
-				continue;
-			default:
-				player->speech->final = 0;
-				*w++ = *text++;
-		}
-		break;
-	} while (true);
-}
-
-void proc(OBJ *player, char *fmt, ...) {
-	ENT *eplayer = &player->sp.entity;
-	va_list args;
-	/* if (flags & ME) { */
-		/* char *name = "you"; */
-		va_start(args, format);
-		dprintf(eplayer->proc->fd, format, args);
-		va_end(args);
-	/* } else if (flags & OTHER) { */
-		/* char *other_name = speech->player->name; */
-		va_start(args, format);
-		dprintf(player->location->proc->fd, format, args);
-		va_end(args);
-	/* } */
-	va_end(args);
-}
-
-void
-enter(OBJ *player, OBJ *loc, enum exit e)
-{
-	OBJ *old = player->location;
-
-	/* if (eplayer->gpt) { */
-	/* 	free(eplayer->gpt); */
-	/* 	eplayer->gpt = NULL; */
-	/* } */
-
+	st_run(player_ref, "leave");
 	if (e == E_NULL)
-		proc(player, "%d teleport out", object_ref(player));
-	else
-		proc(player, "%d go %s", object_ref(player), e_name(e));
-
-	object_move(player, loc);
-	room_clean(player, old);
-
+		nd_owritef(player_ref, "%s teleports out.\n", player.name);
+	object_move(player_ref, loc_ref);
+	room_clean(old_loc_ref);
 	if (e == E_NULL)
-		proc(player, "%d teleport in", object_ref(player)); // invalidated by the above
-	else
-		proc(player, "%d come in from the %s", object_ref(player), e_name(e)); // invalidated by the above
-
-	proc(player, "into %s.%s", player->location->name, player->location->description);
-	flush(player);
-
-	entities_aggro(player);
-	look_around(player);
-}
-
-#endif
-
-void
-nd_move(OBJ *player) {
-	if (!player->sp.entity.fds)
-		return;
-
-	struct hash_cursor c = hash_iter_start(player->sp.entity.fds);
-	pos_t pos;
-
-	map_where(pos, player->location);
-	while (hash_iter_get(&c))
-		ndc_move(* (int *) c.key, pos_morton(pos));
-}
-
-void
-enter(OBJ *player, OBJ *loc, enum exit e)
-{
-	OBJ *old = player->location;
-
-	st_run(player, "leave");
-	if (e == E_NULL)
-		nd_rwritef(player->location, player, "%s teleports out.\n", player->name);
-	object_move(player, loc);
-	room_clean(player, old);
-	if (e == E_NULL)
-		nd_rwritef(player->location, player, "%s teleports in.\n", player->name);
-	nd_move(player);
-	st_run(player, "enter");
-	entities_aggro(player);
+		nd_owritef(player_ref, "%s teleports in.\n", player.name);
+	st_run(player_ref, "enter");
+	entities_aggro(player_ref);
 }
 
 int
-payfor(OBJ *who, int cost)
+payfor(dbref who_ref, OBJ *who, int cost)
 {
-	ENT *ewho = &who->sp.entity;
-
-	if (ewho->flags & EF_WIZARD)
+	if (ent_get(who_ref).flags & EF_WIZARD)
 		return 1;
 
 	if (who->value >= cost) {
@@ -557,49 +145,45 @@ payfor(OBJ *who, int cost)
 }
 
 int
-controls(OBJ *who, OBJ *what)
+controls(dbref who_ref, dbref what_ref)
 {
-	if (!what)
-		return 0;
-
-	if (what->type == TYPE_GARBAGE)
+	if (what_ref == NOTHING)
 		return 0;
 
 	/* Zombies and puppets use the permissions of their owner */
-	if (who->type != TYPE_ENTITY)
-		who = who->owner;
+	OBJ who = obj_get(who_ref);
+	if (who.type != TYPE_ENTITY)
+		who_ref = who.owner;
 
-	ENT *ewho = &who->sp.entity;
+	OBJ what = obj_get(what_ref);
 
 	/* Wizard controls everything */
-	if (ewho->flags & EF_WIZARD) {
-		if(God(what->owner) && !God(who))
-			/* Only God controls God's objects */
+	if (ent_get(who_ref).flags & EF_WIZARD) {
+		if(what.owner == ROOT && who_ref == ROOT)
 			return 0;
 		else
 			return 1;
 	}
 
 	/* owners control their own stuff */
-	return (who == what->owner);
+	return (who_ref == what.owner);
 }
 
 #define BUFF(...) buf_l += snprintf(&buf[buf_l], BUFSIZ - buf_l, __VA_ARGS__)
 
 const char *
-unparse(OBJ *player, OBJ *loc)
+unparse(dbref loc_ref)
 {
 	static char buf[BUFSIZ];
         size_t buf_l = 0;
 
-	if (player && player->type != TYPE_ENTITY)
-		player = player->owner;
-
-	if (!loc)
+	if (loc_ref == NOTHING)
 		return "*NOTHING*";
 
-	if (loc->type == TYPE_EQUIPMENT) {
-		EQU *eloc = &loc->sp.equipment;
+	OBJ loc = obj_get(loc_ref);
+
+	if (loc.type == TYPE_EQUIPMENT) {
+		EQU *eloc = &loc.sp.equipment;
 
 		if (eloc->eqw) {
 			unsigned n = eloc->rare;
@@ -609,85 +193,82 @@ unparse(OBJ *player, OBJ *loc)
 		}
 	}
 
-	BUFF("%s(#%d)", loc->name, object_ref(loc));
+	BUFF("%s(#%d)", loc.name, loc_ref);
 
 	buf[buf_l] = '\0';
 	return buf;
 }
 
 void
-sit(OBJ *player, char *name)
+sit(dbref player_ref, ENT *eplayer, char *name)
 {
-	ENT *eplayer = &player->sp.entity;
-
 	if (eplayer->flags & EF_SITTING) {
-		nd_writef(player, "You are already sitting.\n");
+		nd_writef(player_ref, "You are already sitting.\n");
 		return;
 	}
 
 	if (!*name) {
-		notify_wts(player, "sit", "sits", " on the ground");
+		notify_wts(player_ref, "sit", "sits", " on the ground");
 		eplayer->flags |= EF_SITTING;
-		eplayer->sat = NULL;
-
-		/* warn("%d sits on the ground\n", player); */
+		eplayer->sat = NOTHING;
 		return;
 	}
 
-	OBJ *seat = ematch_near(player, name);
-
-	if (!seat || seat->type != TYPE_SEAT) {
-		nd_writef(player, "You can't sit on that.\n");
+	dbref seat_ref = ematch_near(player_ref, name);
+	if (seat_ref == NOTHING) {
+		nd_writef(player_ref, "Invalid target.\n");
 		return;
 	}
 
-	SEA *sseat = &seat->sp.seat;
+	OBJ seat = obj_get(seat_ref);
+
+	if (seat.type != TYPE_SEAT) {
+		nd_writef(player_ref, "You can't sit on that.\n");
+		return;
+	}
+
+	SEA *sseat = &seat.sp.seat;
 
 	if (sseat->quantity >= sseat->capacity) {
-		nd_writef(player, "No seats available.\n");
+		nd_writef(player_ref, "No seats available.\n");
 		return;
 	}
 
 	sseat->quantity += 1;
 	eplayer->flags |= EF_SITTING;
-	eplayer->sat = seat;
-
-	notify_wts(player, "sit", "sits", " on %s", seat->name);
+	eplayer->sat = seat_ref;
+	notify_wts(player_ref, "sit", "sits", " on %s", seat.name);
 }
 
 int
-stand_silent(OBJ *player)
+stand_silent(dbref player_ref, ENT *eplayer)
 {
-	ENT *eplayer = &player->sp.entity;
-
 	if (!(eplayer->flags & EF_SITTING))
 		return 1;
 
-	OBJ *chair = eplayer->sat;
-
-	if (chair) {
-		CBUG(chair->type != TYPE_SEAT);
-		SEA *schair = &chair->sp.seat;
+	if (eplayer->sat != NOTHING) {
+		OBJ chair = obj_get(eplayer->sat);
+		SEA *schair = &chair.sp.seat;
 		schair->quantity--;
-		eplayer->sat = NULL;
+		obj_set(eplayer->sat, &chair);
+		eplayer->sat = NOTHING;
 	}
 
 	eplayer->flags ^= EF_SITTING;
-	notify_wts(player, "stand", "stands", " up");
+	notify_wts(player_ref, "stand", "stands", " up");
 	return 0;
 }
 
 void
-stand(OBJ *player) {
-	if (stand_silent(player))
-		nd_writef(player, "You are already standing.\n");
+stand(dbref player_ref, ENT *eplayer) {
+	if (stand_silent(player_ref, eplayer))
+		nd_writef(player_ref, "You are already standing.\n");
 }
 
 void
-look_around(OBJ *player)
+look_around(dbref player_ref)
 {
-	if (player->location->type == TYPE_ROOM)
-		mcp_look(player, player->location);
+	mcp_look(player_ref, obj_get(player_ref).location);
 }
 
 int
@@ -705,7 +286,7 @@ equip_affect(ENT *ewho, EQU *equ)
 		if (ewho->attr[ATTR_STR] < msv)
 			return 1;
 		EFFECT(ewho, DMG).value += DMG_WEAPON(equ);
-		ewho->wts = WTS_WEAPON(equ);
+		/* ewho->wts = WTS_WEAPON(equ); */
 		break;
 
 	case ES_HEAD:
@@ -740,47 +321,48 @@ equip_affect(ENT *ewho, EQU *equ)
 }
 
 int
-equip(OBJ *who, OBJ *eq)
+equip(dbref who_ref, dbref eq_ref)
 {
-	CBUG(who->type != TYPE_ENTITY);
-	ENT *ewho = &who->sp.entity;
-	CBUG(eq->type != TYPE_EQUIPMENT);
-	EQU *eeq = &eq->sp.equipment;
+	OBJ eq = obj_get(eq_ref);
+	CBUG(obj_get(who_ref).type != TYPE_ENTITY);
+	ENT ewho = ent_get(who_ref);
+	CBUG(eq.type != TYPE_EQUIPMENT);
+	EQU *eeq = &eq.sp.equipment;
 	unsigned eql = EQL(eeq->eqw);
 
-	if (!eql || EQUIP(ewho, eql) > 0
-	    || equip_affect(ewho, eeq))
+	if (!eql || EQUIP(&ewho, eql) > 0
+	    || equip_affect(&ewho, eeq))
 		return 1;
 
-	EQUIP(ewho, eql) = object_ref(eq);
+	EQUIP(&ewho, eql) = eq_ref;
 	eeq->flags |= EQF_EQUIPPED;
 
-	nd_writef(who, "You equip %s.\n", eq->name);
-	mcp_stats(who);
-	mcp_content_out(who, eq);
-	mcp_equipment(who);
+	nd_writef(who_ref, "You equip %s.\n", eq.name);
+	ent_set(who_ref, &ewho);
+	mcp_stats(who_ref);
+	mcp_content_out(who_ref, eq_ref);
+	mcp_equipment(who_ref);
 	return 0;
 }
 
 dbref
-unequip(OBJ *player, unsigned eql)
+unequip(dbref player_ref, unsigned eql)
 {
-	ENT *eplayer = &player->sp.entity;
-	dbref eq = EQUIP(eplayer, eql);
+	ENT eplayer = ent_get(player_ref);
+	dbref eq_ref = EQUIP(&eplayer, eql);
 	unsigned eqt, aux;
 
-	if (!eq)
+	if (eq_ref == NOTHING)
 		return NOTHING;
 
-	OBJ *oeq = object_get(eq);
-	EQU *eeq = &oeq->sp.equipment;
+	OBJ eq = obj_get(eq_ref);
+	EQU *eeq = &eq.sp.equipment;
 	eqt = EQT(eeq->eqw);
 	aux = 0;
 
 	switch (eql) {
 	case ES_RHAND:
-		EFFECT(eplayer, DMG).value -= DMG_WEAPON(eeq);
-		eplayer->wts = phys_wts[eplayer->wtso];
+		EFFECT(&eplayer, DMG).value -= DMG_WEAPON(eeq);
 		break;
 	case ES_PANTS:
 	case ES_HEAD:
@@ -791,28 +373,29 @@ unequip(OBJ *player, unsigned eql)
 		case ARMOR_MEDIUM: aux += 1; break;
 		}
 		aux = DEF_ARMOR(eeq, aux);
-		EFFECT(eplayer, DEF).value -= aux;
-		EFFECT(eplayer, DODGE).value += DODGE_ARMOR(aux);
+		EFFECT(&eplayer, DEF).value -= aux;
+		EFFECT(&eplayer, DODGE).value += DODGE_ARMOR(aux);
 	}
 
-	EQUIP(eplayer, eql) = NOTHING;
+	EQUIP(&eplayer, eql) = NOTHING;
 	eeq->flags &= ~EQF_EQUIPPED;
-	mcp_content_in(player, oeq);
-	mcp_stats(player);
-	mcp_equipment(player);
-	return eq;
+	ent_set(player_ref, &eplayer);
+	mcp_content_in(player_ref, eq_ref);
+	mcp_stats(player_ref);
+	mcp_equipment(player_ref);
+	return eq_ref;
 }
 
 static inline unsigned
-entity_xp(OBJ *player, ENT *etarget)
+entity_xp(ENT *eplayer, dbref target_ref)
 {
-	ENT *eplayer = &player->sp.entity;
+	ENT etarget = ent_get(target_ref);
 
 	// alternatively (2000/x)*y/x
 	if (!eplayer->lvl)
 		return 0;
 
-	unsigned r = 254 * etarget->lvl / (eplayer->lvl * eplayer->lvl);
+	unsigned r = 254 * etarget.lvl / (eplayer->lvl * eplayer->lvl);
 	if (r < 0)
 		return 0;
 	else
@@ -820,14 +403,13 @@ entity_xp(OBJ *player, ENT *etarget)
 }
 
 static inline void
-_entity_award(OBJ *player, unsigned const xp)
+_entity_award(dbref player_ref, ENT *eplayer, unsigned const xp)
 {
-	ENT *eplayer = &player->sp.entity;
 	unsigned cxp = eplayer->cxp;
-	nd_writef(player, "You gain %u xp!\n", xp);
+	nd_writef(player_ref, "You gain %u xp!\n", xp);
 	cxp += xp;
 	while (cxp >= 1000) {
-		nd_writef(player, "You level up!\n");
+		nd_writef(player_ref, "You level up!\n");
 		cxp -= 1000;
 		eplayer->lvl += 1;
 		eplayer->spend += 2;
@@ -836,217 +418,224 @@ _entity_award(OBJ *player, unsigned const xp)
 }
 
 static inline void
-entity_award(OBJ *player, ENT *etarget)
+entity_award(dbref player_ref, ENT *eplayer, dbref target_ref)
 {
-	_entity_award(player, entity_xp(player, etarget));
+	_entity_award(player_ref, eplayer, entity_xp(eplayer, target_ref));
 }
 
-static inline OBJ *
-entity_body(OBJ *player, OBJ *mob)
+static inline dbref
+entity_body(dbref mob_ref)
 {
+	dbref tmp_ref;
 	char buf[32];
-	struct object_skeleton o = { .name = "", .description = "" };
-	snprintf(buf, sizeof(buf), "%s's body.", mob->name);
-	o.name = buf;
-	OBJ *dead_mob = object_add(&o, mob->location, NULL);
-	OBJ *tmp;
+	struct object_skeleton skel = { .name = "", .description = "" };
+	OBJ mob = obj_get(mob_ref), dead_mob;
+	snprintf(buf, sizeof(buf), "%s's body.", mob.name);
+	skel.name = buf;
+	dbref dead_mob_ref = object_add(&dead_mob, &skel, mob.location, NULL);
 	unsigned n = 0;
 
-	for (; (tmp = mob->contents); ) {
-		/* CBUG(tmp->type != TYPE_GARBAGE); */
-		if (tmp->type == TYPE_GARBAGE)
-			continue;
-		if (tmp->type == TYPE_EQUIPMENT) {
-			EQU *etmp = &tmp->sp.equipment;
-			unequip(mob, EQL(etmp->eqw));
+	struct hash_cursor c = contents_iter(mob_ref);
+	while ((tmp_ref = contents_next(&c)) != NOTHING) {
+		OBJ tmp = obj_get(tmp_ref);
+		if (tmp.type == TYPE_EQUIPMENT) {
+			EQU *etmp = &tmp.sp.equipment;
+			unequip(mob_ref, EQL(etmp->eqw));
 		}
-		object_move(tmp, dead_mob);
+		object_move(tmp_ref, dead_mob_ref);
 		n++;
 	}
 
 	if (n > 0) {
-		nd_rwritef(mob->location, NULL, "%s's body drops to the ground.\n", mob->name);
-		return dead_mob;
+		nd_owritef(mob_ref, "%s's body drops to the ground.\n", mob.name);
+		obj_set(dead_mob_ref, &dead_mob);
+		return dead_mob_ref;
 	} else {
-		recycle(player, dead_mob);
-		return NULL;
+		obj_del(dead_mob_ref);
+		return NOTHING;
 	}
 }
 
-static inline OBJ *
-entity_kill(OBJ *player, OBJ *target)
+static inline dbref
+entity_kill(dbref player_ref, ENT *eplayer, dbref target_ref, ENT *etarget)
 {
-	ENT *eplayer = player ? &player->sp.entity : NULL;
-	ENT *etarget = &target->sp.entity;
+	notify_wts(target_ref, "die", "dies", "");
 
-	notify_wts(target, "die", "dies", "");
+	entity_body(target_ref);
 
-	entity_body(player, target);
-
-	if (player) {
-		CBUG(player->type != TYPE_ENTITY)
-		entity_award(player, etarget);
-		eplayer->target = NULL;
+	if (player_ref != NOTHING) {
+		CBUG(obj_get(player_ref).type != TYPE_ENTITY)
+		entity_award(player_ref, eplayer, target_ref);
+		eplayer->target = NOTHING;
 	}
 
-	CBUG(target->type != TYPE_ENTITY);
+	OBJ target = obj_get(target_ref);
+	CBUG(target.type != TYPE_ENTITY);
 
 	if (etarget->target && (etarget->flags & EF_AGGRO)) {
-		OBJ *tartar = etarget->target;
-		ENT *etartar = &tartar->sp.entity;
-		etartar->klock --;
+		ENT etartar = ent_get(etarget->target);
+		etartar.klock --;
+		ent_set(etarget->target, &etartar);
 	}
 
-	OBJ *loc = target->location;
-	ROO *rloc = &loc->sp.room;
+	dbref loc_ref = target.location;
 
-	if ((rloc->flags & RF_TEMP) && !(etarget->flags & EF_PLAYER)) {
-		recycle(player, target);
-		room_clean(target, loc);
-		return NULL;
+	if ((obj_get(target.location).sp.room.flags & RF_TEMP) && !(etarget->flags & EF_PLAYER)) {
+		obj_del(target_ref);
+		room_clean(loc_ref);
+		return NOTHING;
 	}
 
 	etarget->klock = 0;
-	etarget->target = NULL;
+	etarget->target = NOTHING;
 	etarget->hp = 1;
 	etarget->mp = 1;
-	etarget->hunger_n = etarget->thirst_n = 0;
-	etarget->thirst = etarget->hunger = 0;
-
+	ent_tmp_reset(etarget);
+	etarget->huth[HUTH_THIRST] = etarget->huth[HUTH_HUNGER] = 0;
+	ent_set(target_ref, etarget);
 	debufs_end(etarget);
-	st_start(target);
-	/* object_move(target, object_get((dbref) 0)); */
-	room_clean(target, loc);
-	look_around(target);
-	mcp_bars(target);
-	view(target);
+	st_start(target_ref);
+	room_clean(loc_ref);
+	look_around(target_ref);
+	mcp_bars(target_ref);
+	view(target_ref);
 
-	return target;
+	return target_ref;
 }
 
 int
-entity_damage(OBJ *player, OBJ *target, short amt)
+entity_damage(dbref player_ref, ENT *eplayer, dbref target_ref, ENT *etarget, short amt)
 {
-	ENT *etarget = &target->sp.entity;
 	int hp = etarget->hp;
-	int ret = 0;
 	hp += amt;
 
 	if (!amt)
-		return ret;
+		return 0;
 
 	if (hp <= 0) {
-		hp = 1;
-		ret = 1;
-		target = entity_kill(player, target);
-	} else {
-		register unsigned short max = HP_MAX(etarget);
-		if (hp > max)
-			hp = max;
+		entity_kill(player_ref, eplayer, target_ref, etarget);
+		return 1;
 	}
 
-	if (target) {
-		etarget->hp = hp;
-		CBUG(target->type != TYPE_ENTITY);
-	}
+	register unsigned short max = HP_MAX(etarget);
+	if (hp > max)
+		hp = max;
 
-	if (player && (player->type != TYPE_GARBAGE))
-		CBUG(player->type != TYPE_ENTITY);
+	etarget->hp = hp;
+	ent_set(target_ref, etarget);
+	mcp_bars(target_ref);
 
-	return ret;
+	return 0;
 }
 
 void
 do_look_at(int fd, int argc, char *argv[])
 {
-	OBJ *player = FD_PLAYER(fd);
+	dbref player_ref = FD_PLAYER(fd), thing_ref;
 	char *name = argv[1];
-	OBJ *thing;
 
 	if (*name == '\0') {
-		thing = player->location;
+		thing_ref = obj_get(player_ref).location;
 	} else if (
-			!(thing = ematch_absolute(name))
-			&& !(thing = ematch_here(player, name))
-			&& !(thing = ematch_me(player, name))
-			&& !(thing = ematch_near(player, name))
-			&& !(thing = ematch_mine(player, name))
+			(thing_ref = ematch_absolute(name)) == NOTHING
+			&& (thing_ref = ematch_here(player_ref, name)) == NOTHING
+			&& (thing_ref = ematch_me(player_ref, name)) == NOTHING
+			&& (thing_ref = ematch_near(player_ref, name)) == NOTHING
+			&& (thing_ref = ematch_mine(player_ref, name)) == NOTHING
 		  )
 	{
-		nd_writef(player, NOMATCH_MESSAGE);
+		nd_writef(player_ref, NOMATCH_MESSAGE);
 		return;
 	}
 
-	switch (thing->type) {
+	switch (obj_get(thing_ref).type) {
 	case TYPE_ROOM:
-		view(player);
+		view(player_ref);
 	default:
-		mcp_look(player, thing);
+		mcp_look(player_ref, thing_ref);
 		break;
 	}
 }
 
 static void
-respawn(OBJ *player)
+respawn(dbref player_ref)
 {
-	ENT *eplayer = &player->sp.entity;
-	OBJ *where;
+	ENT eplayer = ent_get(player_ref);
+	OBJ player = obj_get(player_ref);
 
-	nd_rwritef(player->location, player, "%s disappears.\n", player->name);
+	nd_owritef(player_ref, "%s disappears.\n", player.name);
 
-	if (eplayer->flags & EF_PLAYER) {
+	if (eplayer.flags & EF_PLAYER) {
 		struct cmd_dir cd;
 		cd.rep = STARTING_POSITION;
 		cd.dir = '\0';
-		st_teleport(player, cd);
-		where = player->location;
+		st_teleport(player_ref, cd);
 	} else {
-		where = eplayer->home;
 		/* warn("respawning %d to %d\n", who, where); */
-		object_move(player, where);
+		object_move(player_ref, eplayer.home);
 	}
 
-	nd_rwritef(player->location, player, "%s appears.\n", player->name);
+	nd_owritef(player_ref, "%s appears.\n", player.name);
 }
 
 static inline int
-huth_notify(OBJ *player, unsigned char *n_r, unsigned long long v, char const *m[4])
+huth_notify(dbref player_ref, ENT *eplayer, enum huth type)
 {
-	ENT *eplayer = &player->sp.entity;
-	unsigned long long rn = *n_r;
-
-
-	static unsigned const n[] = {
-		1 << (DAY_Y - 1),
-		1 << (DAY_Y - 2),
-		1 << (DAY_Y - 3)
+	static char const *msg[] = {
+		"You are thirsty.\n",
+		"You are very thirsty.\n",
+		"you are dehydrated.\n",
+		"You are dying of thirst.\n",
+		"You are hungry.\n",
+		"You are very hungry.\n",
+		"You are starving.\n",
+		"You are starving to death.\n"
 	};
+
+	unsigned thirst_y = huth_y[HUTH_THIRST],
+		hunger_y = huth_y[HUTH_HUNGER];
+
+	unsigned long long const on[] = {
+		1ULL << (thirst_y - 1),
+		1ULL << (thirst_y - 2),
+		1ULL << (thirst_y - 3),
+		1ULL << (hunger_y - 1),
+		1ULL << (hunger_y - 2),
+		1ULL << (hunger_y - 3)
+	};
+
+	unsigned long long const *n = on + 3 * type;
+	unsigned long long v;
+	unsigned char rn = eplayer->huth_n[type];
+
+	v = eplayer->huth[type] += 1ULL << (DAYTICK_Y - 10);
+
+	char const **m = msg + 4 * type;
 
 	if (rn >= 4) {
 		short val = -(HP_MAX(eplayer) >> 3);
-		return entity_damage(NULL, player, val);
-	}
-
-	if (rn >= 3) {
+		return entity_damage(NOTHING, NULL, player_ref, eplayer, val);
+	} else if (rn >= 3) {
 		if (v >= 2 * n[1] + n[2]) {
-			nd_writef(player, m[3]);
-			*n_r += 1;
+			nd_writef(player_ref, m[3]);
+			rn += 1;
 		}
 	} else if (rn >= 2) {
 		if (v >= 2 * n[1]) {
-			nd_writef(player, m[2]);
-			*n_r += 1;
+			nd_writef(player_ref, m[2]);
+			rn += 1;
 		}
 	} else if (rn >= 1) {
 		if (v >= n[1]) {
-			nd_writef(player, m[1]);
-			*n_r += 1;
+			nd_writef(player_ref, m[1]);
+			rn += 1;
 		}
 	} else if (v >= n[2]) {
-		nd_writef(player, m[0]);
-		*n_r += 1;
+		nd_writef(player_ref, m[0]);
+		rn += 1;
 	}
 
+	eplayer->huth_n[type] = rn;
 	return 0;
 }
 
@@ -1070,13 +659,12 @@ dodge_get(ENT *eplayer)
 }
 
 int
-kill_dodge(OBJ *player, struct wts wts)
+kill_dodge(dbref player_ref, char *wts)
 {
-	ENT *eplayer = &player->sp.entity;
-	OBJ *target = eplayer->target;
-	ENT *etarget = &target->sp.entity;
-	if (!EFFECT(etarget, MOV).value && dodge_get(eplayer)) {
-		notify_wts_to(target, player, "dodge", "dodges", "'s %s", wts.a);
+	ENT eplayer = ent_get(player_ref);
+	ENT etarget = ent_get(eplayer.target);
+	if (!EFFECT(&etarget, MOV).value && dodge_get(&eplayer)) {
+		notify_wts_to(eplayer.target, player_ref, "dodge", "dodges", "'s %s", wts);
 		return 1;
 	} else
 		return 0;
@@ -1110,137 +698,124 @@ kill_dmg(enum element dmg_type, short dmg,
 }
 
 static inline void
-attack(OBJ *player)
+attack(dbref player_ref, ENT *eplayer)
 {
-	ENT *eplayer = &player->sp.entity,
-	    *etarget;
-
 	register unsigned char mask;
 
 	mask = EFFECT(eplayer, MOV).mask;
 
 	if (mask) {
 		register unsigned i = __builtin_ffs(mask) - 1;
-		debuf_notify(player, &eplayer->debufs[i], 0);
+		debuf_notify(player_ref, &eplayer->debufs[i], 0);
 		return;
 	}
 
-	OBJ *target = eplayer->target;
-
-	if (!target)
+	if (eplayer->target == NOTHING)
 		return;
 
-	etarget = &target->sp.entity;
+	ENT etarget = ent_get(eplayer->target);
+	char *wts = wts_map[eplayer->wtso];
 
-	if (!spells_cast(player, target) && !kill_dodge(player, eplayer->wts)) {
+	dbref eq_ref = EQUIP(eplayer, ES_RHAND);
+
+	if (eq_ref != NOTHING)
+		wts = wts_map[EQT(obj_get(eq_ref).sp.equipment.eqw)];
+
+	if (spells_cast(player_ref, eplayer, eplayer->target) && !kill_dodge(player_ref, wts)) {
 		enum element at = ELEMENT_NEXT(eplayer, MDMG);
-		enum element dt = ELEMENT_NEXT(etarget, MDEF);
-		short aval = -kill_dmg(ELM_PHYSICAL, EFFECT(eplayer, DMG).value, EFFECT(etarget, DEF).value + EFFECT(etarget, MDEF).value, dt);
-		short bval = -kill_dmg(at, EFFECT(eplayer, MDMG).value, EFFECT(etarget, MDEF).value, dt);
+		enum element dt = ELEMENT_NEXT(&etarget, MDEF);
+		short aval = -kill_dmg(ELM_PHYSICAL, EFFECT(eplayer, DMG).value, EFFECT(&etarget, DEF).value + EFFECT(&etarget, MDEF).value, dt);
+		short bval = -kill_dmg(at, EFFECT(eplayer, MDMG).value, EFFECT(&etarget, MDEF).value, dt);
 		char const *color = ELEMENT(at)->color;
-		notify_attack(player, target, eplayer->wts, aval, color, bval);
-		entity_damage(player, target, aval + bval);
+		notify_attack(player_ref, eplayer->target, wts, aval, color, bval);
+		if (!entity_damage(player_ref, eplayer, eplayer->target, &etarget, aval + bval))
+			ent_set(eplayer->target, &etarget);
 	}
 }
 
 static inline void
-kill_update(OBJ *player, double dt)
+kill_update(dbref player_ref, ENT *eplayer, double dt)
 {
-	ENT *eplayer = &player->sp.entity;
-	OBJ *target = eplayer->target;
-
-	if (!target
-            || target->type == TYPE_GARBAGE
-	    || target->location != player->location) {
-		eplayer->target = NULL;
+	if (eplayer->target == NOTHING)
 		return;
+
+	dbref target_ref = eplayer->target;
+	ENT etarget = ent_get(target_ref);
+
+	if (etarget.target == NOTHING) {
+		etarget.target = player_ref;
+		ent_set(target_ref, &etarget);
 	}
 
-	ENT *etarget = &target->sp.entity;
+	stand_silent(player_ref, eplayer);
 
-	if (!etarget->target)
-		etarget->target = player;
-
-	stand_silent(player);
-
-	unsigned short ohp = etarget->hp;
+	unsigned short ohp = etarget.hp;
 	unsigned short omp = eplayer->mp;
-	attack(player);
+	attack(player_ref, eplayer);
 	if (eplayer->mp != omp)
-		mcp_bars(player);
-	if (etarget->hp != ohp)
-		mcp_bars(target);
+		mcp_bars(player_ref);
+	if (etarget.hp != ohp)
+		mcp_bars(target_ref);
 }
 
 void
-entity_update(OBJ *player, double dt)
+entity_update(dbref player_ref, double dt)
 {
-	CBUG(player->type != TYPE_ENTITY);
-	ENT *eplayer = &player->sp.entity;
-	unsigned short ohp = eplayer->hp;
-	unsigned short omp = eplayer->mp;
+	OBJ player = obj_get(player_ref);
+	ENT eplayer = ent_get(player_ref);
+	unsigned short ohp = eplayer.hp;
+	unsigned short omp = eplayer.mp;
 
-	static char const *thirst_msg[] = {
-		"You are thirsty.\n",
-		"You are very thirsty.\n",
-		"you are dehydrated.\n",
-		"You are dying of thirst.\n"
-	};
-
-	static char const *hunger_msg[] = {
-		"You are hungry.\n",
-		"You are very hungry.\n",
-		"You are starving.\n",
-		"You are starving to death.\n"
-	};
-
-	if (!(eplayer->flags & EF_PLAYER)) {
-		/* warn("%d hp %d/%d\n", player, eplayer->hp, HP_MAX(player)); */
-		if (eplayer->hp == HP_MAX(eplayer)) {
+	if (!(eplayer.flags & EF_PLAYER)) {
+		/* warn("%d hp %d/%d\n", player, eplayer.hp, HP_MAX(player)); */
+		if (eplayer.hp == HP_MAX(&eplayer)) {
 			/* warn("%d's hp is maximum\n", player); */
 
-			if ((eplayer->flags & EF_SITTING)) {
+			if ((eplayer.flags & EF_SITTING)) {
 				/* warn("%d is sitting so they shall stand\n", player); */
-				stand(player);
+				stand(player_ref, &eplayer);
 			}
 
-			if (player->location == 0) {
+			if (player.location == 0) {
 				/* warn("%d is located at 0, so they shall respawn\n", player); */
-				respawn(player);
+				respawn(player_ref);
+				player = obj_get(player_ref);
+				eplayer = ent_get(player_ref);
 			}
 		} else {
 			/* warn("%d's hp is not maximum\n", player); */
-			if (!eplayer->target && !(eplayer->flags & EF_SITTING)) {
+			if (eplayer.target == NOTHING && !(eplayer.flags & EF_SITTING)) {
 				/* warn("%d is not sitting so they shall sit\n", player); */
-				sit(player, "");
+				sit(player_ref, &eplayer, "");
 			}
 		}
 	}
 
-	if (eplayer->flags & EF_SITTING) {
+	if (eplayer.flags & EF_SITTING) {
 		int div = 100;
 		int max, cur;
-		entity_damage(NULL, player, dt * HP_MAX(eplayer) / div);
-		max = MP_MAX(eplayer);
-		cur = eplayer->mp + (max / div);
-		eplayer->mp = cur > max ? max : cur;
+		entity_damage(NOTHING, NULL, player_ref, &eplayer, dt * HP_MAX(&eplayer) / div);
+		max = MP_MAX(&eplayer);
+		cur = eplayer.mp + (max / div);
+		eplayer.mp = cur > max ? max : cur;
 	}
 
-        CBUG(player->type == TYPE_GARBAGE);
-
-	if (player->location == 0)
+	if (player.location == 0)
 		return;
 
         /* if mob dies, return */
-	if (huth_notify(player, &eplayer->thirst_n, eplayer->thirst += dt * THIRST_INC, thirst_msg)
-		|| huth_notify(player, &eplayer->hunger_n, eplayer->hunger += dt * HUNGER_INC, hunger_msg)
-                || debufs_process(player))
-                        return;
+	if (!(huth_notify(player_ref, &eplayer, HUTH_THIRST)
+		|| huth_notify(player_ref, &eplayer, HUTH_HUNGER)
+                || debufs_process(player_ref, &eplayer)))
 
-	kill_update(player, dt);
+		kill_update(player_ref, &eplayer, dt);
 
-	if (eplayer->hp != ohp || eplayer->mp != omp)
-		mcp_bars(player);
+	if (!obj_exists(player_ref))
+		return;
+
+	ent_set(player_ref, &eplayer);
+	if (eplayer.hp != ohp || eplayer.mp != omp)
+		mcp_bars(player_ref);
 }
 
 void
@@ -1271,8 +846,8 @@ bird_is(SENT *sk)
 	return sk->wt == WT_PECK;
 }
 
-static inline OBJ *
-entity_add(enum mob_type mid, OBJ *where, enum biome biome, long long pdn) {
+static inline dbref
+entity_add(enum mob_type mid, dbref where_ref, enum biome biome, long long pdn) {
 	struct object_skeleton *obj_skel = ENTITY_SKELETON(mid);
 	CBUG(obj_skel->type != S_TYPE_ENTITY);
 	struct entity_skeleton *mob_skel = &obj_skel->sp.entity;
@@ -1280,57 +855,60 @@ entity_add(enum mob_type mid, OBJ *where, enum biome biome, long long pdn) {
 	if ((bird_is(mob_skel) && !pdn)
 	    || (!NIGHT_IS && (mob_skel->type == ELM_DARK || mob_skel->type == ELM_VAMP))
 	    || random() >= (RAND_MAX >> mob_skel->y))
-		return NULL;
+		return NOTHING;
 
 	if (!((1 << biome) & mob_skel->biomes))
-		return NULL;
+		return NOTHING;
 
-	return object_add(obj_skel, where, NULL);
+	OBJ obj;
+	dbref obj_ref = object_add(&obj, obj_skel, where_ref, NULL);
+	obj_set(obj_ref, &obj);
+	return obj_ref;
 }
 
 void
-entities_add(OBJ *where, enum biome biome, long long pdn) {
+entities_add(dbref where_ref, enum biome biome, long long pdn) {
 	unsigned mid;
 
 	for (mid = 1; mid < MOB_MAX; mid++)
-		entity_add(mid, where, biome, pdn);
+		entity_add(mid, where_ref, biome, pdn);
 }
 
 void
-reroll(OBJ *player, OBJ *thing) {
-	ENT *eplayer = &player->sp.entity;
+reroll(dbref player_ref, ENT *eplayer) {
 	int i;
 
-	if (player != thing && !(eplayer->flags & EF_WIZARD)) {
-		nd_writef(player, "You can not do that.\n");
-		return;
-	}
-
-	for (i = 0; i < ATTR_MAX; i++) {
+	for (i = 0; i < ATTR_MAX; i++)
 		eplayer->attr[i] = d20();
-	}
 
 	EFFECT(eplayer, DMG).value = DMG_BASE(eplayer);
 	EFFECT(eplayer, DODGE).value = DODGE_BASE(eplayer);
-	mcp_stats(player);
-	mcp_bars(player);
+	mcp_stats(player_ref);
+	mcp_bars(player_ref);
 }
 
 void
 do_reroll(int fd, int argc, char *argv[])
 {
-	OBJ *player = FD_PLAYER(fd);
+	dbref player_ref = FD_PLAYER(fd),
+	      thing_ref = player_ref;
+
 	char *what = argv[1];
-	OBJ *thing = player;
 
 	if (
-			argc > 1 && !(thing = ematch_me(player, what))
-			&& !(thing = ematch_near(player, what))
-			&& !(thing = ematch_mine(player, what))
+			argc > 1 && (thing_ref = ematch_me(player_ref, what)) == NOTHING
+			&& (thing_ref = ematch_near(player_ref, what)) == NOTHING
+			&& (thing_ref = ematch_mine(player_ref, what)) == NOTHING
 	   ) {
-		nd_writef(player, NOMATCH_MESSAGE);
+		nd_writef(player_ref, NOMATCH_MESSAGE);
 		return;
 	}
 
-	reroll(player, thing);
+	ENT eplayer = ent_get(player_ref);
+	reroll(player_ref, &eplayer);
+	ent_set(player_ref, &eplayer);
+}
+
+void entities_init() {
+	tmp_hds = hash_init();
 }

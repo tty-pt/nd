@@ -174,7 +174,7 @@ struct cmd_slot cmds[] = {
 		.cb = &do_inventory,
 	}, {
 		.name = "fight",
-		.cb = &do_kill,
+		.cb = &do_fight,
 	}, {
 		.name = "look",
 		.cb = &do_look_at,
@@ -232,6 +232,9 @@ struct cmd_slot cmds[] = {
 	}, {
 		.name = "unequip",
 		.cb = &do_unequip,
+	}, {
+		.name = NULL,
+		.cb = NULL,
 	},
 };
 
@@ -240,6 +243,8 @@ int euid = 0;
 struct ndc_config nd_config = {
 	.flags = 0,
 };
+long fds_hd = -1;
+long player_hd = -1;
 
 void
 show_program_usage(char *prog)
@@ -253,6 +258,18 @@ show_program_usage(char *prog)
 	fprintf(stderr, "        -v        display this server's version.\n");
 	fprintf(stderr, "        -?        display this message.\n");
 	exit(1);
+}
+
+struct hash_cursor fds_iter(dbref player) {
+	return hash_citer(fds_hd, &player, sizeof(player));
+}
+
+int fds_next(struct hash_cursor *c) {
+	dbref key;
+	int value;
+	if (!hash_next(&key, &value, c))
+		return 0;
+	return value;
 }
 
 int
@@ -293,12 +310,15 @@ main(int argc, char **argv)
 		}
 	}
 
+	fds_hd = hash_cinit(NULL, NULL, 0644, QH_DUP);
+
 	ndc_init(&nd_config);
 	euid = geteuid();
 	if (euid && !nd_config.chroot)
 		nd_config.chroot = ".";
 
 	players_init();
+	entities_init();
 	objects_init();
 	int ret = map_init();
 	if (ret) {
@@ -322,74 +342,76 @@ main(int argc, char **argv)
 }
 
 void
-nd_write(OBJ *player, char *str, size_t len) {
-	if (!player->sp.entity.fds)
-		return;
+nd_write(dbref player_ref, char *str, size_t len) {
+	struct hash_cursor c = fds_iter(player_ref);
+	int fd;
 
-	struct hash_cursor c = hash_iter_start(player->sp.entity.fds);
-
-	while (hash_iter_get(&c))
-		ndc_write(* (int *) c.key, str, len);
+	while ((fd = fds_next(&c)))
+		ndc_write(fd, str, len);
 }
 
 
 void
-nd_dwritef(OBJ *player, const char *fmt, va_list args) {
+nd_dwritef(dbref player_ref, const char *fmt, va_list args) {
 	static char buf[BUFSIZ];
 	ssize_t len = vsnprintf(buf, sizeof(buf), fmt, args);
-	if (!player->sp.entity.fds)
-		return;
-	struct hash_cursor c = hash_iter_start(player->sp.entity.fds);
+	struct hash_cursor c = fds_iter(player_ref);
+	int fd;
 
-	while (hash_iter_get(&c))
-		ndc_write(* (int *) c.key, buf, len);
+	while ((fd = fds_next(&c)))
+		ndc_write(fd, buf, len);
 }
 
 void
-nd_writef(OBJ *player, const char *fmt, ...)
+nd_writef(dbref player_ref, const char *fmt, ...)
 {
 	va_list va;
 	va_start(va, fmt);
-	nd_dwritef(player, fmt, va);
+	nd_dwritef(player_ref, fmt, va);
 	va_end(va);
 }
 
 void
-nd_rwrite(OBJ *room, OBJ *exception, char *str, size_t len) {
-	OBJ *first = room->contents;
-	FOR_LIST(first, first) {
-		if (first->type != TYPE_ENTITY || first == exception)
-			continue;
-		nd_write(first, str, len);
-	}
+nd_rwrite(dbref room_ref, dbref exception_ref, char *str, size_t len) {
+	dbref tmp_ref;
+	struct hash_cursor c = contents_iter(room_ref);
+	while ((tmp_ref = contents_next(&c)) != NOTHING)
+		if (tmp_ref != exception_ref && obj_get(exception_ref).type == TYPE_ENTITY)
+			nd_write(tmp_ref, str, len);
 }
 
 void
-nd_rwritef(OBJ *room, OBJ *exception, char *format, ...)
-{
+nd_dowritef(dbref player_ref, const char *fmt, va_list args) {
 	char buf[BUFFER_LEN];
 	size_t len;
-	va_list args;
-	va_start(args, format);
-	len = vsnprintf(buf, sizeof(buf), format, args);
-	va_end(args);
-	nd_rwrite(room, exception, buf, len);
+	len = vsnprintf(buf, sizeof(buf), fmt, args);
+	nd_rwrite(obj_get(player_ref).location, player_ref, buf, len);
 }
 
 void
-nd_close(OBJ *player) {
-	struct hash_cursor c = hash_iter_start(player->sp.entity.fds);
+nd_owritef(dbref player_ref, char *format, ...)
+{
+	va_list args;
+	va_start(args, format);
+	nd_dowritef(player_ref, format, args);
+	va_end(args);
+}
 
-	while (hash_iter_get(&c))
-		ndc_close(* (int *) c.key);
+void
+nd_close(dbref player_ref) {
+	struct hash_cursor c = fds_iter(player_ref);
+	int fd;
+
+	while ((fd = fds_next(&c)))
+		ndc_close(fd);
 }
 
 void
 do_save(int fd, int argc, char *argv[]) {
-	OBJ *player = FD_PLAYER(fd);
+	dbref player_ref = FD_PLAYER(fd);
 
-	if (object_ref(player) != 1) {
-		nd_writef(player, "Only God can save\n");
+	if (player_ref != 1) {
+		nd_writef(player_ref, "Only root can save\n");
 		return;
 	}
 
@@ -405,23 +427,25 @@ avatar(OBJ *player) {
 
 void
 do_avatar(int fd, int argc, char *argv[]) {
-	OBJ *player = FD_PLAYER(fd);
-	avatar(player);
-	mcp_content_out(player->location, player);
-	mcp_content_in(player->location, player);
+	dbref player_ref = FD_PLAYER(fd);
+	OBJ player = obj_get(player_ref);
+	avatar(&player);
+	obj_set(player_ref, &player);
+	mcp_content_out(player.location, player_ref);
+	mcp_content_in(player.location, player_ref);
 }
 
-OBJ *
+dbref
 auth(int fd, char *qsession)
 {
 	char buf[BUFSIZ];
 	FILE *fp;
-	OBJ *player;
+	OBJ player;
 
 	if (!*qsession) {
 		ndc_writef(fd, "No key provided.\n");
 		mcp_auth_fail(fd, 3);
-		return NULL;
+		return NOTHING;
 	}
 
 	warn("AUTH '%s'\n", qsession);
@@ -431,7 +455,7 @@ auth(int fd, char *qsession)
 	if (!fp) {
 		ndc_writef(fd, "No such session\n");
 		mcp_auth_fail(fd, 1);
-		return NULL;
+		return NOTHING;
 	}
 
 	fscanf(fp, "%s", buf);
@@ -439,34 +463,46 @@ auth(int fd, char *qsession)
 
 	warn("lookup_player '%s'\n", buf);
 
-	player = player_get(buf);
+	dbref player_ref = player_get(buf);
 
-	if (!player) {
-		player = player_create(buf);
-		birth(player);
-		spells_birth(player);
-		avatar(player);
-		reroll(player, player);
-		ENT *eplayer = &player->sp.entity;
-		eplayer->hp = HP_MAX(eplayer);
-		eplayer->mp = MP_MAX(eplayer);
+	if (player_ref == NOTHING) {
+		ENT eplayer;
+		memset(&eplayer, 0, sizeof(eplayer));
+		player_ref = object_new(&player);
+		player.name = strdup(buf);
+		player.location = eplayer.home = PLAYER_START;
+		player.type = TYPE_ENTITY;
+		player.owner = player_ref;
+		player.value = START_PENNIES;
+		eplayer.flags = EF_PLAYER;
+
+		player_put(buf, player_ref);
+
+		birth(&eplayer);
+		spells_birth(&eplayer);
+		avatar(&player);
+		reroll(player_ref, &eplayer);
+		eplayer.hp = HP_MAX(&eplayer);
+		eplayer.mp = MP_MAX(&eplayer);
+		ent_set(player_ref, &eplayer);
+		obj_set(player_ref, &player);
+		st_start(player_ref);
+
         }
 
-	FD_PLAYER(fd) = player;
+	FD_PLAYER(fd) = player_ref;
 	ndc_auth(fd, buf);
-	ENT *eplayer = &player->sp.entity;
-	if (!eplayer->fds)
-		eplayer->fds = hash_init();
-	hash_put(eplayer->fds, &fd, sizeof(fd), (void *) 1);
-        mcp_stats(player);
-        mcp_auth_success(player);
-        mcp_equipment(player);
-	look_around(player);
-        mcp_bars(player);
+	dbref ref = player_ref;
+	hash_cput(fds_hd, &ref, sizeof(ref), &fd, sizeof(fd));
+        mcp_stats(player_ref);
+        mcp_auth_success(player_ref);
+        mcp_equipment(player_ref);
+	look_around(player_ref);
+        mcp_bars(player_ref);
 	/* enter_room(player, E_ALL); */
 	do_view(fd, 0, NULL);
-	st_run(player, "auth");
-	return player;
+	st_run(player_ref, "auth");
+	return player_ref;
 }
 
 void
@@ -491,30 +527,23 @@ void ndc_vim(int fd, int argc, char *argv[]) {
 	if (!(ndc_flags(fd) & DF_AUTHENTICATED))
 		return;
 
-	OBJ *player = FD_PLAYER(fd);
+	dbref player_ref = FD_PLAYER(fd);
 	int ofs = 1;
 	char const *s = argv[0];
 
 	for (; *s && ofs > 0; s += ofs) {
-		ofs = st_v(player, s);
+		ofs = st_v(player_ref, s);
 		if (ofs < 0)
 			ofs = - ofs;
 		s += ofs;
-		ofs = kill_v(player, s);
+		ofs = kill_v(player_ref, s);
 	}
-}
-
-void ndc_view(int fd, int argc, char *argv[]) {
-	if (!(ndc_flags(fd) & DF_AUTHENTICATED))
-		return;
-
-	do_look_at(fd, argc, argv);
 }
 
 void ndc_connect(int fd) {
 	static char *cookie;
 	int headers = ndc_headers(fd);
-	cookie = (char *) SHASH_GET(headers, "Cookie");
+	cookie = (char *) hash_sget(headers, "Cookie");
 	if (!cookie)
 		return;
 
@@ -525,24 +554,8 @@ void ndc_disconnect(int fd) {
 	if (!(ndc_flags(fd) & DF_AUTHENTICATED))
 		return;
 
-	OBJ *player = FD_PLAYER(fd);
-	ENT *eplayer = &player->sp.entity;
+	dbref player_ref = FD_PLAYER(fd);
 	warn("%s(%d) disconnects on fd %d\n",
-			player->name, object_ref(player), fd);
-	OBJ *last_observed = eplayer->last_observed;
-	if (last_observed)
-		observer_remove(last_observed, player);
-
-	FD_PLAYER(fd) = NULL;
-	int no_fds = 1;
-	struct hash_cursor c = hash_iter_start(eplayer->fds);
-	while (hash_iter_get(&c)) {
-		no_fds = 0;
-		break;
-	}
-	hash_del(eplayer->fds, &fd, sizeof(fd));
-	if (no_fds) {
-		hash_close(eplayer->fds);
-		eplayer->fds = 0;
-	}
+			obj_get(player_ref).name, player_ref, fd);
+	FD_PLAYER(fd) = NOTHING;
 }

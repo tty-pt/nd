@@ -7,10 +7,8 @@
 #include "object.h"
 
 // adds 2^DAYTICK_Y to day tick until it reaches DAYSIZE
-#define DAY_Y		16
-#define DAYTICK_Y	6
-#define DAYTICK		(1<<DAYTICK_Y)
-#define NIGHT_IS	(day_tick > (1 << (DAY_Y - 1)))
+#define DAYTICK_Y	10
+#define NIGHT_IS	(day_n == 1)
 
 #define Y_COORD 0
 #define X_COORD 1
@@ -73,7 +71,8 @@ struct cmd_dir {
 	morton_t rep;
 };
 
-extern unsigned short day_tick;
+extern unsigned long long day_tick;
+extern unsigned short day_n;
 extern double tick;
 extern enum exit e_map[];
 extern exit_t exit_map[];
@@ -84,7 +83,7 @@ morton_t pos_morton(pos_t);
 void morton_pos(pos_t p, morton_t code);
 
 int e_exit_can(OBJ *player, enum exit e);
-int e_ground(OBJ *room, enum exit e);
+int e_ground(dbref room, enum exit e);
 
 void pos_move(pos_t d, pos_t o, enum exit e);
 enum exit dir_e(const char dir);
@@ -95,14 +94,14 @@ const char * e_other(enum exit e);
 morton_t point_rel_idx(point_t p, point_t s, smorton_t w);
 
 void st_update(double dt);
-int st_v(OBJ *player, const char *dir);
-int st_teleport(OBJ *player, struct cmd_dir cd);
-void st_start(OBJ *player);
+int st_v(dbref player_ref, const char *dir);
+int st_teleport(dbref player_ref, struct cmd_dir cd);
+void st_start(dbref player_ref);
 
 void st_init();
 void st_close();
 void st_sync();
-void st_run(OBJ *player, char *symbol);
+void st_run(dbref player_ref, char *symbol);
 void do_stchown(int fd, int argc, char *argv[]);
 void do_streload(int fd, int argc, char *argv[]);
 
