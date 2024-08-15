@@ -1,22 +1,12 @@
 #ifndef _PARAMS_H
 #define _PARAMS_H
 
-/* penny related stuff */
-/* amount of object endowment, based on cost */
-#define OBJECT_ENDOWMENT(cost) (((cost)-5)/5)
-#define OBJECT_GETCOST(endow) ((endow)*5+5)
-
-#define DB_INITIAL_SIZE 100		/* initial malloc() size for the db */
-
-#define MAX_PARENT_DEPTH 256            /* Maximum parenting depth allowed. */
-
-#define GLOBAL_ENVIRONMENT ((dbref) 0)	/* parent of all rooms.  Always #0 */
+#define GLOBAL_ENVIRONMENT ((unsigned) 0)	/* parent of all rooms.  Always #0 */
 
 /* magic cookies (not chocolate chip) :) */
 
 #define ESCAPE_CHAR 27
 #define NUMBER_TOKEN '#'
-#define ARG_DELIMITER '='
 
 /* ANSI attributes and color codes */
 

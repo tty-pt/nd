@@ -19,15 +19,14 @@ typedef struct {
 } vtf_t;
 
 typedef struct view_tile {
-	/* ref_t players[ROOM_MAX]; /1* dbref actually *1/ */
 	enum biome bio_idx;
-	dbref room;
+	unsigned room;
 	ucoord_t flags, exits, doors;
 	struct plant_data pd;
 } view_tile_t;
 
 typedef view_tile_t view_t[VIEW_M];
 
-void view(OBJ *player);
+void view(unsigned player_ref);
 
 #endif

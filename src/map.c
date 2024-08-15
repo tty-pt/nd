@@ -1,14 +1,17 @@
-#include "map.h"
+#include "uapi/map.h"
 
-#include <string.h>
-#include "nddb.h"
+#include <stdlib.h>
+
 #include "config.h"
-#include "debug.h"
+#include "nddb.h"
+#include "st.h"
+
+#define GEO_DB "/var/nd/geo.db"
 
 // #define PRECOVERY
 
 typedef struct {
-	dbref what;
+	unsigned what;
 	morton_t where;
 } map_range_t;
 
@@ -124,9 +127,7 @@ next:	ret = cur->c_pget(cur, &key, &pkey, &data, dbflags);
 	case DB_NOTFOUND:
 		ret = 0;
 		goto out;
-	default:
-		BUG("%s", db_strerror(ret));
-		goto out;
+	default: goto out;
 	}
 
 	code = *(morton_t*) key.data;
@@ -135,7 +136,7 @@ next:	ret = cur->c_pget(cur, &key, &pkey, &data, dbflags);
 		goto out;
 
 	if (inrange(code, rect->s, rect_e)) {
-		r->what = * (dbref *) pkey.data;
+		r->what = * (unsigned *) pkey.data;
 		r->where = code;
 		r++;
 		nn--;
@@ -198,7 +199,7 @@ map_range_safe(map_range_t *res,
 }
 
 void
-map_search(dbref *mat, pos_t pos, unsigned radius)
+map_search(unsigned *mat, pos_t pos, unsigned radius)
 {
 	const unsigned side = 2 * radius + 1;
 	const unsigned m = side * side;
@@ -214,7 +215,7 @@ map_search(dbref *mat, pos_t pos, unsigned radius)
 	int i;
 
 	n =  map_range_safe(buf, m, &vpr, 0);
-	memset(mat, -1, sizeof(dbref) * m);
+	memset(mat, -1, sizeof(unsigned) * m);
 
 	for (i = 0; i < n; i++) {
 		pos_t p;
@@ -240,26 +241,27 @@ map_mki_code(DB *sec, const DBT *key, const DBT *data, DBT *result)
 	return 0;
 }
 
-int
+void
 map_init() {
 	char filename[BUFSIZ];
 	snprintf(filename, sizeof(filename), "%s%s", euid ? nd_config.chroot : "", GEO_DB);
 	int ret = 0;
 	if ((ret = db_create(&ipdb, dbe, 0))
-	    || (ret = ipdb->open(ipdb, NULL, filename, "dp", DB_HASH, DB_CREATE, 0664)))
-		return ret;
+	    || (ret = ipdb->open(ipdb, NULL, filename, "dp", DB_HASH, DB_CREATE, 0664))) {
+		fprintf(stderr, "map_init %s", db_strerror(ret));
+		exit(EXIT_FAILURE);
+		return;
+	}
 
 	if ((ret = db_create(&pdb, dbe, 0))
 	    || (ret = pdb->set_bt_compare(pdb, map_cmp))
 	    || (ret = pdb->open(pdb, NULL, filename, "pd", DB_BTREE, DB_CREATE, 0664))
 	    || (ret = ipdb->associate(ipdb, NULL, pdb, map_mki_code, DB_CREATE)))
-	
+	{
 		pdb->close(pdb, 0);
-	else
-		return 0;
-
-	ipdb->close(ipdb, 0);
-	return ret;
+		fprintf(stderr, "map_init2 %s", db_strerror(ret));
+		exit(EXIT_FAILURE);
+	}
 }
 
 int
@@ -278,40 +280,33 @@ map_sync()
 }
 
 static void
-_map_put(morton_t code, dbref thing, int flags)
+_map_put(morton_t code, unsigned thing_ref, int flags)
 {
 	DBT key;
 	DBT data;
-	int ret;
-
-	CBUG(object_get(thing)->type != TYPE_ROOM);
 
 	memset(&key, 0, sizeof(DBT));
 	memset(&data, 0, sizeof(DBT));
 
-	key.data = &thing;
-	key.size = sizeof(thing);
+	key.data = &thing_ref;
+	key.size = sizeof(thing_ref);
 	data.data = &code;
 	data.size = sizeof(code);
 
-	ret = ipdb->put(ipdb, NULL, &key, &data, flags);
-	if (ret) {
-		debug("room %d %s", thing, db_strerror(ret));
-	}
-	CBUG(ret);
+	ipdb->put(ipdb, NULL, &key, &data, flags);
 }
 
 void
-map_put(pos_t p, OBJ *thing, int flags)
+map_put(pos_t p, unsigned thing, int flags)
 {
 	morton_t code = pos_morton(p);
-	_map_put(code, object_ref(thing), flags);
+	_map_put(code, thing, flags);
 }
 
 morton_t
-map_mwhere(OBJ *where)
+map_mwhere(unsigned where)
 {
-	dbref room = object_ref(where);
+	unsigned room = where;
 	int bad;
 	DBT key;
 	DBT data;
@@ -323,9 +318,6 @@ map_mwhere(OBJ *where)
 
 	if ((bad = ipdb->get(ipdb, NULL, &key, &data, 0))) {
 		static morton_t code = 130056652770671ULL;
-		/* if (bad == DB_NOTFOUND) */
-		/* 	_map_put(code, room, 0); */
-		debug("room %d %s", room, db_strerror(bad));
 		return code;
 	}
 
@@ -333,18 +325,18 @@ map_mwhere(OBJ *where)
 }
 
 int
-map_has(OBJ *room) {
+map_has(unsigned room) {
 	return map_mwhere(room) != 130056652770671ULL;
 }
 
 void
-map_where(pos_t p, OBJ *room)
+map_where(pos_t p, unsigned room)
 {
 	morton_t x = map_mwhere(room);
 	morton_pos(p, x);
 }
 
-OBJ *
+unsigned
 map_get(pos_t p)
 {
 	morton_t at = pos_morton(p);
@@ -352,11 +344,11 @@ map_get(pos_t p)
 	DBT pkey;
 	DBT data;
 	DBT key;
-	OBJ *ref;
+	unsigned ref;
 	int res;
 
 	if (pdb->cursor(pdb, NULL, &cur, 0))
-		return NULL;
+		return NOTHING;
 
 	memset(&pkey, 0, sizeof(DBT));
 	memset(&key, 0, sizeof(DBT));
@@ -369,28 +361,25 @@ map_get(pos_t p)
 		res = cur->c_pget(cur, &key, &pkey, &data, DB_SET);
 		switch (res) {
 		case 0:
-			ref = object_get(* (dbref *) pkey.data);
+			ref = * (unsigned *) pkey.data;
 #ifdef PRECOVERY
-			if (ref->type != TYPE_ROOM) {
+			OBJ obj = obj_get(ref);
+			if (obj.type != TYPE_ROOM) {
 				debug("GARBAGE %d REMOVED ;)", ref);
 				cur->c_del(cur, 0);
 				continue;
 			}
-#else
-			CBUG(ref->type != TYPE_ROOM);
 #endif
 			return ref;
 		case DB_NOTFOUND:
 			cur->close(cur);
-			return NULL;
-		default:
-			BUG("%s", db_strerror(res));
+			return NOTHING;
 		}
 	}
 }
 
 int
-map_delete(OBJ *what)
+map_delete(unsigned what)
 {
 	DBT key;
 	morton_t code = map_mwhere(what);

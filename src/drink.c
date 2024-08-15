@@ -1,8 +1,6 @@
-#include <ndc.h>
-#include "consumable.h"
-#include "io.h"
-#include "entity.h"
-#include "match.h"
+#include "uapi/io.h"
+#include "uapi/entity.h"
+#include "uapi/match.h"
 
 #define DRINK_VALUE (1 << 14)
 #define FOOD_VALUE(x) (1 << (16 - x->food))
@@ -10,92 +8,101 @@
 void
 do_consume(int fd, int argc, char *argv[])
 {
-	OBJ *player = FD_PLAYER(fd);
-	ENT *eplayer = &player->sp.entity;
+	unsigned player_ref = fd_player(fd), vial_ref;
+	ENT eplayer = ent_get(player_ref);
 	char *name = argv[1];
-	OBJ *vial;
-	CON *cvial;
 	int aux;
 
-	if (!*name || !(vial = ematch_mine(player, name))) {
-		nd_writef(player, "Consume what?\n");
+	if (!*name || (vial_ref = ematch_mine(player_ref, name)) == NOTHING) {
+		nd_writef(player_ref, "Consume what?\n");
 		return;
 	}
 
-	if (vial->type != TYPE_CONSUMABLE) {
-		nd_writef(player, "You can not consume that.\n");
+	OBJ vial = obj_get(vial_ref);
+
+	if (vial.type != TYPE_CONSUMABLE) {
+		nd_writef(player_ref, "You can not consume that.\n");
 		return;
 	}
 
-	cvial = &vial->sp.consumable;
+	CON *cvial = &vial.sp.consumable;
 
 	if (!cvial->quantity) {
-		nd_writef(player, "%s is empty.\n", vial->name);
+		nd_writef(player_ref, "%s is empty.\n", vial.name);
 		return;
 	}
 
 	if (cvial->drink) {
-		aux = eplayer->thirst - DRINK_VALUE;
-		eplayer->thirst = aux < 0 ? 0 : aux;
+		aux = eplayer.huth[HUTH_THIRST] - DRINK_VALUE;
+		eplayer.huth[HUTH_THIRST] = aux < 0 ? 0 : aux;
 	}
 
 	if (cvial->food) {
-		aux = eplayer->hunger - FOOD_VALUE(cvial);
-		eplayer->hunger = aux < 0 ? 0 : aux;
+		aux = eplayer.huth[HUTH_HUNGER] - FOOD_VALUE(cvial);
+		eplayer.huth[HUTH_HUNGER] = aux < 0 ? 0 : aux;
 	}
 
 	cvial->quantity--;
-	notify_wts(player, "consume", "consumes", " %s\n", vial->name);
+	notify_wts(player_ref, "consume", "consumes", " %s\n", vial.name);
 
 	if (!cvial->quantity && !cvial->capacity)
-		recycle(player, vial);
+		object_move(vial_ref, NOTHING);
+	else
+		obj_set(vial_ref, &vial);
+
+	ent_set(player_ref, &eplayer);
 }
 
 void
 do_fill(int fd, int argc, char *argv[])
 {
-	OBJ *player = FD_PLAYER(fd);
-	char *vial_s = argv[1];
-	char *source_s = argv[2];
-	OBJ *vial = ematch_mine(player, vial_s);
-	CON *cvial;
-	unsigned m;
+	unsigned player_ref = fd_player(fd),
+	      vial_ref = ematch_mine(player_ref, argv[1]);;
 
-	if (!vial) {
-		nd_writef(player, "Fill what?\n");
+	if (vial_ref == NOTHING) {
+		nd_writef(player_ref, "Fill what?\n");
 		return;
 	}
 
-	if (vial->type != TYPE_CONSUMABLE) {
-		nd_writef(player, "You can not fill that up.\n");
+	OBJ vial = obj_get(vial_ref);
+
+	if (vial.type != TYPE_CONSUMABLE) {
+		nd_writef(player_ref, "You can not fill that up.\n");
 		return;
 	}
 
-	cvial = &vial->sp.consumable;
+	CON *cvial = &vial.sp.consumable;
 
-	if (!(m = cvial->capacity)) {
-		nd_writef(player, "You can not fill that up.\n");
+	if (!cvial->capacity) {
+		nd_writef(player_ref, "You can not fill that up.\n");
 		return;
 	}
 
 	if (cvial->quantity) {
-		nd_writef(player, "%s is not empty.\n", vial->name);
+		nd_writef(player_ref, "%s is not empty.\n", vial.name);
 		return;
 	}
 
-	OBJ *source = ematch_near(player, source_s);
+	unsigned source_ref = ematch_near(player_ref, argv[2]);
 
-	if (!source || source->type != TYPE_CONSUMABLE) {
-		nd_writef(player, "Invalid source.\n");
+	if (source_ref == NOTHING) {
+		nd_writef(player_ref, "Invalid source.\n");
 		return;
 	}
 
-	CON *csource = &source->sp.consumable;
+	OBJ source = obj_get(source_ref);
 
-	cvial->quantity = m;
+	if (source.type != TYPE_CONSUMABLE) {
+		nd_writef(player_ref, "Invalid source.\n");
+		return;
+	}
+
+	CON *csource = &source.sp.consumable;
+	cvial->quantity = cvial->capacity;
 	cvial->drink = csource->drink;
 	cvial->food = csource->food;
+	obj_set(vial_ref, &vial);
 
-	notify_wts(player, "fill", "fills", " %s from %s\n",
-		vial->name, source->name);
+	notify_wts(player_ref, "fill", "fills", " %s from %s\n",
+		vial.name, source.name);
 }

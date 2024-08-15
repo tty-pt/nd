@@ -1,4 +1,19 @@
 1
+#0
+Room Zero
+-1 location
+1 contents
+-1 next
+80 value
+0 type
+0 flags
+1 art_id
+-1
+0
+0
+0
+255
+1
 #1
 root
 0 location
@@ -29,19 +44,4 @@ root
 0 spell
 0 spell
 0 spell
-#0
-Room Zero
--1 location
-1 contents
--1 next
-80 value
-0 type
-0 flags
-1 art_id
--1
-0
-0
-0
-255
-1
 ***END OF DUMP***
