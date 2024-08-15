@@ -69,10 +69,6 @@ do_examine(int fd, int argc, char *argv[])
 		{
 			ROO *rthing = &thing->sp.room;
 			nd_writef(player, "Exits: %hhx Doors: %hhx\n", rthing->exits, rthing->doors);
-
-			if (rthing->dropto)
-				nd_writef(player, "Dropped objects go to: %s\n",
-						unparse(player, rthing->dropto));
 		}
 		break;
 	case TYPE_EQUIPMENT:
@@ -102,7 +98,7 @@ do_examine(int fd, int argc, char *argv[])
 		{
 			ENT *ething = &thing->sp.entity;
 
-			nd_writef(player, "Home: %s\n", unparse(player, ething->home));
+			nd_writef(player, "Home: %s\n", unparse(player, object_get(ething->home)));
 			nd_writef(player, "hp: %d/%d entity flags: %d\n", ething->hp, HP_MAX(ething), ething->flags);
 
 			/* print location if player can link to it */

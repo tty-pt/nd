@@ -117,9 +117,7 @@ do_drop(int fd, int argc, char *argv[])
 		return;
 	}
 
-	int immediate_dropto = (cont->type == TYPE_ROOM && cont->sp.room.dropto);
-
-	object_move(thing, immediate_dropto ? cont->sp.room.dropto : cont);
+	object_move(thing, cont);
 
 	if (object_item(cont)) {
 		nd_writef(player, "Put away.\n");
@@ -131,7 +129,7 @@ do_drop(int fd, int argc, char *argv[])
 	}
 
 	nd_writef(player, "Dropped.\n");
-	nd_rwritef(player->location, player, "%s drops %s.\n", player->name, thing->name);
+	nd_owritef(player, "%s drops %s.\n", player->name, thing->name);
 }
 
 void

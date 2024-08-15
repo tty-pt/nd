@@ -284,7 +284,7 @@ object_add(SKEL *sk, OBJ *where, void *arg)
 			birth(nu);
 			spells_birth(nu);
 			object_drop(nu, sk->sp.entity.drop);
-			enu->home = where;
+			enu->home = object_ref(where);
 			nu->art_id = art_idx(nu);
 		}
 
@@ -305,7 +305,6 @@ object_add(SKEL *sk, OBJ *where, void *arg)
 			ROO *rnu = &nu->sp.room;
 			nu->type = TYPE_ROOM;
 			rnu->exits = rnu->doors = 0;
-			rnu->dropto = NULL;
 			rnu->flags = RF_TEMP;
 			nu->art_id = biome_art_idx(bio);
 		}
@@ -395,7 +394,7 @@ object_write(FILE * f, OBJ *obj)
 	case TYPE_ENTITY:
 		{
 			ENT *ent = &obj->sp.entity;
-			putref(f, object_ref(ent->home));
+			putref(f, ent->home);
 			putref(f, ent->flags);
 			putref(f, ent->lvl);
 			putref(f, ent->cxp);
@@ -403,7 +402,7 @@ object_write(FILE * f, OBJ *obj)
 			for (j = 0; j < ATTR_MAX; j++)
 				putref(f, ent->attr[j]);
 			putref(f, ent->wtso);
-			putref(f, object_ref(ent->sat));
+			putref(f, ent->sat);
 			for (j = 0; j < 8; j++)
 				putref(f, ent->spells[j]._sp - spell_skeleton_map);
 		}
@@ -446,7 +445,7 @@ object_write(FILE * f, OBJ *obj)
 	case TYPE_ROOM:
 		{
 			ROO *roo = &obj->sp.room;
-			putref(f, object_ref(roo->dropto));
+			putref(f, NOTHING);
 			putref(f, roo->flags);
 			putref(f, roo->exits);
 			putref(f, roo->doors);
@@ -684,7 +683,7 @@ object_read(FILE * f)
 	case TYPE_ROOM:
 		{
 			ROO *ro = &o->sp.room;
-			ro->dropto = object_get(ref_read(f));
+			ref_read(f);
 			ro->flags = ref_read(f);
 			ro->exits = ref_read(f);
 			ro->doors = ref_read(f);
@@ -695,10 +694,10 @@ object_read(FILE * f)
 	case TYPE_ENTITY:
 		{
 			ENT *eo = &o->sp.entity;
-			eo->home = object_get(ref_read(f));
+			eo->home = ref_read(f);
 			/* warn("entity home\n"); */
-			eo->last_observed = NULL;
-			eo->gpt = NULL;
+			eo->last_observed = NOTHING;
+			/* eo->gpt = NULL; */
 			eo->flags = ref_read(f);
 			fprintf(stderr, "READ ENT %s %d\n", o->name, eo->flags);
 			eo->lvl = ref_read(f);
@@ -707,7 +706,7 @@ object_read(FILE * f)
 			for (j = 0; j < ATTR_MAX; j++)
 				eo->attr[j] = ref_read(f);
 			eo->wtso = ref_read(f);
-			eo->sat = object_get(ref_read(f));
+			eo->sat = ref_read(f);
 			for (j = 0; j < 8; j++) {
 				struct spell *sp = &eo->spells[j];
 				int ref = ref_read(f);
@@ -927,7 +926,7 @@ object_move(OBJ *what, OBJ *where)
 
 	if (object_plc(what, where)) {
 		if (what->type == TYPE_ENTITY) {
-			where = what->sp.entity.home;
+			where = object_get(what->sp.entity.home);
 			ENT *ewhat = &what->sp.entity;
 			if ((ewhat->flags & EF_SITTING))
 				stand(what);

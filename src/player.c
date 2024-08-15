@@ -15,7 +15,8 @@ player_create(char *name)
 	ENT *eplayer = &player->sp.entity;
 
 	player->name = strdup(name);
-	eplayer->home = player->location = object_get(PLAYER_START);
+	eplayer->home = PLAYER_START;
+	player->location = object_get(PLAYER_START);
 	player->type = TYPE_ENTITY;
 	player->owner = player;
 	player->value = START_PENNIES;

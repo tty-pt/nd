@@ -58,7 +58,7 @@ do_kill(int fd, int argc, char *argv[])
 		return;
 	}
 
-	player->sp.entity.target = target;
+	player->sp.entity.target = object_ref(target);
 	/* ndc_writef(fd, "You form a combat pose."); */
 }
 
@@ -187,7 +187,7 @@ kill_v(OBJ *player, char const *opcs)
 		return end - opcs;
 	} else if (*opcs == 'c' && isdigit(opcs[1])) {
 		unsigned slot = strtol(opcs + 1, &end, 0);
-                OBJ *target = eplayer->target;
+                OBJ *target = object_get(eplayer->target);
 		if (player->location == 0) {
 			nd_writef(player, "You may not cast spells in room 0.\n");
 		} else {

@@ -53,7 +53,8 @@ birth(OBJ *player)
 	eplayer->combo = 0;
 	eplayer->hp = HP_MAX(eplayer);
 	eplayer->mp = MP_MAX(eplayer);
-	eplayer->sat = eplayer->target = NULL;
+	eplayer->target = NOTHING;
+	eplayer->sat = NOTHING;
 
 	EFFECT(eplayer, DMG).value = DMG_BASE(eplayer);
 	EFFECT(eplayer, DODGE).value = DODGE_BASE(eplayer);
@@ -106,7 +107,7 @@ recycle(OBJ *player, OBJ *thing)
 					recycle(player, first);
 				}
 			if (thing->location)
-				nd_rwritef(thing->location, NULL, "You feel a wrenching sensation...\n");
+				nd_owritef(thing, "You feel a wrenching sensation...\n");
 			map_delete(thing);
 		}
 
@@ -140,14 +141,8 @@ recycle(OBJ *player, OBJ *thing)
 	FOR_ALL(rest) {
 		switch (rest->type) {
 		case TYPE_ROOM:
-			{
-				ROO *rrest = &rest->sp.room;
-				if (rrest->dropto == thing)
-					rrest->dropto = NULL;
-				if (rest->owner == thing)
-					rest->owner = object_get(GOD);
-			}
-
+			if (rest->owner == thing)
+				rest->owner = object_get(GOD);
 			break;
 		case TYPE_PLANT:
 		case TYPE_SEAT:
@@ -161,8 +156,8 @@ recycle(OBJ *player, OBJ *thing)
 		case TYPE_ENTITY:
 			{
 				ENT *erest = &rest->sp.entity;
-				if (erest->home == thing)
-					erest->home = object_get(PLAYER_START);
+				if (object_get(erest->home) == thing)
+					erest->home = PLAYER_START;
 			}
 
 			break;
@@ -178,11 +173,8 @@ recycle(OBJ *player, OBJ *thing)
 		if (first->type == TYPE_ENTITY) {
 			ENT *efirst = &first->sp.entity;
 			if (efirst->flags & EF_PLAYER) {
-				enter(first, efirst->home, E_NULL);
-				if (first->location == thing) {
-					nd_writef(player, "Escaping teleport loop!  Going home.\n");
-					object_move(first, object_get(PLAYER_START));
-				}
+				enter(first, object_get(efirst->home), E_NULL);
+				CBUG(first->location == thing);
 				continue;
 			}
 		}
@@ -217,7 +209,7 @@ entities_aggro(OBJ *player)
 		ENT *etmp = &tmp->sp.entity;
 
 		if (etmp->flags & EF_AGGRO) {
-			etmp->target = player;
+			etmp->target = object_ref(player);
 			klock++;
 		}
 	}
@@ -530,11 +522,11 @@ enter(OBJ *player, OBJ *loc, enum exit e)
 
 	st_run(player, "leave");
 	if (e == E_NULL)
-		nd_rwritef(player->location, player, "%s teleports out.\n", player->name);
+		nd_owritef(player, "%s teleports out.\n", player->name);
 	object_move(player, loc);
 	room_clean(player, old);
 	if (e == E_NULL)
-		nd_rwritef(player->location, player, "%s teleports in.\n", player->name);
+		nd_owritef(player, "%s teleports in.\n", player->name);
 	nd_move(player);
 	st_run(player, "enter");
 	entities_aggro(player);
@@ -628,7 +620,7 @@ sit(OBJ *player, char *name)
 	if (!*name) {
 		notify_wts(player, "sit", "sits", " on the ground");
 		eplayer->flags |= EF_SITTING;
-		eplayer->sat = NULL;
+		eplayer->sat = NOTHING;
 
 		/* warn("%d sits on the ground\n", player); */
 		return;
@@ -650,7 +642,7 @@ sit(OBJ *player, char *name)
 
 	sseat->quantity += 1;
 	eplayer->flags |= EF_SITTING;
-	eplayer->sat = seat;
+	eplayer->sat = object_ref(seat);
 
 	notify_wts(player, "sit", "sits", " on %s", seat->name);
 }
@@ -663,13 +655,13 @@ stand_silent(OBJ *player)
 	if (!(eplayer->flags & EF_SITTING))
 		return 1;
 
-	OBJ *chair = eplayer->sat;
+	OBJ *chair = object_get(eplayer->sat);
 
 	if (chair) {
 		CBUG(chair->type != TYPE_SEAT);
 		SEA *schair = &chair->sp.seat;
 		schair->quantity--;
-		eplayer->sat = NULL;
+		eplayer->sat = NOTHING;
 	}
 
 	eplayer->flags ^= EF_SITTING;
@@ -686,8 +678,7 @@ stand(OBJ *player) {
 void
 look_around(OBJ *player)
 {
-	if (player->location->type == TYPE_ROOM)
-		mcp_look(player, player->location);
+	mcp_look(player, player->location);
 }
 
 int
@@ -865,7 +856,7 @@ entity_body(OBJ *player, OBJ *mob)
 	}
 
 	if (n > 0) {
-		nd_rwritef(mob->location, NULL, "%s's body drops to the ground.\n", mob->name);
+		nd_owritef(mob, "%s's body drops to the ground.\n", mob->name);
 		return dead_mob;
 	} else {
 		recycle(player, dead_mob);
@@ -886,13 +877,13 @@ entity_kill(OBJ *player, OBJ *target)
 	if (player) {
 		CBUG(player->type != TYPE_ENTITY)
 		entity_award(player, etarget);
-		eplayer->target = NULL;
+		eplayer->target = NOTHING;
 	}
 
 	CBUG(target->type != TYPE_ENTITY);
 
 	if (etarget->target && (etarget->flags & EF_AGGRO)) {
-		OBJ *tartar = etarget->target;
+		OBJ *tartar = object_get(etarget->target);
 		ENT *etartar = &tartar->sp.entity;
 		etartar->klock --;
 	}
@@ -907,7 +898,7 @@ entity_kill(OBJ *player, OBJ *target)
 	}
 
 	etarget->klock = 0;
-	etarget->target = NULL;
+	etarget->target = NOTHING;
 	etarget->hp = 1;
 	etarget->mp = 1;
 	etarget->hunger_n = etarget->thirst_n = 0;
@@ -992,7 +983,7 @@ respawn(OBJ *player)
 	ENT *eplayer = &player->sp.entity;
 	OBJ *where;
 
-	nd_rwritef(player->location, player, "%s disappears.\n", player->name);
+	nd_owritef(player, "%s disappears.\n", player->name);
 
 	if (eplayer->flags & EF_PLAYER) {
 		struct cmd_dir cd;
@@ -1001,12 +992,12 @@ respawn(OBJ *player)
 		st_teleport(player, cd);
 		where = player->location;
 	} else {
-		where = eplayer->home;
+		where = object_get(eplayer->home);
 		/* warn("respawning %d to %d\n", who, where); */
 		object_move(player, where);
 	}
 
-	nd_rwritef(player->location, player, "%s appears.\n", player->name);
+	nd_owritef(player, "%s appears.\n", player->name);
 }
 
 static inline int
@@ -1073,7 +1064,7 @@ int
 kill_dodge(OBJ *player, struct wts wts)
 {
 	ENT *eplayer = &player->sp.entity;
-	OBJ *target = eplayer->target;
+	OBJ *target = object_get(eplayer->target);
 	ENT *etarget = &target->sp.entity;
 	if (!EFFECT(etarget, MOV).value && dodge_get(eplayer)) {
 		notify_wts_to(target, player, "dodge", "dodges", "'s %s", wts.a);
@@ -1125,7 +1116,7 @@ attack(OBJ *player)
 		return;
 	}
 
-	OBJ *target = eplayer->target;
+	OBJ *target = object_get(eplayer->target);
 
 	if (!target)
 		return;
@@ -1147,19 +1138,19 @@ static inline void
 kill_update(OBJ *player, double dt)
 {
 	ENT *eplayer = &player->sp.entity;
-	OBJ *target = eplayer->target;
+	OBJ *target = object_get(eplayer->target);
 
 	if (!target
             || target->type == TYPE_GARBAGE
 	    || target->location != player->location) {
-		eplayer->target = NULL;
+		eplayer->target = NOTHING;
 		return;
 	}
 
 	ENT *etarget = &target->sp.entity;
 
 	if (!etarget->target)
-		etarget->target = player;
+		etarget->target = object_ref(player);
 
 	stand_silent(player);
 

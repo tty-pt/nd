@@ -70,8 +70,10 @@ void mcp_auth_fail(int descr, int reason);
 void mcp_auth_success(OBJ *player);
 void mcp_stats(OBJ *player);
 void mcp_bars(OBJ *player);
+/*
 void mcp_dialog_start(OBJ *player, OBJ *npc, const char *dialog);
 void mcp_dialog_stop(OBJ *player);
+*/
 void mcp_equipment(OBJ *player);
 void fbcp_view(OBJ *player, view_t *view);
 void fbcp_view_buf(OBJ *player, char *view);

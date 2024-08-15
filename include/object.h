@@ -59,7 +59,6 @@ enum exit {
 };
 
 typedef struct {
-	struct object *dropto;
 	unsigned flags;
 	unsigned char exits;
 	unsigned char doors;
@@ -140,15 +139,14 @@ struct effect {
 };
 
 typedef struct entity {
-	struct object *home;
+	dbref home;
 	unsigned fds;
-	struct object *last_observed, *dialog_target;
-        const char *dialog;
+	dbref last_observed;
 
 	struct debuf debufs[8];
 	struct spell spells[8];
 	struct effect e[7];
-	struct object *target, *sat;
+	dbref target, sat;
 	unsigned char wtso;
 	struct wts wts;
 	unsigned flags; // TODO merge these two
@@ -158,7 +156,7 @@ typedef struct entity {
 	unsigned attr[ATTR_MAX];
 	unsigned equipment[ES_MAX];
 	unsigned char hunger_n, thirst_n;
-	char *gpt;
+	/* char *gpt; */
 } ENT;
 
 enum equipment_flags {

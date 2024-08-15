@@ -513,7 +513,7 @@ e_move(OBJ *player, enum exit e) {
 	}
 
 	nd_writef(player, "You go %s%s%s.\n", ANSI_FG_BLUE ANSI_BOLD, e_name(e), ANSI_RESET);
-	nd_rwritef(player->location, player, "%s goes %s.\n", player->name, e_name(e));
+	nd_owritef(player, "%s goes %s.\n", player->name, e_name(e));
 
 	dest = st_there(loc, e);
 	if (!dest)
@@ -521,7 +521,7 @@ e_move(OBJ *player, enum exit e) {
 
 	enter(player, dest, e);
 
-	nd_rwritef(player->location, player, "%s comes in from the %s.\n", player->name, e_name(e_simm(e)));
+	nd_owritef(player, "%s comes in from the %s.\n", player->name, e_name(e_simm(e)));
 
 	if (door)
 		nd_writef(player, "You close the %s.\n", dwts);
@@ -825,7 +825,6 @@ tell_pos(OBJ *player, struct cmd_dir cd) {
 int
 st_teleport(OBJ *player, struct cmd_dir cd)
 {
-	ENT *eplayer = &player->sp.entity;
 	pos_t pos;
 	OBJ *there;
 	int ret = 0;
@@ -844,8 +843,8 @@ st_teleport(OBJ *player, struct cmd_dir cd)
 	if (!there)
 		there = st_room_at(player, pos);
 	CBUG(!there);
-	if (!eplayer->gpt)
-		nd_writef(player, "Teleporting to 0x%llx.\n", cd.rep);
+	/* if (!eplayer->gpt) */
+	nd_writef(player, "Teleporting to 0x%llx.\n", cd.rep);
 	enter(player, there, E_NULL);
 	return ret;
 }
@@ -959,7 +958,7 @@ struct st_key {
 } __attribute__((packed));
 
 void
-echo(const char *fmt, ...) {
+echo(char *fmt, ...) {
 	va_list va;
 	va_start(va, fmt);
 	nd_dwritef(g_player, fmt, va);
@@ -967,14 +966,11 @@ echo(const char *fmt, ...) {
 };
 
 void
-oecho(const char *format, ...) {
-	char buf[BUFFER_LEN];
-	size_t len;
+oecho(char *format, ...) {
 	va_list args;
 	va_start(args, format);
-	len = vsnprintf(buf, sizeof(buf), format, args);
+	nd_owritef(g_player, format, args);
 	va_end(args);
-	nd_rwrite(g_player->location, g_player, buf, len);
 }
 
 static void

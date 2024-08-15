@@ -90,12 +90,6 @@ do_teleport(int fd, int argc, char *argv[]) {
 			nd_writef(player, "Permission denied. (must control dest and be able to link to it, or control dest's loc)\n");
 			break;
 		}
-		/* check for non-sticky dropto */
-		if (destination->type == TYPE_ROOM) {
-			ROO *rdestination = &destination->sp.room;
-			if (rdestination->dropto)
-				destination = rdestination->dropto;
-		}
 		object_move(victim, destination);
 		nd_writef(player, "Teleported.\n");
 		break;
@@ -236,7 +230,7 @@ do_toad(int fd, int argc, char *argv[]) {
 	} else {
 		/* we're ok */
 		/* do it */
-		send_contents(victim, evictim->home);
+		send_contents(victim, object_get(evictim->home));
 		for (stuff = 0; stuff < db_top; stuff++) {
 			OBJ *ostuff = object_get(stuff);
 			if (ostuff->owner == victim) {

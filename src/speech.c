@@ -35,7 +35,7 @@ do_say(int fd, int argc, char *argv[])
 	OBJ *player = FD_PLAYER(fd);
 	char *message = argscat(argc, argv);
 	nd_writef(player, "You say:%s.\n", message);
-	nd_rwritef(player->location, player, "%s says:%s\n", player->name, message);
+	nd_owritef(player, "%s says:%s\n", player->name, message);
 }
 
 void
@@ -45,7 +45,7 @@ do_pose(int fd, int argc, char *argv[])
 	char *message = argscat(argc, argv);
 	/* ENT *eplayer = &player->sp.entity; */
 
-	nd_rwritef(player->location, player, "%s%s\n", player->name, message);
+	nd_owritef(player, "%s%s\n", player->name, message);
 	/* if (eplayer->gpt) { */
 	/* 	char contents[BUFFER_LEN]; */
 	/* 	sprintf(contents, "Describe %s %s.\n\n", player->name, message); */
@@ -83,7 +83,7 @@ notify_wts(OBJ *who, char const *a, char const *b, char *format, ...)
 	vsnprintf(buf, sizeof(buf), format, args);
 	va_end(args);
 	nd_writef(who, "You %s%s.\n", a, buf);
-	nd_rwritef(who->location, who, "%s %s%s.\n", who->name, b, buf);
+	nd_owritef(who, "%s %s%s.\n", who->name, b, buf);
 }
 
 void
@@ -95,5 +95,5 @@ notify_wts_to(OBJ *who, OBJ *tar, char const *a, char const *b, char *format, ..
 	vsnprintf(buf, sizeof(buf), format, args);
 	va_end(args);
 	nd_writef(who, "You %s %s%s.\n", a, tar->name, buf);
-	nd_rwritef(who->location, who, "%s %s %s%s.\n", who->name, b, tar->name, buf);
+	nd_owritef(who, "%s %s %s%s.\n", who->name, b, tar->name, buf);
 }

@@ -365,15 +365,20 @@ nd_rwrite(OBJ *room, OBJ *exception, char *str, size_t len) {
 }
 
 void
-nd_rwritef(OBJ *room, OBJ *exception, char *format, ...)
-{
+nd_dowritef(OBJ *player, const char *fmt, va_list args) {
 	char buf[BUFFER_LEN];
 	size_t len;
+	len = vsnprintf(buf, sizeof(buf), fmt, args);
+	nd_rwrite(player->location, player, buf, len);
+}
+
+void
+nd_owritef(OBJ *player, char *format, ...)
+{
 	va_list args;
 	va_start(args, format);
-	len = vsnprintf(buf, sizeof(buf), format, args);
+	nd_dowritef(player, format, args);
 	va_end(args);
-	nd_rwrite(room, exception, buf, len);
 }
 
 void
@@ -529,7 +534,7 @@ void ndc_disconnect(int fd) {
 	ENT *eplayer = &player->sp.entity;
 	warn("%s(%d) disconnects on fd %d\n",
 			player->name, object_ref(player), fd);
-	OBJ *last_observed = eplayer->last_observed;
+	OBJ *last_observed = object_get(eplayer->last_observed);
 	if (last_observed)
 		observer_remove(last_observed, player);
 
