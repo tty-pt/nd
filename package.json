@@ -6,11 +6,7 @@
   "entry": "index.js",
   "template": "index.html",
   "publicPath": "/nd/",
-  "cdn": {
-    "react": "umd/react.production.min.js"
-  },
   "external": {
-    "react": "global React",
     "@popperjs/core": "global Popper",
     "lodash": "global lodash",
     "@tty-pt/ndc": "global ttyNdc",
@@ -45,11 +41,10 @@
   },
   "dependencies": {
     "@popperjs/core": "^2.11.8",
-    "@tty-pt/ndc": "^0.3.24",
+    "@tty-pt/ndc": "^0.3.25",
     "@tty-pt/qhash": "^0.1.2",
     "@tty-pt/sub": "^2.2.40",
     "lodash": "^4.17.21",
-    "react": "^18.2.0",
     "xterm": "^5.3.0",
     "xterm-addon-fit": "^0.8.0",
     "xterm-addon-web-links": "^0.9.0"
