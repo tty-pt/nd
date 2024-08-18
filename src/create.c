@@ -87,7 +87,7 @@ do_clone(int fd, int argc, char *argv[])
 
 		/* initialize everything */
 		clone->name = strdup(thing->name);
-		clone->location = player;
+		clone->location = object_ref(player);
 		clone->owner = player->owner;
 		clone->value = thing->value;
 		/* FIXME: should we clone attached actions? */
@@ -175,7 +175,7 @@ do_create(int fd, int argc, char *argv[])
 
 	/* initialize everything */
 	thing->name = strdup(name);
-	thing->location = player;
+	thing->location = object_ref(player);
 	thing->owner = player->owner;
 	thing->value = OBJECT_ENDOWMENT(cost);
 	thing->type = TYPE_THING;

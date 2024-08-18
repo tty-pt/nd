@@ -7,7 +7,7 @@
 static inline OBJ *
 vendor_find(OBJ *where)
 {
-	OBJ *tmp = where->contents;
+	OBJ *tmp = object_get(where->contents);
 
 	while (tmp) {
 		if (tmp->type == TYPE_ENTITY) {
@@ -16,7 +16,7 @@ vendor_find(OBJ *where)
 				return tmp;
 		}
 
-		tmp = tmp->next;
+		tmp = object_get(tmp->next);
 	}
 
 	return NULL;
@@ -26,7 +26,7 @@ void
 do_shop(int fd, int argc, char *argv[])
 {
 	OBJ *player = FD_PLAYER(fd);
-	OBJ *here = player->location;
+	OBJ *here = object_get(player->location);
 	OBJ *npc = vendor_find(here);
 	OBJ *tmp;
 
@@ -39,7 +39,7 @@ do_shop(int fd, int argc, char *argv[])
 
         mcp_look(player, npc);
 
-	FOR_LIST(tmp, npc->contents) {
+	FOR_LIST(tmp, npc) {
 		if (tmp->flags & OF_INF)
 			nd_writef(player, "%-13s %5dP (Inf)",
 				tmp->name, tmp->value);
@@ -53,7 +53,7 @@ void
 do_buy(int fd, int argc, char *argv[])
 {
 	OBJ *player = FD_PLAYER(fd);
-	OBJ *here = player->location;
+	OBJ *here = object_get(player->location);
 	char *name = argv[1];
 	OBJ *npc = vendor_find(here);
 
@@ -94,7 +94,7 @@ void
 do_sell(int fd, int argc, char *argv[])
 {
 	OBJ *player = FD_PLAYER(fd),
-	    *here = player->location;
+	    *here = object_get(player->location);
 	char *name = argv[1];
 	OBJ *npc = vendor_find(here);
 

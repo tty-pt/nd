@@ -326,10 +326,10 @@ view_build_exit_s(OBJ *player, view_tile_t *t,
 
 static inline ucoord_t
 view_build_flags(OBJ *loc) {
-	OBJ *tmp = loc->contents;
+	OBJ *tmp;
 	ucoord_t flags = 0;
 
-	FOR_LIST(tmp, tmp) {
+	FOR_LIST(tmp, loc) {
 		switch (tmp->type) {
 		case TYPE_ENTITY:
 			{
@@ -402,7 +402,7 @@ view(OBJ *player)
 	struct bio bd[VIEW_M], *n_p = bd,
 		   *n_max = &bd[VIEW_BDI + 1];
 	pos_t pos, opos;
-	map_where(opos, player->location);
+	map_where(opos, object_get(player->location));
 	view_t view;
         view_tile_t *p = view;
 	dbref o[VIEW_M], *o_p = o;

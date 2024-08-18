@@ -232,6 +232,9 @@ struct cmd_slot cmds[] = {
 	}, {
 		.name = "unequip",
 		.cb = &do_unequip,
+	}, {
+		.name = "",
+		.cb = NULL,
 	},
 };
 
@@ -356,11 +359,11 @@ nd_writef(OBJ *player, const char *fmt, ...)
 
 void
 nd_rwrite(OBJ *room, OBJ *exception, char *str, size_t len) {
-	OBJ *first = room->contents;
-	FOR_LIST(first, first) {
-		if (first->type != TYPE_ENTITY || first == exception)
+	OBJ *tmp;
+	FOR_LIST(tmp, room) {
+		if (tmp->type != TYPE_ENTITY || tmp == exception)
 			continue;
-		nd_write(first, str, len);
+		nd_write(tmp, str, len);
 	}
 }
 
@@ -369,7 +372,7 @@ nd_dowritef(OBJ *player, const char *fmt, va_list args) {
 	char buf[BUFFER_LEN];
 	size_t len;
 	len = vsnprintf(buf, sizeof(buf), fmt, args);
-	nd_rwrite(player->location, player, buf, len);
+	nd_rwrite(object_get(player->location), player, buf, len);
 }
 
 void
@@ -412,8 +415,8 @@ void
 do_avatar(int fd, int argc, char *argv[]) {
 	OBJ *player = FD_PLAYER(fd);
 	avatar(player);
-	mcp_content_out(player->location, player);
-	mcp_content_in(player->location, player);
+	mcp_content_out(object_get(player->location), player);
+	mcp_content_in(object_get(player->location), player);
 }
 
 OBJ *

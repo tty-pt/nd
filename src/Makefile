@@ -22,7 +22,7 @@ obj-y := object.o entity.o spacetime.o mcp.o map.o \
 	plant.o biome.o noise.o view.o item.o spell.o drink.o \
 	mob.o kill.o shop.o create.o look.o match.o \
 	move.o player.o utils.o rob.o set.o speech.o wiz.o \
-	copyright.o interface.o
+	copyright.o interface.o wts.o
 
 src = ${obj-y:%.o=%.c}
 LD := ${CC}

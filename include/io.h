@@ -25,6 +25,6 @@ void nd_rwrite(OBJ *room, OBJ *exception, char *str, size_t len);
 void nd_owritef(OBJ *player, char *format, ...);
 void notify_wts(OBJ *who, char const *a, char const *b, char *format, ...);
 void notify_wts_to(OBJ *who, OBJ *tar, char const *a, char const *b, char *format, ...);
-void notify_attack(OBJ *player, OBJ *target, struct wts wts, short val, char const *color, short mval);
+void notify_attack(OBJ *player, OBJ *target, char *wts, short val, char const *color, short mval);
 
 #endif

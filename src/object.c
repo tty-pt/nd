@@ -17,6 +17,7 @@
 #include "plant.h"
 #include "noise.h"
 #include "mcp.h"
+#include <qhash.h>
 
 enum actions {
         ACT_LOOK = 1,
@@ -47,7 +48,7 @@ _object_parent(OBJ *obj)
 {
 	if (!obj)
 		return NULL;
-	return obj->location;
+	return object_get(obj->location);
 }
 
 OBJ *
@@ -104,9 +105,11 @@ object_clear(OBJ *o)
 	memset(o, 0, sizeof(struct object));
 
 	o->name = 0;
-	o->first_observer = NULL;
-	o->contents = o->location = o->next = NULL;
-	o->owner = object_get(GOD);
+	if (o->observers > 0)
+		hash_close(o->observers);
+	o->observers = -1;
+	o->location = o->contents = o->next = NOTHING;
+	o->owner = GOD;
 }
 
 OBJ *
@@ -116,7 +119,7 @@ object_new(void)
 
 	if (recyclable) {
 		newobj = recyclable;
-		recyclable = newobj->next;
+		recyclable = object_get(newobj->next);
 		object_free(newobj);
 	} else {
 		newobj = object_get(db_top);
@@ -125,6 +128,7 @@ object_new(void)
 
 	/* clear it out */
 	object_clear(newobj);
+	newobj->observers = hash_init();
 	return newobj;
 }
 
@@ -245,11 +249,12 @@ object_add(SKEL *sk, OBJ *where, void *arg)
 	OBJ *nu = object_new();
 	nu->name = strdup(sk->name);
 	nu->description = strdup(sk->description);
-	nu->location = where;
-	nu->owner = object_get(GOD);
+	nu->location = object_ref(where);
+	nu->owner = GOD;
 	nu->type = TYPE_THING;
-	if (where)
+	if (where) {
 		PUSH(nu, where->contents);
+	}
 
 	switch (sk->type) {
 	case S_TYPE_EQUIPMENT:
@@ -294,7 +299,7 @@ object_add(SKEL *sk, OBJ *where, void *arg)
 			noise_t v = * (noise_t *) arg;
 			nu->type = TYPE_PLANT;
 			object_drop(nu, sk->sp.plant.drop);
-			nu->owner = object_get(GOD);
+			nu->owner = GOD;
 			nu->art_id = 1 + (v & 0xf) % art_max(nu->name);
 		}
 
@@ -382,9 +387,9 @@ object_write(FILE * f, OBJ *obj)
 {
 	int j;
 	putstring(f, obj->name);
-	putref(f, object_ref(obj->location));
-	putref(f, object_ref(obj->contents));
-	putref(f, object_ref(obj->next));
+	putref(f, obj->location);
+	putref(f, obj->contents);
+	putref(f, obj->next);
 	putref(f, obj->value);
 	putref(f, obj->type);
 	putref(f, obj->flags);
@@ -404,7 +409,7 @@ object_write(FILE * f, OBJ *obj)
 			putref(f, ent->wtso);
 			putref(f, ent->sat);
 			for (j = 0; j < 8; j++)
-				putref(f, ent->spells[j]._sp - spell_skeleton_map);
+				putref(f, ent->spells[j].skel);
 		}
 		break;
 
@@ -439,7 +444,7 @@ object_write(FILE * f, OBJ *obj)
 		}
 		break;
 	case TYPE_THING:
-		putref(f, object_ref(obj->owner));
+		putref(f, obj->owner);
 		break;
 
 	case TYPE_ROOM:
@@ -450,7 +455,7 @@ object_write(FILE * f, OBJ *obj)
 			putref(f, roo->exits);
 			putref(f, roo->doors);
 			putref(f, roo->floor);
-			putref(f, object_ref(obj->owner));
+			putref(f, obj->owner);
 		}
 		break;
 	}
@@ -535,41 +540,23 @@ object_free(OBJ *o)
 	if (o->description)
 		free((void *) o->description);
 
-	if (o->type != TYPE_ROOM) {
-		struct observer_node *obs, *aux;
-		for (obs = o->first_observer; obs; obs = aux) {
-			aux = obs->next;
-			free(obs);
-		}
+	if (o->type != TYPE_ROOM && o->observers > 0) {
+		hash_close(o->observers);
+		o->observers = -1;
 	}
 }
 
 void
 observer_add(OBJ *observable, OBJ *observer) {
-	struct observer_node *node = (struct observer_node *)
-		malloc(sizeof(struct observer_node));
-	node->next = observable->first_observer;
-	node->who = observer;
-	observable->first_observer = node;
+	dbref ref = object_ref(observer);
+	hash_cput(observable->observers, &ref, sizeof(ref), &ref, sizeof(ref));
 }
 
 int
 observer_remove(OBJ *observable, OBJ *observer) {
-	struct observer_node *cur, *prev = NULL;
-
-	for (cur = observable->first_observer; cur; ) {
-		if (cur->who == observer) {
-			if (prev) {
-				prev->next = cur->next;
-				free(cur);
-				return 0;
-			}
-		}
-		prev = cur;
-		cur = cur->next;
-	}
-
-	return 1;
+	dbref ref = object_ref(observer);
+	hash_del(observable->observers, &ref, sizeof(ref));
+	return 0;
 }
 
 void
@@ -635,9 +622,9 @@ object_read(FILE * f)
 	objects_grow(ref + 1);
 
 	o->name = STRING_READ(f);
-	o->location = object_get(ref_read(f));
-	o->contents = object_get(ref_read(f));
-	o->next = object_get(ref_read(f));
+	o->location = ref_read(f);
+	o->contents = ref_read(f);
+	o->next = ref_read(f);
 	o->value = ref_read(f);
 	o->type = ref_read(f);
 	o->flags = ref_read(f);
@@ -678,7 +665,7 @@ object_read(FILE * f)
 		}
 		return;
 	case TYPE_THING:
-		o->owner = object_get(ref_read(f));
+		o->owner = ref_read(f);
 		return;
 	case TYPE_ROOM:
 		{
@@ -688,7 +675,7 @@ object_read(FILE * f)
 			ro->exits = ref_read(f);
 			ro->doors = ref_read(f);
 			ro->floor = ref_read(f);
-			o->owner = object_get(ref_read(f));
+			o->owner = ref_read(f);
 		}
 		return;
 	case TYPE_ENTITY:
@@ -712,12 +699,12 @@ object_read(FILE * f)
 				int ref = ref_read(f);
 				struct spell_skeleton *_sp = SPELL_SKELETON(ref);
 				/* warn("entity! flags %d ref %d sp %p\n", eo->flags, ref); */
-				sp->_sp = _sp;
+				sp->skel = _sp - spell_skeleton_map;
 				sp->val = SPELL_DMG(eo, _sp);
 				sp->cost = SPELL_COST(sp->val, _sp->y, _sp->flags & AF_BUF);
 			}
 			/* warn("entity! flags %d ref %d\n", eo->flags, ref_read(f)); */
-			o->owner = o;
+			o->owner = object_ref(o);
 			if (eo->flags & EF_PLAYER) {
 				player_put(o);
 				eo->fds = 0;
@@ -771,7 +758,7 @@ objects_read(FILE * f)
 				for (i = 0; i < db_top; i++) {
 					OBJ *o = object_get(i);
 					if (o->type == TYPE_GARBAGE) {
-						o->next = recyclable;
+						o->next = object_ref(recyclable);
 						recyclable = o;
 					}
 				}
@@ -792,7 +779,7 @@ object_copy(OBJ *player, OBJ *old)
 {
 	OBJ *nu = object_new();
 	nu->name = strdup(old->name);
-	nu->contents = nu->next = nu->location = NULL;
+	nu->location = nu->contents = nu->next = NOTHING;
 	nu->owner = old->owner;
         return nu;
 }
@@ -829,7 +816,7 @@ object_llc(OBJ *source, OBJ *dest)
 	pstack[1] = dest;
 
 	while (level < MAX_PARENT_DEPTH) {
-		dest = dest->location;
+		dest = object_get(dest->location);
 		if (!dest || object_ref(dest) == (dbref) 0) {   /* Reached the top of the chain. */
 			return 0;
 		}
@@ -883,22 +870,23 @@ object_plc(OBJ *source, OBJ *dest)
 
 /* remove the first occurence of what in list headed by first */
 static inline OBJ *
-remove_first(OBJ *first, OBJ *what)
+remove_first(OBJ *loc, OBJ *what)
 {
+	OBJ *first = object_get(loc->contents);
 	OBJ *prev;
 
 	/* special case if it's the first one */
 	if (first == what) {
-		return first->next;
+		return object_get(first->next);
 	} else {
 		/* have to find it */
-		FOR_LIST(prev, first) {
-			if (prev->next == what) {
+		FOR_LIST(prev, loc) {
+			if (object_get(prev->next) == what) {
 				prev->next = what->next;
-				return first;
+				return loc;
 			}
 		}
-		return first;
+		return loc;
 	}
 }
 
@@ -909,18 +897,17 @@ object_move(OBJ *what, OBJ *where)
 
 	/* do NOT move garbage */
 	CBUG(!what);
-	CBUG(what->type == TYPE_GARBAGE);
 
-	loc = what->location;
+	loc = object_get(what->location);
 
         if (loc) {
                 mcp_content_out(loc, what);
-		loc->contents = remove_first(loc->contents, what);
+		loc->contents = object_ref(remove_first(loc, what));
         }
 
 	/* test for special cases */
 	if (!where) {
-		what->location = NULL;
+		what->location = NOTHING;
 		return;
 	}
 
@@ -936,8 +923,11 @@ object_move(OBJ *what, OBJ *where)
 	}
 
 	/* now put what in where */
+	if (what->type == TYPE_GARBAGE)
+		return;
+
 	PUSH(what, where->contents);
-	what->location = where;
+	what->location = object_ref(where);
 	mcp_content_in(where, what);
 }
 

@@ -38,7 +38,7 @@ do_teleport(int fd, int argc, char *argv[]) {
 	} else
 		to = arg2;
 
-	if(!God(player) && God(victim->owner)) {
+	if(!God(player) && victim->owner == GOD) {
 		nd_writef(player, "God has already set that where He wants it to be.\n");
 		return;
 	}
@@ -55,8 +55,8 @@ do_teleport(int fd, int argc, char *argv[]) {
 		{
 			if (!controls(player, victim) ||
 					!controls(player, destination) ||
-					!controls(player, victim->location) ||
-					(object_item(destination) && !controls(player, destination->location))) {
+					!controls(player, object_get(victim->location)) ||
+					(object_item(destination) && !controls(player, object_get(destination->location)))) {
 				nd_writef(player, "Permission denied. (must control victim, dest, victim's loc, and dest's loc)\n");
 				break;
 			}
@@ -86,7 +86,7 @@ do_teleport(int fd, int argc, char *argv[]) {
 			break;
 		}
 		if (!(controls(player, destination) &&
-			  (controls(player, victim) || controls(player, victim->location)))) {
+			  (controls(player, victim) || controls(player, object_get(victim->location))))) {
 			nd_writef(player, "Permission denied. (must control dest and be able to link to it, or control dest's loc)\n");
 			break;
 		}
@@ -134,46 +134,6 @@ do_boot(int fd, int argc, char *argv[]) {
 		nd_close(victim);
 		nd_writef(player, "You booted %s off!", victim->name);
 	}
-}
-
-static inline OBJ *
-reverse(OBJ *list)
-{
-	OBJ *newlist = NULL;
-	OBJ *rest;
-
-	while (list) {
-		rest = list->next;
-		PUSH(list, newlist);
-		list = rest;
-	}
-
-	return newlist;
-}
-
-static inline void
-send_contents(OBJ *loc, OBJ *dest)
-{
-	OBJ *first, *rest;
-
-	first = loc->contents;
-	loc->contents = NULL;
-
-	/* blast locations of everything in list */
-	FOR_LIST(rest, first)
-		rest->location = NULL;
-
-	while (first) {
-		rest = first->next;
-		if (!object_item(first)) {
-			object_move(first, loc);
-		} else {
-			object_move(first, object_plc(first, dest) ? loc : dest);
-		}
-		first = rest;
-	}
-
-	loc->contents = reverse(loc->contents);
 }
 
 void
@@ -230,16 +190,18 @@ do_toad(int fd, int argc, char *argv[]) {
 	} else {
 		/* we're ok */
 		/* do it */
-		send_contents(victim, object_get(evictim->home));
+		OBJ *rest;
+		FOR_LIST(rest, victim)
+			recycle(object_get(GOD), rest);
 		for (stuff = 0; stuff < db_top; stuff++) {
 			OBJ *ostuff = object_get(stuff);
-			if (ostuff->owner == victim) {
+			if (ostuff->owner == object_ref(victim)) {
 				switch (ostuff->type) {
 				case TYPE_ROOM:
 				case TYPE_CONSUMABLE:
 				case TYPE_EQUIPMENT:
 				case TYPE_THING:
-					ostuff->owner = recipient;
+					ostuff->owner = object_ref(recipient);
 					break;
 				}
 			}
@@ -256,7 +218,7 @@ do_toad(int fd, int argc, char *argv[]) {
 		victim->name = strdup(buf);
 		nd_close(victim);
 		victim->type = TYPE_THING;
-		victim->owner = player;	/* you get it */
+		victim->owner = object_ref(player);	/* you get it */
 		victim->value = 1; /* don't let him keep his immense wealth */
 	}
 }

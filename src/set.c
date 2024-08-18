@@ -90,9 +90,9 @@ do_chown(int fd, int argc, char *argv[])
 			return;
 		}
 	} else {
-		owner = player->owner;
+		owner = object_get(player->owner);
 	}
-	if (!(eplayer->flags & EF_WIZARD) && player->owner != owner) {
+	if (!(eplayer->flags & EF_WIZARD) && player->owner != object_ref(owner)) {
 		nd_writef(player, "Only wizards can transfer ownership to others.\n");
 		return;
 	}
@@ -104,7 +104,7 @@ do_chown(int fd, int argc, char *argv[])
 
 	switch (thing->type) {
 	case TYPE_ROOM:
-		if (!(eplayer->flags & EF_WIZARD) && player->location != thing) {
+		if (!(eplayer->flags & EF_WIZARD) && player->location != object_ref(thing)) {
 			nd_writef(player, "You can only chown \"here\".\n");
 			return;
 		}
@@ -113,7 +113,7 @@ do_chown(int fd, int argc, char *argv[])
 	case TYPE_CONSUMABLE:
 	case TYPE_EQUIPMENT:
 	case TYPE_THING:
-		if (!(eplayer->flags & EF_WIZARD) && thing->location != player) {
+		if (!(eplayer->flags & EF_WIZARD) && thing->location != object_ref(player)) {
 			nd_writef(player, "You aren't carrying that.\n");
 			return;
 		}

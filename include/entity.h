@@ -34,8 +34,6 @@
 #define EQL(x)		(x & 15)
 #define EQ(i, t)	(i | (t<<6))
 
-extern struct wts phys_wts[];
-
 static inline unsigned
 xsqrtx(unsigned x)
 {
@@ -43,7 +41,7 @@ xsqrtx(unsigned x)
 }
 
 ENT *birth(OBJ *player);
-int kill_dodge(OBJ *player, struct wts wts);
+int kill_dodge(OBJ *player, char *wts);
 short kill_dmg(enum element dmg_type,
 		short dmg, short def,
 		enum element def_type);

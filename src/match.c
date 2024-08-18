@@ -26,7 +26,7 @@ OBJ *
 ematch_here(OBJ *player, char *str)
 {
 	if (!strcmp(str, "here"))
-		return player->location;
+		return object_get(player->location);
 	else
 		return NULL;
 }
@@ -40,7 +40,7 @@ ematch_mine(OBJ *player, char *str)
 OBJ *
 ematch_near(OBJ *player, char *str)
 {
-	return ematch_at(player, player->location, str);
+	return ematch_at(player, object_get(player->location), str);
 }
 
 /* all ematch
@@ -128,9 +128,15 @@ string_match(register const char *src, register const char *sub)
 	return 0;
 }
 
-static OBJ *
-ematch_list(OBJ *player, OBJ *first, char *name)
-{
+OBJ *
+ematch_at(OBJ *player, OBJ *where, char *name) {
+	OBJ *what;
+
+	what = ematch_absolute(name);
+
+	if (what && what->location == object_ref(where))
+		return what;
+
 	OBJ *absolute;
 	ENT *mob = &player->sp.entity;
 	unsigned nth = mob->select;
@@ -140,27 +146,16 @@ ematch_list(OBJ *player, OBJ *first, char *name)
 	if (!controls(player, absolute))
 		absolute = NULL;
 
-	FOR_LIST(first, first) {
-		if (first == absolute) {
-			return first;
-		} else if (string_match(first->name, name)) {
+	OBJ *tmp;
+	FOR_LIST(tmp, where) {
+		if (tmp == absolute) {
+			return tmp;
+		} else if (string_match(tmp->name, name)) {
 			if (nth <= 0)
-				return first;
+				return tmp;
 			nth--;
 		}
 	}
 
 	return NULL;
-}
-
-OBJ *
-ematch_at(OBJ *player, OBJ *where, char *name) {
-	OBJ *what;
-
-	what = ematch_absolute(name);
-
-	if (what && what->location == where)
-		return what;
-
-	return ematch_list(player, where->contents, name);
 }

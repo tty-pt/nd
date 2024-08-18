@@ -42,7 +42,7 @@ do_get(int fd, int argc, char *argv[])
 			return;
 		}
 	}
-	if (thing->location == player) {
+	if (thing->location == object_ref(player)) {
 		nd_writef(player, "You already have that!\n");
 		return;
 	}
@@ -60,7 +60,7 @@ do_get(int fd, int argc, char *argv[])
 			nd_writef(player, "You can't pick that up.\n");
 		break;
 	case TYPE_SEAT:
-		if (thing->owner != player)
+		if (thing->owner != object_ref(player))
 			nd_writef(player, "You can't pick that up.\n");
 		else {
 			object_move(thing, player);
@@ -83,7 +83,7 @@ do_drop(int fd, int argc, char *argv[])
 	OBJ *player = FD_PLAYER(fd);
 	char *name = argv[1];
 	char *obj = argv[2];
-	OBJ *loc = player->location,
+	OBJ *loc = object_get(player->location),
 	    *thing, *cont;
 
 	if (!(thing = ematch_mine(player, name))) {
@@ -150,7 +150,7 @@ do_recycle(int fd, int argc, char *argv[])
 	}
 
 
-	if(!God(player) && God(thing->owner)) {
+	if(!God(player) && thing->owner == GOD) {
 		nd_writef(player, "Only God may reclaim God's property.\n");
 		return;
 	}

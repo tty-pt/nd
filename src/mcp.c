@@ -124,7 +124,7 @@ _fbcp_item(char *bcp_buf, OBJ *obj, unsigned char dynflags)
 	memcpy(p += 2, &iden, sizeof(iden));
 	aux = object_ref(obj);
 	memcpy(p += sizeof(iden), &aux, sizeof(aux));
-	aux = object_ref(obj->location);
+	aux = obj->location;
 	memcpy(p += sizeof(aux), &aux, sizeof(aux));
 	memcpy(p += sizeof(aux), &dynflags, sizeof(dynflags));
 	memcpy(p += sizeof(dynflags), &obj->type, sizeof(obj->type));
@@ -172,7 +172,7 @@ _fbcp_out(char *bcp_buf, OBJ *obj)
 	memcpy(p += 2, &iden, sizeof(iden));
 	aux = object_ref(obj);
 	memcpy(p += sizeof(iden), &aux, sizeof(aux));
-	aux = object_ref(obj->location);
+	aux = obj->location;
 	memcpy(p += sizeof(aux), &aux, sizeof(aux));
 	p += sizeof(aux);
 	return p - bcp_buf;
@@ -277,7 +277,7 @@ mcp_look(OBJ *player, OBJ *loc)
                 return;
 
 	// use callbacks for mcp like this versus telnet
-        FOR_LIST(thing, loc->contents)
+        FOR_LIST(thing, loc)
 		fbcp_item(player, thing, 0);
 
 	nd_twritef(player, "%s\n", unparse(player, loc));
@@ -288,14 +288,12 @@ mcp_look(OBJ *player, OBJ *loc)
         size_t buf_l = 0;
 
 	/* check to see if there is anything there */
-	if (loc->contents) {
-                FOR_LIST(thing, loc->contents) {
+                FOR_LIST(thing, loc) {
 			if (thing == player)
 				continue;
 			buf_l += snprintf(&buf[buf_l], BUFSIZ - buf_l,
 					"%s\r\n", unparse(player, thing));
                 }
-	}
 
         buf[buf_l] = '\0';
         nd_twritef(player, "Contents: %s", buf);
@@ -306,7 +304,7 @@ fbcp_room(OBJ *room, char *msg, size_t len)
 {
 	OBJ *tmp;
 
-	for (tmp = room->contents; tmp; tmp = tmp->next) {
+	for (tmp = object_get(room->contents); tmp; tmp = object_get(tmp->next)) {
 		if (tmp->type != TYPE_ENTITY)
 			continue;
 
@@ -317,14 +315,15 @@ fbcp_room(OBJ *room, char *msg, size_t len)
 static void
 fbcp_observers(OBJ *thing, char *msg, size_t len)
 {
-	struct observer_node *node;
+	if (thing->observers <= 0)
+		return;
+	struct hash_cursor c = hash_iter_start(thing->observers);
+	dbref ref, ignore;
 
-	for (node = thing->first_observer; node; node = node->next) {
-		OBJ *tmp = node->who;
-
+	while (hash_iter_cget(&ref, &ignore, &c)) {
+		OBJ *tmp = object_get(ref);
 		if (tmp->type != TYPE_ENTITY)
 			continue;
-
 		nd_wwrite(tmp, msg, len);
 	}
 }

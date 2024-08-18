@@ -21,6 +21,7 @@
 #include "debug.h"
 #include "mob.h"
 #include "utils.h"
+#include "uapi/wts.h"
 
 #define HUNGER_Y	4
 #define THIRST_Y	2
@@ -36,19 +37,10 @@ static const char *rarity_str[] = {
 	ANSI_BOLD ANSI_FG_MAGENTA "Mythical" ANSI_RESET
 };
 
-struct wts phys_wts[] = {
-	{ "punch", "punches" },
-	{ "peck", "pecks at" },
-	{ "slash", "slashes" },
-	{ "bite", "bites" },
-	{ "strike", "strikes" },
-};
-
 ENT *
 birth(OBJ *player)
 {
 	ENT *eplayer = &player->sp.entity;
-	eplayer->wts = phys_wts[eplayer->wtso];
 	eplayer->hunger = eplayer->thirst = 0;
 	eplayer->combo = 0;
 	eplayer->hp = HP_MAX(eplayer);
@@ -85,7 +77,7 @@ recycle(OBJ *player, OBJ *thing)
 	int looplimit;
 
 	CBUG(!thing->owner);
-	OBJ *owner = thing->owner;
+	OBJ *owner = object_get(thing->owner);
 	ENT *eowner = &owner->sp.entity;
 
 	switch (thing->type) {
@@ -95,8 +87,8 @@ recycle(OBJ *player, OBJ *thing)
 			if (!(eowner->flags & EF_WIZARD))
 				owner->value += ROOM_COST;
 			if (rthing->flags & RF_TEMP)
-				for (first = thing->contents; first; first = rest) {
-					rest = first->next;
+				for (first = object_get(thing->contents); first; first = rest) {
+					rest = object_get(first->next);
 
 					if (first->type == TYPE_ENTITY) {
 						ENT *efirst = &first->sp.entity;
@@ -106,7 +98,7 @@ recycle(OBJ *player, OBJ *thing)
 
 					recycle(player, first);
 				}
-			if (thing->location)
+			if (thing->location != NOTHING)
 				nd_owritef(thing, "You feel a wrenching sensation...\n");
 			map_delete(thing);
 		}
@@ -121,7 +113,7 @@ recycle(OBJ *player, OBJ *thing)
 		if (!(eowner->flags & EF_WIZARD))
 			owner->value += thing->value;
 
-		OBJ *thingloc = thing->location;
+		OBJ *thingloc = object_get(thing->location);
 
 		if (thingloc->type != TYPE_ROOM)
 			break;
@@ -129,8 +121,8 @@ recycle(OBJ *player, OBJ *thing)
 		ROO *rthingloc = &thingloc->sp.room;
 
 		if (rthingloc->flags & RF_TEMP) {
-			for (first = thing->contents; first; first = rest) {
-				rest = first->next;
+			for (first = object_get(thing->contents); first; first = rest) {
+				rest = object_get(first->next);
 				recycle(player, first);
 			}
 		}
@@ -141,8 +133,8 @@ recycle(OBJ *player, OBJ *thing)
 	FOR_ALL(rest) {
 		switch (rest->type) {
 		case TYPE_ROOM:
-			if (rest->owner == thing)
-				rest->owner = object_get(GOD);
+			if (rest->owner == object_ref(thing))
+				rest->owner = GOD;
 			break;
 		case TYPE_PLANT:
 		case TYPE_SEAT:
@@ -150,8 +142,8 @@ recycle(OBJ *player, OBJ *thing)
 		case TYPE_EQUIPMENT:
 		case TYPE_THING:
 		case TYPE_MINERAL:
-			if (rest->owner == thing)
-				rest->owner = object_get(GOD);
+			if (rest->owner == object_ref(thing))
+				rest->owner = GOD;
 			break;
 		case TYPE_ENTITY:
 			{
@@ -162,19 +154,19 @@ recycle(OBJ *player, OBJ *thing)
 
 			break;
 		}
-		if (rest->contents == thing)
+		if (rest->contents == object_ref(thing))
 			rest->contents = thing->next;
-		if (rest->next == thing)
+		if (object_get(rest->next) == thing)
 			rest->next = thing->next;
 	}
 
 	looplimit = db_top;
-	while ((looplimit-- > 0) && (first = thing->contents)) {
+	while ((looplimit-- > 0) && (first = object_get(thing->contents))) {
 		if (first->type == TYPE_ENTITY) {
 			ENT *efirst = &first->sp.entity;
 			if (efirst->flags & EF_PLAYER) {
 				enter(first, object_get(efirst->home), E_NULL);
-				CBUG(first->location == thing);
+				CBUG(first->location == object_ref(thing));
 				continue;
 			}
 		}
@@ -190,7 +182,7 @@ recycle(OBJ *player, OBJ *thing)
 	thing->name = (char*) strdup("<garbage>");
 	thing->description = (char *) strdup("<recyclable>");
 	thing->type = TYPE_GARBAGE;
-	thing->next = recyclable;
+	thing->next = object_ref(recyclable);
 	recyclable = thing;
 }
 
@@ -198,11 +190,11 @@ static inline int
 entities_aggro(OBJ *player)
 {
 	ENT *eplayer = &player->sp.entity;
-	OBJ *here = player->location;
+	OBJ *here = object_get(player->location);
 	OBJ *tmp;
 	int klock = 0;
 
-	FOR_LIST(tmp, here->contents) {
+	FOR_LIST(tmp, here) {
 		if (tmp->type != TYPE_ENTITY)
 			continue;
 
@@ -235,14 +227,14 @@ enter_room(OBJ *player, enum exit e)
 	sprintf(contents, "This is a fantasy story narrated by an artificial intelligence.\n");
 	sprintf(contents, "%sIt takes place in a '%s'",
 			contents, player->location->name);
-	if (player->location->description && *player->location->description)
+	if (object_get(player->location)->description && *object_get(player->location)->description)
 		sprintf(contents, "%s that is described as '%s' and ",
 			contents, player->location->description);
 	else
 		sprintf(contents, "%s that ", contents);
 	sprintf(contents, "%shas the following contents:\n", contents);
 
-	FOR_LIST(oi, player->location->contents) {
+	FOR_LIST(oi, player->location) {
 		count++;
 		switch (oi->type) {
 		case TYPE_ENTITY:
@@ -510,7 +502,7 @@ nd_move(OBJ *player) {
 	struct hash_cursor c = hash_iter_start(player->sp.entity.fds);
 	pos_t pos;
 
-	map_where(pos, player->location);
+	map_where(pos, object_get(player->location));
 	while (hash_iter_get(&c))
 		ndc_move(* (int *) c.key, pos_morton(pos));
 }
@@ -518,7 +510,7 @@ nd_move(OBJ *player) {
 void
 enter(OBJ *player, OBJ *loc, enum exit e)
 {
-	OBJ *old = player->location;
+	OBJ *old = object_get(player->location);
 
 	st_run(player, "leave");
 	if (e == E_NULL)
@@ -559,13 +551,13 @@ controls(OBJ *who, OBJ *what)
 
 	/* Zombies and puppets use the permissions of their owner */
 	if (who->type != TYPE_ENTITY)
-		who = who->owner;
+		who = object_get(who->owner);
 
 	ENT *ewho = &who->sp.entity;
 
 	/* Wizard controls everything */
 	if (ewho->flags & EF_WIZARD) {
-		if(God(what->owner) && !God(who))
+		if(what->owner == GOD && !God(who))
 			/* Only God controls God's objects */
 			return 0;
 		else
@@ -573,7 +565,7 @@ controls(OBJ *who, OBJ *what)
 	}
 
 	/* owners control their own stuff */
-	return (who == what->owner);
+	return (object_ref(who) == what->owner);
 }
 
 #define BUFF(...) buf_l += snprintf(&buf[buf_l], BUFSIZ - buf_l, __VA_ARGS__)
@@ -585,7 +577,7 @@ unparse(OBJ *player, OBJ *loc)
         size_t buf_l = 0;
 
 	if (player && player->type != TYPE_ENTITY)
-		player = player->owner;
+		player = object_get(player->owner);
 
 	if (!loc)
 		return "*NOTHING*";
@@ -678,7 +670,7 @@ stand(OBJ *player) {
 void
 look_around(OBJ *player)
 {
-	mcp_look(player, player->location);
+	mcp_look(player, object_get(player->location));
 }
 
 int
@@ -696,7 +688,7 @@ equip_affect(ENT *ewho, EQU *equ)
 		if (ewho->attr[ATTR_STR] < msv)
 			return 1;
 		EFFECT(ewho, DMG).value += DMG_WEAPON(equ);
-		ewho->wts = WTS_WEAPON(equ);
+		/* ewho->wts = WTS_WEAPON(equ); */
 		break;
 
 	case ES_HEAD:
@@ -771,7 +763,6 @@ unequip(OBJ *player, unsigned eql)
 	switch (eql) {
 	case ES_RHAND:
 		EFFECT(eplayer, DMG).value -= DMG_WEAPON(eeq);
-		eplayer->wts = phys_wts[eplayer->wtso];
 		break;
 	case ES_PANTS:
 	case ES_HEAD:
@@ -839,11 +830,11 @@ entity_body(OBJ *player, OBJ *mob)
 	struct object_skeleton o = { .name = "", .description = "" };
 	snprintf(buf, sizeof(buf), "%s's body.", mob->name);
 	o.name = buf;
-	OBJ *dead_mob = object_add(&o, mob->location, NULL);
+	OBJ *dead_mob = object_add(&o, object_get(mob->location), NULL);
 	OBJ *tmp;
 	unsigned n = 0;
 
-	for (; (tmp = mob->contents); ) {
+	for (; (tmp = object_get(mob->contents)); ) {
 		/* CBUG(tmp->type != TYPE_GARBAGE); */
 		if (tmp->type == TYPE_GARBAGE)
 			continue;
@@ -888,7 +879,7 @@ entity_kill(OBJ *player, OBJ *target)
 		etartar->klock --;
 	}
 
-	OBJ *loc = target->location;
+	OBJ *loc = object_get(target->location);
 	ROO *rloc = &loc->sp.room;
 
 	if ((rloc->flags & RF_TEMP) && !(etarget->flags & EF_PLAYER)) {
@@ -955,7 +946,7 @@ do_look_at(int fd, int argc, char *argv[])
 	OBJ *thing;
 
 	if (*name == '\0') {
-		thing = player->location;
+		thing = object_get(player->location);
 	} else if (
 			!(thing = ematch_absolute(name))
 			&& !(thing = ematch_here(player, name))
@@ -990,7 +981,7 @@ respawn(OBJ *player)
 		cd.rep = STARTING_POSITION;
 		cd.dir = '\0';
 		st_teleport(player, cd);
-		where = player->location;
+		where = object_get(player->location);
 	} else {
 		where = object_get(eplayer->home);
 		/* warn("respawning %d to %d\n", who, where); */
@@ -1061,13 +1052,13 @@ dodge_get(ENT *eplayer)
 }
 
 int
-kill_dodge(OBJ *player, struct wts wts)
+kill_dodge(OBJ *player, char *wts)
 {
 	ENT *eplayer = &player->sp.entity;
 	OBJ *target = object_get(eplayer->target);
 	ENT *etarget = &target->sp.entity;
 	if (!EFFECT(etarget, MOV).value && dodge_get(eplayer)) {
-		notify_wts_to(target, player, "dodge", "dodges", "'s %s", wts.a);
+		notify_wts_to(target, player, "dodge", "dodges", "'s %s", wts);
 		return 1;
 	} else
 		return 0;
@@ -1122,14 +1113,22 @@ attack(OBJ *player)
 		return;
 
 	etarget = &target->sp.entity;
+	char *wts = wts_map[eplayer->wtso];
 
-	if (!spells_cast(player, target) && !kill_dodge(player, eplayer->wts)) {
+	OBJ *eq = object_get(EQUIP(eplayer, ES_RHAND));
+
+	if (eq != NULL) {
+		EQU *equ = &eq->sp.equipment;
+		wts = wts_map[EQT(equ->eqw)];
+	}
+
+	if (!spells_cast(player, target) && !kill_dodge(player, wts)) {
 		enum element at = ELEMENT_NEXT(eplayer, MDMG);
 		enum element dt = ELEMENT_NEXT(etarget, MDEF);
 		short aval = -kill_dmg(ELM_PHYSICAL, EFFECT(eplayer, DMG).value, EFFECT(etarget, DEF).value + EFFECT(etarget, MDEF).value, dt);
 		short bval = -kill_dmg(at, EFFECT(eplayer, MDMG).value, EFFECT(etarget, MDEF).value, dt);
 		char const *color = ELEMENT(at)->color;
-		notify_attack(player, target, eplayer->wts, aval, color, bval);
+		notify_attack(player, target, wts, aval, color, bval);
 		entity_damage(player, target, aval + bval);
 	}
 }
@@ -1149,7 +1148,7 @@ kill_update(OBJ *player, double dt)
 
 	ENT *etarget = &target->sp.entity;
 
-	if (!etarget->target)
+	if (etarget->target == NOTHING)
 		etarget->target = object_ref(player);
 
 	stand_silent(player);
@@ -1201,7 +1200,7 @@ entity_update(OBJ *player, double dt)
 			}
 		} else {
 			/* warn("%d's hp is not maximum\n", player); */
-			if (!eplayer->target && !(eplayer->flags & EF_SITTING)) {
+			if (eplayer->target == NOTHING && !(eplayer->flags & EF_SITTING)) {
 				/* warn("%d is not sitting so they shall sit\n", player); */
 				sit(player, "");
 			}

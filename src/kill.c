@@ -7,9 +7,10 @@
 #include "params.h"
 #include "match.h"
 #include "spell.h"
+#include "uapi/wts.h"
 
 void
-notify_attack(OBJ *player, OBJ *target, struct wts wts, short val, char const *color, short mval)
+notify_attack(OBJ *player, OBJ *target, char *wts, short val, char const *color, short mval)
 {
 	char buf[BUFSIZ];
 	unsigned i = 0;
@@ -28,7 +29,7 @@ notify_attack(OBJ *player, OBJ *target, struct wts wts, short val, char const *c
 	}
 	buf[i] = '\0';
 
-	notify_wts_to(player, target, wts.a, wts.b, "%s", buf);
+	notify_wts_to(player, target, wts, wts_plural(wts), "%s", buf);
 }
 
 
@@ -37,7 +38,7 @@ do_kill(int fd, int argc, char *argv[])
 {
 	char *what = argv[1];
 	OBJ *player = FD_PLAYER(fd);
-	OBJ *here = player->location;
+	OBJ *here = object_get(player->location);
 	ROO *rhere = &here->sp.room;
 	OBJ *target = strcmp(what, "me")
 		? ematch_near(player, what)
@@ -121,7 +122,7 @@ do_advitam(int fd, int argc, char *argv[])
 
 	if (!(eplayer->flags & EF_WIZARD)
 	    || !target
-	    || target->owner != player) {
+	    || target->owner != object_ref(player)) {
 		nd_writef(player, "You can't do that.\n");
 		return;
 	}

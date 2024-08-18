@@ -19,7 +19,7 @@ print_owner(OBJ *player, OBJ *thing)
 	case TYPE_CONSUMABLE:
 	case TYPE_EQUIPMENT:
 	case TYPE_THING:
-		nd_writef(player, "Owner: %s\n", thing->owner->name);
+		nd_writef(player, "Owner: %s\n", object_get(thing->owner)->name);
 		break;
 	case TYPE_GARBAGE:
 		nd_writef(player, "%s is garbage.\n", thing->name);
@@ -35,7 +35,7 @@ do_examine(int fd, int argc, char *argv[])
 	OBJ *thing, *content;
 
 	if (*name == '\0') {
-		thing = player->location;
+		thing = object_get(player->location);
 	} else if (!(thing = ematch_all(player, name))) {
 		nd_writef(player, NOMATCH_MESSAGE);
 		return;
@@ -52,15 +52,15 @@ do_examine(int fd, int argc, char *argv[])
 		nd_writef(player, "%s (#%d) Owner: %s  Value: %d\n",
 				unparse(player, thing),
 				object_ref(thing),
-				thing->owner->name, thing->value);
+				object_get(thing->owner)->name, thing->value);
 
 	if (thing->description)
 		nd_writef(player, thing->description);
 
 	/* show him the contents */
-	if (thing->contents) {
+	if (thing->contents != NOTHING) {
 		nd_writef(player, "Contents:\n");
-		FOR_LIST(content, thing->contents) {
+		FOR_LIST(content, thing) {
 			nd_writef(player, unparse(player, content));
 		}
 	}
@@ -91,8 +91,8 @@ do_examine(int fd, int argc, char *argv[])
 		break;
 	case TYPE_THING:
 		/* print location if player can link to it */
-		if (thing->location && controls(player, thing->location))
-			nd_writef(player, "Location: %s\n", unparse(player, thing->location));
+		if (thing->location != NOTHING && controls(player, object_get(thing->location)))
+			nd_writef(player, "Location: %s\n", unparse(player, object_get(thing->location)));
 		break;
 	case TYPE_ENTITY:
 		{
@@ -102,8 +102,8 @@ do_examine(int fd, int argc, char *argv[])
 			nd_writef(player, "hp: %d/%d entity flags: %d\n", ething->hp, HP_MAX(ething), ething->flags);
 
 			/* print location if player can link to it */
-			if (thing->location && controls(player, thing->location))
-				nd_writef(player, "Location: %s\n", unparse(player, thing->location));
+			if (thing->location != NOTHING && controls(player, object_get(thing->location)))
+				nd_writef(player, "Location: %s\n", unparse(player, object_get(thing->location)));
 		}
 		break;
 	default:
@@ -179,7 +179,7 @@ do_contents(int fd, int argc, char *argv[])
 	int total = 0;
 
 	if (*name == '\0') {
-		thing = player->location;
+		thing = object_get(player->location);
 	} else if (!(thing = ematch_all(player, name))) {
 		nd_writef(player, NOMATCH_MESSAGE);
 		return;
@@ -189,7 +189,7 @@ do_contents(int fd, int argc, char *argv[])
 		nd_writef(player, "Permission denied. (You can't get the contents of something you don't control)\n");
 		return;
 	}
-	FOR_LIST(oi, thing->contents) {
+	FOR_LIST(oi, thing) {
 		display_objinfo(player, oi);
 		total++;
 	}

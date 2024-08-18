@@ -15,10 +15,9 @@ player_create(char *name)
 	ENT *eplayer = &player->sp.entity;
 
 	player->name = strdup(name);
-	eplayer->home = PLAYER_START;
-	player->location = object_get(PLAYER_START);
+	player->location = eplayer->home = PLAYER_START;
 	player->type = TYPE_ENTITY;
-	player->owner = player;
+	player->owner = object_ref(player);
 	player->value = START_PENNIES;
 	eplayer->flags = EF_PLAYER;
 

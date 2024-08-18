@@ -162,7 +162,7 @@ object_drop(OBJ *where, struct drop **drop)
 	pos_t pos;
         register int i;
 
-	map_where(pos, where->location);
+	map_where(pos, object_get(where->location));
 
 	for (; *drop; drop++)
 		if (random() < (RAND_MAX >> (*drop)->y)) {
@@ -186,7 +186,7 @@ object_drop(OBJ *where, struct drop **drop)
 
 int
 e_exit_can(OBJ *player, enum exit e) {
-	return e_ground(player->location, e);
+	return e_ground(object_get(player->location), e);
 }
 
 int
@@ -318,7 +318,7 @@ fee_noname(OBJ *player) {
 static inline void
 wall_around(OBJ *player, enum exit e)
 {
-	OBJ *here = player->location;
+	OBJ *here = object_get(player->location);
 	ROO *rhere = &here->sp.room;
 	const char *s;
 	for (s = e_other(e); *s; s++) {
@@ -335,7 +335,7 @@ st_claim(OBJ *player, OBJ *room) {
 	ROO *rroom = &room->sp.room;
 
 	if (!(rroom->flags & RF_TEMP)) {
-		if (room->owner != player) {
+		if (room->owner != object_ref(player)) {
 			nd_writef(player, "You don't own this room\n");
 			return 1;
 		}
@@ -348,7 +348,7 @@ st_claim(OBJ *player, OBJ *room) {
 
 	rroom->flags ^= RF_TEMP;
 	CBUG(rroom->flags & RF_TEMP);
-	room->owner = player;
+	room->owner = object_ref(player);
 
 	return 0;
 }
@@ -462,7 +462,7 @@ do_bio(int fd, int argc, char *argv[]) {
 	OBJ *player = FD_PLAYER(fd);
 	struct bio *bio;
 	pos_t pos;
-	map_where(pos, player->location);
+	map_where(pos, object_get(player->location));
 	bio = noise_point(pos);
 	nd_writef(player, "tmp %d rn %u bio %s(%d)\n",
 		bio->tmp, bio->rn, biomes[bio->bio_idx].name, bio->bio_idx);
@@ -472,7 +472,7 @@ static OBJ *
 st_room(OBJ *player, enum exit e)
 {
 	pos_t pos;
-	OBJ *here = player->location,
+	OBJ *here = object_get(player->location),
 	    *there;
 
 	st_pos(pos, here, e);
@@ -484,7 +484,7 @@ st_room(OBJ *player, enum exit e)
 static void
 e_move(OBJ *player, enum exit e) {
 	ENT *eplayer = &player->sp.entity;
-	OBJ *loc = player->location,
+	OBJ *loc = object_get(player->location),
 	    *dest;
 	ROO *rloc = &loc->sp.room;
 	char const *dwts = "door";
@@ -536,8 +536,7 @@ room_clean(OBJ *player, OBJ *here)
 	if (!(rhere->flags & RF_TEMP))
 		return here;
 
-	tmp = here->contents;
-	FOR_LIST(tmp, tmp) {
+	FOR_LIST(tmp, here) {
 		if (tmp->type != TYPE_ENTITY)
 			continue;
 
@@ -560,7 +559,7 @@ static void
 carve(OBJ *player, enum exit e)
 {
 	OBJ *there = NULL,
-	    *here = player->location;
+	    *here = object_get(player->location);
 	ROO *rhere = &here->sp.room;
 	int wall = 0;
 
@@ -583,7 +582,7 @@ carve(OBJ *player, enum exit e)
 	}
 
 	e_move(player, e);
-	there = player->location;
+	there = object_get(player->location);
 
 	if (here == there)
 		return;
@@ -599,14 +598,14 @@ uncarve(OBJ *player, enum exit e)
 {
 	const char *s0 = "is";
 	OBJ *there,
-	    *here = player->location;
+	    *here = object_get(player->location);
 	ROO *rhere = &here->sp.room;
 	int ht, cd = e_ground(here, e);
 
 	if (cd) {
 		ht = rhere->flags & RF_TEMP;
 		e_move(player, e);
-		there = player->location;
+		there = object_get(player->location);
 
 		if (here == there)
 			return;
@@ -627,7 +626,7 @@ uncarve(OBJ *player, enum exit e)
 
 	ROO *rthere = &there->sp.room;
 
-	if ((rthere->flags & RF_TEMP) || there->owner != player) {
+	if ((rthere->flags & RF_TEMP) || there->owner != object_ref(player)) {
 		nd_writef(player, "You don't own th%s room.\n", s0);
 		return;
 	}
@@ -649,17 +648,17 @@ unwall(OBJ *player, enum exit e)
 {
 	int a, b, c, d;
 	OBJ *there,
-	    *here = player->location;
+	    *here = object_get(player->location);
 	ROO *rhere = &here->sp.room;
 
-	a = here->owner == player;
+	a = here->owner == object_ref(player);
 	b = rhere->flags & RF_TEMP;
 	there = st_there(here, e);
 
 	ROO *rthere = &there->sp.room;
 
 	if (there) {
-		c = there->owner == player;
+		c = there->owner == object_ref(player);
 		d = rthere->flags & RF_TEMP;
 	} else {
 		c = 0;
@@ -681,7 +680,7 @@ unwall(OBJ *player, enum exit e)
 	rhere->exits |= e;
 	e_move(player, e);
 
-	there = player->location;
+	there = object_get(player->location);
 	rthere = &there->sp.room;
 
 	if (here == there)
@@ -696,12 +695,12 @@ gexit_claim(OBJ *player, enum exit e)
 {
 	int a, b, c, d;
 	OBJ *here = st_there(player, e),
-	    *there = player->location;
+	    *there = object_get(player->location);
 	ROO *rthere = &there->sp.room;
 
-	a = here && here->owner == player;
+	a = here && here->owner == object_ref(player);
 	c = rthere->flags & RF_TEMP;
-	b = !c && there->owner == player;
+	b = !c && there->owner == object_ref(player);
 	d = e_ground(there, e);
 
 	if (a && (b || c))
@@ -721,7 +720,7 @@ gexit_claim(OBJ *player, enum exit e)
 static inline int
 gexit_claim_walk(OBJ *player, enum exit e)
 {
-	OBJ *here = player->location;
+	OBJ *here = object_get(player->location);
 	ROO *rhere = &here->sp.room;
 
 	if (!(rhere->exits & e)) {
@@ -731,7 +730,7 @@ gexit_claim_walk(OBJ *player, enum exit e)
 
 	e_move(player, e);
 
-	OBJ *there = player->location;
+	OBJ *there = object_get(player->location);
 
 	if (here == there)
 		return 1;
@@ -749,7 +748,7 @@ e_wall(OBJ *player, enum exit e)
 	if (gexit_claim_walk(player, e))
 		return;
 
-	OBJ *here = player->location;
+	OBJ *here = object_get(player->location);
 	ROO *rhere = &here->sp.room;
 
 	rhere->exits &= ~e_simm(e);
@@ -770,7 +769,7 @@ door(OBJ *player, enum exit e)
 	if (gexit_claim_walk(player, e))
 		return;
 
-	OBJ *where = player->location;
+	OBJ *where = object_get(player->location);
 	ROO *rwhere = &where->sp.room;
 
 	rwhere->doors |= e_simm(e);
@@ -791,7 +790,7 @@ undoor(OBJ *player, enum exit e)
 	if (gexit_claim_walk(player, e))
 		return;
 
-	OBJ *where = player->location;
+	OBJ *where = object_get(player->location);
 	ROO *rwhere = &where->sp.room;
 
 	rwhere->doors &= ~e_simm(e);
@@ -817,7 +816,7 @@ tell_pos(OBJ *player, struct cmd_dir cd) {
 		return 0;
 	}
 
-	map_where(pos, target->location);
+	map_where(pos, object_get(target->location));
 	nd_writef(player, "0x%llx\n", MORTON_READ(pos));
 	return ret;
 }
@@ -834,7 +833,7 @@ st_teleport(OBJ *player, struct cmd_dir cd)
 		// X6? teleport to chivas
 		OBJ *target = object_get((dbref) cd.rep);
 		if (target->type == TYPE_ENTITY) {
-			map_where(pos, target->location);
+			map_where(pos, object_get(target->location));
 			ret = 1;
 		}
 	} else
@@ -864,7 +863,7 @@ pull(OBJ *player, struct cmd_dir cd)
 	if (e == E_NULL)
 		return 0;
 
-	here = player->location;
+	here = object_get(player->location);
 	what = object_get((dbref) cd.rep);
 
 	ROO *rhere = &here->sp.room;
@@ -872,7 +871,7 @@ pull(OBJ *player, struct cmd_dir cd)
 	if (!(rhere->exits & e)
 	    || !what
 	    || what->type != TYPE_ROOM
-	    || what->owner != player
+	    || what->owner != object_ref(player)
 	    || ((there = st_there(here, e))
 		&& room_clean(player, there) == there))
 	{
@@ -1110,7 +1109,7 @@ _st_run(OBJ *player, char *symbol, uint64_t key, unsigned shift) {
 
 void
 st_run(OBJ *player, char *symbol) {
-	uint64_t position = map_mwhere(player->location);
+	uint64_t position = map_mwhere(object_get(player->location));
 	int i;
 	g_player = player;
 
@@ -1140,7 +1139,7 @@ do_stchown(int fd, int argc, char *argv[]) {
 
 	uint64_t position = argc > 2
 		? strtoull(argv[3], NULL, 10)
-		: map_mwhere(player->location);
+		: map_mwhere(object_get(player->location));
 
 	long int high_shift = st_hish_shift(player, position);
 
@@ -1163,7 +1162,7 @@ do_streload(int fd, int argc, char *argv[]) {
 
 	uint64_t position = argc > 2
 		? strtoull(argv[2], NULL, 10)
-		: map_mwhere(player->location);
+		: map_mwhere(object_get(player->location));
 
 	long int high_shift = st_hish_shift(player, position);
 
