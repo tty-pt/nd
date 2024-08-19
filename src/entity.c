@@ -100,7 +100,7 @@ recycle(OBJ *player, OBJ *thing)
 				}
 			if (thing->location != NOTHING)
 				nd_owritef(thing, "You feel a wrenching sensation...\n");
-			map_delete(thing);
+			map_delete(object_ref(thing));
 		}
 
 		break;
@@ -502,7 +502,7 @@ nd_move(OBJ *player) {
 	struct hash_cursor c = hash_iter_start(player->sp.entity.fds);
 	pos_t pos;
 
-	map_where(pos, object_get(player->location));
+	map_where(pos, player->location);
 	while (hash_iter_get(&c))
 		ndc_move(* (int *) c.key, pos_morton(pos));
 }

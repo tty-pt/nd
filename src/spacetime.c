@@ -162,7 +162,7 @@ object_drop(OBJ *where, struct drop **drop)
 	pos_t pos;
         register int i;
 
-	map_where(pos, object_get(where->location));
+	map_where(pos, where->location);
 
 	for (; *drop; drop++)
 		if (random() < (RAND_MAX >> (*drop)->y)) {
@@ -186,11 +186,11 @@ object_drop(OBJ *where, struct drop **drop)
 
 int
 e_exit_can(OBJ *player, enum exit e) {
-	return e_ground(object_get(player->location), e);
+	return e_ground(player->location, e);
 }
 
 int
-e_ground(OBJ *room, enum exit e)
+e_ground(dbref room, enum exit e)
 {
 	pos_t pos;
 
@@ -267,7 +267,7 @@ st_update(double dt)
 }
 
 static inline void
-st_pos(pos_t p, OBJ *loc, enum exit e)
+st_pos(pos_t p, dbref loc, enum exit e)
 {
 	pos_t aux;
 	map_where(aux, loc);
@@ -280,7 +280,7 @@ st_pos(pos_t p, OBJ *loc, enum exit e)
 }
 
 static OBJ *
-st_there(OBJ *where, enum exit e)
+st_there(dbref where, enum exit e)
 {
 	pos_t pos;
 	/* CBUG(!*e_name(e)); */
@@ -323,7 +323,7 @@ wall_around(OBJ *player, enum exit e)
 	const char *s;
 	for (s = e_other(e); *s; s++) {
 		enum exit e2 = dir_e(*s);
-		OBJ *there = st_there(here, e2);
+		OBJ *there = st_there(player->location, e2);
 
 		if ((rhere->exits & e2) && there)
 			rhere->exits ^= e2;
@@ -354,14 +354,15 @@ st_claim(OBJ *player, OBJ *room) {
 }
 
 static inline void
-exits_fix(OBJ *player, OBJ *there, enum exit e)
+exits_fix(OBJ *player, dbref there_ref, enum exit e)
 {
+	OBJ *there = object_get(there_ref);
 	ROO *rthere = &there->sp.room;
 	const char *s;
 
 	for (s = e_other(e); *s; s++) {
 		enum exit e2 = dir_e(*s);
-		OBJ *othere = st_there(there, e2);
+		OBJ *othere = st_there(there_ref, e2);
 
 		if (!othere)
 			continue;
@@ -386,14 +387,15 @@ exits_fix(OBJ *player, OBJ *there, enum exit e)
 }
 
 static void
-exits_infer(OBJ *player, OBJ *here)
+exits_infer(OBJ *player, dbref here_ref)
 {
+	OBJ *here = object_get(here_ref);
 	ROO *rhere = &here->sp.room;
 	const char *s = "wsnedu";
 
 	for (; *s; s++) {
 		enum exit e = dir_e(*s);
-		OBJ *there = st_there(here, e);
+		OBJ *there = st_there(here_ref, e);
 
 		if (!there) {
                         if (e != E_UP && e != E_DOWN)
@@ -444,8 +446,8 @@ st_room_at(OBJ *player, pos_t pos)
 	bio = noise_point(pos);
         OBJ *there = object_add(&biomes[bio->bio_idx], NULL, bio);
 	ROO *rthere = &there->sp.room;
-	map_put(pos, there, DB_NOOVERWRITE);
-	exits_infer(player, there);
+	map_put(pos, object_ref(there), DB_NOOVERWRITE);
+	exits_infer(player, object_ref(there));
 
 	if (pos[2] != 0)
 		return there;
@@ -462,7 +464,7 @@ do_bio(int fd, int argc, char *argv[]) {
 	OBJ *player = FD_PLAYER(fd);
 	struct bio *bio;
 	pos_t pos;
-	map_where(pos, object_get(player->location));
+	map_where(pos, player->location);
 	bio = noise_point(pos);
 	nd_writef(player, "tmp %d rn %u bio %s(%d)\n",
 		bio->tmp, bio->rn, biomes[bio->bio_idx].name, bio->bio_idx);
@@ -472,10 +474,9 @@ static OBJ *
 st_room(OBJ *player, enum exit e)
 {
 	pos_t pos;
-	OBJ *here = object_get(player->location),
-	    *there;
+	OBJ *there;
 
-	st_pos(pos, here, e);
+	st_pos(pos, player->location, e);
 	there = st_room_at(player, pos);
 
 	return there;
@@ -495,7 +496,7 @@ e_move(OBJ *player, enum exit e) {
 		return;
 	}
 
-	if (!map_has(loc) || !(rloc->exits & e)) {
+	if (!map_has(player->location) || !(rloc->exits & e)) {
 		nd_writef(player, "You can't go that way.\n");
 		return;
 	}
@@ -515,7 +516,7 @@ e_move(OBJ *player, enum exit e) {
 	nd_writef(player, "You go %s%s%s.\n", ANSI_FG_BLUE ANSI_BOLD, e_name(e), ANSI_RESET);
 	nd_owritef(player, "%s goes %s.\n", player->name, e_name(e));
 
-	dest = st_there(loc, e);
+	dest = st_there(player->location, e);
 	if (!dest)
 		dest = st_room(player, e);
 
@@ -563,7 +564,7 @@ carve(OBJ *player, enum exit e)
 	ROO *rhere = &here->sp.room;
 	int wall = 0;
 
-	if (!e_ground(here, e)) {
+	if (!e_ground(player->location, e)) {
 		if (st_claim(player, here))
 			return;
 
@@ -574,7 +575,7 @@ carve(OBJ *player, enum exit e)
 
 		rhere->exits |= e;
 
-		there = st_there(here, e);
+		there = st_there(player->location, e);
 		if (!there)
 			there = st_room(player, e);
 		/* wall_around(cmd, exit); */
@@ -600,7 +601,7 @@ uncarve(OBJ *player, enum exit e)
 	OBJ *there,
 	    *here = object_get(player->location);
 	ROO *rhere = &here->sp.room;
-	int ht, cd = e_ground(here, e);
+	int ht, cd = e_ground(player->location, e);
 
 	if (cd) {
 		ht = rhere->flags & RF_TEMP;
@@ -615,7 +616,7 @@ uncarve(OBJ *player, enum exit e)
                         return;
                 }
 
-		there = st_there(here, e);
+		there = st_there(player->location, e);
 
 		if (!there) {
 			nd_writef(player, "No room there.\n");
@@ -633,7 +634,7 @@ uncarve(OBJ *player, enum exit e)
 
 	rthere->flags ^= RF_TEMP;
 	CBUG(!(rthere->flags & RF_TEMP));
-	exits_infer(player, there);
+	exits_infer(player, object_ref(there));
 	if (cd) {
 		if (ht && (rthere->doors & e_simm(e)))
 			rthere->doors &= ~e_simm(e);
@@ -653,7 +654,7 @@ unwall(OBJ *player, enum exit e)
 
 	a = here->owner == object_ref(player);
 	b = rhere->flags & RF_TEMP;
-	there = st_there(here, e);
+	there = st_there(player->location, e);
 
 	ROO *rthere = &there->sp.room;
 
@@ -694,14 +695,14 @@ static inline int
 gexit_claim(OBJ *player, enum exit e)
 {
 	int a, b, c, d;
-	OBJ *here = st_there(player, e),
+	OBJ *here = st_there(player->location, e),
 	    *there = object_get(player->location);
 	ROO *rthere = &there->sp.room;
 
 	a = here && here->owner == object_ref(player);
 	c = rthere->flags & RF_TEMP;
 	b = !c && there->owner == object_ref(player);
-	d = e_ground(there, e);
+	d = e_ground(player->location, e);
 
 	if (a && (b || c))
 		return 0;
@@ -753,7 +754,7 @@ e_wall(OBJ *player, enum exit e)
 
 	rhere->exits &= ~e_simm(e);
 
-	OBJ *there = st_there(here, e_simm(e));
+	OBJ *there = st_there(player->location, e_simm(e));
 
 	if (there) {
 		ROO *rthere = &there->sp.room;
@@ -774,7 +775,7 @@ door(OBJ *player, enum exit e)
 
 	rwhere->doors |= e_simm(e);
 
-	where = st_there(where, e_simm(e));
+	where = st_there(player->location, e_simm(e));
 
 	if (where) {
 		rwhere = &where->sp.room;
@@ -795,7 +796,7 @@ undoor(OBJ *player, enum exit e)
 
 	rwhere->doors &= ~e_simm(e);
 
-	where = st_there(where, e_simm(e));
+	where = st_there(player->location, e_simm(e));
 
 	if (where) {
 		rwhere = &where->sp.room;
@@ -816,7 +817,7 @@ tell_pos(OBJ *player, struct cmd_dir cd) {
 		return 0;
 	}
 
-	map_where(pos, object_get(target->location));
+	map_where(pos, target->location);
 	nd_writef(player, "0x%llx\n", MORTON_READ(pos));
 	return ret;
 }
@@ -833,7 +834,7 @@ st_teleport(OBJ *player, struct cmd_dir cd)
 		// X6? teleport to chivas
 		OBJ *target = object_get((dbref) cd.rep);
 		if (target->type == TYPE_ENTITY) {
-			map_where(pos, object_get(target->location));
+			map_where(pos, target->location);
 			ret = 1;
 		}
 	} else
@@ -872,16 +873,16 @@ pull(OBJ *player, struct cmd_dir cd)
 	    || !what
 	    || what->type != TYPE_ROOM
 	    || what->owner != object_ref(player)
-	    || ((there = st_there(here, e))
+	    || ((there = st_there(player->location, e))
 		&& room_clean(player, there) == there))
 	{
 		nd_writef(player, "You cannot do that.\n");
 		return 1;
 	}
 
-	st_pos(pos, here, e);
-	map_put(pos, what, 0);
-	exits_fix(player, what, e);
+	st_pos(pos, player->location, e);
+	map_put(pos, cd.rep, 0);
+	exits_fix(player, cd.rep, e);
 	e_move(player, e);
 	return 1;
 }
@@ -1109,7 +1110,7 @@ _st_run(OBJ *player, char *symbol, uint64_t key, unsigned shift) {
 
 void
 st_run(OBJ *player, char *symbol) {
-	uint64_t position = map_mwhere(object_get(player->location));
+	uint64_t position = map_mwhere(player->location);
 	int i;
 	g_player = player;
 
@@ -1139,7 +1140,7 @@ do_stchown(int fd, int argc, char *argv[]) {
 
 	uint64_t position = argc > 2
 		? strtoull(argv[3], NULL, 10)
-		: map_mwhere(object_get(player->location));
+		: map_mwhere(player->location);
 
 	long int high_shift = st_hish_shift(player, position);
 
@@ -1162,7 +1163,7 @@ do_streload(int fd, int argc, char *argv[]) {
 
 	uint64_t position = argc > 2
 		? strtoull(argv[2], NULL, 10)
-		: map_mwhere(object_get(player->location));
+		: map_mwhere(player->location);
 
 	long int high_shift = st_hish_shift(player, position);
 

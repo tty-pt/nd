@@ -84,7 +84,7 @@ morton_t pos_morton(pos_t);
 void morton_pos(pos_t p, morton_t code);
 
 int e_exit_can(OBJ *player, enum exit e);
-int e_ground(OBJ *room, enum exit e);
+int e_ground(dbref room, enum exit e);
 
 void pos_move(pos_t d, pos_t o, enum exit e);
 enum exit dir_e(const char dir);

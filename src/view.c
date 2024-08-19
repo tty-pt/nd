@@ -402,7 +402,7 @@ view(OBJ *player)
 	struct bio bd[VIEW_M], *n_p = bd,
 		   *n_max = &bd[VIEW_BDI + 1];
 	pos_t pos, opos;
-	map_where(opos, object_get(player->location));
+	map_where(opos, player->location);
 	view_t view;
         view_tile_t *p = view;
 	dbref o[VIEW_M], *o_p = o;
