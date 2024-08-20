@@ -130,7 +130,7 @@ string_match(register const char *src, register const char *sub)
 
 OBJ *
 ematch_at(OBJ *player, OBJ *where, char *name) {
-	OBJ *what;
+	OBJ *what, *tmp;
 
 	what = ematch_absolute(name);
 
@@ -146,8 +146,8 @@ ematch_at(OBJ *player, OBJ *where, char *name) {
 	if (!controls(player, absolute))
 		absolute = NULL;
 
-	OBJ *tmp;
-	FOR_LIST(tmp, where) {
+	struct hash_cursor c = contents_iter(object_ref(where));
+	while ((tmp = contents_next(&c))) {
 		if (tmp == absolute) {
 			return tmp;
 		} else if (string_match(tmp->name, name)) {

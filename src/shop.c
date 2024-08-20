@@ -3,21 +3,21 @@
 #include "entity.h"
 #include <stddef.h>
 #include "match.h"
+#include "object.h"
 
 static inline OBJ *
 vendor_find(OBJ *where)
 {
-	OBJ *tmp = object_get(where->contents);
+	struct hash_cursor c = contents_iter(object_ref(where));
 
-	while (tmp) {
+	OBJ *tmp;
+
+	while ((tmp = contents_next(&c)))
 		if (tmp->type == TYPE_ENTITY) {
 			ENT *etmp = &tmp->sp.entity;
 			if (etmp->flags & EF_SHOP)
 				return tmp;
 		}
-
-		tmp = object_get(tmp->next);
-	}
 
 	return NULL;
 }
@@ -39,7 +39,8 @@ do_shop(int fd, int argc, char *argv[])
 
         mcp_look(player, npc);
 
-	FOR_LIST(tmp, npc) {
+	struct hash_cursor c = contents_iter(object_ref(npc));
+	while ((tmp = contents_next(&c))) {
 		if (tmp->flags & OF_INF)
 			nd_writef(player, "%-13s %5dP (Inf)",
 				tmp->name, tmp->value);

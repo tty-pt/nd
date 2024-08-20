@@ -329,10 +329,11 @@ nd_write(OBJ *player, char *str, size_t len) {
 	if (!player->sp.entity.fds)
 		return;
 
-	struct hash_cursor c = hash_iter_start(player->sp.entity.fds);
+	struct hash_cursor c = hash_iter(player->sp.entity.fds);
+	int key, ign;
 
-	while (hash_iter_get(&c))
-		ndc_write(* (int *) c.key, str, len);
+	while (hash_next(&key, &ign, &c))
+		ndc_write(key, str, len);
 }
 
 
@@ -342,10 +343,11 @@ nd_dwritef(OBJ *player, const char *fmt, va_list args) {
 	ssize_t len = vsnprintf(buf, sizeof(buf), fmt, args);
 	if (!player->sp.entity.fds)
 		return;
-	struct hash_cursor c = hash_iter_start(player->sp.entity.fds);
+	struct hash_cursor c = hash_iter(player->sp.entity.fds);
+	int fd, ign;
 
-	while (hash_iter_get(&c))
-		ndc_write(* (int *) c.key, buf, len);
+	while (hash_next(&fd, &ign, &c))
+		ndc_write(fd, buf, len);
 }
 
 void
@@ -360,11 +362,10 @@ nd_writef(OBJ *player, const char *fmt, ...)
 void
 nd_rwrite(OBJ *room, OBJ *exception, char *str, size_t len) {
 	OBJ *tmp;
-	FOR_LIST(tmp, room) {
-		if (tmp->type != TYPE_ENTITY || tmp == exception)
-			continue;
-		nd_write(tmp, str, len);
-	}
+	struct hash_cursor c = contents_iter(object_ref(room));
+	while ((tmp = contents_next(&c)))
+		if (tmp->type == TYPE_ENTITY && tmp != exception)
+			nd_write(tmp, str, len);
 }
 
 void
@@ -386,10 +387,11 @@ nd_owritef(OBJ *player, char *format, ...)
 
 void
 nd_close(OBJ *player) {
-	struct hash_cursor c = hash_iter_start(player->sp.entity.fds);
+	struct hash_cursor c = hash_iter(player->sp.entity.fds);
+	int fd, ign;
 
-	while (hash_iter_get(&c))
-		ndc_close(* (int *) c.key);
+	while (hash_next(&fd, &ign, &c))
+		ndc_close(fd);
 }
 
 void
@@ -465,7 +467,8 @@ auth(int fd, char *qsession)
 	ENT *eplayer = &player->sp.entity;
 	if (!eplayer->fds)
 		eplayer->fds = hash_init();
-	hash_put(eplayer->fds, &fd, sizeof(fd), (void *) 1);
+	int val = 1;
+	hash_cput(eplayer->fds, &fd, sizeof(fd), &val, sizeof(val));
         mcp_stats(player);
         mcp_auth_success(player);
         mcp_equipment(player);
@@ -543,8 +546,9 @@ void ndc_disconnect(int fd) {
 
 	FD_PLAYER(fd) = NULL;
 	int no_fds = 1;
-	struct hash_cursor c = hash_iter_start(eplayer->fds);
-	while (hash_iter_get(&c)) {
+	struct hash_cursor c = hash_iter(eplayer->fds);
+	int ign;
+	while (hash_next(&ign, &ign, &c)) {
 		no_fds = 0;
 		break;
 	}

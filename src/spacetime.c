@@ -30,7 +30,7 @@
 #define GEON_M (GEON_SIZE * GEON_SIZE)
 #define GEON_BDI (GEON_SIZE * (GEON_SIZE - 1))
 
-static int owner_hd = -1, sl_hd = -1;
+static long owner_hd = -1, sl_hd = -1;
 
 typedef void op_a_t(OBJ *player, enum exit e);
 typedef int op_b_t(OBJ *player, struct cmd_dir cd);
@@ -531,13 +531,14 @@ e_move(OBJ *player, enum exit e) {
 OBJ *
 room_clean(OBJ *player, OBJ *here)
 {
-	ROO *rhere = &here->sp.room;
 	OBJ *tmp;
+	ROO *rhere = &here->sp.room;
 
 	if (!(rhere->flags & RF_TEMP))
 		return here;
 
-	FOR_LIST(tmp, here) {
+	struct hash_cursor c = contents_iter(object_ref(here));
+	while ((tmp = contents_next(&c))) {
 		if (tmp->type != TYPE_ENTITY)
 			continue;
 
@@ -1020,13 +1021,13 @@ st_init() {
 	nd.echo = &echo;
 	nd.oecho = &oecho;
 
-	owner_hd = hash_cinit("/var/nd/st.db", NULL, 0644);
+	owner_hd = hash_cinit("/var/nd/st.db", NULL, 0644, 0);
 	sl_hd = hash_init();
-	struct hash_cursor c = hash_iter_start(owner_hd);
+	struct hash_cursor c = hash_iter(owner_hd);
 	struct st_key st_key;
 	int owner;
 
-	while (hash_iter_cget(&st_key, &owner, &c))
+	while (hash_next(&st_key, &owner, &c))
 		st_open(st_key, owner);
 }
 
@@ -1037,11 +1038,11 @@ st_sync() {
 
 void
 st_close() {
-	struct hash_cursor c = hash_iter_start(sl_hd);
+	struct hash_cursor c = hash_iter(sl_hd);
 	struct st_key key;
 	void *sl;
 
-	while (hash_iter_cget(&key, &sl, &c))
+	while (hash_next(&key, &sl, &c))
 		dlclose(sl);
 
 	hash_close(sl_hd);

@@ -172,8 +172,8 @@ union specific {
 };
 
 typedef struct object {
-	int observers;
-	dbref location, owner, contents, next;
+	long observers;
+	dbref location, owner;
 
 	unsigned art_id;
 	unsigned char type;

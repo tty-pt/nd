@@ -17,6 +17,7 @@
 #include "plant.h"
 #include "noise.h"
 #include "mcp.h"
+#include "map.h"
 #include <qhash.h>
 
 enum actions {
@@ -31,9 +32,9 @@ enum actions {
         ACT_TALK = 256,
 };
 
+long contents_hd = -1;
 struct object *db = 0;
 dbref db_top = 0;
-OBJ *recyclable = NULL;
 char std_db[BUFSIZ];
 char std_db_ok[BUFSIZ];
 
@@ -105,10 +106,8 @@ object_clear(OBJ *o)
 	memset(o, 0, sizeof(struct object));
 
 	o->name = 0;
-	if (o->observers > 0)
-		hash_close(o->observers);
 	o->observers = -1;
-	o->location = o->contents = o->next = NOTHING;
+	o->location = NOTHING;
 	o->owner = GOD;
 }
 
@@ -117,14 +116,8 @@ object_new(void)
 {
 	OBJ *newobj;
 
-	if (recyclable) {
-		newobj = recyclable;
-		recyclable = object_get(newobj->next);
-		object_free(newobj);
-	} else {
-		newobj = object_get(db_top);
-		objects_grow(db_top + 1);
-	}
+	newobj = object_get(db_top);
+	objects_grow(db_top + 1);
 
 	/* clear it out */
 	object_clear(newobj);
@@ -231,7 +224,7 @@ struct core_art core_art[] = {
 	{ 14, "stick" },
 };
 
-int art_hd = -1;
+long art_hd = -1;
 
 unsigned art_max(char *name) {
 	struct core_art *core_art_item = (struct core_art *) SHASH_GET(art_hd, name);
@@ -243,6 +236,10 @@ art_idx(OBJ *obj) {
 	return 1 + (random() % art_max(obj->name));
 }
 
+void contents_put(dbref parent, dbref child) {
+	hash_cput(contents_hd, &parent, sizeof(parent), &child, sizeof(child));
+}
+
 OBJ *
 object_add(SKEL *sk, OBJ *where, void *arg)
 {
@@ -252,9 +249,8 @@ object_add(SKEL *sk, OBJ *where, void *arg)
 	nu->location = object_ref(where);
 	nu->owner = GOD;
 	nu->type = TYPE_THING;
-	if (where) {
-		PUSH(nu, where->contents);
-	}
+	if (where)
+		contents_put(nu->location, object_ref(nu));
 
 	switch (sk->type) {
 	case S_TYPE_EQUIPMENT:
@@ -388,8 +384,8 @@ object_write(FILE * f, OBJ *obj)
 	int j;
 	putstring(f, obj->name);
 	putref(f, obj->location);
-	putref(f, obj->contents);
-	putref(f, obj->next);
+	putref(f, NOTHING);
+	putref(f, NOTHING);
 	putref(f, obj->value);
 	putref(f, obj->type);
 	putref(f, obj->flags);
@@ -510,7 +506,11 @@ objects_init()
 	objects_free();
 	srand(getpid());			/* init random number generator */
 
+	contents_hd = hash_cinit(NULL, NULL, 0644, QH_DUP);
 	CBUG(!objects_read(f));
+	OBJ *tmp;
+	FOR_ALL(tmp)
+		contents_put(tmp->location, object_ref(tmp));
 
 	return 0;
 }
@@ -555,7 +555,8 @@ observer_add(OBJ *observable, OBJ *observer) {
 int
 observer_remove(OBJ *observable, OBJ *observer) {
 	dbref ref = object_ref(observer);
-	hash_del(observable->observers, &ref, sizeof(ref));
+	if (observable->observers > 0)
+		hash_del(observable->observers, &ref, sizeof(ref));
 	return 0;
 }
 
@@ -571,7 +572,6 @@ objects_free(void)
 		db = 0;
 		db_top = 0;
 	}
-	recyclable = NULL;
 }
 
 dbref
@@ -623,8 +623,8 @@ object_read(FILE * f)
 
 	o->name = STRING_READ(f);
 	o->location = ref_read(f);
-	o->contents = ref_read(f);
-	o->next = ref_read(f);
+	ref_read(f);
+	ref_read(f);
 	o->value = ref_read(f);
 	o->type = ref_read(f);
 	o->flags = ref_read(f);
@@ -721,7 +721,6 @@ object_read(FILE * f)
 OBJ *
 objects_read(FILE * f)
 {
-	int i;
 	dbref grow;
 	const char *special;
 	char c;
@@ -737,7 +736,7 @@ objects_read(FILE * f)
 	objects_grow( grow );
 
 	c = getc(f);			/* get next char */
-	for (i = 0;; i++) {
+	for (;;) {
 		switch (c) {
 		case NUMBER_TOKEN:
 			/* another entry, yawn */
@@ -755,13 +754,6 @@ objects_read(FILE * f)
 				special = STRING_READ(f);
 				if (special)
 					free((void *) special);
-				for (i = 0; i < db_top; i++) {
-					OBJ *o = object_get(i);
-					if (o->type == TYPE_GARBAGE) {
-						o->next = object_ref(recyclable);
-						recyclable = o;
-					}
-				}
 				return object_get(db_top);
 			}
 			break;
@@ -779,7 +771,7 @@ object_copy(OBJ *player, OBJ *old)
 {
 	OBJ *nu = object_new();
 	nu->name = strdup(old->name);
-	nu->location = nu->contents = nu->next = NOTHING;
+	nu->location = NOTHING;
 	nu->owner = old->owner;
         return nu;
 }
@@ -868,28 +860,6 @@ object_plc(OBJ *source, OBJ *dest)
 	return 1;
 }
 
-/* remove the first occurence of what in list headed by first */
-static inline OBJ *
-remove_first(OBJ *loc, OBJ *what)
-{
-	OBJ *first = object_get(loc->contents);
-	OBJ *prev;
-
-	/* special case if it's the first one */
-	if (first == what) {
-		return object_get(first->next);
-	} else {
-		/* have to find it */
-		FOR_LIST(prev, loc) {
-			if (object_get(prev->next) == what) {
-				prev->next = what->next;
-				return loc;
-			}
-		}
-		return loc;
-	}
-}
-
 void
 object_move(OBJ *what, OBJ *where)
 {
@@ -902,7 +872,8 @@ object_move(OBJ *what, OBJ *where)
 
         if (loc) {
                 mcp_content_out(loc, what);
-		loc->contents = object_ref(remove_first(loc, what));
+		int ref = object_ref(what);
+		hash_vdel(contents_hd, &what->location, sizeof(what->location), &ref, sizeof(ref));
         }
 
 	/* test for special cases */
@@ -926,8 +897,16 @@ object_move(OBJ *what, OBJ *where)
 	if (what->type == TYPE_GARBAGE)
 		return;
 
-	PUSH(what, where->contents);
 	what->location = object_ref(where);
+	contents_put(what->location, object_ref(what));
+	if (what->type == TYPE_ENTITY && what->sp.entity.fds) {
+		struct hash_cursor c = hash_iter(what->sp.entity.fds);
+		morton_t location = map_mwhere(what->location);
+		int key, ign;
+
+		while (hash_next(&key, &ign, &c))
+			ndc_move(key, location);
+	}
 	mcp_content_in(where, what);
 }
 
@@ -1004,4 +983,15 @@ object_ref(register OBJ *obj)
 		return (dbref) (obj - db);
 	else
 		return NOTHING;
+}
+
+struct hash_cursor contents_iter(dbref parent) {
+	return hash_citer(contents_hd, &parent, sizeof(parent));
+}
+
+OBJ *contents_next(struct hash_cursor *c) {
+	dbref key, value;
+	if (!hash_next(&key, &value, c))
+		return NULL;
+	return object_get(value);
 }

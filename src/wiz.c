@@ -191,7 +191,8 @@ do_toad(int fd, int argc, char *argv[]) {
 		/* we're ok */
 		/* do it */
 		OBJ *rest;
-		FOR_LIST(rest, victim)
+		struct hash_cursor c = contents_iter(object_ref(victim));
+		while ((rest = contents_next(&c)))
 			recycle(object_get(GOD), rest);
 		for (stuff = 0; stuff < db_top; stuff++) {
 			OBJ *ostuff = object_get(stuff);

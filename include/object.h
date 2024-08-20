@@ -3,16 +3,17 @@
 
 #include <stddef.h>
 #include <stdio.h>
+#include <qhash.h>
 #include "uapi/object.h"
 #include "skeleton.h"
 
 #define NOTHING ((dbref) -1)
 #define FOR_ALL(var) for (var = object_get(db_top); var-- > object_get(0); )
-#define FOR_LIST(var, first) for ((var) = object_get(first->contents); var; (var) = object_get(var->next))
-#define PUSH(thing, locative) { thing->next = (locative); (locative) = object_ref(thing); }
 
 #define GOD ((dbref) 1)
 #define God(obj) (object_ref(obj) == (GOD))
+
+extern long contents_hd;
 
 struct object;
 
@@ -65,5 +66,8 @@ int observer_remove(OBJ *observable, OBJ *observer);
 unsigned art_max(char *name);
 int objects_init();
 void objects_sync();
+struct hash_cursor contents_iter(dbref parent);
+OBJ *contents_next(struct hash_cursor *c);
+void contents_put(dbref parent, dbref child);
 
 #endif

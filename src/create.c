@@ -113,7 +113,7 @@ do_clone(int fd, int argc, char *argv[])
 			thing->value = MAX_OBJECT_ENDOWMENT;
 		
 		/* link it in */
-		PUSH(clone, player->contents);
+		contents_put(object_ref(player), object_ref(clone));
 
 		/* and we're done */
 		nd_writef(player, "%s created with number %d.\n", thing->name, object_ref(clone));
@@ -185,7 +185,7 @@ do_create(int fd, int argc, char *argv[])
 		thing->value = MAX_OBJECT_ENDOWMENT;
 
 	/* link it in */
-	PUSH(thing, player->contents);
+	contents_put(thing->location, object_ref(thing));
 
 	/* and we're done */
 	nd_writef(player, "%s created with number %d.\n", name, object_ref(thing));

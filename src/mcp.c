@@ -70,13 +70,11 @@ nd_tdwritef(OBJ *player, const char *fmt, va_list args) {
 	ssize_t len = vsnprintf(buf, sizeof(buf), fmt, args);
 	if (!player->sp.entity.fds)
 		return;
-	struct hash_cursor c = hash_iter_start(player->sp.entity.fds);
-	while (hash_iter_get(&c)) {
-		int fd = * (int *) c.key;
-		if (ndc_flags(fd) & DF_WEBSOCKET)
-			continue;
-		ndc_write(fd, buf, len);
-	}
+	struct hash_cursor c = hash_iter(player->sp.entity.fds);
+	int fd, ign;
+	while (hash_next(&fd, &ign, &c))
+		if (!(ndc_flags(fd) & DF_WEBSOCKET))
+			ndc_write(fd, buf, len);
 }
 
 static void
@@ -94,13 +92,12 @@ nd_wwrite(OBJ *player, void *msg, size_t len) {
 	if (!eplayer->fds)
 		return;
 
-	struct hash_cursor c = hash_iter_start(eplayer->fds);
+	struct hash_cursor c = hash_iter(eplayer->fds);
+	int fd, ign;
 
-	while (hash_iter_get(&c)) {
-		register int fd = * (int *) c.key;
+	while (hash_next(&fd, &ign, &c))
 		if ((ndc_flags(fd) & DF_WEBSOCKET))
 			ndc_write(fd, msg, len);
-	}
 }
 
 static void
@@ -277,7 +274,8 @@ mcp_look(OBJ *player, OBJ *loc)
                 return;
 
 	// use callbacks for mcp like this versus telnet
-        FOR_LIST(thing, loc)
+	struct hash_cursor c = contents_iter(object_ref(loc));
+	while ((thing = contents_next(&c)))
 		fbcp_item(player, thing, 0);
 
 	nd_twritef(player, "%s\n", unparse(player, loc));
@@ -287,13 +285,14 @@ mcp_look(OBJ *player, OBJ *loc)
         char buf[BUFSIZ];
         size_t buf_l = 0;
 
+	struct hash_cursor c2 = contents_iter(object_ref(loc));
+	while ((thing = contents_next(&c2))) {
 	/* check to see if there is anything there */
-                FOR_LIST(thing, loc) {
 			if (thing == player)
 				continue;
 			buf_l += snprintf(&buf[buf_l], BUFSIZ - buf_l,
 					"%s\r\n", unparse(player, thing));
-                }
+	}
 
         buf[buf_l] = '\0';
         nd_twritef(player, "Contents: %s", buf);
@@ -302,9 +301,10 @@ mcp_look(OBJ *player, OBJ *loc)
 static void
 fbcp_room(OBJ *room, char *msg, size_t len)
 {
+	struct hash_cursor c = contents_iter(object_ref(room));
 	OBJ *tmp;
 
-	for (tmp = object_get(room->contents); tmp; tmp = object_get(tmp->next)) {
+	while ((tmp = contents_next(&c))) {
 		if (tmp->type != TYPE_ENTITY)
 			continue;
 
@@ -317,10 +317,10 @@ fbcp_observers(OBJ *thing, char *msg, size_t len)
 {
 	if (thing->observers <= 0)
 		return;
-	struct hash_cursor c = hash_iter_start(thing->observers);
+	struct hash_cursor c = hash_iter(thing->observers);
 	dbref ref, ignore;
 
-	while (hash_iter_cget(&ref, &ignore, &c)) {
+	while (hash_next(&ref, &ignore, &c)) {
 		OBJ *tmp = object_get(ref);
 		if (tmp->type != TYPE_ENTITY)
 			continue;

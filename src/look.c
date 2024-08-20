@@ -58,11 +58,9 @@ do_examine(int fd, int argc, char *argv[])
 		nd_writef(player, thing->description);
 
 	/* show him the contents */
-	if (thing->contents != NOTHING) {
-		nd_writef(player, "Contents:\n");
-		FOR_LIST(content, thing) {
+	struct hash_cursor c = contents_iter(object_ref(thing));
+	while ((content = contents_next(&c))) {
 			nd_writef(player, unparse(player, content));
-		}
 	}
 	switch (thing->type) {
 	case TYPE_ROOM:
@@ -189,7 +187,8 @@ do_contents(int fd, int argc, char *argv[])
 		nd_writef(player, "Permission denied. (You can't get the contents of something you don't control)\n");
 		return;
 	}
-	FOR_LIST(oi, thing) {
+	struct hash_cursor c = contents_iter(object_ref(thing));
+	while ((oi = contents_next(&c))) {
 		display_objinfo(player, oi);
 		total++;
 	}

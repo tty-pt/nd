@@ -6,7 +6,7 @@
 
 #include "defaults.h"
 
-int player_hd = -1;
+long player_hd = -1;
 
 OBJ *
 player_create(char *name)
@@ -21,7 +21,7 @@ player_create(char *name)
 	player->value = START_PENNIES;
 	eplayer->flags = EF_PLAYER;
 
-	PUSH(player, object_get(PLAYER_START)->contents);
+	contents_put(PLAYER_START, object_ref(player));
 	player_put(player);
 
 	st_start(player);

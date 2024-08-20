@@ -326,10 +326,11 @@ view_build_exit_s(OBJ *player, view_tile_t *t,
 
 static inline ucoord_t
 view_build_flags(OBJ *loc) {
+	struct hash_cursor c = contents_iter(object_ref(loc));
 	OBJ *tmp;
 	ucoord_t flags = 0;
 
-	FOR_LIST(tmp, loc) {
+	while ((tmp = contents_next(&c))) {
 		switch (tmp->type) {
 		case TYPE_ENTITY:
 			{

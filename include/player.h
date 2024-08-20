@@ -5,7 +5,7 @@
 
 #include <qhash.h>
 
-extern int player_hd;
+extern long player_hd;
 
 OBJ *player_connect(const char *qsession);
 OBJ *player_create(char *name);

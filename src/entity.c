@@ -72,9 +72,7 @@ birth(OBJ *player)
 void
 recycle(OBJ *player, OBJ *thing)
 {
-	extern OBJ *recyclable;
-	OBJ *first, *rest;
-	int looplimit;
+	OBJ *rest, *first;
 
 	CBUG(!thing->owner);
 	OBJ *owner = object_get(thing->owner);
@@ -86,20 +84,17 @@ recycle(OBJ *player, OBJ *thing)
 			ROO *rthing = &thing->sp.room;
 			if (!(eowner->flags & EF_WIZARD))
 				owner->value += ROOM_COST;
-			if (rthing->flags & RF_TEMP)
-				for (first = object_get(thing->contents); first; first = rest) {
-					rest = object_get(first->next);
-
+			if (rthing->flags & RF_TEMP) {
+				struct hash_cursor c = contents_iter(object_ref(thing));
+				while ((first = contents_next(&c))) {
 					if (first->type == TYPE_ENTITY) {
 						ENT *efirst = &first->sp.entity;
 						if (efirst->flags & EF_PLAYER)
 							continue;
 					}
-
 					recycle(player, first);
 				}
-			if (thing->location != NOTHING)
-				nd_owritef(thing, "You feel a wrenching sensation...\n");
+			}
 			map_delete(object_ref(thing));
 		}
 
@@ -121,10 +116,9 @@ recycle(OBJ *player, OBJ *thing)
 		ROO *rthingloc = &thingloc->sp.room;
 
 		if (rthingloc->flags & RF_TEMP) {
-			for (first = object_get(thing->contents); first; first = rest) {
-				rest = object_get(first->next);
+			struct hash_cursor c = contents_iter(object_ref(thing));
+			while ((first = contents_next(&c)))
 				recycle(player, first);
-			}
 		}
 
 		break;
@@ -154,14 +148,10 @@ recycle(OBJ *player, OBJ *thing)
 
 			break;
 		}
-		if (rest->contents == object_ref(thing))
-			rest->contents = thing->next;
-		if (object_get(rest->next) == thing)
-			rest->next = thing->next;
 	}
 
-	looplimit = db_top;
-	while ((looplimit-- > 0) && (first = object_get(thing->contents))) {
+	struct hash_cursor c = contents_iter(object_ref(thing));
+	while ((first = contents_next(&c))) {
 		if (first->type == TYPE_ENTITY) {
 			ENT *efirst = &first->sp.entity;
 			if (efirst->flags & EF_PLAYER) {
@@ -174,7 +164,6 @@ recycle(OBJ *player, OBJ *thing)
 		recycle(player, first);
 	}
 
-
 	object_move(thing, NULL);
 
 	object_free(thing);
@@ -182,19 +171,17 @@ recycle(OBJ *player, OBJ *thing)
 	thing->name = (char*) strdup("<garbage>");
 	thing->description = (char *) strdup("<recyclable>");
 	thing->type = TYPE_GARBAGE;
-	thing->next = object_ref(recyclable);
-	recyclable = thing;
 }
 
 static inline int
 entities_aggro(OBJ *player)
 {
 	ENT *eplayer = &player->sp.entity;
-	OBJ *here = object_get(player->location);
 	OBJ *tmp;
 	int klock = 0;
 
-	FOR_LIST(tmp, here) {
+	struct hash_cursor c = contents_iter(player->location);
+	while ((tmp = contents_next(&c))) {
 		if (tmp->type != TYPE_ENTITY)
 			continue;
 
@@ -495,19 +482,6 @@ enter(OBJ *player, OBJ *loc, enum exit e)
 #endif
 
 void
-nd_move(OBJ *player) {
-	if (!player->sp.entity.fds)
-		return;
-
-	struct hash_cursor c = hash_iter_start(player->sp.entity.fds);
-	pos_t pos;
-
-	map_where(pos, player->location);
-	while (hash_iter_get(&c))
-		ndc_move(* (int *) c.key, pos_morton(pos));
-}
-
-void
 enter(OBJ *player, OBJ *loc, enum exit e)
 {
 	OBJ *old = object_get(player->location);
@@ -519,7 +493,6 @@ enter(OBJ *player, OBJ *loc, enum exit e)
 	room_clean(player, old);
 	if (e == E_NULL)
 		nd_owritef(player, "%s teleports in.\n", player->name);
-	nd_move(player);
 	st_run(player, "enter");
 	entities_aggro(player);
 }
@@ -826,16 +799,16 @@ entity_award(OBJ *player, ENT *etarget)
 static inline OBJ *
 entity_body(OBJ *player, OBJ *mob)
 {
+	OBJ *tmp;
 	char buf[32];
 	struct object_skeleton o = { .name = "", .description = "" };
 	snprintf(buf, sizeof(buf), "%s's body.", mob->name);
 	o.name = buf;
 	OBJ *dead_mob = object_add(&o, object_get(mob->location), NULL);
-	OBJ *tmp;
 	unsigned n = 0;
 
-	for (; (tmp = object_get(mob->contents)); ) {
-		/* CBUG(tmp->type != TYPE_GARBAGE); */
+	struct hash_cursor c = contents_iter(object_ref(mob));
+	while ((tmp = contents_next(&c))) {
 		if (tmp->type == TYPE_GARBAGE)
 			continue;
 		if (tmp->type == TYPE_EQUIPMENT) {
