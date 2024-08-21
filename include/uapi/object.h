@@ -107,7 +107,6 @@ struct effect {
 
 typedef struct entity {
 	dbref home;
-	unsigned fds;
 	dbref last_observed;
         /* const char *dialog; <- make this external to the struct (use object id) */
 	struct debuf debufs[8];

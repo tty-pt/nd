@@ -68,11 +68,10 @@ static void
 nd_tdwritef(OBJ *player, const char *fmt, va_list args) {
 	static char buf[BUFSIZ];
 	ssize_t len = vsnprintf(buf, sizeof(buf), fmt, args);
-	if (!player->sp.entity.fds)
-		return;
-	struct hash_cursor c = hash_iter(player->sp.entity.fds);
-	int fd, ign;
-	while (hash_next(&fd, &ign, &c))
+	struct hash_cursor c = fds_iter(object_ref(player));
+	int fd;
+
+	while ((fd = fds_next(&c)))
 		if (!(ndc_flags(fd) & DF_WEBSOCKET))
 			ndc_write(fd, buf, len);
 }
@@ -87,17 +86,13 @@ nd_twritef(OBJ *player, const char *fmt, ...) {
 
 static void
 nd_wwrite(OBJ *player, void *msg, size_t len) {
-	ENT *eplayer = &player->sp.entity;
+	struct hash_cursor c = fds_iter(object_ref(player));
+	int fd;
 
-	if (!eplayer->fds)
-		return;
-
-	struct hash_cursor c = hash_iter(eplayer->fds);
-	int fd, ign;
-
-	while (hash_next(&fd, &ign, &c))
+	while ((fd = fds_next(&c))) {
 		if ((ndc_flags(fd) & DF_WEBSOCKET))
 			ndc_write(fd, msg, len);
+	}
 }
 
 static void
@@ -375,9 +370,6 @@ mcp_equipment(OBJ *player)
 {
 	ENT *eplayer = &player->sp.entity;
 	int aux;
-
-	if (!eplayer->fds)
-		return;
 
 	fbcp(player, sizeof(eplayer->equipment), BCP_EQUIPMENT, eplayer->equipment);
 	

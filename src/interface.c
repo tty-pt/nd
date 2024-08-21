@@ -233,7 +233,7 @@ struct cmd_slot cmds[] = {
 		.name = "unequip",
 		.cb = &do_unequip,
 	}, {
-		.name = "",
+		.name = NULL,
 		.cb = NULL,
 	},
 };
@@ -243,6 +243,7 @@ int euid = 0;
 struct ndc_config nd_config = {
 	.flags = 0,
 };
+long fds_hd = -1;
 
 void
 show_program_usage(char *prog)
@@ -256,6 +257,18 @@ show_program_usage(char *prog)
 	fprintf(stderr, "        -v        display this server's version.\n");
 	fprintf(stderr, "        -?        display this message.\n");
 	exit(1);
+}
+
+struct hash_cursor fds_iter(dbref player) {
+	return hash_citer(fds_hd, &player, sizeof(player));
+}
+
+int fds_next(struct hash_cursor *c) {
+	dbref key;
+	int value;
+	if (!hash_next(&key, &value, c))
+		return 0;
+	return value;
 }
 
 int
@@ -296,6 +309,8 @@ main(int argc, char **argv)
 		}
 	}
 
+	fds_hd = hash_cinit(NULL, NULL, 0644, QH_DUP);
+
 	ndc_init(&nd_config);
 	euid = geteuid();
 	if (euid && !nd_config.chroot)
@@ -326,14 +341,11 @@ main(int argc, char **argv)
 
 void
 nd_write(OBJ *player, char *str, size_t len) {
-	if (!player->sp.entity.fds)
-		return;
+	struct hash_cursor c = fds_iter(object_ref(player));
+	int fd;
 
-	struct hash_cursor c = hash_iter(player->sp.entity.fds);
-	int key, ign;
-
-	while (hash_next(&key, &ign, &c))
-		ndc_write(key, str, len);
+	while ((fd = fds_next(&c)))
+		ndc_write(fd, str, len);
 }
 
 
@@ -341,12 +353,10 @@ void
 nd_dwritef(OBJ *player, const char *fmt, va_list args) {
 	static char buf[BUFSIZ];
 	ssize_t len = vsnprintf(buf, sizeof(buf), fmt, args);
-	if (!player->sp.entity.fds)
-		return;
-	struct hash_cursor c = hash_iter(player->sp.entity.fds);
-	int fd, ign;
+	struct hash_cursor c = fds_iter(object_ref(player));
+	int fd;
 
-	while (hash_next(&fd, &ign, &c))
+	while ((fd = fds_next(&c)))
 		ndc_write(fd, buf, len);
 }
 
@@ -387,10 +397,10 @@ nd_owritef(OBJ *player, char *format, ...)
 
 void
 nd_close(OBJ *player) {
-	struct hash_cursor c = hash_iter(player->sp.entity.fds);
-	int fd, ign;
+	struct hash_cursor c = fds_iter(object_ref(player));
+	int fd;
 
-	while (hash_next(&fd, &ign, &c))
+	while ((fd = fds_next(&c)))
 		ndc_close(fd);
 }
 
@@ -464,11 +474,8 @@ auth(int fd, char *qsession)
 
 	FD_PLAYER(fd) = player;
 	ndc_auth(fd, buf);
-	ENT *eplayer = &player->sp.entity;
-	if (!eplayer->fds)
-		eplayer->fds = hash_init();
-	int val = 1;
-	hash_cput(eplayer->fds, &fd, sizeof(fd), &val, sizeof(val));
+	dbref ref = object_ref(player);
+	hash_cput(fds_hd, &ref, sizeof(ref), &fd, sizeof(fd));
         mcp_stats(player);
         mcp_auth_success(player);
         mcp_equipment(player);
@@ -515,13 +522,6 @@ void ndc_vim(int fd, int argc, char *argv[]) {
 	}
 }
 
-void ndc_view(int fd, int argc, char *argv[]) {
-	if (!(ndc_flags(fd) & DF_AUTHENTICATED))
-		return;
-
-	do_look_at(fd, argc, argv);
-}
-
 void ndc_connect(int fd) {
 	static char *cookie;
 	int headers = ndc_headers(fd);
@@ -545,16 +545,6 @@ void ndc_disconnect(int fd) {
 		observer_remove(last_observed, player);
 
 	FD_PLAYER(fd) = NULL;
-	int no_fds = 1;
-	struct hash_cursor c = hash_iter(eplayer->fds);
-	int ign;
-	while (hash_next(&ign, &ign, &c)) {
-		no_fds = 0;
-		break;
-	}
-	hash_del(eplayer->fds, &fd, sizeof(fd));
-	if (no_fds) {
-		hash_close(eplayer->fds);
-		eplayer->fds = 0;
-	}
+	dbref ref = object_ref(player);
+	hash_vdel(contents_hd, &ref, sizeof(ref), &fd, sizeof(fd));
 }

@@ -919,9 +919,18 @@ st_cmd_dir(struct cmd_dir *res, const char *cmd)
 	return ofs;
 }
 
+static void may_look(OBJ *player, morton_t old_loc) {
+	morton_t new_loc = map_mwhere(player->location);
+	if (old_loc == new_loc)
+		return;
+	look_around(player);
+	view(player);
+}
+
 int
 st_v(OBJ *player, char const *opcs)
 {
+	morton_t old_loc = map_mwhere(player->location);
 	struct cmd_dir cd;
 	char const *s = opcs;
 
@@ -936,8 +945,10 @@ st_v(OBJ *player, char const *opcs)
 			aop = &walk;
 
 		if (aop) {
-			if (cd.e == E_NULL)
+			if (cd.e == E_NULL) {
+				may_look(player, old_loc);
 				return opcs - s;
+			}
 
 			ofs ++;
 			int j;
@@ -949,7 +960,7 @@ st_v(OBJ *player, char const *opcs)
 		s += ofs;
 	}
 
-	look_around(player);
+	may_look(player, old_loc);
 	return s - opcs;
 }
 

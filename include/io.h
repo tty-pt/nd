@@ -17,6 +17,9 @@ typedef struct pfd {
 
 extern struct pfd descr_map[];
 
+struct hash_cursor fds_iter(dbref player);
+int fds_next(struct hash_cursor *c);
+int fds_has(dbref player);
 void nd_close(OBJ *player);
 void nd_write(OBJ *player, char *str, size_t len);
 void nd_dwritef(OBJ *player, const char *fmt, va_list args);

@@ -18,6 +18,7 @@
 #include "noise.h"
 #include "mcp.h"
 #include "map.h"
+#include "io.h"
 #include <qhash.h>
 
 enum actions {
@@ -705,10 +706,8 @@ object_read(FILE * f)
 			}
 			/* warn("entity! flags %d ref %d\n", eo->flags, ref_read(f)); */
 			o->owner = object_ref(o);
-			if (eo->flags & EF_PLAYER) {
+			if (eo->flags & EF_PLAYER)
 				player_put(o);
-				eo->fds = 0;
-			}
 			birth(o);
 			/* warn("ENTITY\n"); */
 		}
@@ -899,14 +898,6 @@ object_move(OBJ *what, OBJ *where)
 
 	what->location = object_ref(where);
 	contents_put(what->location, object_ref(what));
-	if (what->type == TYPE_ENTITY && what->sp.entity.fds) {
-		struct hash_cursor c = hash_iter(what->sp.entity.fds);
-		morton_t location = map_mwhere(what->location);
-		int key, ign;
-
-		while (hash_next(&key, &ign, &c))
-			ndc_move(key, location);
-	}
 	mcp_content_in(where, what);
 }
 
