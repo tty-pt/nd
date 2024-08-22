@@ -38,18 +38,6 @@ Q
 
 ~
 ~
-startingout|starting_out|starting out
-
-The word 'me' refers to yourself. Some things to do when starting out:
-1) give yourself a description with "describe me=<description>", then
-    look at yourself with "look me".
-2) prevent anyone else from robbing you with "@lock me=me".
-3) set your gender, if you wish it known, with "@set me=sex:male" or
-    "set me=sex:female" (or "set me=sex:neuter" to be an 'it').
-
-~~alsosee geo,walking,kill,desc,look,lock,rob,set,gender
-~
-~
 say
 "<message>
 SAY <message>
@@ -70,27 +58,6 @@ if your name was Igor, and you typed ':falls down.', everyone would see
     Igor falls down.
 ~~endcode
 ~~alsosee say,whisper,page
-~
-~
-page
-PAGE <player>
-PAGE <player>=<message>
-
-  In the first form, this tells a player that you are looking for them, like
-'You sense <pager> is looking for you in <location>.'
-
-  In the second form, with the <message>, the user receives a message like:
-'<pager> pages, "<message>" to you.'  Your location is not revealed in
-message pages.
-
-  If a player is set HAVEN, you cannot page them.  You will instead be told,
-'That player does not wish to be disturbed.'
-
-  Note: Most systems use a MUF program with a global 'page' action, which
-takes the place of the built-in 'page' command, and has more features.
-Usually, you can see the extra features of this MUF page program by using
-the command 'page #help'.
-~~alsosee say,pose,whisper
 ~
 ~
 whisper
@@ -181,49 +148,12 @@ other players in the room.  Throw and put can be used instead of drop.
 ~~alsosee @drop,@odrop,@lock,STICKY,DROP-TO,get,put
 ~
 ~
-go|move
-GO <direction>
-GO home
-MOVE <direction>
-MOVE home
-
-  Moves the player in the specified direction. 'go home' is a special command
-that returns you to your starting location.  The word 'go' may be omitted.
-'move' is the same as 'go'.
-~
-~
 home
 HOME
 
   Sends you home, no matter where you are. You retain your pennies, but
 any objects you are carrying leave your inventory and return to their own
 homes. See HOMES.
-~
-~
-goal
-Goal:
-
-  There is no ultimate goal to this game, except to have fun.  There are
-puzzles to solve, scenery to visit, and people to meet. There are no
-winners or losers, only fellow players. Enjoy.
-~
-~
-score
-SCORE
-
-  Displays how many pennies you are carrying.  Pretty meaningless.
-~
-~
-money
-Building and some other actions cost money.  How to get money:
-    1) Get pennies from the local bank.
-    2) Find pennies.
-    3) Get killed.
-    4) Be given money by another player.
-    5) Rob someone.
-Once you reach 10000 pennies, it becomes difficult to acquire
-more.  Wizards don't need money to do anything.
-~~alsosee costs
 ~
 ~
 give
@@ -251,25 +181,6 @@ to yourself, you can rob yourself and set off your @success and @osuccess
 messages.
 
 ~~alsosee rob,success,failure,@lock
-~
-~
-kill|combat
-KILL <target>
-
-  Starts combat with target, as long at it is living. This includes a set
-of mechanics you can inspect in https://tty.pt/kill-math.pdf.
-This includes equipment, spells, stats, bufs, etc.
-
-  A successful kill sends the player home, sends all objects in the
-player's inventory to their respective homes. Players cannot
-be killed in rooms which have the HAVEN flag set.  On systems where
-the KILL_OK flag is used, you cannot kill someone unless both you
-and they are set Kill_OK.
-
-  On the other hand, mobs can attack you anywhere, when they die,
-they sometimes drop loot. There are wild mobs and respawn mobs.
-
-~~alsosee KILL_OK,status,train,equip,unequip,cast,combo
 ~
 ~
 train
@@ -374,13 +285,6 @@ commands on playing the game. When <subject> is specified, it returns
 detailed informaion on that topic.  Lists of topics are available by
 typing 'help category', or 'help alpha'.  Seeing as you are reading this,
 you probably already understand how this works.
-~
-~
-news
-NEWS [<topic>]
-
-  Displays the current news file for the game. Must be typed in full.  If a
-topic is given, then it displays the information on that specific topic.
 ~
 ~
 walk|walking
@@ -542,35 +446,6 @@ m<char>
 to the current geographical position.
 ~
 ~
-gripe
-GRIPE <message>
-
-  Sends <message> to the system maintainer.  Gripes are logged for
-later reference; also, if the system maintainer is connected he will
-receive the gripe real-time when the gripe is made.
-~
-~
-who
-WHO [<player>]
-
-  Must be in all capitals, and typed in full. Lists the name of every
-player currently logged in, and how long they have been inactive. If
-given a player name, it displays only the matching names and idle times.
-Wizards also get a display of the host the player is connected from.
-~
-~
-quit
-QUIT
-
-  Must be in all capitals, and typed in full. Logs out of your character
-and leaves the game. Your character remains at the location you are in when
-you log out, although it might be moved elsewhere while you are 'asleep.'
-~
-~
-~
-~~section Building Help|BuildHelp
-~
-~
 types
 Object Types:
 
@@ -633,74 +508,6 @@ There are a few things to keep in mind, in relation to the above:
   d) If an object is set CHOWN_OK, anyone may "@chown <object>=me" and gain
      ownership and control of the object. (see chown_ok)
 ~~endcode
-~
-~
-@create
-@CREATE <object> [=<cost>[=<regname>]]
-
-  Creates a new object and places it in your inventory.  This costs at
-least ten pennies.  If <cost> is specified, you are charged that many
-pennies, and in return, the object is endowed with a value according
-to the formula: ((cost / 5) - 1).  Usually the maximum value of an
-object is 100 pennies, which would cost 505 pennies to create. If a
-<regname> is specified, then the _reg/<regname> property on the player
-is set to the dbref of the new object.  This lets players refer to
-the object as $<regname> (ie: $mybutton) in @locks, @sets, et cetera.
-Only a builder may use this command.
-~
-~
-@dig
-@DIG <room> [=<parent> [=<regname>]]
-
-  Creates a new room, sets its parent, and gives it a personal registered
-name.  If no parent is given, it defaults to the first ABODE room down the
-environment tree from the current room.  If it fails to find one, it sets
-the parent to the global environment, which is typically room #0.  If no
-<regname> is given, then it doesn't register the object.  If one is given,
-then the object's dbref is recorded in the player's _reg/<regname> property,
-so that they can refer to the object later as $<regname>.  Digging a room
-costs 10 pennies, and you must be able to link to the parent room if
-specified.  Only a builder may use this command.
-~
-~
-@open
-@OPEN <exit> [=<object> [; <object2>; ... <objectn> ] [=<regname>]]
-
-  Opens an exit in the current room, optionally attempting to link it
-simultaneously.  If a <regname> is specified, then the _reg/<regname>
-property on the player is set to the dbref of the new object.  This lets
-players refer to the object as $<regname> (ie: $mybutton) in @locks,
-@sets, etc.  Opening an exit costs a penny, and an extra penny to link
-it, and you must control the room where it is being opened.
-~
-~
-@action
-@ACTION <name>=<source> [=<regname>]
-
-  Creates a new action and attaches it to the thing, room, or player
-specified.  If a <regname> is specified, then the _reg/<regname> property
-on the player is set to the dbref of the new object.  This lets players
-refer to the object as $<regname> (ie: $mybutton) in @locks, @sets, etc.
-You may only attach actions you control to things you control.  Creating
-an action costs 1 penny.  The action can then be linked with the command
-@LINK.
-~
-~
-bogus|pseudo
-Bogus Exits and Pseudo Commands:
-
-  Bogus commands can be made using exits.  For example, to make a 'sit'
-command, one could give the following commands:
-~~code
-    @open sit
-	@link sit=here                   (because unlinked exits can be stolen)
-	@lock sit=me&!me                 (therefore always fails)
-	@fail sit=You sit on the chair.
-    @ofail sit=sits on the chair.
-~~endcode
-Since nobody can go through it, it always fails. The @fail message is
-displayed to the player, and the @ofail message (preceded by the player's
-name) to everyone else.
 ~
 ~
 @recycle
@@ -859,42 +666,6 @@ Ex. '@ofail teapot=burns %p hand on the hot teapot.'
 ~~alsosee gender
 ~
 ~
-@attach
-@ATTACH <action>=<new source>
-
-  Removes the action from where it was and attaches it to the new source.
-You must control the action in question.
-~
-~
-linking
-Linking:
-
-  You can link to a room if you control it, or if it is set LINK_OK or ABODE.
-Being able to link means you can set the homes of objects or yourself to that
-room if it is set ABODE, and can set the destination of exits to that room if 
-it is LINK_OK. See LINK_OK, ABODE, and @LINK.
-~
-~
-@link
-@LINK <object1>=<object2> [; <object3>; ...  <objectn> ]
-
-  Links <object1> to <object2>, provided you control <object1>, and
-<object2> is either controlled by you or linkable.  Actions may be
-linked to more than one thing, specified in a list separated by
-semi-colons.
-~
-~
-@unlink
-@UNLINK <exit>
-@UNLINK here
-
-  Removes the link on the exit in the specified direction, or removes the
-drop-to on the room. Unlinked exits may be picked up and dropped elsewhere.
-Be careful, anyone can relink an unlinked exit, becoming its new owner
-(but you will be reimbursed your 1 penny).
-~~alsosee @link
-~
-~
 homes
 Homes:
 
@@ -918,111 +689,6 @@ Drop-to:
 object dropped in the room (if it isn't STICKY) will go to that location. If
 the room is STICKY, the drop-to will be delayed until the last person in the
 room has left.
-~
-~
-@lock
-@LOCK <object>=<key>
-
-  Locks <object> to a specific key(s). <object> can be specified as <name>
-or #<number>, or as 'me' or 'here'. Boolean expressions are allowed, using
-'&' (and), '|' (or), '!' (not), and parentheses ('(' and ')') for grouping.
-To lock to a player, prefix their name with '*' (ex. '*Igor').  A key may
-be a player, an object, or 'property:value'.
-
-  Examples:
-~~code
-    @lock thingy=*Igor
-    @lock thingy=me|#1234
-    @lock here=me|Other Thingy
-    @lock west=sex:female
-    @lock east=((*Igor|*JohnDoe)&sex:male)
-~~endcode
-~
-~
-@unlock
-@UNLOCK <object>
-
-  Removes the lock on <object>.
-~~alsosee @lock
-~
-~
-success
-Success:
-
-  You successfully use an object when you take it. You use an exit
-successfully when you go through it. You use a person successfully
-when you successfully rob them. You successfully use a room when you
-look around.
-~~alsosee strings,@success,@osuccess
-~
-~
-failure
-Failure:
-
-You fail to use a thing when you cannot take it (because it's lock fails).
-You fail to use an exit when you cannot go through it (because it's locked).
-You fail to use a person when you fail to rob them.
-You fail to use a room when you fail to look around (because it's locked).
-~~alsosee strings,@fail,@ofail
-~
-~
-@set
-@SET <object> = [!]<flag>
-@SET <object> = <property>:<string>
-@SET <object> = <property>:
-@SET <object> = :clear
-  
-  @set does one of three things on TinyMUCK, it can modify flags, add
-properties to an object, or remove properties from an object.
-  
-  Using the first format, you may set flags, which are:
-	ABODE (AUTOSTART)
-	BUILDER (BOUND)
-	CHOWN_OK (COLOR)
-	DARK (DEBUG)
-	HAVEN (HARDUID)
-	JUMP_OK
-	KILL_OK
-	LINK_OK
-	MUCKER
-	QUELL
-	STICKY (SETUID)
-	VEHICLE (VIEWABLE)
-	WIZARD
-	XFORCIBLE
-	ZOMBIE
-  You can also set the MUCKER (or Priority) Level of an object by using
-0, 1, 2, or 3 as the flag name.
-  
-  The second format sets <property> on <object> to <string>
-
-  The third format will remove <property> and any sub-properties under it.
-  
-  The fourth format removes all properties from an object.
-~~alsosee flaghelp
-~
-~
-@propset
-@PROPSET <object>=<type>:<property>:<value> -or-
-@PROPSET <object>=erase:<property>
-  
-  @propset can set and clear properties from an object.
-  
-  If the first format above is specified, the @propset command sets
-<property> on <object> to <value>, where <value> is of type <type>.
-<type> can be one of 'string', 'integer', 'float, 'dbref', or 'lock'.
-A string can be any set of characters the MUCK recognizes.  An integer
-must be composed solely of numerals with the possible exception of
-a leading sign indicator (+ or -).  A float must be a valid floating
-point number.  A dbref must be of the form # followed by a positive
-integer, and it must be a valid dbref (i.e., the object must exist).
-A lock value must be a key that would be accepted by @lock or a similar
-command (see the help for @lock for more details).
-  
-  The second format removes <property> on object.  Note that if <property>
-is a propdir, it removes all properties below <property> as well.
-If you wish to clear the value of a propdir without removing the
-properties below it, use '@propset <object> = integer:<property>:0'.
 ~
 ~
 @chown
@@ -1197,34 +863,6 @@ Example:  @contents here=DE=owner
   Will list all Dark Exits who's source is your current location, giving the
 owner of each one.
 ~~alsosee @find,@owned,@entrances
-~
-~
-@entrances
-@ENTRANCES [<object>] [= <flags/types> = [<output type>]]
-
-  Searches through the database for items that you control linked to <object>.
-  
-  For an explanation of the flags/types modifiers and the output types, see
-the help entry for @FIND.
-  
-Example:  @entrances here=ED=location
-  Will list all Dark Exits that are linked to your current location,
-giving the location of each one.
-~~alsosee @find,@owned,@contents
-~
-~
-@trace
-@TRACE <object> [=<depth>]
-
-  Starts with <object> and traces all location fields, until the global-
-environment room is reached or the optional <depth> is specified.  This
-is generally useful for finding which rooms are parents in your heirarchy.
-If you cannot link to a particular location its name is replaced by stars
-(***).
-~
-~
-~
-~~section Object Flags|FlagHelp
 ~
 ~
 ABODE
@@ -1508,276 +1146,10 @@ Properties are stored in AVL trees, and organized into directories of
     See also PROPDIRS-EXAMPLE.
 ~
 ~
-propdirs-example|props-example|property-example|properties-example
-Property and Propdir Usage Examples:
-  Lines indented only 2 spaces are what the user is typing.
-  Lines indented 6 spaces are what the MUCK is returning to the user.
-  Lines in []'s are comments on what's going on.
-  
-  [first, lets set up a bunch of properties]
-  @set me=first:a property.
-  @set me=second:another property.
-  @set me=first/one:A property in a propdir
-  @set me=first/two:Another property in a propdir
-  @set me=third/prime:three
-  
-  [Okay, now lets see what properties we have.  We use the examine command
-   to do that, with a second argument, to tell it what we want to list in
-   the way of properties.  In this case, since we want to list the base level
-   properties, we use '/'.]
-  
-  ex me=/
-      first/: (string) a property.
-      second: (string) another property.
-      third/: (no value)
-  
-  [Okay, it has a few properties with the first part of the names of the
-   properties that we set.  The /'s at the end of some of the property
-   names means that there are sub-properties that we can list.  When we
-   set a property like 'first/one', it's actually creating a sub-property
-   named 'one' beneath a property named 'first'.  If 'first' doesn't
-   already exist, then it will create that property.  Let's list what
-   sub-properties we created under 'first'.]
-  
-  ex me=first/
-      first/one: (string) A property in a propdir.
-      first/two: (string) Another property in a propdir.
-  
-  [Here we see the properties that we set as sub-properties under 'first'.
-   We examined for 'first/' to list the sub-properties.  The / at the end
-   of the name tells the game that we want it to list the sub-properties
-   of that property, and not that property's value itself.  Lets see what
-   value the property 'first' has, itself.  To do this we leave off the '/']
-  
-  ex me=first
-      first/: (string) a property.
-  
-  [Okay, lets say that we just want to see the value of the sub-property
-   named 'one', under the property 'first'.  We can list it as follows:]
-  
-  ex me=first/one
-      first/one: (string) A property in a propdir.
-  
-  [If the property or sub-property that you specify does not exist, it
-   will complain about it.]
-  
-  ex me=first/three
-      No property found.
-  
-  [if a property was created to contain a sub-property, but was never given
-   a value itself, it is listed as having no value.  It has sub-properties,
-   however.]
-  
-  ex me=third
-      third/: (no value)
-  
-  [Let's list those sub-properties.]
-  
-  ex me=third/
-      third/prime: (string) three
-  
-  [Okay, let's delete the sub-property 'prime', from under the property
-   'third'.  To do this, we act like we are setting the variable again,
-   except that we are giving it no value this time.]
-  
-  @set me=third/prime:
-  ex me=third/
-      No properties listed.
-  
-  [There.  It's gone.  Now let's list the bottom level properties again.]
-  
-  ex me=/
-      first/: (string) a property.
-      second: (string) another property.
-  
-  [Whoops!  The property 'third' is gone too!  This is because properties
-   with no values are automatically deleted when their last sub-property
-   is deleted.  Let's delete a subproperty from 'first', now.]
-  
-  @set me=first/one:
-  ex me=/
-      first/: (string) a property.
-      second: (string) another property.
-  
-  [The property 'first' still exists, with it's string value, and it still
-   has sub-properties.  Lets list those.]
-  
-  ex me=first/
-      first/two: (string) Another property in a propdir.
-  
-  [Here we see that the sub-property 'one' is gone, as we expected.  Let's
-   see what happens when you erase a property that has sub-properties.]
-  
-  @set me=first:
-  ex me=/
-      second: (string) another property.
-  
-  [The property 'first' is gone.]
-  
-  ex me=first/
-      No properties listed.
-  
-  [And the subproperty it had is gone too!  Let's remake the 'first' prop.]
-  
-  @set me=first:again, a property.
-  ex me=/
-      first: (string) again, a property.
-      second: (string) another property.
-  
-  [We have two properties again, and no sub-properties.  It should be
-   noted that sub-properties can have sub-sub-properties, and they can
-   contain even subbier properties, and so on and so forth.]
-  @set me=first/one:uno
-  @set me=first/one/example:dos
-  @set me=first/two/example:tres
-  @set me=first/one/example/cat:meow
-  ex me=first/
-      first/one/: (string) uno
-      first/two/: (no value)
-  ex me=first/one/
-      first/one/example/: (string) dos
-  ex me=first/one/example/
-      first/one/example/cat: (string) meow
-  
-  [There is a special case in examine to let us list ALL the properties and
-   sub-properties of a prop.  To use it, we just specify '**' as a propdir.
-   For example, to list all sub-properties and sub-sub-properties, etc.,
-   under 'first', you would do the following:]
-  
-  ex me=first/**
-      first/one/: (string) uno
-      first/one/example/: (string) dos
-      first/one/example/cat: (string) meow
-      first/two/: (no value)
-      first/two/example/: (string) tres
-      
-  [Let's delete all the properties on the object, now.  To do that, we
-   specify no property name or value when we use @set.  Nothing but a
-   colon.]
-  
-  @set me=:
-  ex me=/
-      No properties listed.
-  
-  [All gone!]
-  
-~
-~
-sex
-@SET me=sex:unassigned|male|female|neuter
-
-  Default unassigned. If a player's sex is set, %-substitutions will use
-the appropriate pronoun for that player. Only meaningful for players and
-maybe Zombie things.
-~~alsosee substitutions
-~
-~
-gender
-@SET me=sex:unassigned|male|female|neuter|herm|hermaphrodite
-
-  Default is unassigned. If a player's sex is set, %X substitutions
-will use the appropriate pronoun for that player in @osucc/@ofail/etc.
-Only meaningful for players.
-~~alsosee substitutions
-~
-~
-strings
-Objects have several standard strings:
-  1) a name.
-  2) a description.                             (stored in _/de property)
-  2) an inside description (for vehicles).      (stored in _/ide property)
-  3) a success message (seen by the player).    (stored in _/sc property)
-  4) a fail message (seen by the player).       (stored in _/fl property)
-  5) an osuccess message (seen by others).      (stored in _/osc property)
-  6) an ofail message (seen by others).         (stored in _/ofl property)
-  7) a drop message (seen by the player).       (stored in _/dr property)
-  8) an odrop message (seen by others).         (stored in _/ofl property)
-(see properties)
-~
-~
-~
-~~section MUF Programming|ProgCmds
-~
-~
 man
 MAN [<subject>]
 
   Displays the programmer's manual or a quick reference.
-~
-~
-@ps
-@PS
-
-  Lists the status of the currently running MUF program processes.
-This lists all processes for a Wizard.  Non-Wizards only see the muf
-processes that they can @kill.
-~~alsosee @kill
-~
-~
-@kill
-@KILL <processid>
-@KILL <playername>
-@KILL <programdbref>
-@KILL all
-
-  If passed a processid (a number without a '#' preceeding it), it will kill
-the given process, if the player controls it.  If passed a player name, it
-will kill all the processes controlled by that player.  If passed a program
-dbref, it will kill all processes that that program is running in.  If the
-argument passed is "all", and the player is a wizard, it will kill all
-processes on the timequeue.
-~
-~
-@list
-@LIST <program>  [=[line1] [-] [line2]]
-
-  Lists  lines  in a  program, provided you control it or it is VIEWABLE.
-Zero, one,  or  two  line numbers may be specified, denoting the range of
-lines to list.   If no lines are given, the entire program is listed.
-~
-~
-@edit
-@EDIT <program>
-
-  Searches for a program and if a match is found, puts the player into
-edit mode.  Programs must be created with @PROGRAM or @MCPPROGRAM.
-~~alsosee @mcpprogram,@program,@mcpedit
-~
-~
-@program
-@PROGRAM <program>
-
-  Create a new program, or enter edit mode on an existing one.
-~~alsosee @mcpprogram,@edit,@mcpedit
-~
-~
-@mcpedit
-@MCPEDIT <program>
-
-  Searches for a program and if a match is found, pops up an editor window
-if the client supports the MCP edit package, otherwise puts the player into
-text edit mode.  Programs must be created with @PROGRAM or @MCPPROGRAM.
-~~alsosee @edit,@program,@mcpprogram
-~
-~
-@mcpprogram
-@MCPPROGRAM <program>
-
-  Create a new program, or enter edit mode on an existing one.  If the
-client supports the MCP edit package, an editor window will appear instead
-of using the text edit mode.
-~~alsosee @edit,@program,@mcpedit
-~
-~
-~
-~~section Wizardly Commands|WizCmds
-~
-~
-@pcreate
-@PCREATE <player>=<password>
-
-  Only wizards can use this command. This command creates a new player.
-It may only be used if REGISTRATION is enabled.
 ~
 ~
 @newpassword
@@ -1925,32 +1297,6 @@ in full.
 ~~alsosee @shutdown
 ~
 ~
-@armageddon
-@ARMAGEDDON
-
-  Initiates an immediate emergency shutdown of the Muck server, and does
-NOT save the database out to disk.  Use this ONLY when you suspect the
-database has been corrupted, and it would be a BAD thing to save the
-database out to disk.
-~~alsosee @shutdown,@restart
-~
-~
-~
-@restrict
-@RESTRICT [on|off]
-
-  Manages restriction of logins, turning on or off maintenance wiz-only login
-mode.  With no args, @restrict will print out the current login restriction
-state.  With an argument of 'on', maintenance mode is turned on, and only
-wizards can log in.  With an argument of 'off', restricted login mode is turned
-off, and all players can log in.  NOTE: when the muck starts up in sanfix mode,
-with a corrupted database, it will be with @restricted logins.
-~
-~
-~
-~~section Miscellaneous|MiscHelp
-~
-~
 cheatsheet
 Muck Basics Cheatsheet:
 
@@ -1991,22 +1337,3 @@ Costs:
   @open: 1p (2p if linked at the same time).
   
 Wizards don't need money to do anything.
-~
-~
-outputprefix
-OUTPUTPREFIX [string]
-
-  Must be in all capitals, and typed in full. Prints the given line before
-the output of every command, setting them apart from other messages.
-~~alsosee outputsuffix
-~
-~
-outputsuffix
-OUTPUTSUFFIX [string]
-
-  Must be in all capitals, and typed in full. Prints the given line after
-the output of every command, setting them apart from other messages. Only
-robots may use this command.
-~~alsosee outputprefix
-~
-~
