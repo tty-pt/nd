@@ -317,6 +317,7 @@ main(int argc, char **argv)
 		nd_config.chroot = ".";
 
 	players_init();
+	entities_init();
 	objects_init();
 	int ret = map_init();
 	if (ret) {
@@ -476,6 +477,8 @@ auth(int fd, char *qsession)
 	ndc_auth(fd, buf);
 	dbref ref = object_ref(player);
 	hash_cput(fds_hd, &ref, sizeof(ref), &fd, sizeof(fd));
+	if (!ent_tmp_get(ref))
+		ent_tmp_reset(ref);
         mcp_stats(player);
         mcp_auth_success(player);
         mcp_equipment(player);
@@ -537,10 +540,9 @@ void ndc_disconnect(int fd) {
 		return;
 
 	OBJ *player = FD_PLAYER(fd);
-	ENT *eplayer = &player->sp.entity;
 	warn("%s(%d) disconnects on fd %d\n",
 			player->name, object_ref(player), fd);
-	OBJ *last_observed = object_get(eplayer->last_observed);
+	OBJ *last_observed = object_get(ent_tmp_get(object_ref(player))->last_observed);
 	if (last_observed)
 		observer_remove(last_observed, player);
 

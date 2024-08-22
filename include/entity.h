@@ -34,11 +34,23 @@
 #define EQL(x)		(x & 15)
 #define EQ(i, t)	(i | (t<<6))
 
+extern long tmp_hds;
+
 static inline unsigned
 xsqrtx(unsigned x)
 {
 	return x * sqrt(x);
 }
+
+#define ENT_TMP_SETF(ref, field, value) { \
+		dbref inner_ref = ref; \
+		struct ent_tmp *tmp = ent_tmp_get(inner_ref); \
+		tmp->field = value; \
+		ent_tmp_set(inner_ref, tmp); \
+	}
+struct ent_tmp *ent_tmp_get(dbref ref);
+void ent_tmp_set(dbref ref, struct ent_tmp *tmp);
+void ent_tmp_reset(dbref ref);
 
 ENT *birth(OBJ *player);
 int kill_dodge(OBJ *player, char *wts);
@@ -73,5 +85,6 @@ int entity_damage(OBJ *player, OBJ *target, short amt);
 
 void entities_add(OBJ *where, enum biome, long long pdn);
 void enter_room(OBJ *player, enum exit e);
+void entities_init();
 
 #endif

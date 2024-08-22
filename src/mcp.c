@@ -261,7 +261,7 @@ mcp_look(OBJ *player, OBJ *loc)
 	case TYPE_ROOM: break;
 	case TYPE_ENTITY: // falls through
 	default:
-		eplayer->last_observed = object_ref(loc);
+		ENT_TMP_SETF(object_ref(player), last_observed, object_ref(loc));
 		observer_add(loc, player);
 	}
 

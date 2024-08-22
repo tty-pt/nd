@@ -105,9 +105,14 @@ struct effect {
 	unsigned char mask;
 };
 
+struct ent_tmp {
+	dbref last_observed;
+	unsigned char select;
+	unsigned char hunger_n, thirst_n;
+};
+
 typedef struct entity {
 	dbref home;
-	dbref last_observed;
         /* const char *dialog; <- make this external to the struct (use object id) */
 	struct debuf debufs[8];
 	struct spell spells[8];
@@ -115,11 +120,10 @@ typedef struct entity {
 	dbref target, sat;
 	unsigned flags;
 	unsigned short hp, mp, hunger, thirst, wtso;
-	unsigned char debuf_mask, combo, select, klock;
+	unsigned char debuf_mask, combo, klock;
 	unsigned lvl, spend, cxp;
 	unsigned attr[ATTR_MAX];
 	unsigned equipment[ES_MAX];
-	unsigned char hunger_n, thirst_n;
 } ENT;
 
 enum equipment_flags {

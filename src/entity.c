@@ -28,6 +28,8 @@
 #define HUNGER_INC	(1 << (DAYTICK_Y - HUNGER_Y))
 #define THIRST_INC	(1 << (DAYTICK_Y - THIRST_Y))
 
+long tmp_hds;
+
 static const char *rarity_str[] = {
 	ANSI_BOLD ANSI_FG_BLACK "Poor" ANSI_RESET,
 	"",
@@ -36,6 +38,24 @@ static const char *rarity_str[] = {
 	ANSI_BOLD ANSI_FG_GREEN "Epic" ANSI_RESET,
 	ANSI_BOLD ANSI_FG_MAGENTA "Mythical" ANSI_RESET
 };
+
+struct ent_tmp *ent_tmp_get(dbref ref) {
+	return hash_get(tmp_hds, &ref, sizeof(ref));
+}
+
+void ent_tmp_set(dbref ref, struct ent_tmp *tmp) {
+	hash_cput(tmp_hds, &ref, sizeof(ref), tmp, sizeof(struct ent_tmp));
+}
+
+void ent_tmp_reset(dbref ref) {
+	struct ent_tmp tmp = {
+		.last_observed = NOTHING,
+		.select = 0,
+		.hunger_n = 0,
+		.thirst_n = 0
+	};
+	ent_tmp_set(ref, &tmp);
+}
 
 ENT *
 birth(OBJ *player)
@@ -865,7 +885,7 @@ entity_kill(OBJ *player, OBJ *target)
 	etarget->target = NOTHING;
 	etarget->hp = 1;
 	etarget->mp = 1;
-	etarget->hunger_n = etarget->thirst_n = 0;
+	ent_tmp_reset(object_ref(target));
 	etarget->thirst = etarget->hunger = 0;
 
 	debufs_end(etarget);
@@ -965,11 +985,14 @@ respawn(OBJ *player)
 }
 
 static inline int
-huth_notify(OBJ *player, unsigned char *n_r, unsigned long long v, char const *m[4])
+huth_notify(OBJ *player, size_t n_offset, unsigned long long v, char const *m[4])
 {
 	ENT *eplayer = &player->sp.entity;
-	unsigned long long rn = *n_r;
+	dbref ref = object_ref(player);
+	struct ent_tmp *tmp = ent_tmp_get(ref);
 
+	unsigned char *n_r = (unsigned char *) tmp + n_offset;
+	unsigned char rn = tmp ? *n_r : 0;
 
 	static unsigned const n[] = {
 		1 << (DAY_Y - 1),
@@ -985,21 +1008,26 @@ huth_notify(OBJ *player, unsigned char *n_r, unsigned long long v, char const *m
 	if (rn >= 3) {
 		if (v >= 2 * n[1] + n[2]) {
 			nd_writef(player, m[3]);
-			*n_r += 1;
+			rn += 1;
 		}
 	} else if (rn >= 2) {
 		if (v >= 2 * n[1]) {
 			nd_writef(player, m[2]);
-			*n_r += 1;
+			rn += 1;
 		}
 	} else if (rn >= 1) {
 		if (v >= n[1]) {
 			nd_writef(player, m[1]);
-			*n_r += 1;
+			rn += 1;
 		}
 	} else if (v >= n[2]) {
 		nd_writef(player, m[0]);
-		*n_r += 1;
+		rn += 1;
+	}
+
+	if (tmp) {
+		*n_r = rn;
+		ent_tmp_set(ref, tmp);
 	}
 
 	return 0;
@@ -1195,10 +1223,11 @@ entity_update(OBJ *player, double dt)
 		return;
 
         /* if mob dies, return */
-	if (huth_notify(player, &eplayer->thirst_n, eplayer->thirst += dt * THIRST_INC, thirst_msg)
-		|| huth_notify(player, &eplayer->hunger_n, eplayer->hunger += dt * HUNGER_INC, hunger_msg)
-                || debufs_process(player))
-                        return;
+	if ((huth_notify(player, offsetof(struct ent_tmp, thirst_n), eplayer->thirst += dt * THIRST_INC, thirst_msg))
+		|| (huth_notify(player, offsetof(struct ent_tmp, hunger_n), eplayer->hunger += dt * HUNGER_INC, hunger_msg))
+                || debufs_process(player)) {
+		return;
+	}
 
 	kill_update(player, dt);
 
@@ -1296,4 +1325,8 @@ do_reroll(int fd, int argc, char *argv[])
 	}
 
 	reroll(player, thing);
+}
+
+void entities_init() {
+	tmp_hds = hash_init();
 }

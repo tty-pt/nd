@@ -684,8 +684,8 @@ object_read(FILE * f)
 			ENT *eo = &o->sp.entity;
 			eo->home = ref_read(f);
 			/* warn("entity home\n"); */
-			eo->last_observed = NOTHING;
 			/* eo->gpt = NULL; */
+			ent_tmp_reset(ref);
 			eo->flags = ref_read(f);
 			fprintf(stderr, "READ ENT %s %d\n", o->name, eo->flags);
 			eo->lvl = ref_read(f);
