@@ -107,11 +107,10 @@ void
 do_boot(int fd, int argc, char *argv[]) {
 	OBJ *player = FD_PLAYER(fd);
 	CBUG(player->type != TYPE_ENTITY);
-	ENT *eplayer = &player->sp.entity;
 	char *name = argv[1];
 	OBJ *victim;
 
-	if (!(eplayer->flags & EF_WIZARD)) {
+	if (!(ent_get(object_ref(player)).flags & EF_WIZARD)) {
 		nd_writef(player, "Only a Wizard player can boot someone off.\n");
 		return;
 	}
@@ -139,7 +138,6 @@ do_boot(int fd, int argc, char *argv[]) {
 void
 do_toad(int fd, int argc, char *argv[]) {
 	OBJ *player = FD_PLAYER(fd);
-	ENT *eplayer = &player->sp.entity;
 	char *name = argv[1];
 	char *recip = argv[2];
 	OBJ *victim;
@@ -149,7 +147,7 @@ do_toad(int fd, int argc, char *argv[]) {
 
 	CBUG(player->type != TYPE_ENTITY);
 
-	if (!(eplayer->flags & EF_WIZARD)) {
+	if (!(ent_get(object_ref(player)).flags & EF_WIZARD)) {
 		nd_writef(player, "Only a Wizard player can turn an entity into a toad.\n");
 		return;
 	}
@@ -183,9 +181,7 @@ do_toad(int fd, int argc, char *argv[]) {
 	if (victim->type != TYPE_ENTITY)
 		nd_writef(player, "You can only turn entities into toads!\n");
 
-	ENT *evictim = &victim->sp.entity;
-
-	if (!(God(player)) && (evictim->flags & EF_WIZARD)) {
+	if (!(God(player)) && (ent_get(object_ref(victim)).flags & EF_WIZARD)) {
 		nd_writef(player, "You can't turn a Wizard into a toad.\n");
 	} else {
 		/* we're ok */
@@ -227,10 +223,9 @@ do_toad(int fd, int argc, char *argv[]) {
 void
 do_usage(int fd, int argc, char *argv[]) {
 	OBJ *player = FD_PLAYER(fd);
-	ENT *eplayer = &player->sp.entity;
 	struct rusage usage;
 
-	if (!(eplayer->flags & EF_WIZARD)) {
+	if (!(ent_get(object_ref(player)).flags & EF_WIZARD)) {
 		nd_writef(player, "Permission denied. (@usage is wizard-only)\n");
 		return;
 	}

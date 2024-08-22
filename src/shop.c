@@ -13,11 +13,9 @@ vendor_find(OBJ *where)
 	OBJ *tmp;
 
 	while ((tmp = contents_next(&c)))
-		if (tmp->type == TYPE_ENTITY) {
-			ENT *etmp = &tmp->sp.entity;
-			if (etmp->flags & EF_SHOP)
+		if (tmp->type == TYPE_ENTITY)
+			if (ent_get(object_ref(tmp)).flags & EF_SHOP)
 				return tmp;
-		}
 
 	return NULL;
 }

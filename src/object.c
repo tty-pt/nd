@@ -278,15 +278,17 @@ object_add(SKEL *sk, OBJ *where, void *arg)
 		break;
 	case S_TYPE_ENTITY:
 		{
-			ENT *enu = &nu->sp.entity;
+			ENT ent;
+			memset(&ent, 0, sizeof(ent));
 			nu->type = TYPE_ENTITY;
-			stats_init(enu, &sk->sp.entity);
-			enu->flags = sk->sp.entity.flags;
-			enu->wtso = sk->sp.entity.wt;
-			birth(nu);
-			spells_birth(nu);
+			stats_init(&ent, &sk->sp.entity);
+			ent.flags = sk->sp.entity.flags;
+			ent.wtso = sk->sp.entity.wt;
+			birth(&ent);
+			spells_birth(&ent);
 			object_drop(nu, sk->sp.entity.drop);
-			enu->home = object_ref(where);
+			ent.home = object_ref(where);
+			ent_set(object_ref(nu), &ent);
 			nu->art_id = art_idx(nu);
 		}
 
@@ -346,7 +348,7 @@ object_art(OBJ *thing)
 	switch (thing->type) {
 	case TYPE_ENTITY:
 		type = "entity";
-		snprintf(art, sizeof(art), "%s/%s/%u.jpeg", type, thing->art_id && thing->sp.entity.flags & EF_PLAYER ? "avatar" : thing->name, thing->art_id);
+		snprintf(art, sizeof(art), "%s/%s/%u.jpeg", type, thing->art_id && ent_get(object_ref(thing)).flags & EF_PLAYER ? "avatar" : thing->name, thing->art_id);
 		return art;
 	case TYPE_ROOM: type = "biome"; break;
 	case TYPE_PLANT: type = "plant"; break;
@@ -395,18 +397,18 @@ object_write(FILE * f, OBJ *obj)
 	switch (obj->type) {
 	case TYPE_ENTITY:
 		{
-			ENT *ent = &obj->sp.entity;
-			putref(f, ent->home);
-			putref(f, ent->flags);
-			putref(f, ent->lvl);
-			putref(f, ent->cxp);
-			putref(f, ent->spend);
+			ENT ent = ent_get(object_ref(obj));
+			putref(f, ent.home);
+			putref(f, ent.flags);
+			putref(f, ent.lvl);
+			putref(f, ent.cxp);
+			putref(f, ent.spend);
 			for (j = 0; j < ATTR_MAX; j++)
-				putref(f, ent->attr[j]);
-			putref(f, ent->wtso);
-			putref(f, ent->sat);
+				putref(f, ent.attr[j]);
+			putref(f, ent.wtso);
+			putref(f, ent.sat);
 			for (j = 0; j < 8; j++)
-				putref(f, ent->spells[j].skel);
+				putref(f, ent.spells[j].skel);
 		}
 		break;
 
@@ -681,34 +683,36 @@ object_read(FILE * f)
 		return;
 	case TYPE_ENTITY:
 		{
-			ENT *eo = &o->sp.entity;
-			eo->home = ref_read(f);
+			ENT ent;
+			memset(&ent, 0, sizeof(ent));
+			ent.home = ref_read(f);
 			/* warn("entity home\n"); */
-			eo->last_observed = NOTHING;
 			/* eo->gpt = NULL; */
-			eo->flags = ref_read(f);
-			fprintf(stderr, "READ ENT %s %d\n", o->name, eo->flags);
-			eo->lvl = ref_read(f);
-			eo->cxp = ref_read(f);
-			eo->spend = ref_read(f);
+			ent_tmp_reset(&ent);
+			ent.flags = ref_read(f);
+			fprintf(stderr, "READ ENT %s %d\n", o->name, ent.flags);
+			ent.lvl = ref_read(f);
+			ent.cxp = ref_read(f);
+			ent.spend = ref_read(f);
 			for (j = 0; j < ATTR_MAX; j++)
-				eo->attr[j] = ref_read(f);
-			eo->wtso = ref_read(f);
-			eo->sat = ref_read(f);
+				ent.attr[j] = ref_read(f);
+			ent.wtso = ref_read(f);
+			ent.sat = ref_read(f);
 			for (j = 0; j < 8; j++) {
-				struct spell *sp = &eo->spells[j];
+				struct spell *sp = &ent.spells[j];
 				int ref = ref_read(f);
 				struct spell_skeleton *_sp = SPELL_SKELETON(ref);
 				/* warn("entity! flags %d ref %d sp %p\n", eo->flags, ref); */
 				sp->skel = _sp - spell_skeleton_map;
-				sp->val = SPELL_DMG(eo, _sp);
+				sp->val = SPELL_DMG(&ent, _sp);
 				sp->cost = SPELL_COST(sp->val, _sp->y, _sp->flags & AF_BUF);
 			}
 			/* warn("entity! flags %d ref %d\n", eo->flags, ref_read(f)); */
 			o->owner = object_ref(o);
-			if (eo->flags & EF_PLAYER)
+			birth(&ent);
+			if (ent.flags & EF_PLAYER)
 				player_put(o);
-			birth(o);
+			ent_set(ref, &ent);
 			/* warn("ENTITY\n"); */
 		}
 		break;
@@ -883,10 +887,12 @@ object_move(OBJ *what, OBJ *where)
 
 	if (object_plc(what, where)) {
 		if (what->type == TYPE_ENTITY) {
-			where = object_get(what->sp.entity.home);
-			ENT *ewhat = &what->sp.entity;
-			if ((ewhat->flags & EF_SITTING))
-				stand(what);
+			ENT ewhat = ent_get(object_ref(what));
+			where = object_get(ewhat.home);
+			if ((ewhat.flags & EF_SITTING)) {
+				stand(what, &ewhat);
+				ent_set(object_ref(what), &ewhat);
+			}
 		}
 		else
 			where = object_get(GLOBAL_ENVIRONMENT);
@@ -915,15 +921,11 @@ object_icon(OBJ *what)
                 ret.icon = ANSI_FG_YELLOW "-";
                 break;
         case TYPE_ENTITY:
-		{
-			ENT *ewhat = &what->sp.entity;
-
-			ret.actions |= ACT_KILL;
-			ret.icon = ANSI_BOLD ANSI_FG_YELLOW "!";
-			if (ewhat->flags & EF_SHOP) {
-				ret.actions |= ACT_SHOP;
-				ret.icon = ANSI_BOLD ANSI_FG_GREEN "$";
-			}
+		ret.actions |= ACT_KILL;
+		ret.icon = ANSI_BOLD ANSI_FG_YELLOW "!";
+		if (ent_get(object_ref(what)).flags & EF_SHOP) {
+			ret.actions |= ACT_SHOP;
+			ret.icon = ANSI_BOLD ANSI_FG_GREEN "$";
 		}
                 break;
 	case TYPE_CONSUMABLE:

@@ -138,9 +138,11 @@ ematch_at(OBJ *player, OBJ *where, char *name) {
 		return what;
 
 	OBJ *absolute;
-	ENT *mob = &player->sp.entity;
-	unsigned nth = mob->select;
-	mob->select = 0;
+	dbref ref = object_ref(player);
+	ENT ent = ent_get(ref);
+	unsigned nth = ent.select;
+	ent.select = 0;
+	ent_set(ref, &ent);
 
 	absolute = ematch_absolute(name);
 	if (!controls(player, absolute))

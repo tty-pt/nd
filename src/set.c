@@ -65,7 +65,7 @@ void
 do_chown(int fd, int argc, char *argv[])
 {
 	OBJ *player = FD_PLAYER(fd);
-	ENT *eplayer = &player->sp.entity;
+	int wizard = ent_get(object_ref(player)).flags & EF_WIZARD;
 	char *name = argv[1];
 	char *newowner = argv[2];
 	OBJ *thing;
@@ -92,19 +92,19 @@ do_chown(int fd, int argc, char *argv[])
 	} else {
 		owner = object_get(player->owner);
 	}
-	if (!(eplayer->flags & EF_WIZARD) && player->owner != object_ref(owner)) {
+	if (!wizard && player->owner != object_ref(owner)) {
 		nd_writef(player, "Only wizards can transfer ownership to others.\n");
 		return;
 	}
 
-	if ((eplayer->flags & EF_WIZARD) && !God(player) && God(owner)) {
+	if (wizard && !God(player) && God(owner)) {
 		nd_writef(player, "God doesn't need an offering or sacrifice.\n");
 		return;
 	}
 
 	switch (thing->type) {
 	case TYPE_ROOM:
-		if (!(eplayer->flags & EF_WIZARD) && player->location != object_ref(thing)) {
+		if (!wizard && player->location != object_ref(thing)) {
 			nd_writef(player, "You can only chown \"here\".\n");
 			return;
 		}
@@ -113,7 +113,7 @@ do_chown(int fd, int argc, char *argv[])
 	case TYPE_CONSUMABLE:
 	case TYPE_EQUIPMENT:
 	case TYPE_THING:
-		if (!(eplayer->flags & EF_WIZARD) && thing->location != object_ref(player)) {
+		if (!wizard && thing->location != object_ref(player)) {
 			nd_writef(player, "You aren't carrying that.\n");
 			return;
 		}

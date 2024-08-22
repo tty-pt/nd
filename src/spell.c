@@ -207,9 +207,8 @@ debuf_notify(OBJ *player, struct debuf *d, short val)
 }
 
 int
-debufs_process(OBJ *player)
+debufs_process(OBJ *player, ENT *eplayer)
 {
-	ENT *eplayer = &player->sp.entity;
 	register unsigned mask, i, aux;
 	short hpi = 0, dmg;
 	struct debuf *d, *hd;
@@ -237,7 +236,7 @@ debufs_process(OBJ *player)
 
 	if (hpi) {
 		debuf_notify(player, hd, hpi);
-		return entity_damage(NULL, player, hpi);
+		return entity_damage(NULL, player, eplayer, hpi);
 	}
 
 	return 0;
@@ -259,40 +258,39 @@ static inline int
 debuf_start(OBJ *player, struct spell *sp, short val)
 {
 	struct spell_skeleton *_sp = &spell_skeleton_map[sp->skel];
-	ENT *eplayer = &player->sp.entity;
+	ENT eplayer = ent_get(object_ref(player));
 	struct debuf *d;
 	int i;
 
-	if (eplayer->debuf_mask) {
-		i = __builtin_ffs(~eplayer->debuf_mask);
+	if (eplayer.debuf_mask) {
+		i = __builtin_ffs(~eplayer.debuf_mask);
 		if (!i)
 			return -1;
 		i--;
 	} else
 		i = 0;
 
-	d = &eplayer->debufs[i];
+	d = &eplayer.debufs[i];
 	d->skel = _sp - spell_skeleton_map;
 	d->duration = DEBUF_DURATION(_sp->ra);
 	d->val = DEBUF_DMG(val, d->duration);
 
 	i = 1 << i;
-	eplayer->debuf_mask |= i;
+	eplayer.debuf_mask |= i;
 
-	struct effect *e = &eplayer->e[DEBUF_TYPE(_sp)];
+	struct effect *e = &eplayer.e[DEBUF_TYPE(_sp)];
 	e->mask |= i;
 	e->value += d->val;
 
 	debuf_notify(player, d, 0);
+	ent_set(object_ref(player), &eplayer);
 
 	return 0;
 }
 
 int
-spell_cast(OBJ *player, OBJ *target, unsigned slot)
+spell_cast(OBJ *player, ENT *eplayer, OBJ *target, ENT *etarget, unsigned slot)
 {
-	ENT *eplayer = &player->sp.entity,
-	    *etarget = &target->sp.entity;
 	struct spell sp = eplayer->spells[slot];
 	struct spell_skeleton *_sp = &spell_skeleton_map[sp.skel];
 
@@ -328,18 +326,18 @@ spell_cast(OBJ *player, OBJ *target, unsigned slot)
 	if (random() < (RAND_MAX >> _sp->y))
 		debuf_start(target, &sp, val);
 
-	return entity_damage(player, target, val);
+	return entity_damage(player, target, etarget, val);
 }
 
 int
-spells_cast(OBJ *player, OBJ *target)
+spells_cast(OBJ *player, OBJ *target, ENT *etarget)
 {
-	ENT *eplayer = &player->sp.entity;
-	register unsigned i, d, combo = eplayer->combo;
+	ENT eplayer = ent_get(object_ref(player));
+	register unsigned i, d, combo = eplayer.combo;
 	unsigned enough_mp = 1;
 
 	for (i = 0; enough_mp && (d = __builtin_ffs(combo)); combo >>= d) {
-		switch (spell_cast(player, target, (i += d) - 1)) {
+		switch (spell_cast(player, &eplayer, target, etarget, (i += d) - 1)) {
 		case -1: enough_mp = 0;
 			 break;
 		case 1:  return 1;
@@ -353,8 +351,7 @@ spells_cast(OBJ *player, OBJ *target)
 }
 
 void
-spells_birth(OBJ *object) {
-	ENT *entity = &object->sp.entity;
+spells_birth(ENT *entity) {
 	register int j;
 	for (j = 0; j < 8; j++) {
 		struct spell *sp = &entity->spells[j];

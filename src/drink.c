@@ -11,7 +11,7 @@ void
 do_consume(int fd, int argc, char *argv[])
 {
 	OBJ *player = FD_PLAYER(fd);
-	ENT *eplayer = &player->sp.entity;
+	ENT eplayer = ent_get(object_ref(player));
 	char *name = argv[1];
 	OBJ *vial;
 	CON *cvial;
@@ -35,13 +35,13 @@ do_consume(int fd, int argc, char *argv[])
 	}
 
 	if (cvial->drink) {
-		aux = eplayer->thirst - DRINK_VALUE;
-		eplayer->thirst = aux < 0 ? 0 : aux;
+		aux = eplayer.huth[HUTH_THIRST] - DRINK_VALUE;
+		eplayer.huth[HUTH_THIRST] = aux < 0 ? 0 : aux;
 	}
 
 	if (cvial->food) {
-		aux = eplayer->hunger - FOOD_VALUE(cvial);
-		eplayer->hunger = aux < 0 ? 0 : aux;
+		aux = eplayer.huth[HUTH_HUNGER] - FOOD_VALUE(cvial);
+		eplayer.huth[HUTH_HUNGER] = aux < 0 ? 0 : aux;
 	}
 
 	cvial->quantity--;
@@ -49,6 +49,8 @@ do_consume(int fd, int argc, char *argv[])
 
 	if (!cvial->quantity && !cvial->capacity)
 		recycle(player, vial);
+
+	ent_set(object_ref(player), &eplayer);
 }
 
 void

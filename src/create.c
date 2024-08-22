@@ -21,14 +21,13 @@ void
 do_clone(int fd, int argc, char *argv[])
 {
 	OBJ *player = FD_PLAYER(fd);
-	ENT *eplayer = &player->sp.entity;
 	char *name = argv[1];
 	OBJ *thing, *clone;
 	int    cost;
 
 	/* Perform sanity checks */
 
-	if (!(eplayer->flags & (EF_WIZARD | EF_BUILDER))) {
+	if (!(ent_get(object_ref(player)).flags & (EF_WIZARD | EF_BUILDER))) {
 		nd_writef(player, "That command is restricted to authorized builders.\n");
 		return;
 	}
@@ -99,11 +98,7 @@ do_clone(int fd, int argc, char *argv[])
 				}
 				break;
 			case TYPE_ENTITY:
-				{
-					ENT *ething = &thing->sp.entity;
-					ENT *eclone = &clone->sp.entity;
-					eclone->home = ething->home;
-				}
+				ENT_SETF(object_ref(clone), home, ent_get(object_ref(thing)).home);
 				break;
 		}
 		clone->type = thing->type;
@@ -129,7 +124,7 @@ void
 do_create(int fd, int argc, char *argv[])
 {
 	OBJ *player = FD_PLAYER(fd);
-	ENT *eplayer = &player->sp.entity;
+	unsigned pflags = ent_get(object_ref(player)).flags;
 	char *name = argv[1];
 	char *acost =argv[2];
 	OBJ *thing;
@@ -149,7 +144,7 @@ do_create(int fd, int argc, char *argv[])
 	for (; *rname && isspace(*rname); rname++) ;
 
 	cost = atoi(qname);
-	if (!(eplayer->flags & (EF_WIZARD | EF_BUILDER))) {
+	if (!(pflags & (EF_WIZARD | EF_BUILDER))) {
 		nd_writef(player, "That command is restricted to authorized builders.\n");
 		return;
 	}

@@ -135,9 +135,9 @@ _fbcp_item(char *bcp_buf, OBJ *obj, unsigned char dynflags)
 		break;
 	}
 	case TYPE_ENTITY: {
-		ENT *ent = &obj->sp.entity;
-		memcpy(p += aux1, &ent->flags, sizeof(ent->flags));
-		p += sizeof(ent->flags);
+		unsigned flags = ent_get(object_ref(obj)).flags;
+		memcpy(p += aux1, &flags, sizeof(flags));
+		p += sizeof(flags);
 		break;
 	}
 	default: {
@@ -199,20 +199,20 @@ fbcp_auth_failure(int fd, int reason)
 static void
 fbcp_stats(OBJ *player)
 {
-	ENT *eplayer = &player->sp.entity;
+	ENT eplayer = ent_get(object_ref(player));
 	unsigned char iden = BCP_STATS;
-	static char bcp_buf[2 + sizeof(iden) + sizeof(eplayer->attr) + sizeof(short) * 7];
+	static char bcp_buf[2 + sizeof(iden) + sizeof(eplayer.attr) + sizeof(short) * 7];
 	char *p = bcp_buf;
 	memcpy(p, "#b", 2);
 	memcpy(p += 2, &iden, sizeof(iden));
-	memcpy(p += sizeof(iden), eplayer->attr, sizeof(eplayer->attr));
-	memcpy(p += sizeof(eplayer->attr), &eplayer->e[AF_HP].value, sizeof(short));
-	memcpy(p += sizeof(short), &eplayer->e[AF_MOV].value, sizeof(short));
-	memcpy(p += sizeof(short), &eplayer->e[AF_MDMG].value, sizeof(short));
-	memcpy(p += sizeof(short), &eplayer->e[AF_MDEF].value, sizeof(short));
-	memcpy(p += sizeof(short), &eplayer->e[AF_DODGE].value, sizeof(short));
-	memcpy(p += sizeof(short), &eplayer->e[AF_DMG].value, sizeof(short));
-	memcpy(p += sizeof(short), &eplayer->e[AF_DEF].value, sizeof(short));
+	memcpy(p += sizeof(iden), eplayer.attr, sizeof(eplayer.attr));
+	memcpy(p += sizeof(eplayer.attr), &eplayer.e[AF_HP].value, sizeof(short));
+	memcpy(p += sizeof(short), &eplayer.e[AF_MOV].value, sizeof(short));
+	memcpy(p += sizeof(short), &eplayer.e[AF_MDMG].value, sizeof(short));
+	memcpy(p += sizeof(short), &eplayer.e[AF_MDEF].value, sizeof(short));
+	memcpy(p += sizeof(short), &eplayer.e[AF_DODGE].value, sizeof(short));
+	memcpy(p += sizeof(short), &eplayer.e[AF_DMG].value, sizeof(short));
+	memcpy(p += sizeof(short), &eplayer.e[AF_DEF].value, sizeof(short));
 	p += sizeof(short);
 	nd_write(player, bcp_buf, p - bcp_buf);
 }
@@ -220,19 +220,19 @@ fbcp_stats(OBJ *player)
 static void
 fbcp_bars(OBJ *player)
 {
-	ENT *eplayer = &player->sp.entity;
+	ENT eplayer = ent_get(object_ref(player));
 	unsigned char iden = BCP_BARS;
 	static char bcp_buf[2 + sizeof(iden) + sizeof(int) * 4];
 	char *p = bcp_buf;
 	unsigned short aux;
 	memcpy(p, "#b", 2);
 	memcpy(p += 2, &iden, sizeof(iden));
-	memcpy(p += sizeof(iden), &eplayer->hp, sizeof(eplayer->hp));
-	aux = HP_MAX(eplayer);
-	memcpy(p += sizeof(eplayer->hp), &aux, sizeof(aux));
-	memcpy(p += sizeof(aux), &eplayer->mp, sizeof(eplayer->mp));
-	aux = MP_MAX(eplayer);
-	memcpy(p += sizeof(eplayer->mp), &aux, sizeof(aux));
+	memcpy(p += sizeof(iden), &eplayer.hp, sizeof(eplayer.hp));
+	aux = HP_MAX(&eplayer);
+	memcpy(p += sizeof(eplayer.hp), &aux, sizeof(aux));
+	memcpy(p += sizeof(aux), &eplayer.mp, sizeof(eplayer.mp));
+	aux = MP_MAX(&eplayer);
+	memcpy(p += sizeof(eplayer.mp), &aux, sizeof(aux));
 	p += sizeof(aux);
 	nd_write(player, bcp_buf, p - bcp_buf);
 }
@@ -253,7 +253,7 @@ fbcp_view_buf(OBJ *player, char *view_buf)
 void
 mcp_look(OBJ *player, OBJ *loc)
 {
-	ENT *eplayer = &player->sp.entity;
+	ENT eplayer = ent_get(object_ref(player));
 	OBJ *thing;
 
 	fbcp_item(player, loc, 1);
@@ -261,11 +261,12 @@ mcp_look(OBJ *player, OBJ *loc)
 	case TYPE_ROOM: break;
 	case TYPE_ENTITY: // falls through
 	default:
-		eplayer->last_observed = object_ref(loc);
+		eplayer.last_observed = object_ref(loc);
+		ent_set(object_ref(player), &eplayer);
 		observer_add(loc, player);
 	}
 
-        if (loc != player && loc->type == TYPE_ENTITY && !(eplayer->flags & EF_WIZARD))
+        if (loc != player && loc->type == TYPE_ENTITY && !(eplayer.flags & EF_WIZARD))
                 return;
 
 	// use callbacks for mcp like this versus telnet
@@ -368,33 +369,33 @@ mcp_bars(OBJ *player) {
 void
 mcp_equipment(OBJ *player)
 {
-	ENT *eplayer = &player->sp.entity;
+	ENT eplayer = ent_get(object_ref(player));
 	int aux;
 
-	fbcp(player, sizeof(eplayer->equipment), BCP_EQUIPMENT, eplayer->equipment);
+	fbcp(player, sizeof(eplayer.equipment), BCP_EQUIPMENT, eplayer.equipment);
 	
-	aux = eplayer->equipment[ES_HEAD];
+	aux = eplayer.equipment[ES_HEAD];
 	if (aux && aux != NOTHING)
 		fbcp_item(player, object_get(aux), 0);
-	aux = eplayer->equipment[ES_NECK];
+	aux = eplayer.equipment[ES_NECK];
 	if (aux && aux != NOTHING)
 		fbcp_item(player, object_get(aux), 0);
-	aux = eplayer->equipment[ES_CHEST];
+	aux = eplayer.equipment[ES_CHEST];
 	if (aux && aux != NOTHING)
 		fbcp_item(player, object_get(aux), 0);
-	aux = eplayer->equipment[ES_BACK];
+	aux = eplayer.equipment[ES_BACK];
 	if (aux && aux != NOTHING)
 		fbcp_item(player, object_get(aux), 0);
-	aux = eplayer->equipment[ES_RHAND];
+	aux = eplayer.equipment[ES_RHAND];
 	if (aux && aux != NOTHING)
 		fbcp_item(player, object_get(aux), 0);
-	aux = eplayer->equipment[ES_LFINGER];
+	aux = eplayer.equipment[ES_LFINGER];
 	if (aux && aux != NOTHING)
 		fbcp_item(player, object_get(aux), 0);
-	aux = eplayer->equipment[ES_RFINGER];
+	aux = eplayer.equipment[ES_RFINGER];
 	if (aux && aux != NOTHING)
 		fbcp_item(player, object_get(aux), 0);
-	aux = eplayer->equipment[ES_PANTS];
+	aux = eplayer.equipment[ES_PANTS];
 	if (aux && aux != NOTHING)
 		fbcp_item(player, object_get(aux), 0);
 }
