@@ -94,10 +94,10 @@ do_examine(int fd, int argc, char *argv[])
 		break;
 	case TYPE_ENTITY:
 		{
-			ENT *ething = &thing->sp.entity;
+			ENT ething = ent_get(object_ref(thing));
 
-			nd_writef(player, "Home: %s\n", unparse(player, object_get(ething->home)));
-			nd_writef(player, "hp: %d/%d entity flags: %d\n", ething->hp, HP_MAX(ething), ething->flags);
+			nd_writef(player, "Home: %s\n", unparse(player, object_get(ething.home)));
+			nd_writef(player, "hp: %d/%d entity flags: %d\n", ething.hp, HP_MAX(&ething), ething.flags);
 
 			/* print location if player can link to it */
 			if (thing->location != NOTHING && controls(player, object_get(thing->location)))
@@ -140,7 +140,6 @@ void
 do_owned(int fd, int argc, char *argv[])
 {
 	OBJ *player = FD_PLAYER(fd);
-	ENT *eplayer = &player->sp.entity;
 	char *name = argv[1];
 	OBJ *victim, *oi;
 	int total = 0;
@@ -149,7 +148,7 @@ do_owned(int fd, int argc, char *argv[])
 		nd_writef(player, "You don't have enough %s.\n", PENNIES);
 		return;
 	}
-	if ((eplayer->flags & EF_WIZARD) && *name) {
+	if ((ent_get(object_ref(player)).flags & EF_WIZARD) && *name) {
 		victim = player_get(name);
 		if (!victim) {
 			nd_writef(player, "I couldn't find that player.\n");

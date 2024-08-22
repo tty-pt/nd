@@ -59,11 +59,10 @@ do_wall(int fd, int argc, char *argv[])
 {
 	OBJ *player = FD_PLAYER(fd), *oi;
 	CBUG(player->type != TYPE_ENTITY);
-	ENT *eplayer = &player->sp.entity;
 	char buf[BUFFER_LEN];
 	char *message = argscat(argc, argv);
 
-	if (!(eplayer->flags & EF_WIZARD)) {
+	if (!(ent_get(object_ref(player)).flags & EF_WIZARD)) {
 		nd_writef(player, "But what do you want to do with the wall?\n");
 		return;
 	}

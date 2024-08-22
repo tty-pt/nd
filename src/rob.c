@@ -10,12 +10,12 @@ void
 do_give(int fd, int argc, char *argv[])
 {
 	OBJ *player = FD_PLAYER(fd);
-	ENT *eplayer = &player->sp.entity;
+	int wizard = ent_get(object_ref(player)).flags & EF_WIZARD;
 	char *recipient = argv[1];
 	int amount = atoi(argv[2]);
 	OBJ *who;
 
-	if (amount < 0 && !(eplayer->flags & EF_WIZARD)) {
+	if (amount < 0 && !wizard) {
 		nd_writef(player, "Invalid amount.\n");
 		return;
 	}
@@ -29,7 +29,7 @@ do_give(int fd, int argc, char *argv[])
 		return;
 	}
 
-	if (!(eplayer->flags & EF_WIZARD)) {
+	if (!wizard) {
 		if (who->type != TYPE_ENTITY) {
 			nd_writef(player, "You can only give to other entities.\n");
 			return;

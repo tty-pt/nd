@@ -333,13 +333,10 @@ view_build_flags(OBJ *loc) {
 	while ((tmp = contents_next(&c))) {
 		switch (tmp->type) {
 		case TYPE_ENTITY:
-			{
-				ENT *etmp = &tmp->sp.entity;
-				flags |= VTF_ENTITY;
+			flags |= VTF_ENTITY;
 
-				if (etmp->flags & EF_SHOP)
-					flags |= VTF_SHOP;
-			}
+			if (ent_get(object_ref(tmp)).flags & EF_SHOP)
+				flags |= VTF_SHOP;
 
 			break;
 

@@ -139,10 +139,10 @@ ematch_at(OBJ *player, OBJ *where, char *name) {
 
 	OBJ *absolute;
 	dbref ref = object_ref(player);
-	struct ent_tmp *etmp = ent_tmp_get(ref);
-	unsigned nth = etmp->select;
-	etmp->select = 0;
-	ent_tmp_set(ref, etmp);
+	ENT ent = ent_get(ref);
+	unsigned nth = ent.select;
+	ent.select = 0;
+	ent_set(ref, &ent);
 
 	absolute = ematch_absolute(name);
 	if (!controls(player, absolute))

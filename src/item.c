@@ -12,7 +12,7 @@ do_select(int fd, int argc, char *argv[])
 	OBJ *player = FD_PLAYER(fd);
 	const char *n_s = argv[1];
 	unsigned n = strtoul(n_s, NULL, 0);
-	ENT_TMP_SETF(object_ref(player), select, n);
+	ENT_SETF(object_ref(player), select, n);
 	nd_writef(player, "You select %u.\n", n);
 }
 

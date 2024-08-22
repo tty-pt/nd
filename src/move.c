@@ -11,7 +11,6 @@ void
 do_get(int fd, int argc, char *argv[])
 {
 	OBJ *player = FD_PLAYER(fd);
-	ENT *eplayer = &player->sp.entity;
 	char *what = argv[1];
 	char *obj = argv[2];
 	OBJ *thing, *cont;
@@ -28,7 +27,7 @@ do_get(int fd, int argc, char *argv[])
 	cont = thing;
 
 	// is this needed?
-	if (thing->location != player->location && !(eplayer->flags & EF_WIZARD)) {
+	if (thing->location != player->location && !(ent_get(object_ref(player)).flags & EF_WIZARD)) {
 		nd_writef(player, "That is too far away from you.\n");
 		return;
 	}
@@ -184,7 +183,7 @@ do_recycle(int fd, int argc, char *argv[])
 			}
 			break;
 		case TYPE_ENTITY:
-			if (thing->sp.entity.flags & EF_PLAYER) {
+			if (ent_get(object_ref(thing)).flags & EF_PLAYER) {
 				nd_writef(player, "You can't recycle a player!\n");
 				return;
 			}

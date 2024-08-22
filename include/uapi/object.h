@@ -47,6 +47,11 @@ enum entity_flags {
 	EF_BUILDER = 32,
 };
 
+enum huth {
+	HUTH_THIRST = 0,
+	HUTH_HUNGER = 1,
+};
+
 enum attribute {
 	ATTR_STR,
 	ATTR_CON,
@@ -105,12 +110,6 @@ struct effect {
 	unsigned char mask;
 };
 
-struct ent_tmp {
-	dbref last_observed;
-	unsigned char select;
-	unsigned char hunger_n, thirst_n;
-};
-
 typedef struct entity {
 	dbref home;
         /* const char *dialog; <- make this external to the struct (use object id) */
@@ -119,14 +118,20 @@ typedef struct entity {
 	struct effect e[7];
 	dbref target, sat;
 	unsigned flags;
-	unsigned short hp, mp, hunger, thirst, wtso;
+	unsigned short hp, mp, wtso;
+	unsigned short huth[2];
 	unsigned char debuf_mask, combo, klock;
 	unsigned lvl, spend, cxp;
 	unsigned attr[ATTR_MAX];
 	unsigned equipment[ES_MAX];
-} ENT;
 
-enum equipment_flags {
+	/* tmp data? */
+	dbref last_observed;
+	unsigned char select;
+	unsigned char huth_n[2];
+} ENT;
+/*{{{*/
+enum equipment_flags {/*{{{*/
 	EQF_EQUIPPED = 1,
 };
 
@@ -166,7 +171,7 @@ typedef struct {
 
 union specific {
 	ROO room;
-	ENT entity;
+	char entity;
 	EQU equipment;
 	CON consumable;
 	PLA plant;

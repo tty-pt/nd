@@ -244,6 +244,7 @@ struct ndc_config nd_config = {
 	.flags = 0,
 };
 long fds_hd = -1;
+long player_hd = -1;
 
 void
 show_program_usage(char *prog)
@@ -463,22 +464,34 @@ auth(int fd, char *qsession)
 	player = player_get(buf);
 
 	if (!player) {
-		player = player_create(buf);
-		birth(player);
-		spells_birth(player);
+		ENT eplayer;
+		memset(&eplayer, 0, sizeof(eplayer));
+		player = object_new();
+		player->name = strdup(buf);
+		player->location = eplayer.home = PLAYER_START;
+		player->type = TYPE_ENTITY;
+		player->owner = object_ref(player);
+		player->value = START_PENNIES;
+		eplayer.flags = EF_PLAYER;
+
+		contents_put(PLAYER_START, object_ref(player));
+		player_put(player);
+
+		birth(&eplayer);
+		spells_birth(&eplayer);
 		avatar(player);
 		reroll(player, player);
-		ENT *eplayer = &player->sp.entity;
-		eplayer->hp = HP_MAX(eplayer);
-		eplayer->mp = MP_MAX(eplayer);
+		eplayer.hp = HP_MAX(&eplayer);
+		eplayer.mp = MP_MAX(&eplayer);
+		ent_set(object_ref(player), &eplayer);
+		st_start(player);
+
         }
 
 	FD_PLAYER(fd) = player;
 	ndc_auth(fd, buf);
 	dbref ref = object_ref(player);
 	hash_cput(fds_hd, &ref, sizeof(ref), &fd, sizeof(fd));
-	if (!ent_tmp_get(ref))
-		ent_tmp_reset(ref);
         mcp_stats(player);
         mcp_auth_success(player);
         mcp_equipment(player);
@@ -542,7 +555,7 @@ void ndc_disconnect(int fd) {
 	OBJ *player = FD_PLAYER(fd);
 	warn("%s(%d) disconnects on fd %d\n",
 			player->name, object_ref(player), fd);
-	OBJ *last_observed = object_get(ent_tmp_get(object_ref(player))->last_observed);
+	OBJ *last_observed = object_get(ent_get(object_ref(player)).last_observed);
 	if (last_observed)
 		observer_remove(last_observed, player);
 

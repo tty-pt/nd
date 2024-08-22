@@ -484,14 +484,15 @@ st_room(OBJ *player, enum exit e)
 
 static void
 e_move(OBJ *player, enum exit e) {
-	ENT *eplayer = &player->sp.entity;
+	int ref = object_ref(player);
+	ENT eplayer = ent_get(ref);
 	OBJ *loc = object_get(player->location),
 	    *dest;
 	ROO *rloc = &loc->sp.room;
 	char const *dwts = "door";
 	int door = 0;
 
-	if (eplayer->klock) {
+	if (eplayer.klock) {
 		nd_writef(player, "You can't move while being targeted.\n");
 		return;
 	}
@@ -501,7 +502,8 @@ e_move(OBJ *player, enum exit e) {
 		return;
 	}
 
-	stand_silent(player);
+	stand_silent(player, &eplayer);
+	ent_set(ref, &eplayer);
 
 	if (rloc->doors & e) {
 		if (e == E_UP || e == E_DOWN) {
@@ -542,9 +544,7 @@ room_clean(OBJ *player, OBJ *here)
 		if (tmp->type != TYPE_ENTITY)
 			continue;
 
-		ENT *etmp = &tmp->sp.entity;
-
-		if (etmp->flags & EF_PLAYER)
+		if (ent_get(object_ref(tmp)).flags & EF_PLAYER)
 			return here;
 	}
 
@@ -1145,7 +1145,7 @@ do_stchown(int fd, int argc, char *argv[]) {
 
 	OBJ *who = player_get(argv[1]);
 
-	if (!who || who->type != TYPE_ENTITY || !(who->sp.entity.flags & EF_PLAYER)) {
+	if (!who || who->type != TYPE_ENTITY || !(ent_get(object_ref(who)).flags & EF_PLAYER)) {
 		nd_writef(player, "Invalid target\n");
 		return;
 	}
