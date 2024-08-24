@@ -541,7 +541,7 @@ void ndc_vim(int fd, int argc, char *argv[]) {
 void ndc_connect(int fd) {
 	static char *cookie;
 	int headers = ndc_headers(fd);
-	cookie = (char *) SHASH_GET(headers, "Cookie");
+	cookie = (char *) hash_sget(headers, "Cookie");
 	if (!cookie)
 		return;
 

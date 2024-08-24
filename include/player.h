@@ -19,19 +19,19 @@ players_init()
 static inline OBJ *
 player_get(char *name)
 {
-	return (OBJ *) SHASH_GET(player_hd, name);
+	return (OBJ *) hash_sget(player_hd, name);
 }
 
 static inline void
 player_put(OBJ *player)
 {
-	SHASH_PUT(player_hd, player->name, player);
+	hash_sput(player_hd, player->name, player);
 }
 
 static inline void
 player_delete(OBJ *player)
 {
-	SHASH_DEL(player_hd, player->name);
+	hash_sdel(player_hd, player->name);
 }
 
 #endif

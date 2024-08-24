@@ -228,7 +228,7 @@ struct core_art core_art[] = {
 long art_hd = -1;
 
 unsigned art_max(char *name) {
-	struct core_art *core_art_item = (struct core_art *) SHASH_GET(art_hd, name);
+	struct core_art *core_art_item = (struct core_art *) hash_sget(art_hd, name);
 	return core_art_item->max;
 }
 
@@ -732,7 +732,7 @@ objects_read(FILE * f)
 
 	int hash_i = 0;
 	for (; hash_i < sizeof(core_art) / sizeof(struct core_art); hash_i++)
-		SHASH_PUT(art_hd, core_art[hash_i].name, &core_art[hash_i]);
+		hash_sput(art_hd, core_art[hash_i].name, &core_art[hash_i]);
 
 	/* Parse the header */
 	grow = ref_read(f);
