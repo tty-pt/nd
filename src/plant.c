@@ -219,7 +219,7 @@ plants_shuffle(struct plant_data *pd, morton_t v)
 }
 
 static inline void
-_plants_add(OBJ *where, struct bio *bio, pos_t pos)
+_plants_add(dbref where_ref, struct bio *bio, pos_t pos)
 {
 	register int i, n;
 	noise_t v = XXH32((const char *) pos, sizeof(pos_t), 1);
@@ -230,16 +230,18 @@ _plants_add(OBJ *where, struct bio *bio, pos_t pos)
 		if (!n)
 			continue;
 
-                struct object_skeleton *obj_skel = PLANT_SKELETON(bio->pd.id[i]);
-                OBJ *plant = object_add(obj_skel, where, &v);
-		PLA *pplant = &plant->sp.plant;
+                struct object_skeleton *skel = PLANT_SKELETON(bio->pd.id[i]);
+		OBJ plant;
+		dbref plant_ref = object_add(&plant, skel, where_ref, &v);
+		PLA *pplant = &plant.sp.plant;
 		pplant->plid = bio->pd.id[i];
 		pplant->size = n;
+		obj_set(plant_ref, &plant);
         }
 }
 
 void
-plants_add(OBJ *where, void *arg, pos_t pos)
+plants_add(dbref where_ref, void *arg, pos_t pos)
 {
 	struct bio *bio = arg;
 	/* &bio->pd, bio->ty, */
@@ -247,7 +249,7 @@ plants_add(OBJ *where, void *arg, pos_t pos)
 	/* struct plant_data epd; */
 
         if (bio->pd.n)
-                _plants_add(where, bio, pos);
+                _plants_add(where_ref, bio, pos);
 
 	/* plants_noise(&epd, ty, tmp, rn, PLANT_EXTRA); */
 

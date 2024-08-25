@@ -180,7 +180,6 @@ union specific {
 };
 
 typedef struct object {
-	long observers;
 	dbref location, owner;
 
 	unsigned art_id;

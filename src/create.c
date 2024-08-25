@@ -20,20 +20,19 @@
 void
 do_clone(int fd, int argc, char *argv[])
 {
-	OBJ *player = FD_PLAYER(fd);
+	dbref player_ref = FD_PLAYER(fd), thing_ref;
 	char *name = argv[1];
-	OBJ *thing, *clone;
 	int    cost;
 
 	/* Perform sanity checks */
 
-	if (!(ent_get(object_ref(player)).flags & (EF_WIZARD | EF_BUILDER))) {
-		nd_writef(player, "That command is restricted to authorized builders.\n");
+	if (!(ent_get(player_ref).flags & (EF_WIZARD | EF_BUILDER))) {
+		nd_writef(player_ref, "That command is restricted to authorized builders.\n");
 		return;
 	}
 	
 	if (*name == '\0') {
-		nd_writef(player, "Clone what?\n");
+		nd_writef(player_ref, "Clone what?\n");
 		return;
 	} 
 
@@ -41,77 +40,78 @@ do_clone(int fd, int argc, char *argv[])
 	   do not allow rooms, exits, etc. to be cloned for now. */
 
 	if (
-			!(thing = ematch_absolute(name))
-			&& !(thing = ematch_mine(player, name))
-			&& !(thing = ematch_near(player, name))
+			(thing_ref = ematch_absolute(name)) == NOTHING
+			&& (thing_ref = ematch_mine(player_ref, name)) == NOTHING
+			&& (thing_ref = ematch_near(player_ref, name)) == NOTHING
 	   )
 	{
-		nd_writef(player, "I don't know what you mean.\n");
+		nd_writef(player_ref, "I don't know what you mean.\n");
 		return;
 	}
 
 	/* Further sanity checks */
+	OBJ thing = obj_get(thing_ref);
 
 	/* things only. */
-	if(thing->type != TYPE_THING) {
-		nd_writef(player, "That is not a cloneable object.\n");
+	if(thing.type != TYPE_THING) {
+		nd_writef(player_ref, "That is not a cloneable object.\n");
 		return;
 	}		
 	
 	/* check the name again, just in case reserved name patterns have
 	   changed since the original object was created. */
-	if (!ok_name(thing->name)) {
-		nd_writef(player, "You cannot clone something with such a weird name!\n");
+	if (!ok_name(thing.name)) {
+		nd_writef(player_ref, "You cannot clone something with such a weird name!\n");
 		return;
 	}
 
 	/* no stealing stuff. */
-	if(!controls(player, thing)) {
-		nd_writef(player, "Permission denied. (you can't clone this)\n");
+	if(!controls(player_ref, thing_ref)) {
+		nd_writef(player_ref, "Permission denied. (you can't clone this)\n");
 		return;
 	}
 
 	/* there ain't no such lunch as a free thing. */
-	cost = OBJECT_GETCOST(thing->value);
+	cost = OBJECT_GETCOST(thing.value);
 	if (cost < OBJECT_COST) {
 		cost = OBJECT_COST;
 	}
 	
-	if (!payfor(player, cost)) {
-		nd_writef(player, "Sorry, you don't have enough %s.\n", PENNIES);
+	OBJ player = obj_get(player_ref);
+	if (!payfor(player_ref, &player, cost)) {
+		nd_writef(player_ref, "Sorry, you don't have enough %s.\n", PENNIES);
 		return;
 	} else {
 		/* create the object */
-		clone = object_new();
+		obj_set(player_ref, &player);
+		OBJ clone;
+		dbref clone_ref = object_new(&clone);
 
 		/* initialize everything */
-		clone->name = strdup(thing->name);
-		clone->location = object_ref(player);
-		clone->owner = player->owner;
-		clone->value = thing->value;
+		clone.name = strdup(thing.name);
+		clone.location = player_ref;
+		clone.owner = player.owner;
+		clone.value = thing.value;
 		/* FIXME: should we clone attached actions? */
-		switch (thing->type) {
+		switch (thing.type) {
 			case TYPE_ROOM:
 				{
-					ROO *rclone = &clone->sp.room;
+					ROO *rclone = &clone.sp.room;
 					rclone->exits = rclone->doors = 0;
 				}
 				break;
 			case TYPE_ENTITY:
-				ENT_SETF(object_ref(clone), home, ent_get(object_ref(thing)).home);
+				ENT_SETF(clone_ref, home, ent_get(thing_ref).home);
 				break;
 		}
-		clone->type = thing->type;
+		clone.type = thing.type;
 
-		/* endow the object */
-		if (thing->value > MAX_OBJECT_ENDOWMENT)
-			thing->value = MAX_OBJECT_ENDOWMENT;
-		
 		/* link it in */
-		contents_put(object_ref(player), object_ref(clone));
+		contents_put(player_ref, clone_ref);
+		obj_set(clone_ref, &clone);
 
 		/* and we're done */
-		nd_writef(player, "%s created with number %d.\n", thing->name, object_ref(clone));
+		nd_writef(player_ref, "%s created with number %d.\n", thing.name, clone_ref);
 	}
 }
 
@@ -123,11 +123,10 @@ do_clone(int fd, int argc, char *argv[])
 void
 do_create(int fd, int argc, char *argv[])
 {
-	OBJ *player = FD_PLAYER(fd);
-	unsigned pflags = ent_get(object_ref(player)).flags;
+	dbref player_ref = FD_PLAYER(fd), thing_ref;
+	unsigned pflags = ent_get(player_ref).flags;
 	char *name = argv[1];
 	char *acost =argv[2];
-	OBJ *thing;
 	int cost;
 
 	char buf2[BUFSIZ];
@@ -140,48 +139,55 @@ do_create(int fd, int argc, char *argv[])
 		*(rname++) = '\0';
 	while ((qname > buf2) && (isspace(*qname)))
 		*(qname--) = '\0';
-	qname = buf2;
+	name = buf2;
 	for (; *rname && isspace(*rname); rname++) ;
 
 	cost = atoi(qname);
 	if (!(pflags & (EF_WIZARD | EF_BUILDER))) {
-		nd_writef(player, "That command is restricted to authorized builders.\n");
+		nd_writef(player_ref, "That command is restricted to authorized builders.\n");
 		return;
 	}
 	if (*name == '\0') {
-		nd_writef(player, "Create what?\n");
+		nd_writef(player_ref, "Create what?\n");
 		return;
 	} else if (!ok_name(name)) {
-		nd_writef(player, "That's a silly name for a thing!\n");
+		nd_writef(player_ref, "That's a silly name for a thing!\n");
 		return;
 	} else if (cost < 0) {
-		nd_writef(player, "You can't create an object for less than nothing!\n");
+		nd_writef(player_ref, "You can't create an object for less than nothing!\n");
 		return;
 	} else if (cost < OBJECT_COST) {
 		cost = OBJECT_COST;
 	}
-	if (!payfor(player, cost)) {
-		nd_writef(player, "Sorry, you don't have enough %s.\n", PENNIES);
+
+	OBJ player = obj_get(player_ref);
+
+	if (!payfor(player_ref, &player, cost)) {
+		nd_writef(player_ref, "Sorry, you don't have enough %s.\n", PENNIES);
 		return;
 	}
 
+	obj_set(player_ref, &player);
+
 	/* create the object */
-	thing = object_new();
+	OBJ thing;
+	thing_ref = object_new(&thing);
 
 	/* initialize everything */
-	thing->name = strdup(name);
-	thing->location = object_ref(player);
-	thing->owner = player->owner;
-	thing->value = OBJECT_ENDOWMENT(cost);
-	thing->type = TYPE_THING;
+	thing.name = strdup(name);
+	thing.location = player_ref;
+	thing.owner = player.owner;
+	thing.value = OBJECT_ENDOWMENT(cost);
+	thing.type = TYPE_THING;
 
 	/* endow the object */
-	if (thing->value > MAX_OBJECT_ENDOWMENT)
-		thing->value = MAX_OBJECT_ENDOWMENT;
+	if (thing.value > MAX_OBJECT_ENDOWMENT)
+		thing.value = MAX_OBJECT_ENDOWMENT;
 
 	/* link it in */
-	contents_put(thing->location, object_ref(thing));
+	contents_put(thing.location, thing_ref);
+	obj_set(thing_ref, &thing);
 
 	/* and we're done */
-	nd_writef(player, "%s created with number %d.\n", name, object_ref(thing));
+	nd_writef(player_ref, "%s created with number %d.\n", name, thing_ref);
 }

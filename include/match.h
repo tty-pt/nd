@@ -8,13 +8,13 @@
 
 #define NOMATCH_MESSAGE "I don't know what you mean.\n"
 
-OBJ *ematch_at(OBJ *player, OBJ *where, char *name);
-OBJ *ematch_player(char *name);
-OBJ *ematch_absolute(char *name);
-OBJ *ematch_me(OBJ *player, char *str);
-OBJ *ematch_here(OBJ *player, char *str);
-OBJ *ematch_mine(OBJ *player, char *str);
-OBJ *ematch_near(OBJ *player, char *str);
-OBJ *ematch_all(OBJ *player, char *name);
+dbref ematch_at(dbref player_ref, dbref where_ref, char *name);
+dbref ematch_player(char *name);
+dbref ematch_absolute(char *name);
+dbref ematch_me(dbref player_ref, char *str);
+dbref ematch_here(dbref player_ref, char *str);
+dbref ematch_mine(dbref player_ref, char *str);
+dbref ematch_near(dbref player_ref, char *str);
+dbref ematch_all(dbref player_ref, char *name);
 
 #endif /* _MATCH_H */

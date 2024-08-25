@@ -278,25 +278,23 @@ map_sync()
 }
 
 static void
-_map_put(morton_t code, dbref thing, int flags)
+_map_put(morton_t code, dbref thing_ref, int flags)
 {
 	DBT key;
 	DBT data;
 	int ret;
 
-	CBUG(object_get(thing)->type != TYPE_ROOM);
-
 	memset(&key, 0, sizeof(DBT));
 	memset(&data, 0, sizeof(DBT));
 
-	key.data = &thing;
-	key.size = sizeof(thing);
+	key.data = &thing_ref;
+	key.size = sizeof(thing_ref);
 	data.data = &code;
 	data.size = sizeof(code);
 
 	ret = ipdb->put(ipdb, NULL, &key, &data, flags);
 	if (ret) {
-		debug("room %d %s", thing, db_strerror(ret));
+		debug("room %d %s", thing_ref, db_strerror(ret));
 	}
 	CBUG(ret);
 }
@@ -344,7 +342,7 @@ map_where(pos_t p, dbref room)
 	morton_pos(p, x);
 }
 
-OBJ *
+dbref
 map_get(pos_t p)
 {
 	morton_t at = pos_morton(p);
@@ -352,11 +350,11 @@ map_get(pos_t p)
 	DBT pkey;
 	DBT data;
 	DBT key;
-	OBJ *ref;
+	dbref ref;
 	int res;
 
 	if (pdb->cursor(pdb, NULL, &cur, 0))
-		return NULL;
+		return NOTHING;
 
 	memset(&pkey, 0, sizeof(DBT));
 	memset(&key, 0, sizeof(DBT));
@@ -369,20 +367,21 @@ map_get(pos_t p)
 		res = cur->c_pget(cur, &key, &pkey, &data, DB_SET);
 		switch (res) {
 		case 0:
-			ref = object_get(* (dbref *) pkey.data);
+			ref = * (dbref *) pkey.data;
+			OBJ obj = obj_get(ref);
 #ifdef PRECOVERY
-			if (ref->type != TYPE_ROOM) {
+			if (obj.type != TYPE_ROOM) {
 				debug("GARBAGE %d REMOVED ;)", ref);
 				cur->c_del(cur, 0);
 				continue;
 			}
 #else
-			CBUG(ref->type != TYPE_ROOM);
+			CBUG(obj.type != TYPE_ROOM);
 #endif
 			return ref;
 		case DB_NOTFOUND:
 			cur->close(cur);
-			return NULL;
+			return NOTHING;
 		default:
 			BUG("%s", db_strerror(res));
 		}

@@ -8,7 +8,7 @@
 
 typedef struct pfd {
 	int fd;
-	OBJ *player;
+	dbref player;
 	McpFrame mcpframe;
 } descr_t;
 
@@ -20,14 +20,14 @@ extern struct pfd descr_map[];
 struct hash_cursor fds_iter(dbref player);
 int fds_next(struct hash_cursor *c);
 int fds_has(dbref player);
-void nd_close(OBJ *player);
-void nd_write(OBJ *player, char *str, size_t len);
-void nd_dwritef(OBJ *player, const char *fmt, va_list args);
-void nd_writef(OBJ *player, const char *fmt, ...);
-void nd_rwrite(OBJ *room, OBJ *exception, char *str, size_t len);
-void nd_owritef(OBJ *player, char *format, ...);
-void notify_wts(OBJ *who, char const *a, char const *b, char *format, ...);
-void notify_wts_to(OBJ *who, OBJ *tar, char const *a, char const *b, char *format, ...);
-void notify_attack(OBJ *player, OBJ *target, char *wts, short val, char const *color, short mval);
+void nd_close(dbref player);
+void nd_write(dbref player_ref, char *str, size_t len);
+void nd_dwritef(dbref player_ref, const char *fmt, va_list args);
+void nd_writef(dbref player_ref, const char *fmt, ...);
+void nd_rwrite(dbref room_ref, dbref exception_ref, char *str, size_t len);
+void nd_owritef(dbref player_ref, char *format, ...);
+void notify_wts(dbref player_ref, char const *a, char const *b, char *format, ...);
+void notify_wts_to(dbref player_ref, dbref target_ref, char const *a, char const *b, char *format, ...);
+void notify_attack(dbref player_ref, dbref target_ref, char *wts, short val, char const *color, short mval);
 
 #endif

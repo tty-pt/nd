@@ -13,122 +13,127 @@
 #include "match.h"
 #include "player.h"
 
-static OBJ *
-match_controlled(OBJ *player, char *name)
+static dbref
+match_controlled(dbref player_ref, char *name)
 {
-	OBJ *match = ematch_all(player, name);
+	dbref match_ref = ematch_all(player_ref, name);
 
-	if (!match) {
-		nd_writef(player, NOMATCH_MESSAGE);
-		return NULL;
+	if (match_ref == NOTHING) {
+		nd_writef(player_ref, NOMATCH_MESSAGE);
+		return NOTHING;
 	}
 
-	else if (!controls(player, match)) {
-		nd_writef(player, "Permission denied. (You don't control what was matched)\n");
-		return NULL;
+	else if (!controls(player_ref, match_ref)) {
+		nd_writef(player_ref, "Permission denied. (You don't control what was matched)\n");
+		return NOTHING;
 	}
 
-	return match;
+	return match_ref;
 }
 
 void
 do_name(int fd, int argc, char *argv[])
 {
-	OBJ *player = FD_PLAYER(fd);
+	dbref player_ref = FD_PLAYER(fd);
 	char *name = argv[1];
 	char *newname = argv[2];
-	OBJ *thing = match_controlled(player, name);
+	dbref thing_ref = match_controlled(player_ref, name);
 
-	if (!thing)
+	if (thing_ref == NOTHING)
 		return;
 
 	/* check for bad name */
 	if (*newname == '\0') {
-		nd_writef(player, "Give it what new name?\n");
+		nd_writef(player_ref, "Give it what new name?\n");
 		return;
 	}
 	/* check for renaming a player */
 	if (!ok_name(newname)) {
-		nd_writef(player, "That is not a reasonable name.\n");
+		nd_writef(player_ref, "That is not a reasonable name.\n");
 		return;
 	}
 
 	/* everything ok, change the name */
-	if (thing->name) {
-		free((void *) thing->name);
-	}
-	thing->name = strdup(newname);
-	nd_writef(player, "Name set.\n");
+	OBJ thing = obj_get(thing_ref);
+	if (thing.name)
+		free((void *) thing.name);
+	thing.name = strdup(newname);
+	obj_set(thing_ref, &thing);
+	nd_writef(player_ref, "Name set.\n");
 }
 
 void
 do_chown(int fd, int argc, char *argv[])
 {
-	OBJ *player = FD_PLAYER(fd);
-	int wizard = ent_get(object_ref(player)).flags & EF_WIZARD;
+	dbref player_ref = FD_PLAYER(fd), owner_ref, thing_ref;
+	int wizard = ent_get(player_ref).flags & EF_WIZARD;
 	char *name = argv[1];
 	char *newowner = argv[2];
-	OBJ *thing;
-	OBJ *owner;
 
 	if (!*name) {
-		nd_writef(player, "You must specify what you want to take ownership of.\n");
+		nd_writef(player_ref, "You must specify what you want to take ownership of.\n");
 		return;
 	}
 
-	thing = ematch_all(player, name);
-	if (!thing) {
-		nd_writef(player, NOMATCH_MESSAGE);
+	thing_ref = ematch_all(player_ref, name);
+	if (thing_ref == NOTHING) {
+		nd_writef(player_ref, NOMATCH_MESSAGE);
 		return;
 	}
+
+	OBJ player = obj_get(player_ref);
 
 	if (*newowner && strcmp(newowner, "me")) {
-		owner = player_get(newowner);
+		owner_ref = player_get(newowner);
 
-		if (!owner) {
-			nd_writef(player, "I couldn't find that player.\n");
+		if (owner_ref == NOTHING) {
+			nd_writef(player_ref, "I couldn't find that player.\n");
 			return;
 		}
-	} else {
-		owner = object_get(player->owner);
-	}
-	if (!wizard && player->owner != object_ref(owner)) {
-		nd_writef(player, "Only wizards can transfer ownership to others.\n");
+	} else
+		owner_ref = player.owner;
+	if (!wizard && player.owner != owner_ref) {
+		nd_writef(player_ref, "Only wizards can transfer ownership to others.\n");
 		return;
 	}
 
-	if (wizard && !God(player) && God(owner)) {
-		nd_writef(player, "God doesn't need an offering or sacrifice.\n");
+	if (wizard && GOD != player_ref && owner_ref) {
+		nd_writef(player_ref, "God doesn't need an offering or sacrifice.\n");
 		return;
 	}
 
-	switch (thing->type) {
+	OBJ owner = obj_get(owner_ref);
+	OBJ thing = obj_get(thing_ref);
+
+	switch (thing.type) {
 	case TYPE_ROOM:
-		if (!wizard && player->location != object_ref(thing)) {
-			nd_writef(player, "You can only chown \"here\".\n");
+		if (!wizard && player.location != thing_ref) {
+			nd_writef(player_ref, "You can only chown \"here\".\n");
 			return;
 		}
-		thing->owner = owner->owner;
+		thing.owner = owner.owner;
 		break;
 	case TYPE_CONSUMABLE:
 	case TYPE_EQUIPMENT:
 	case TYPE_THING:
-		if (!wizard && thing->location != object_ref(player)) {
-			nd_writef(player, "You aren't carrying that.\n");
+		if (!wizard && thing.location != player_ref) {
+			nd_writef(player_ref, "You aren't carrying that.\n");
 			return;
 		}
-		thing->owner = owner->owner;
+		thing.owner = owner.owner;
 		break;
 	case TYPE_ENTITY:
-		nd_writef(player, "Entities always own themselves.\n");
+		nd_writef(player_ref, "Entities always own themselves.\n");
 		return;
 	case TYPE_GARBAGE:
-		nd_writef(player, "No one wants to own garbage.\n");
+		nd_writef(player_ref, "No one wants to own garbage.\n");
 		return;
 	}
-	if (owner == player)
-		nd_writef(player, "Owner changed to you.\n");
+	if (owner_ref == player_ref)
+		nd_writef(player_ref, "Owner changed to you.\n");
 	else {
-		nd_writef(player, "Owner changed to %s.\n", unparse(player, owner));
+		nd_writef(player_ref, "Owner changed to %s.\n", unparse(owner_ref));
 	}
+
+	obj_set(thing_ref, &thing);
 }

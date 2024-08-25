@@ -174,7 +174,7 @@ struct cmd_slot cmds[] = {
 		.cb = &do_inventory,
 	}, {
 		.name = "fight",
-		.cb = &do_kill,
+		.cb = &do_fight,
 	}, {
 		.name = "look",
 		.cb = &do_look_at,
@@ -342,8 +342,8 @@ main(int argc, char **argv)
 }
 
 void
-nd_write(OBJ *player, char *str, size_t len) {
-	struct hash_cursor c = fds_iter(object_ref(player));
+nd_write(dbref player_ref, char *str, size_t len) {
+	struct hash_cursor c = fds_iter(player_ref);
 	int fd;
 
 	while ((fd = fds_next(&c)))
@@ -352,10 +352,10 @@ nd_write(OBJ *player, char *str, size_t len) {
 
 
 void
-nd_dwritef(OBJ *player, const char *fmt, va_list args) {
+nd_dwritef(dbref player_ref, const char *fmt, va_list args) {
 	static char buf[BUFSIZ];
 	ssize_t len = vsnprintf(buf, sizeof(buf), fmt, args);
-	struct hash_cursor c = fds_iter(object_ref(player));
+	struct hash_cursor c = fds_iter(player_ref);
 	int fd;
 
 	while ((fd = fds_next(&c)))
@@ -363,43 +363,43 @@ nd_dwritef(OBJ *player, const char *fmt, va_list args) {
 }
 
 void
-nd_writef(OBJ *player, const char *fmt, ...)
+nd_writef(dbref player_ref, const char *fmt, ...)
 {
 	va_list va;
 	va_start(va, fmt);
-	nd_dwritef(player, fmt, va);
+	nd_dwritef(player_ref, fmt, va);
 	va_end(va);
 }
 
 void
-nd_rwrite(OBJ *room, OBJ *exception, char *str, size_t len) {
-	OBJ *tmp;
-	struct hash_cursor c = contents_iter(object_ref(room));
-	while ((tmp = contents_next(&c)))
-		if (tmp->type == TYPE_ENTITY && tmp != exception)
-			nd_write(tmp, str, len);
+nd_rwrite(dbref room_ref, dbref exception_ref, char *str, size_t len) {
+	dbref tmp_ref;
+	struct hash_cursor c = contents_iter(room_ref);
+	while ((tmp_ref = contents_next(&c)))
+		if (tmp_ref != exception_ref && obj_get(exception_ref).type == TYPE_ENTITY)
+			nd_write(tmp_ref, str, len);
 }
 
 void
-nd_dowritef(OBJ *player, const char *fmt, va_list args) {
+nd_dowritef(dbref player_ref, const char *fmt, va_list args) {
 	char buf[BUFFER_LEN];
 	size_t len;
 	len = vsnprintf(buf, sizeof(buf), fmt, args);
-	nd_rwrite(object_get(player->location), player, buf, len);
+	nd_rwrite(obj_get(player_ref).location, player_ref, buf, len);
 }
 
 void
-nd_owritef(OBJ *player, char *format, ...)
+nd_owritef(dbref player_ref, char *format, ...)
 {
 	va_list args;
 	va_start(args, format);
-	nd_dowritef(player, format, args);
+	nd_dowritef(player_ref, format, args);
 	va_end(args);
 }
 
 void
-nd_close(OBJ *player) {
-	struct hash_cursor c = fds_iter(object_ref(player));
+nd_close(dbref player_ref) {
+	struct hash_cursor c = fds_iter(player_ref);
 	int fd;
 
 	while ((fd = fds_next(&c)))
@@ -408,10 +408,10 @@ nd_close(OBJ *player) {
 
 void
 do_save(int fd, int argc, char *argv[]) {
-	OBJ *player = FD_PLAYER(fd);
+	dbref player_ref = FD_PLAYER(fd);
 
-	if (object_ref(player) != 1) {
-		nd_writef(player, "Only God can save\n");
+	if (player_ref != 1) {
+		nd_writef(player_ref, "Only God can save\n");
 		return;
 	}
 
@@ -427,23 +427,25 @@ avatar(OBJ *player) {
 
 void
 do_avatar(int fd, int argc, char *argv[]) {
-	OBJ *player = FD_PLAYER(fd);
-	avatar(player);
-	mcp_content_out(object_get(player->location), player);
-	mcp_content_in(object_get(player->location), player);
+	dbref player_ref = FD_PLAYER(fd);
+	OBJ player = obj_get(player_ref);
+	avatar(&player);
+	obj_set(player_ref, &player);
+	mcp_content_out(player.location, player_ref);
+	mcp_content_in(player.location, player_ref);
 }
 
-OBJ *
+dbref
 auth(int fd, char *qsession)
 {
 	char buf[BUFSIZ];
 	FILE *fp;
-	OBJ *player;
+	OBJ player;
 
 	if (!*qsession) {
 		ndc_writef(fd, "No key provided.\n");
 		mcp_auth_fail(fd, 3);
-		return NULL;
+		return NOTHING;
 	}
 
 	warn("AUTH '%s'\n", qsession);
@@ -453,7 +455,7 @@ auth(int fd, char *qsession)
 	if (!fp) {
 		ndc_writef(fd, "No such session\n");
 		mcp_auth_fail(fd, 1);
-		return NULL;
+		return NOTHING;
 	}
 
 	fscanf(fp, "%s", buf);
@@ -461,46 +463,47 @@ auth(int fd, char *qsession)
 
 	warn("lookup_player '%s'\n", buf);
 
-	player = player_get(buf);
+	dbref player_ref = player_get(buf);
 
-	if (!player) {
+	if (player_ref == NOTHING) {
 		ENT eplayer;
 		memset(&eplayer, 0, sizeof(eplayer));
-		player = object_new();
-		player->name = strdup(buf);
-		player->location = eplayer.home = PLAYER_START;
-		player->type = TYPE_ENTITY;
-		player->owner = object_ref(player);
-		player->value = START_PENNIES;
+		player_ref = object_new(&player);
+		player.name = strdup(buf);
+		player.location = eplayer.home = PLAYER_START;
+		player.type = TYPE_ENTITY;
+		player.owner = player_ref;
+		player.value = START_PENNIES;
 		eplayer.flags = EF_PLAYER;
 
-		contents_put(PLAYER_START, object_ref(player));
-		player_put(player);
+		contents_put(PLAYER_START, player_ref);
+		player_put(buf, player_ref);
 
 		birth(&eplayer);
 		spells_birth(&eplayer);
-		avatar(player);
-		reroll(player, player);
+		avatar(&player);
+		reroll(player_ref, &eplayer);
 		eplayer.hp = HP_MAX(&eplayer);
 		eplayer.mp = MP_MAX(&eplayer);
-		ent_set(object_ref(player), &eplayer);
-		st_start(player);
+		ent_set(player_ref, &eplayer);
+		obj_set(player_ref, &player);
+		st_start(player_ref);
 
         }
 
-	FD_PLAYER(fd) = player;
+	FD_PLAYER(fd) = player_ref;
 	ndc_auth(fd, buf);
-	dbref ref = object_ref(player);
+	dbref ref = player_ref;
 	hash_cput(fds_hd, &ref, sizeof(ref), &fd, sizeof(fd));
-        mcp_stats(player);
-        mcp_auth_success(player);
-        mcp_equipment(player);
-	look_around(player);
-        mcp_bars(player);
+        mcp_stats(player_ref);
+        mcp_auth_success(player_ref);
+        mcp_equipment(player_ref);
+	look_around(player_ref);
+        mcp_bars(player_ref);
 	/* enter_room(player, E_ALL); */
 	do_view(fd, 0, NULL);
-	st_run(player, "auth");
-	return player;
+	st_run(player_ref, "auth");
+	return player_ref;
 }
 
 void
@@ -525,16 +528,16 @@ void ndc_vim(int fd, int argc, char *argv[]) {
 	if (!(ndc_flags(fd) & DF_AUTHENTICATED))
 		return;
 
-	OBJ *player = FD_PLAYER(fd);
+	dbref player_ref = FD_PLAYER(fd);
 	int ofs = 1;
 	char const *s = argv[0];
 
 	for (; *s && ofs > 0; s += ofs) {
-		ofs = st_v(player, s);
+		ofs = st_v(player_ref, s);
 		if (ofs < 0)
 			ofs = - ofs;
 		s += ofs;
-		ofs = kill_v(player, s);
+		ofs = kill_v(player_ref, s);
 	}
 }
 
@@ -552,14 +555,9 @@ void ndc_disconnect(int fd) {
 	if (!(ndc_flags(fd) & DF_AUTHENTICATED))
 		return;
 
-	OBJ *player = FD_PLAYER(fd);
+	dbref player_ref = FD_PLAYER(fd);
 	warn("%s(%d) disconnects on fd %d\n",
-			player->name, object_ref(player), fd);
-	OBJ *last_observed = object_get(ent_get(object_ref(player)).last_observed);
-	if (last_observed)
-		observer_remove(last_observed, player);
-
-	FD_PLAYER(fd) = NULL;
-	dbref ref = object_ref(player);
-	hash_vdel(contents_hd, &ref, sizeof(ref), &fd, sizeof(fd));
+			obj_get(player_ref).name, player_ref, fd);
+	FD_PLAYER(fd) = NOTHING;
+	hash_vdel(contents_hd, &player_ref, sizeof(player_ref), &fd, sizeof(fd));
 }

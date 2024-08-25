@@ -95,14 +95,14 @@ const char * e_other(enum exit e);
 morton_t point_rel_idx(point_t p, point_t s, smorton_t w);
 
 void st_update(double dt);
-int st_v(OBJ *player, const char *dir);
-int st_teleport(OBJ *player, struct cmd_dir cd);
-void st_start(OBJ *player);
+int st_v(dbref player_ref, const char *dir);
+int st_teleport(dbref player_ref, struct cmd_dir cd);
+void st_start(dbref player_ref);
 
 void st_init();
 void st_close();
 void st_sync();
-void st_run(OBJ *player, char *symbol);
+void st_run(dbref player_ref, char *symbol);
 void do_stchown(int fd, int argc, char *argv[]);
 void do_streload(int fd, int argc, char *argv[]);
 

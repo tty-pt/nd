@@ -13,7 +13,7 @@ int map_has(dbref thing);
 morton_t map_mwhere(dbref thing);
 void map_where(pos_t p, dbref thing);
 int map_delete(dbref what);
-OBJ *map_get(pos_t at);
+dbref map_get(pos_t at);
 void map_put(pos_t p, dbref thing, int flags);
 
 #endif

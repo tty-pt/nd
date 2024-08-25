@@ -32,8 +32,8 @@
 
 static long owner_hd = -1, sl_hd = -1;
 
-typedef void op_a_t(OBJ *player, enum exit e);
-typedef int op_b_t(OBJ *player, struct cmd_dir cd);
+typedef void op_a_t(dbref player_ref, enum exit e);
+typedef int op_b_t(dbref player_ref, struct cmd_dir cd);
 typedef struct {
 	union {
 		op_a_t *a;
@@ -41,6 +41,7 @@ typedef struct {
 	} op;
 	int type;
 } op_t;
+dbref g_player_ref;
 OBJ *g_player;
 
 enum exit e_map[] = {
@@ -157,12 +158,12 @@ morton_pos(pos_t p, morton_t code)
 }
 
 void
-object_drop(OBJ *where, struct drop **drop)
+object_drop(dbref where_ref, struct drop **drop)
 {
 	pos_t pos;
         register int i;
 
-	map_where(pos, where->location);
+	map_where(pos, obj_get(where_ref).location);
 
 	for (; *drop; drop++)
 		if (random() < (RAND_MAX >> (*drop)->y)) {
@@ -171,7 +172,9 @@ object_drop(OBJ *where, struct drop **drop)
                             yield_v = (*drop)->yield_v;
 
                         if (!yield) {
-                                object_add((*drop)->i, where, &v2);
+				OBJ obj;
+				dbref obj_ref = object_add(&obj, (*drop)->i, where_ref, &v2);
+				obj_set(obj_ref, &obj);
                                 continue;
                         }
 
@@ -179,7 +182,9 @@ object_drop(OBJ *where, struct drop **drop)
 
                         for (i = 0; i < yield; i++) {
 				v2 = XXH32((const char *) pos, sizeof(pos_t), 4 + i);
-                                object_add((*drop)->i, where, &v2);
+				OBJ obj;
+                                dbref obj_ref = object_add(&obj, (*drop)->i, where_ref, &v2);
+				obj_set(obj_ref, &obj);
 			}
                 }
 }
@@ -259,11 +264,9 @@ st_update(double dt)
 	else
 		return;
 
-	for (i = 0; i < db_top; i++) {
-		OBJ *o = object_get(i);
-		if (o->type == TYPE_ENTITY)
-			nd_writef(o, msg);
-	}
+	for (i = 0; i < db_top; i++)
+		if (obj_get(i).type == TYPE_ENTITY)
+			nd_writef(i, msg);
 }
 
 static inline void
@@ -279,7 +282,7 @@ st_pos(pos_t p, dbref loc, enum exit e)
 	/* 		* (morton_t *) p); */
 }
 
-static OBJ *
+static dbref
 st_there(dbref where, enum exit e)
 {
 	pos_t pos;
@@ -288,86 +291,61 @@ st_there(dbref where, enum exit e)
 	return map_get(pos);
 }
 
-static inline void
-reward(OBJ *player, const char *msg, int amount)
-{
-	player->value += amount;
-	nd_writef(player, "You %s. (+%dp)\n", msg, amount);
-}
-
 static inline int
-fee_fail(OBJ *player, char *desc, char *info, int cost)
+fee_fail(dbref player_ref, OBJ *player, char *desc, char *info, int cost)
 {
-	int v = player->value;
-	if (v < cost) {
-		nd_writef(player, "You can't afford to %s. (%dp)\n", desc, cost);
+	if (player->value < cost) {
+		nd_writef(player_ref, "You can't afford to %s. (%dp)\n", desc, cost);
 		return 1;
 	} else {
 		player->value -= cost;
-		nd_writef(player, "%s (-%dp). %s\n",
+		nd_writef(player_ref, "%s (-%dp). %s\n",
 			   desc, cost, info);
 		return 0;
 	}
 }
 
-static inline int
-fee_noname(OBJ *player) {
-	return fee_fail(player, "claim a room", "", ROOM_COST);
-}
-
-static inline void
-wall_around(OBJ *player, enum exit e)
-{
-	OBJ *here = object_get(player->location);
-	ROO *rhere = &here->sp.room;
-	const char *s;
-	for (s = e_other(e); *s; s++) {
-		enum exit e2 = dir_e(*s);
-		OBJ *there = st_there(player->location, e2);
-
-		if ((rhere->exits & e2) && there)
-			rhere->exits ^= e2;
-	}
-}
-
 static int
-st_claim(OBJ *player, OBJ *room) {
+st_claim(dbref player_ref, OBJ *room) {
 	ROO *rroom = &room->sp.room;
 
 	if (!(rroom->flags & RF_TEMP)) {
-		if (room->owner != object_ref(player)) {
-			nd_writef(player, "You don't own this room\n");
+		if (room->owner != player_ref) {
+			nd_writef(player_ref, "You don't own this room\n");
 			return 1;
 		}
 
 		return 0;
 	}
 
-	if (fee_noname(player))
+	OBJ player = obj_get(player_ref);
+	if (fee_fail(player_ref, &player, "claim a room", "", ROOM_COST))
 		return 1;
 
+	obj_set(player_ref, &player);
 	rroom->flags ^= RF_TEMP;
 	CBUG(rroom->flags & RF_TEMP);
-	room->owner = object_ref(player);
+	room->owner = player_ref;
 
 	return 0;
 }
 
 static inline void
-exits_fix(OBJ *player, dbref there_ref, enum exit e)
+exits_fix(dbref there_ref, enum exit e)
 {
-	OBJ *there = object_get(there_ref);
-	ROO *rthere = &there->sp.room;
+	OBJ there = obj_get(there_ref);
+	ROO *rthere = &there.sp.room;
 	const char *s;
 
 	for (s = e_other(e); *s; s++) {
 		enum exit e2 = dir_e(*s);
-		OBJ *othere = st_there(there_ref, e2);
+		dbref othere_ref = st_there(there_ref, e2);
 
-		if (!othere)
+		if (othere_ref == NOTHING)
 			continue;
 
-		ROO *rothere = &othere->sp.room;
+		OBJ othere = obj_get(othere_ref);
+		ROO *rothere = &othere.sp.room;
 
 		if (rothere->flags & RF_TEMP) {
 			continue;
@@ -384,26 +362,27 @@ exits_fix(OBJ *player, dbref there_ref, enum exit e)
 		if (!(rothere->exits & e_simm(e2)))
 			rthere->exits &= ~e2;
 	}
+
+	obj_set(there_ref, &there);
 }
 
 static void
-exits_infer(OBJ *player, dbref here_ref)
+exits_infer(dbref here_ref, ROO *rhere)
 {
-	OBJ *here = object_get(here_ref);
-	ROO *rhere = &here->sp.room;
 	const char *s = "wsnedu";
 
 	for (; *s; s++) {
 		enum exit e = dir_e(*s);
-		OBJ *there = st_there(here_ref, e);
+		dbref there_ref = st_there(here_ref, e);
 
-		if (!there) {
+		if (there_ref == NOTHING) {
                         if (e != E_UP && e != E_DOWN)
 				rhere->exits |= e;
 			continue;
 		}
 
-		ROO *rthere = &there->sp.room;
+		OBJ there = obj_get(there_ref);
+		ROO *rthere = &there.sp.room;
 
 		if (rthere->exits & e_simm(e)) {
 			rhere->exits |= e;
@@ -415,10 +394,10 @@ exits_infer(OBJ *player, dbref here_ref)
 // TODO make more add functions similar and easy to insert here
 
 static inline void
-stones_add(OBJ *where, struct bio *bio, pos_t p) {
+stones_add(dbref where_ref, struct bio *bio, pos_t p) {
 	noise_t v = XXH32((const char *) p, sizeof(pos_t), 0);
 	unsigned char n = v & 0x3, i;
-	static struct object_skeleton stone = {
+	static struct object_skeleton skel = {
                 .name = "stone",
                 .description = "Solid stone(s)",
 		.type = S_TYPE_MINERAL,
@@ -435,75 +414,78 @@ stones_add(OBJ *where, struct bio *bio, pos_t p) {
 
 	noise_t v2 = XXH32((const char *) p, sizeof(pos_t), 0);
 
-        for (i = 0; i < n; i++, v2 >>= 4)
-                object_add(&stone, where, &v2);
+        for (i = 0; i < n; i++, v2 >>= 4) {
+		OBJ stone;
+                dbref stone_ref = object_add(&stone, &skel, where_ref, &v2);
+		obj_set(stone_ref, &stone);
+	}
 }
 
-static OBJ *
-st_room_at(OBJ *player, pos_t pos)
+static dbref
+st_room_at(pos_t pos)
 {
 	struct bio *bio;
 	bio = noise_point(pos);
-        OBJ *there = object_add(&biomes[bio->bio_idx], NULL, bio);
-	ROO *rthere = &there->sp.room;
-	map_put(pos, object_ref(there), DB_NOOVERWRITE);
-	exits_infer(player, object_ref(there));
+	OBJ there;
+	dbref there_ref = object_add(&there, &biomes[bio->bio_idx], NOTHING, bio);
+	ROO *rthere = &there.sp.room;
+	map_put(pos, there_ref, DB_NOOVERWRITE);
+	exits_infer(there_ref, rthere);
 
-	if (pos[2] != 0)
-		return there;
+	if (pos[2] != 0) {
+		obj_set(there_ref, &there);
+		return there_ref;
+	}
 
 	rthere->floor = bio->bio_idx;
-	entities_add(there, bio->bio_idx, bio->pd.n);
-        stones_add(there, bio, pos);
-	plants_add(there, bio, pos);
-	return there;
+	obj_set(there_ref, &there);
+	entities_add(there_ref, bio->bio_idx, bio->pd.n);
+        stones_add(there_ref, bio, pos);
+	plants_add(there_ref, bio, pos);
+	return there_ref;
 }
 
 void
 do_bio(int fd, int argc, char *argv[]) {
-	OBJ *player = FD_PLAYER(fd);
+	dbref player_ref = FD_PLAYER(fd);
 	struct bio *bio;
 	pos_t pos;
-	map_where(pos, player->location);
+	map_where(pos, obj_get(player_ref).location);
 	bio = noise_point(pos);
-	nd_writef(player, "tmp %d rn %u bio %s(%d)\n",
+	nd_writef(player_ref, "tmp %d rn %u bio %s(%d)\n",
 		bio->tmp, bio->rn, biomes[bio->bio_idx].name, bio->bio_idx);
 }
 
-static OBJ *
-st_room(OBJ *player, enum exit e)
+static dbref
+st_room(dbref location, enum exit e)
 {
 	pos_t pos;
-	OBJ *there;
-
-	st_pos(pos, player->location, e);
-	there = st_room_at(player, pos);
-
-	return there;
+	st_pos(pos, location, e);
+	return st_room_at(pos);
 }
 
-static void
-e_move(OBJ *player, enum exit e) {
-	int ref = object_ref(player);
-	ENT eplayer = ent_get(ref);
-	OBJ *loc = object_get(player->location),
-	    *dest;
-	ROO *rloc = &loc->sp.room;
+static dbref
+e_move(dbref player_ref, enum exit e) {
+	OBJ player = obj_get(player_ref);
+	ENT eplayer = ent_get(player_ref);
+	OBJ loc = obj_get(player.location);
+	dbref dest_ref;
+	ROO *rloc = &loc.sp.room;
 	char const *dwts = "door";
 	int door = 0;
 
 	if (eplayer.klock) {
-		nd_writef(player, "You can't move while being targeted.\n");
-		return;
+		nd_writef(player_ref, "You can't move while being targeted.\n");
+		return NOTHING;
 	}
 
-	if (!map_has(player->location) || !(rloc->exits & e)) {
-		nd_writef(player, "You can't go that way.\n");
-		return;
+	if (!map_has(player.location) || !(rloc->exits & e)) {
+		nd_writef(player_ref, "You can't go that way.\n");
+		return NOTHING;
 	}
 
-	stand_silent(player, &eplayer);
-	ent_set(ref, &eplayer);
+	stand_silent(player_ref, &eplayer);
+	ent_set(player_ref, &eplayer);
 
 	if (rloc->doors & e) {
 		if (e == E_UP || e == E_DOWN) {
@@ -512,155 +494,168 @@ e_move(OBJ *player, enum exit e) {
 		} else
 			door = 1;
 
-		nd_writef(player, "You open the %s.\n", dwts);
+		nd_writef(player_ref, "You open the %s.\n", dwts);
 	}
 
-	nd_writef(player, "You go %s%s%s.\n", ANSI_FG_BLUE ANSI_BOLD, e_name(e), ANSI_RESET);
-	nd_owritef(player, "%s goes %s.\n", player->name, e_name(e));
+	nd_writef(player_ref, "You go %s%s%s.\n", ANSI_FG_BLUE ANSI_BOLD, e_name(e), ANSI_RESET);
+	nd_owritef(player_ref, "%s goes %s.\n", player.name, e_name(e));
 
-	dest = st_there(player->location, e);
-	if (!dest)
-		dest = st_room(player, e);
+	dest_ref = st_there(player.location, e);
+	if (dest_ref == NOTHING)
+		dest_ref = st_room(player.location, e);
 
-	enter(player, dest, e);
+	enter(player_ref, dest_ref, e);
 
-	nd_owritef(player, "%s comes in from the %s.\n", player->name, e_name(e_simm(e)));
+	nd_owritef(player_ref, "%s comes in from the %s.\n", player.name, e_name(e_simm(e)));
 
 	if (door)
-		nd_writef(player, "You close the %s.\n", dwts);
+		nd_writef(player_ref, "You close the %s.\n", dwts);
+
+	return dest_ref;
 }
 
-OBJ *
-room_clean(OBJ *player, OBJ *here)
+dbref
+room_clean(dbref here_ref)
 {
-	OBJ *tmp;
-	ROO *rhere = &here->sp.room;
+	dbref tmp_ref;
 
-	if (!(rhere->flags & RF_TEMP))
-		return here;
+	if (!(obj_get(here_ref).sp.room.flags & RF_TEMP))
+		return here_ref;
 
-	struct hash_cursor c = contents_iter(object_ref(here));
-	while ((tmp = contents_next(&c))) {
-		if (tmp->type != TYPE_ENTITY)
+	struct hash_cursor c = contents_iter(here_ref);
+	while ((tmp_ref = contents_next(&c))) {
+		if (obj_get(tmp_ref).type != TYPE_ENTITY)
 			continue;
 
-		if (ent_get(object_ref(tmp)).flags & EF_PLAYER)
-			return here;
+		if (ent_get(tmp_ref).flags & EF_PLAYER)
+			return here_ref;
 	}
 
-	recycle(player, here);
-	return NULL;
+	recycle(here_ref);
+	return NOTHING;
 }
 
 static void
-walk(OBJ *player, enum exit e) {
-	e_move(player, e);
+walk(dbref player_ref, enum exit e) {
+	e_move(player_ref, e);
 }
 
 static void
-carve(OBJ *player, enum exit e)
+carve(dbref player_ref, enum exit e)
 {
-	OBJ *there = NULL,
-	    *here = object_get(player->location);
-	ROO *rhere = &here->sp.room;
+	OBJ player = obj_get(player_ref);
+	dbref here_ref = player.location, there_ref = here_ref;
+	OBJ here = obj_get(here_ref);
+	ROO *rhere = &here.sp.room;
 	int wall = 0;
 
-	if (!e_ground(player->location, e)) {
-		if (st_claim(player, here))
+	if (!e_ground(here_ref, e)) {
+		if (st_claim(player_ref, &here))
 			return;
-
-		if (player->value < ROOM_COST) {
-			nd_writef(player, "You can't pay for that room.\n");
-			return;
-		}
 
 		rhere->exits |= e;
+		obj_set(here_ref, &here);
 
-		there = st_there(player->location, e);
-		if (!there)
-			there = st_room(player, e);
-		/* wall_around(cmd, exit); */
+		there_ref = st_there(here_ref, e);
+		if (there_ref == NOTHING)
+			there_ref = st_room(here_ref, e);
 		wall = 1;
 	}
 
-	e_move(player, e);
-	there = object_get(player->location);
-
-	if (here == there)
+	there_ref = e_move(player_ref, e);
+	if (there_ref == NOTHING)
 		return;
 
-	st_claim(player, there);
+	OBJ there = obj_get(there_ref);
+	st_claim(player_ref, &there); // FIXME check success in advance
 
-	if (wall)
-		wall_around(player, e_simm(e));
+	if (wall) {
+		ROO *rthere = &there.sp.room;
+		const char *s;
+		for (s = e_other(e_simm(e)); *s; s++) {
+			enum exit e2 = dir_e(*s);
+
+			if ((rthere->exits & e2) &&
+					st_there(there_ref, e2) != NOTHING)
+
+				rthere->exits ^= e2;
+		}
+	}
+
+	obj_set(there_ref, &there);
 }
 
 static void
-uncarve(OBJ *player, enum exit e)
+uncarve(dbref player_ref, enum exit e)
 {
+	OBJ player = obj_get(player_ref);
 	const char *s0 = "is";
-	OBJ *there,
-	    *here = object_get(player->location);
-	ROO *rhere = &here->sp.room;
-	int ht, cd = e_ground(player->location, e);
+	dbref here_ref = player.location, there_ref;
+	OBJ here = obj_get(here_ref);
+	ROO *rhere = &here.sp.room;
+	int ht, cd = e_ground(here_ref, e);
 
 	if (cd) {
 		ht = rhere->flags & RF_TEMP;
-		e_move(player, e);
-		there = object_get(player->location);
-
-		if (here == there)
+		there_ref = e_move(player_ref, e);
+		if (there_ref == NOTHING)
 			return;
 	} else {
 		if (!(rhere->exits & e)) {
-                        nd_writef(player, "No exit there.\n");
+                        nd_writef(player_ref, "No exit there.\n");
                         return;
                 }
 
-		there = st_there(player->location, e);
+		there_ref = st_there(here_ref, e);
 
-		if (!there) {
-			nd_writef(player, "No room there.\n");
+		if (there_ref == NOTHING) {
+			nd_writef(player_ref, "No room there.\n");
 			return;
 		}
 		s0 = "at";
 	}
 
-	ROO *rthere = &there->sp.room;
+	OBJ there = obj_get(there_ref);
+	ROO *rthere = &there.sp.room;
 
-	if ((rthere->flags & RF_TEMP) || there->owner != object_ref(player)) {
-		nd_writef(player, "You don't own th%s room.\n", s0);
+	if ((rthere->flags & RF_TEMP) || there.owner != player_ref) {
+		nd_writef(player_ref, "You don't own th%s room.\n", s0);
 		return;
 	}
 
 	rthere->flags ^= RF_TEMP;
 	CBUG(!(rthere->flags & RF_TEMP));
-	exits_infer(player, object_ref(there));
+	exits_infer(there_ref, rthere);
 	if (cd) {
 		if (ht && (rthere->doors & e_simm(e)))
 			rthere->doors &= ~e_simm(e);
+		obj_set(there_ref, &there);
 	} else
-		room_clean(player, there);
+		room_clean(there_ref);
 
-	reward(player, "collect your materials", ROOM_COST);
+	player = obj_get(player_ref);
+	player.value += ROOM_COST;
+	nd_writef(player_ref, "You collect your materials. (+%dp)\n", ROOM_COST);
+	obj_set(player_ref, &player);
 }
 
 static void
-unwall(OBJ *player, enum exit e)
+unwall(dbref player_ref, enum exit e)
 {
 	int a, b, c, d;
-	OBJ *there,
-	    *here = object_get(player->location);
-	ROO *rhere = &here->sp.room;
+	dbref there_ref, here_ref = obj_get(player_ref).location;
+	OBJ here = obj_get(here_ref);
+	ROO *rhere = &here.sp.room;
 
-	a = here->owner == object_ref(player);
+	a = here.owner == player_ref;
 	b = rhere->flags & RF_TEMP;
-	there = st_there(player->location, e);
+	there_ref = st_there(here_ref, e);
 
-	ROO *rthere = &there->sp.room;
+	OBJ there = obj_get(there_ref);
+	ROO *rthere = &there.sp.room;
 
-	if (there) {
-		c = there->owner == object_ref(player);
+	if (there_ref != NOTHING) {
+		c = there.owner == player_ref;
 		d = rthere->flags & RF_TEMP;
 	} else {
 		c = 0;
@@ -669,222 +664,249 @@ unwall(OBJ *player, enum exit e)
 
 	if (!((a && !b && (d || c))
 	    || (c && !d && b))) {
-		nd_writef(player, "You can't do that here.\n");
+		nd_writef(player_ref, "You can't do that here.\n");
 		return;
 	}
 
 	if (rhere->exits & e) {
-		nd_writef(player, "There's an exit here already.\n");
+		nd_writef(player_ref, "There's an exit here already.\n");
 		return;
 	}
 
-	debug("will create exit here %d there %d dir %c\n", object_ref(here), object_ref(there), e_dir(e));
+	debug("will create exit here %d there %d dir %c\n", here_ref, there_ref, e_dir(e));
 	rhere->exits |= e;
-	e_move(player, e);
-
-	there = object_get(player->location);
-	rthere = &there->sp.room;
-
-	if (here == there)
+	there_ref = e_move(player_ref, e);
+	if (there_ref == NOTHING)
 		return;
 
+	there = obj_get(there_ref);
+	rthere = &there.sp.room;
 	rthere->exits |= e_simm(e);
-	nd_writef(player, "You tear down the wall.\n");
+	obj_set(there_ref, &there);
+	nd_writef(player_ref, "You tear down the wall.\n");
 }
 
 static inline int
-gexit_claim(OBJ *player, enum exit e)
+gexit_claim(dbref player_ref, enum exit e)
 {
 	int a, b, c, d;
-	OBJ *here = st_there(player->location, e),
-	    *there = object_get(player->location);
-	ROO *rthere = &there->sp.room;
+	OBJ player = obj_get(player_ref);
+	dbref here_ref = player.location,
+	      there_ref = st_there(player.location, e);
+	OBJ here = obj_get(here_ref);
+	OBJ there = obj_get(there_ref);
+	ROO *rthere = &there.sp.room;
 
-	a = here && here->owner == object_ref(player);
+	a = here_ref != NOTHING && here.owner == player_ref;
 	c = rthere->flags & RF_TEMP;
-	b = !c && there->owner == object_ref(player);
-	d = e_ground(player->location, e);
+	b = !c && there.owner == player_ref;
+	d = e_ground(here_ref, e);
 
 	if (a && (b || c))
 		return 0;
 
-	if (!here || (here->sp.room.flags & RF_TEMP)) {
+	if (here_ref != NOTHING || (here.sp.room.flags & RF_TEMP)) {
 		if (b)
 			return 0;
-		if (d || c)
-			return st_claim(player, there);
+		if (d || c) // FIXME
+			return st_claim(player_ref, &there);
 	}
 
-	nd_writef(player, "You can't claim that exit.\n");
+	nd_writef(player_ref, "You can't claim that exit.\n");
 	return 1;
 }
 
 static inline int
-gexit_claim_walk(OBJ *player, enum exit e)
+gexit_claim_walk(dbref player_ref, enum exit e)
 {
-	OBJ *here = object_get(player->location);
-	ROO *rhere = &here->sp.room;
+	OBJ player = obj_get(player_ref);
+	dbref here_ref = player.location;
+	OBJ here = obj_get(here_ref);
+	ROO *rhere = &here.sp.room;
 
 	if (!(rhere->exits & e)) {
-		nd_writef(player, "No exit here.\n");
+		nd_writef(player_ref, "No exit here.\n");
 		return 1;
 	}
 
-	e_move(player, e);
-
-	OBJ *there = object_get(player->location);
-
-	if (here == there)
+	dbref there_ref = e_move(player_ref, e);
+	if (there_ref == NOTHING)
 		return 1;
 
-	ROO *rthere = &there->sp.room;
+	player.location = there_ref;
+	obj_set(player_ref, &player);
+	OBJ there = obj_get(there_ref);
+	ROO *rthere = &there.sp.room;
 
 	CBUG(!(rthere->exits & e_simm(e)));
 
-	return gexit_claim(player, e_simm(e));
+	return gexit_claim(player_ref, e_simm(e));
 }
 
 static void
-e_wall(OBJ *player, enum exit e)
+e_wall(dbref player_ref, enum exit e)
 {
-	if (gexit_claim_walk(player, e))
+	if (gexit_claim_walk(player_ref, e))
 		return;
 
-	OBJ *here = object_get(player->location);
-	ROO *rhere = &here->sp.room;
+	OBJ player = obj_get(player_ref);
+	dbref here_ref = player.location;
+	OBJ here = obj_get(here_ref);
+	ROO *rhere = &here.sp.room;
 
 	rhere->exits &= ~e_simm(e);
+	obj_set(here_ref, &here);
 
-	OBJ *there = st_there(player->location, e_simm(e));
+	dbref there_ref = st_there(here_ref, e_simm(e));
 
-	if (there) {
-		ROO *rthere = &there->sp.room;
+	if (there_ref != NOTHING) {
+		OBJ there = obj_get(there_ref);
+		ROO *rthere = &there.sp.room;
 		rthere->exits &= ~e;
+		obj_set(there_ref, &there);
 	}
 
-	nd_writef(player, "You build a wall.\n");
+	nd_writef(player_ref, "You build a wall.\n");
 }
 
 static void
-door(OBJ *player, enum exit e)
+door(dbref player_ref, enum exit e)
 {
-	if (gexit_claim_walk(player, e))
+	if (gexit_claim_walk(player_ref, e))
 		return;
 
-	OBJ *where = object_get(player->location);
-	ROO *rwhere = &where->sp.room;
-
+	OBJ player = obj_get(player_ref);
+	dbref where_ref = player.location;
+	OBJ where = obj_get(where_ref);
+	ROO *rwhere = &where.sp.room;
 	rwhere->doors |= e_simm(e);
+	obj_set(where_ref, &where);
 
-	where = st_there(player->location, e_simm(e));
+	where_ref = st_there(where_ref, e_simm(e));
 
-	if (where) {
-		rwhere = &where->sp.room;
+	if (where_ref == NOTHING) {
+		where = obj_get(where_ref);
+		rwhere = &where.sp.room;
 		rwhere->doors |= e;
+		obj_set(where_ref, &where);
 	}
 
-	nd_writef(player, "You place a door.\n");
+	nd_writef(player_ref, "You place a door.\n");
 }
 
 static void
-undoor(OBJ *player, enum exit e)
+undoor(dbref player_ref, enum exit e)
 {
-	if (gexit_claim_walk(player, e))
+	if (gexit_claim_walk(player_ref, e))
 		return;
 
-	OBJ *where = object_get(player->location);
-	ROO *rwhere = &where->sp.room;
-
+	OBJ player = obj_get(player_ref);
+	dbref where_ref = player.location;
+	OBJ where = obj_get(where_ref);
+	ROO *rwhere = &where.sp.room;
 	rwhere->doors &= ~e_simm(e);
+	obj_set(where_ref, &where);
 
-	where = st_there(player->location, e_simm(e));
+	where_ref = st_there(where_ref, e_simm(e));
 
-	if (where) {
-		rwhere = &where->sp.room;
+	if (where_ref != NOTHING) {
+		where = obj_get(where_ref);
+		rwhere = &where.sp.room;
 		rwhere->doors &= ~e;
+		obj_set(where_ref, &where);
 	}
 
-	nd_writef(player, "You remove a door.\n");
+	nd_writef(player_ref, "You remove a door.\n");
 }
 
 static int
-tell_pos(OBJ *player, struct cmd_dir cd) {
+tell_pos(dbref player_ref, struct cmd_dir cd) {
 	pos_t pos;
-	OBJ *target = cd.rep == 1 ? player : object_get((dbref) cd.rep);
+	dbref target_ref = cd.rep == 1 ? player_ref : cd.rep;
+	OBJ target = obj_get(target_ref);
 	int ret = 1;
 
-	if (target->type != TYPE_ENTITY) {
-		nd_writef(player, "Invalid object type.\n");
+	if (target.type != TYPE_ENTITY) {
+		nd_writef(player_ref, "Invalid object type.\n");
 		return 0;
 	}
 
-	map_where(pos, target->location);
-	nd_writef(player, "0x%llx\n", MORTON_READ(pos));
+	map_where(pos, target.location);
+	nd_writef(player_ref, "0x%llx\n", MORTON_READ(pos));
 	return ret;
 }
 
 int
-st_teleport(OBJ *player, struct cmd_dir cd)
+st_teleport(dbref player_ref, struct cmd_dir cd)
 {
 	pos_t pos;
-	OBJ *there;
 	int ret = 0;
 	if (cd.rep == 1)
 		cd.rep = 0;
 	if (cd.dir == '?') {
 		// X6? teleport to chivas
-		OBJ *target = object_get((dbref) cd.rep);
-		if (target->type == TYPE_ENTITY) {
-			map_where(pos, target->location);
+		dbref target_ref = cd.rep;
+		OBJ target = obj_get(target_ref);
+		if (target.type == TYPE_ENTITY) {
+			map_where(pos, target.location);
 			ret = 1;
 		}
 	} else
 		memcpy(pos, &cd.rep, sizeof(cd.rep));
-	there = map_get(pos);
-	if (!there)
-		there = st_room_at(player, pos);
-	CBUG(!there);
+
+	dbref there_ref = map_get(pos);
+	if (there_ref == NOTHING)
+		there_ref = st_room_at(pos);
+	CBUG(there_ref == NOTHING);
+
 	/* if (!eplayer->gpt) */
-	nd_writef(player, "Teleporting to 0x%llx.\n", cd.rep);
-	enter(player, there, E_NULL);
+	nd_writef(player_ref, "Teleporting to 0x%llx.\n", cd.rep);
+	enter(player_ref, there_ref, E_NULL);
 	return ret;
 }
 
-void st_start(OBJ *player) {
+void st_start(dbref player_ref) {
 	struct cmd_dir cmd_dir = { .rep = 0 };
-	st_teleport(player, cmd_dir);
+	st_teleport(player_ref, cmd_dir);
 }
 
 static int
-pull(OBJ *player, struct cmd_dir cd)
+pull(dbref player_ref, struct cmd_dir cd)
 {
 	pos_t pos;
 	enum exit e = cd.e;
-	OBJ *there, *here, *what;
+	OBJ player = obj_get(player_ref);
+	dbref here_ref = player.location, there_ref;
 
 	if (e == E_NULL)
 		return 0;
 
-	here = object_get(player->location);
-	what = object_get((dbref) cd.rep);
+	dbref what_ref = cd.rep;
 
-	ROO *rhere = &here->sp.room;
-
-	if (!(rhere->exits & e)
-	    || !what
-	    || what->type != TYPE_ROOM
-	    || what->owner != object_ref(player)
-	    || ((there = st_there(player->location, e))
-		&& room_clean(player, there) == there))
-	{
-		nd_writef(player, "You cannot do that.\n");
+	if (what_ref == NOTHING) {
+		nd_writef(player_ref, "You cannot do that.\n");
 		return 1;
 	}
 
-	st_pos(pos, player->location, e);
+	OBJ what = obj_get(what_ref);
+
+	OBJ here = obj_get(here_ref);
+	ROO *rhere = &here.sp.room;
+
+	if (!(rhere->exits & e)
+	    || what.type != TYPE_ROOM
+	    || what.owner != player_ref
+	    || ((there_ref = st_there(here_ref, e))
+		&& room_clean(there_ref) == there_ref))
+	{
+		nd_writef(player_ref, "You cannot do that.\n");
+		return 1;
+	}
+
+	st_pos(pos, player.location, e);
 	map_put(pos, cd.rep, 0);
-	exits_fix(player, cd.rep, e);
-	e_move(player, e);
+	exits_fix(cd.rep, e);
+	e_move(player_ref, e);
 	return 1;
 }
 
@@ -919,18 +941,19 @@ st_cmd_dir(struct cmd_dir *res, const char *cmd)
 	return ofs;
 }
 
-static void may_look(OBJ *player, morton_t old_loc) {
-	morton_t new_loc = map_mwhere(player->location);
+static void may_look(dbref player_ref, morton_t old_loc) {
+	OBJ player = obj_get(player_ref);
+	morton_t new_loc = map_mwhere(player.location);
 	if (old_loc == new_loc)
 		return;
-	look_around(player);
-	view(player);
+	look_around(player_ref);
+	view(player_ref);
 }
 
 int
-st_v(OBJ *player, char const *opcs)
+st_v(dbref player_ref, char const *opcs)
 {
-	morton_t old_loc = map_mwhere(player->location);
+	morton_t old_loc = map_mwhere(obj_get(player_ref).location);
 	struct cmd_dir cd;
 	char const *s = opcs;
 
@@ -946,21 +969,21 @@ st_v(OBJ *player, char const *opcs)
 
 		if (aop) {
 			if (cd.e == E_NULL) {
-				may_look(player, old_loc);
+				may_look(player_ref, old_loc);
 				return opcs - s;
 			}
 
 			ofs ++;
 			int j;
 			for (j = 0; j < cd.rep; j++)
-				aop(player, cd.e);
+				aop(player_ref, cd.e);
 		} else
-			ofs += op.op.b(player, cd);
+			ofs += op.op.b(player_ref, cd);
 
 		s += ofs;
 	}
 
-	may_look(player, old_loc);
+	may_look(player_ref, old_loc);
 	return s - opcs;
 }
 
@@ -973,7 +996,7 @@ void
 echo(char *fmt, ...) {
 	va_list va;
 	va_start(va, fmt);
-	nd_dwritef(g_player, fmt, va);
+	nd_dwritef(g_player_ref, fmt, va);
 	va_end(va);
 };
 
@@ -981,7 +1004,7 @@ void
 oecho(char *format, ...) {
 	va_list args;
 	va_start(args, format);
-	nd_owritef(g_player, format, args);
+	nd_owritef(g_player_ref, format, args);
 	va_end(args);
 }
 
@@ -1015,16 +1038,16 @@ st_key_new(uint64_t key, unsigned shift) {
 }
 
 void
-st_put(int owner, uint64_t key, unsigned shift) {
+st_put(dbref owner_ref, uint64_t key, unsigned shift) {
 	char buf[BUFSIZ];
 	struct st_key st_key = st_key_new(key, shift);
 	size_t len = snprintf(buf, sizeof(buf), "var/nd/st/%u/", shift);
 	mkdir(buf, 0750);
 	snprintf(buf + len, sizeof(buf) - len, "%llu", key >> shift);
 	mkdir(buf, 0750);
-	struct passwd *pw = getpwnam(object_get(owner)->name);
+	struct passwd *pw = getpwnam(obj_get(owner_ref).name);
 	chown(buf, pw->pw_uid, pw->pw_gid);
-	st_open(st_key, owner);
+	st_open(st_key, owner_ref);
 }
 
 void
@@ -1060,7 +1083,7 @@ st_close() {
 	hash_close(owner_hd);
 }
 
-typedef void (*st_run_cb)(void *player);
+typedef void (*st_run_cb)(dbref player_ref);
 
 int
 st_get(uint64_t key, unsigned shift) {
@@ -1085,9 +1108,9 @@ _st_can(int ref, uint64_t key, unsigned shift) {
 }
 
 static long int
-st_hish_shift(OBJ *player, uint64_t position)
+st_hish_shift(dbref player_ref, uint64_t position)
 {
-	int ref = object_ref(player);
+	int ref = player_ref;
 
 	if (_st_can(ref, 0, 64))
 		return 64;
@@ -1100,7 +1123,7 @@ st_hish_shift(OBJ *player, uint64_t position)
 }
 
 inline static void
-_st_run(OBJ *player, char *symbol, uint64_t key, unsigned shift) {
+_st_run(dbref player_ref, char *symbol, uint64_t key, unsigned shift) {
 	struct st_key st_key = st_key_new(key, shift);
 	void *sl;
 
@@ -1117,67 +1140,77 @@ _st_run(OBJ *player, char *symbol, uint64_t key, unsigned shift) {
 	}
 
 	fprintf(stderr, "X");
-	(*cb)(player);
+	(*cb)(player_ref);
 }
 
 void
-st_run(OBJ *player, char *symbol) {
-	uint64_t position = map_mwhere(player->location);
+st_run(dbref player_ref, char *symbol) {
+	uint64_t position = map_mwhere(obj_get(player_ref).location);
 	int i;
-	g_player = player;
+	g_player_ref = player_ref;
 
-	_st_run(player, symbol, 0, 64);
+	_st_run(player_ref, symbol, 0, 64);
 
 	for (i = 63; i >= 0; i--)
-		_st_run(player, symbol, position, i);
+		_st_run(player_ref, symbol, position, i);
 
 	fprintf(stderr, "\n");
 }
 
 void
 do_stchown(int fd, int argc, char *argv[]) {
-	OBJ *player = FD_PLAYER(fd);
+	dbref player_ref = FD_PLAYER(fd);
 
 	if (argc < 2) {
-		nd_writef(player, "Requires at least an argument\n");
+		nd_writef(player_ref, "Requires at least an argument\n");
 		return;
 	}
 
-	OBJ *who = player_get(argv[1]);
+	dbref who_ref = player_get(argv[1]);
 
-	if (!who || who->type != TYPE_ENTITY || !(ent_get(object_ref(who)).flags & EF_PLAYER)) {
-		nd_writef(player, "Invalid target\n");
+	if (who_ref == NOTHING) {
+		nd_writef(player_ref, "Invalid target\n");
 		return;
 	}
+
+	OBJ who = obj_get(who_ref);
+
+	if (who.type != TYPE_ENTITY || !(ent_get(who_ref).flags & EF_PLAYER)) {
+		nd_writef(player_ref, "Invalid target\n");
+		return;
+	}
+
+	OBJ player = obj_get(player_ref);
 
 	uint64_t position = argc > 2
 		? strtoull(argv[3], NULL, 10)
-		: map_mwhere(player->location);
+		: map_mwhere(player.location);
 
-	long int high_shift = st_hish_shift(player, position);
+	long int high_shift = st_hish_shift(player_ref, position);
 
 	unsigned shift = argc < 3 ? high_shift : strtoul(argv[2], NULL, 10);
 
 	long long unsigned key = shift > 63 ? 0 : position;
 
 	if (high_shift < shift) {
-		nd_writef(player, "Permission denied\n");
+		nd_writef(player_ref, "Permission denied\n");
 		return;
 	}
 
-	st_put(object_ref(who), key, shift);
-	nd_writef(player, "Set shift %d ownership to %s\n", shift, who->name);
+	st_put(who_ref, key, shift);
+	nd_writef(player_ref, "Set shift %d ownership to %s\n", shift, who.name);
 }
 
 void
 do_streload(int fd, int argc, char *argv[]) {
-	OBJ *player = FD_PLAYER(fd);
+	dbref player_ref = FD_PLAYER(fd);
+	OBJ player = obj_get(player_ref);
 
 	uint64_t position = argc > 2
 		? strtoull(argv[2], NULL, 10)
-		: map_mwhere(player->location);
+		: map_mwhere(player.location);
 
-	long int high_shift = st_hish_shift(player, position);
+	long int high_shift = st_hish_shift(player_ref, position);
 
 	unsigned shift = argc < 2 ? high_shift : strtoul(argv[1], NULL, 10);
 
@@ -1188,14 +1221,14 @@ do_streload(int fd, int argc, char *argv[]) {
 	void *sl;
 
 	if (hash_cget(owner_hd, &owner, &st_key, sizeof(st_key)) == -1
-			|| owner != object_ref(player))
+			|| owner != player_ref)
 	{
-		nd_writef(player, "Permission denied\n");
+		nd_writef(player_ref, "Permission denied\n");
 		return;
 	}
 
 	if (hash_cget(sl_hd, &sl, &st_key, sizeof(st_key)) == -1) {
-		nd_writef(player, "Not open\n");
+		nd_writef(player_ref, "Not open\n");
 		return;
 	}
 

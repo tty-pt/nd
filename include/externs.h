@@ -6,7 +6,7 @@
 #include "object.h"
 
 /* from entity.c */
-void reroll(OBJ *player, OBJ *thing);
+void reroll(dbref player_ref, ENT *eplayer);
 void do_reroll(int fd, int argc, char *argv[]);
 
 /* from timequeue.c */
@@ -43,14 +43,14 @@ extern void do_buy(int fd, int argc, char *argv[]);
 extern void do_sell(int fd, int argc, char *argv[]);
 
 /* from kill.c */
-extern void do_kill(int fd, int argc, char *argv[]);
+extern void do_fight(int fd, int argc, char *argv[]);
 extern void do_advitam(int fd, int argc, char *argv[]);
 extern void do_heal(int fd, int argc, char *argv[]);
 extern void do_status(int fd, int argc, char *argv[]);
 extern void do_train(int fd, int argc, char *argv[]);
 extern void do_sit(int fd, int argc, char *argv[]);
 extern void do_stand(int fd, int argc, char *argv[]);
-extern int kill_v(OBJ *player, const char *cmdstr);
+extern int kill_v(dbref player_ref, const char *cmdstr);
 
 /* From move.c */
 extern void do_get(int fd, int argc, char *argv[]);

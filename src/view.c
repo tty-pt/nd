@@ -97,9 +97,10 @@ dr_room(char *buf, view_tile_t *t, const char *bg)
 }
 
 static inline unsigned
-floor_get(OBJ *what) {
-	CBUG(what->type != TYPE_ROOM);
-	ROO *rwhat = &what->sp.room;
+floor_get(dbref what_ref) {
+	OBJ what = obj_get(what_ref);
+	CBUG(what.type != TYPE_ROOM);
+	ROO *rwhat = &what.sp.room;
 	unsigned char floor = rwhat->floor;
 
 	if (floor > BIOME_VOLCANIC)
@@ -217,7 +218,7 @@ dr_hs_n(char *b, view_tile_t *t)
 	     bg = BIOME_BG(
 		     t->room < 0
 		     ? t->bio_idx
-		     : floor_get(object_get(t->room))) ;
+		     : floor_get(t->room)) ;
 	     t < t_max ;
 	     bg = BIOME_BG(floor),
 	     b = dr_h(b, bg, wp, w, toggle),
@@ -280,9 +281,7 @@ view_draw(view_t view) {
 }
 
 static inline void
-view_build_exit(view_tile_t *t, OBJ *loc, enum exit e) {
-	ROO *rloc = &loc->sp.room;
-
+view_build_exit(view_tile_t *t, ROO *rloc, enum exit e) {
 	if (rloc->exits & e) {
 		t->exits |= e;
 		t->doors |= rloc->doors & e;
@@ -290,26 +289,24 @@ view_build_exit(view_tile_t *t, OBJ *loc, enum exit e) {
 }
 
 static inline void
-view_build_exit_z(view_tile_t *t, OBJ *loc, enum exit e) {
-	ROO *rloc = &loc->sp.room;
-
+view_build_exit_z(view_tile_t *t, ROO *rloc, enum exit e) {
 	if (rloc->exits & e)
 		t->exits |= e;
 }
 
 static inline void
-view_build_exit_s(OBJ *player, view_tile_t *t,
-		  OBJ *loc, pos_t p, enum exit e) {
+view_build_exit_s(view_tile_t *t, pos_t p, enum exit e) {
 	pos_t pa;
 	pos_move(pa, p, e);
-	OBJ *tmp = map_get(pa);
+	dbref tmp_ref = map_get(pa);
 
-	if (!tmp) {
+	if (tmp_ref == NOTHING) {
 		t->exits |= e;
 		return;
 	}
 
-	ROO *rtmp = &tmp->sp.room;
+	OBJ tmp = obj_get(tmp_ref);
+	ROO *rtmp = &tmp.sp.room;
 
 	// FIXME not returning correct room (at least for E_SOUTH)
 	/* debug("here 0x%llx -> 0x%llx (%d)\n", */
@@ -325,17 +322,17 @@ view_build_exit_s(OBJ *player, view_tile_t *t,
 }
 
 static inline ucoord_t
-view_build_flags(OBJ *loc) {
-	struct hash_cursor c = contents_iter(object_ref(loc));
-	OBJ *tmp;
+view_build_flags(dbref loc_ref) {
+	struct hash_cursor c = contents_iter(loc_ref);
+	dbref tmp_ref;
 	ucoord_t flags = 0;
 
-	while ((tmp = contents_next(&c))) {
-		switch (tmp->type) {
+	while ((tmp_ref = contents_next(&c))) {
+		switch (obj_get(tmp_ref).type) {
 		case TYPE_ENTITY:
 			flags |= VTF_ENTITY;
 
-			if (ent_get(object_ref(tmp)).flags & EF_SHOP)
+			if (ent_get(tmp_ref).flags & EF_SHOP)
 				flags |= VTF_SHOP;
 
 			break;
@@ -350,28 +347,27 @@ view_build_flags(OBJ *loc) {
 }
 
 static void
-view_build_tile(OBJ *player,
-		struct bio *n, OBJ *loc,
-		view_tile_t *t, pos_t p)
+view_build_tile(struct bio *n, dbref loc_ref, view_tile_t *t, pos_t p)
 {
-	t->room = object_ref(loc);
-	if (loc) {
-		ROO *rloc = &loc->sp.room;
-		view_build_exit(t, loc, E_EAST);
-		view_build_exit(t, loc, E_NORTH);
-		view_build_exit(t, loc, E_WEST);
-		view_build_exit(t, loc, E_SOUTH);
-		view_build_exit_z(t, loc, E_UP);
-		view_build_exit_z(t, loc, E_DOWN);
-		t->flags = view_build_flags(loc);
-		t->bio_idx = floor_get(loc);
+	t->room = loc_ref;
+	if (loc_ref != NOTHING) {
+		OBJ loc = obj_get(loc_ref);
+		ROO *rloc = &loc.sp.room;
+		view_build_exit(t, rloc, E_EAST);
+		view_build_exit(t, rloc, E_NORTH);
+		view_build_exit(t, rloc, E_WEST);
+		view_build_exit(t, rloc, E_SOUTH);
+		view_build_exit_z(t, rloc, E_UP);
+		view_build_exit_z(t, rloc, E_DOWN);
+		t->flags = view_build_flags(loc_ref);
+		t->bio_idx = floor_get(loc_ref);
 		if (rloc->flags & RF_TEMP)
 			t->room = -1;
 	} else {
-		view_build_exit_s(player, t, loc, p, E_EAST);
-		view_build_exit_s(player, t, loc, p, E_NORTH);
-		view_build_exit_s(player, t, loc, p, E_WEST);
-		view_build_exit_s(player, t, loc, p, E_SOUTH);
+		view_build_exit_s(t, p, E_EAST);
+		view_build_exit_s(t, p, E_NORTH);
+		view_build_exit_s(t, p, E_WEST);
+		view_build_exit_s(t, p, E_SOUTH);
 		/* view_build_exit_sz(t, descr, player, loc, E_UP); */
 		/* view_build_exit_sz(t, descr, player, loc, E_DOWN); */
 		t->bio_idx = n->bio_idx;
@@ -381,26 +377,24 @@ view_build_tile(OBJ *player,
 }
 
 static inline view_tile_t *
-_view_build(OBJ *player,
-		struct bio *n, dbref *g,
-		view_tile_t *b, pos_t p)
+_view_build(struct bio *n, dbref *g, view_tile_t *b, pos_t p)
 {
 	dbref *g_max = g + VIEW_SIZE;
 
 	// TODO vary p vertically and horizontally
 	for (; g < g_max ; n++, g++, b++, p[1]++)
-		view_build_tile(player, n, object_get(*g), b, p);
+		view_build_tile(n, *g, b, p);
 
         return b;
 }
 
 void
-view(OBJ *player)
+view(dbref player_ref)
 {
 	struct bio bd[VIEW_M], *n_p = bd,
 		   *n_max = &bd[VIEW_BDI + 1];
 	pos_t pos, opos;
-	map_where(opos, player->location);
+	map_where(opos, obj_get(player_ref).location);
 	view_t view;
         view_tile_t *p = view;
 	dbref o[VIEW_M], *o_p = o;
@@ -411,7 +405,7 @@ view(OBJ *player)
 	memset(view, 0, sizeof(view));
 
 	for (; n_p < n_max;) {
-		_view_build(player, n_p, o_p, p, pos);
+		_view_build(n_p, o_p, p, pos);
 		p += VIEW_SIZE;
 		o_p += VIEW_SIZE;
 		n_p += VIEW_SIZE;
@@ -422,7 +416,7 @@ view(OBJ *player)
 	char *view_buf = view_draw(view);
         /* if (mcp_view(eplayer, &view)) */
         /* if (fbcp_view(eplayer, &view)) */
-        fbcp_view_buf(player, view_buf);
+        fbcp_view_buf(player_ref, view_buf);
 }
 
 void

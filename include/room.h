@@ -3,6 +3,6 @@
 
 #include "object.h"
 
-OBJ *room_clean(OBJ *player, OBJ *loc);
+dbref room_clean(dbref loc_ref);
 
 #endif

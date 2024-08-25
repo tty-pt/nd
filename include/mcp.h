@@ -63,19 +63,19 @@ void mcp_frame_init(McpFrame * mfr, connection_t con);
 
 void mcp_view(ENT *eplayer, char *buf);
 void mcp_art(int descr, const char *art);
-void mcp_look(OBJ *player, OBJ *target);
-void mcp_content_out(OBJ *loc, OBJ *thing);
-void mcp_content_in(OBJ *loc, OBJ *thing);
+void mcp_look(dbref player_ref, dbref target_ref);
+void mcp_content_out(dbref loc_ref, dbref thing_ref);
+void mcp_content_in(dbref loc_ref, dbref thing_ref);
 void mcp_auth_fail(int descr, int reason);
-void mcp_auth_success(OBJ *player);
-void mcp_stats(OBJ *player);
-void mcp_bars(OBJ *player);
+void mcp_auth_success(dbref player_ref);
+void mcp_stats(dbref player_ref);
+void mcp_bars(dbref player_ref);
 /*
 void mcp_dialog_start(OBJ *player, OBJ *npc, const char *dialog);
 void mcp_dialog_stop(OBJ *player);
 */
-void mcp_equipment(OBJ *player);
-void fbcp_view(OBJ *player, view_t *view);
-void fbcp_view_buf(OBJ *player, char *view);
+void mcp_equipment(dbref player_ref);
+void fbcp_view(dbref player_ref, view_t *view);
+void fbcp_view_buf(dbref player_ref, char *view);
 
 #endif							/* MCP_H */

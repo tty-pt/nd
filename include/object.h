@@ -8,12 +8,12 @@
 #include "skeleton.h"
 
 #define NOTHING ((dbref) -1)
-#define FOR_ALL(var) for (var = object_get(db_top); var-- > object_get(0); )
+#define FOR_ALL(ref) for (ref = db_top; ref-- > 0; )
 
 #define GOD ((dbref) 1)
 #define God(obj) (object_ref(obj) == (GOD))
 
-extern long contents_hd;
+extern long contents_hd, observable_hd;
 
 struct object;
 
@@ -35,39 +35,40 @@ extern dbref db_top;
 
 extern struct object *db;
 
-OBJ * object_get(register dbref ref);
-dbref object_ref(register OBJ *obj);
+OBJ obj_get(dbref ref);
+void obj_set(dbref ref, OBJ *obj);
 
 static inline int
-object_item(register OBJ *obj)
+object_item(dbref obj_ref)
 {
-	return obj->type == TYPE_THING
-		|| obj->type == TYPE_CONSUMABLE
-		|| obj->type == TYPE_EQUIPMENT;
+	OBJ obj = obj_get(obj_ref);
+	return obj.type == TYPE_THING
+		|| obj.type == TYPE_CONSUMABLE
+		|| obj.type == TYPE_EQUIPMENT;
 }
 
-OBJ *object_new(void);
-OBJ *object_add(SKEL *o, OBJ *where, void *arg);
-char *object_art(OBJ *obj);
+dbref object_new(OBJ *obj);
+dbref object_add(OBJ *nu, SKEL *o, dbref where, void *arg);
+char *object_art(dbref ref);
 void object_clear(OBJ *obj);
-void object_free(OBJ *obj);
-OBJ *objects_write(FILE *f);
-OBJ *objects_read(FILE *f);
-void objects_free(void);
-OBJ *object_copy(OBJ *player, OBJ *obj);
+void object_free(dbref ref);
+dbref objects_write(FILE *f);
+dbref objects_read(FILE *f);
+dbref object_copy(OBJ *nu, dbref old_ref);
 void objects_update(double dt);
 OBJ *object_parent(OBJ *obj);
 int object_plc(OBJ *source, OBJ *dest); /* parent loop check */
-void object_move(OBJ *what, OBJ *where);
-void object_drop(OBJ *where, struct drop **drop);
-struct icon object_icon(OBJ *thing);
-void observer_add(OBJ *observable, OBJ *observer);
-int observer_remove(OBJ *observable, OBJ *observer);
+void object_move(dbref what_ref, dbref where_ref);
+void object_drop(dbref where_ref, struct drop **drop);
+struct icon object_icon(dbref thing_ref);
+/* TODO observables share DB */
+void observer_add(dbref observable_ref, dbref observer_ref);
+int observer_remove(dbref observable_ref, dbref observer_ref);
 unsigned art_max(char *name);
 int objects_init();
 void objects_sync();
 struct hash_cursor contents_iter(dbref parent);
-OBJ *contents_next(struct hash_cursor *c);
+dbref contents_next(struct hash_cursor *c);
 void contents_put(dbref parent, dbref child);
 
 #endif

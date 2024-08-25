@@ -10,7 +10,7 @@
 #include "uapi/wts.h"
 
 void
-notify_attack(OBJ *player, OBJ *target, char *wts, short val, char const *color, short mval)
+notify_attack(dbref player_ref, dbref target_ref, char *wts, short val, char const *color, short mval)
 {
 	char buf[BUFSIZ];
 	unsigned i = 0;
@@ -29,47 +29,45 @@ notify_attack(OBJ *player, OBJ *target, char *wts, short val, char const *color,
 	}
 	buf[i] = '\0';
 
-	notify_wts_to(player, target, wts, wts_plural(wts), "%s", buf);
+	notify_wts_to(player_ref, target_ref, wts, wts_plural(wts), "%s", buf);
 }
 
 
 void
-do_kill(int fd, int argc, char *argv[])
+do_fight(int fd, int argc, char *argv[])
 {
-	char *what = argv[1];
-	OBJ *player = FD_PLAYER(fd);
-	OBJ *here = object_get(player->location);
-	ROO *rhere = &here->sp.room;
-	OBJ *target = strcmp(what, "me")
-		? ematch_near(player, what)
-		: player;
+	dbref player_ref = FD_PLAYER(fd);
+	OBJ player = obj_get(player_ref);
+	dbref target_ref = strcmp(argv[1], "me")
+		? ematch_near(player_ref, argv[1])
+		: player_ref;
 
-	if (object_ref(here) == 0 || (rhere->flags & RF_HAVEN)) {
-		nd_writef(player, "You may not kill here.\n");
+	if (player.location == 0 || (obj_get(player.location).flags & RF_HAVEN)) {
+		nd_writef(player_ref, "You may not fight here.\n");
 		return;
 	}
 
-	CBUG(player->type != TYPE_ENTITY);
+	CBUG(player.type != TYPE_ENTITY);
 
-	if (!target
-	    || player == target
-	    || target->type != TYPE_ENTITY)
+	if (target_ref == NOTHING
+	    || player_ref == target_ref
+	    || obj_get(target_ref).type != TYPE_ENTITY)
 	{
-		nd_writef(player, "You can't target that.\n");
+		nd_writef(player_ref, "You can't target that.\n");
 		return;
 	}
 
-	ENT_SETF(object_ref(player), target, object_ref(target));
+	ENT_SETF(player_ref, target, target_ref);
 	/* ndc_writef(fd, "You form a combat pose."); */
 }
 
 void
 do_status(int fd, int argc, char *argv[])
 {
-	OBJ *player = FD_PLAYER(fd);
-	ENT eplayer = ent_get(object_ref(player));
+	dbref player_ref = FD_PLAYER(fd);
+	ENT eplayer = ent_get(player_ref);
 	// TODO optimize MOB_EV / MOB_EM
-	nd_writef(player, "hp %u/%u\tmp %u/%u\tstuck 0x%x\n"
+	nd_writef(player_ref, "hp %u/%u\tmp %u/%u\tstuck 0x%x\n"
 		"dodge %d\tcombo 0x%x \tdebuf_mask 0x%x\n"
 		"damage %d\tmdamage %d\tmdmg_mask 0x%x\n"
 		"defense %d\tmdefense %d\tmdef_mask 0x%x\n"
@@ -85,56 +83,66 @@ void
 do_heal(int fd, int argc, char *argv[])
 {
 	char *name = argv[1];
-	OBJ *player = FD_PLAYER(fd),
-	    *target;
+	dbref player_ref = FD_PLAYER(fd), target_ref;
 
 	if (strcmp(name, "me")) {
-		target = ematch_near(player, name);
+		target_ref = ematch_near(player_ref, name);
 
 	} else
-		target = player;
+		target_ref = player_ref;
 
-	if (!(ent_get(object_ref(player)).flags & EF_WIZARD)
-	    || !target
-	    || target->type != TYPE_ENTITY) {
-                nd_writef(player, "You can't do that.\n");
+	if (target_ref == NOTHING) {
+                nd_writef(player_ref, "Invalid target\n");
+		return;
+	}
+
+	if (!(ent_get(player_ref).flags & EF_WIZARD)
+	    || obj_get(target_ref).type != TYPE_ENTITY) {
+                nd_writef(player_ref, "Invalid target\n");
                 return;
         }
 
-	ENT etarget = ent_get(object_ref(target));
+	ENT etarget = ent_get(target_ref);
 	etarget.hp = HP_MAX(&etarget);
 	etarget.mp = MP_MAX(&etarget);
 	etarget.huth[HUTH_THIRST] = etarget.huth[HUTH_HUNGER] = 0;
 	debufs_end(&etarget);
-	ent_set(object_ref(target), &etarget);
-	notify_wts_to(player, target, "heal", "heals", "");
-	mcp_bars(target);
+	ent_set(target_ref, &etarget);
+	notify_wts_to(player_ref, target_ref, "heal", "heals", "");
+	mcp_bars(target_ref);
 }
 
 void
 do_advitam(int fd, int argc, char *argv[])
 {
-	OBJ *player = FD_PLAYER(fd);
+	dbref player_ref = FD_PLAYER(fd);
 	char *name = argv[1];
-	OBJ *target = ematch_near(player, name);
+	dbref target_ref = ematch_near(player_ref, name);
 
-	if (!(ent_get(object_ref(player)).flags & EF_WIZARD)
-	    || !target
-	    || target->owner != object_ref(player)) {
-		nd_writef(player, "You can't do that.\n");
+	if (!(ent_get(player_ref).flags & EF_WIZARD) || target_ref == NOTHING) {
+		nd_writef(player_ref, "You can't do that.\n");
+		return;
+	}
+
+	OBJ target = obj_get(target_ref);
+
+	if (target.owner != player_ref) {
+		nd_writef(player_ref, "You don't own that.\n");
 		return;
 	}
 
 	ENT etarget;
 	birth(&etarget);
-	ent_set(object_ref(target), &etarget);
-	nd_writef(player, "You infuse %s with life.\n", target->name);
+	ent_set(target_ref, &etarget);
+	target.type = TYPE_ENTITY;
+	obj_set(target_ref, &target);
+	nd_writef(player_ref, "You infuse %s with life.\n", target.name);
 }
 
 void
 do_train(int fd, int argc, char *argv[]) {
-	OBJ *player = FD_PLAYER(fd);
-	ENT eplayer = ent_get(object_ref(player));
+	dbref player_ref = FD_PLAYER(fd);
+	ENT eplayer = ent_get(player_ref);
 	const char *attrib = argv[1];
 	const char *amount_s = argv[2];
 	int attr;
@@ -147,7 +155,7 @@ do_train(int fd, int argc, char *argv[]) {
 	case 'w': attr = ATTR_WIZ; break;
 	case 'h': attr = ATTR_CHA; break;
 	default:
-		  nd_writef(player, "Invalid attribute.\n");
+		  nd_writef(player_ref, "Invalid attribute.\n");
 		  return;
 	}
 
@@ -155,7 +163,7 @@ do_train(int fd, int argc, char *argv[]) {
 	int amount = *amount_s ? atoi(amount_s) : 1;
 
 	if (amount > avail) {
-		  nd_writef(player, "Not enough points.\n");
+		  nd_writef(player_ref, "Not enough points.\n");
 		  return;
 	}
 
@@ -172,32 +180,29 @@ do_train(int fd, int argc, char *argv[]) {
 	}
 
 	eplayer.spend = avail - amount;
-	ent_set(object_ref(player), &eplayer);
-	nd_writef(player, "Your %s increases %d time(s).\n", attrib, amount);
-        mcp_stats(player);
+	ent_set(player_ref, &eplayer);
+	nd_writef(player_ref, "Your %s increases %d time(s).\n", attrib, amount);
+        mcp_stats(player_ref);
 }
 
 int
-kill_v(OBJ *player, char const *opcs)
+kill_v(dbref player_ref, char const *opcs)
 {
-	ENT eplayer = ent_get(object_ref(player));
+	ENT eplayer = ent_get(player_ref);
 	char *end;
 	if (isdigit(*opcs)) {
 		unsigned combo = strtol(opcs, &end, 0);
 		eplayer.combo = combo;
-		ent_set(object_ref(player), &eplayer);
-		nd_writef(player, "Set combo to 0x%x.\n", combo);
+		ent_set(player_ref, &eplayer);
+		nd_writef(player_ref, "Set combo to 0x%x.\n", combo);
 		return end - opcs;
 	} else if (*opcs == 'c' && isdigit(opcs[1])) {
 		unsigned slot = strtol(opcs + 1, &end, 0);
-                OBJ *target = object_get(eplayer.target);
-		if (player->location == 0) {
-			nd_writef(player, "You may not cast spells in room 0.\n");
-		} else {
-			ENT etarget = ent_get(eplayer.target);
-			spell_cast(player, &eplayer, target, &etarget, slot);
-			ent_set(object_ref(player), &eplayer);
-			ent_set(object_ref(target), &etarget);
+		if (obj_get(player_ref).location == 0)
+			nd_writef(player_ref, "You may not cast spells in room 0.\n");
+		else {
+			spell_cast(player_ref, &eplayer, eplayer.target, slot);
+			ent_set(player_ref, &eplayer);
 		}
 		return end - opcs;
 	} else
@@ -207,20 +212,17 @@ kill_v(OBJ *player, char const *opcs)
 void
 do_sit(int fd, int argc, char *argv[])
 {
-	OBJ *player = FD_PLAYER(fd);
-	int ref = object_ref(player);
-	ENT eplayer = ent_get(ref);
-	char *name = argv[1];
-        sit(player, &eplayer, name);
-	ent_set(ref, &eplayer);
+	dbref player_ref = FD_PLAYER(fd);
+	ENT eplayer = ent_get(player_ref);
+        sit(player_ref, &eplayer, argv[1]);
+	ent_set(player_ref, &eplayer);
 }
 
 void
 do_stand(int fd, int argc, char *argv[])
 {
-	OBJ *player = FD_PLAYER(fd);
-	int ref = object_ref(player);
-	ENT eplayer = ent_get(ref);
-        stand(player, &eplayer);
-	ent_set(ref, &eplayer);
+	dbref player_ref = FD_PLAYER(fd);
+	ENT eplayer = ent_get(player_ref);
+        stand(player_ref, &eplayer);
+	ent_set(player_ref, &eplayer);
 }
