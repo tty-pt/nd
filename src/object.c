@@ -7,7 +7,6 @@
 #include <string.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <sys/queue.h>
 
 #include "params.h"
 #include "defaults.h"
@@ -34,20 +33,10 @@ enum actions {
         ACT_TALK = 256,
 };
 
-long obj_hd = -1, observable_hd = -1;
-long contents_hd = -1;
 struct object *db = 0;
 dbref db_top = 0;
 char std_db[BUFSIZ];
 char std_db_ok[BUFSIZ];
-
-struct free_id {
-        dbref value;
-        SLIST_ENTRY(free_id) entry;
-};
-
-SLIST_HEAD(free_list_head, free_id);
-struct free_list_head free_ids;
 
 #ifndef DB_INITIAL_SIZE
 #define DB_INITIAL_SIZE 10000
@@ -55,22 +44,16 @@ struct free_list_head free_ids;
 
 dbref db_size = DB_INITIAL_SIZE;
 
+LHASH_DEF(obj, OBJ);
+LHASH_ASSOC_DEF(obs, obj, obj);
+LHASH_ASSOC_DEF(contents, obj, obj);
+
 int obj_exists(dbref ref) {
-	return !!hash_get(obj_hd, &ref, sizeof(ref));
-}
-
-OBJ obj_get(dbref ref) {
-	OBJ obj;
-	hash_cget(obj_hd, &obj, &ref, sizeof(ref));
-	return obj;
-}
-
-void obj_set(dbref ref, OBJ *obj) {
-	hash_cput(obj_hd, &ref, sizeof(ref), obj, sizeof(OBJ));
+	return !!lhash_get(&obj_lhash, ref);
 }
 
 struct hash_cursor obj_iter() {
-	return hash_iter(obj_hd);
+	return hash_iter(obj_lhash.hd);
 }
 
 dbref obj_next(OBJ *iobj, struct hash_cursor *c) {
@@ -86,20 +69,10 @@ dbref
 object_new(OBJ *newobj)
 {
 	memset(newobj, 0, sizeof(OBJ));
-	/* clear it out */
-	memset(newobj, 0, sizeof(struct object));
 	newobj->name = NULL;
 	newobj->location = NOTHING;
 	newobj->owner = ROOT;
-
-	struct free_id *new_id = SLIST_FIRST(&free_ids);
-	if (new_id) {
-		dbref ret = new_id->value;
-		SLIST_REMOVE_HEAD(&free_ids, entry);
-		obj_set(ret, newobj);
-		return ret;
-	} else
-		return ++db_top;
+	return obj_new(newobj);
 }
 
 static inline int
@@ -214,10 +187,6 @@ art_idx(OBJ *obj) {
 	return 1 + (random() % art_max(obj->name));
 }
 
-static inline void contents_put(dbref parent, dbref child) {
-	hash_cput(contents_hd, &parent, sizeof(parent), &child, sizeof(child));
-}
-
 dbref
 object_add(OBJ *nu, SKEL *sk, dbref where_ref, void *arg)
 {
@@ -228,7 +197,7 @@ object_add(OBJ *nu, SKEL *sk, dbref where_ref, void *arg)
 	nu->owner = ROOT;
 	nu->type = TYPE_THING;
 	if (where_ref != NOTHING)
-		contents_put(nu->location, nu_ref);
+		contents_add(nu->location, nu_ref);
 
 	switch (sk->type) {
 	case S_TYPE_EQUIPMENT:
@@ -343,7 +312,7 @@ object_art(dbref thing_ref)
 void
 putref(FILE * f, dbref ref)
 {
-	if (fprintf(f, "%d\n", ref) < 0) {
+	if (fprintf(f, "%u\n", ref) < 0) {
 		abort();
 	}
 }
@@ -449,7 +418,7 @@ db_write_list(FILE * f)
 	struct hash_cursor c = obj_iter();
 	OBJ oi;
 	while ((ref = obj_next(&oi, &c)) != NOTHING) {
-		if (fprintf(f, "#%d\n", ref) < 0)
+		if (fprintf(f, "#%u\n", ref) < 0)
 			abort();
 		object_write(f, ref);
 	}
@@ -460,10 +429,9 @@ static dbref objects_read(FILE *f);
 int
 objects_init()
 {
-	SLIST_INIT(&free_ids);
-	obj_hd = hash_init();
-	contents_hd = hash_cinit(NULL, NULL, 0644, QH_DUP);
-	observable_hd = hash_init();
+	obj_lhash = lhash_init();
+	contents_ahd = hash_cinit(NULL, NULL, 0644, QH_DUP);
+	obs_ahd = hash_cinit(NULL, NULL, 0644, QH_DUP);
 	art_hd = hash_init();
 
 	snprintf(std_db, sizeof(std_db), "%s%s", euid ? nd_config.chroot : "", STD_DB);
@@ -488,7 +456,7 @@ objects_init()
 	struct hash_cursor c = obj_iter();
 	OBJ oi;
 	while ((ref = obj_next(&oi, &c)) != NOTHING)
-		contents_put(oi.location, ref);
+		contents_add(oi.location, ref);
 
 	return 0;
 }
@@ -515,28 +483,6 @@ objects_sync()
 }
 
 #define STRING_READ(x) strdup(string_read(x))
-
-struct hash_cursor obs_iter(dbref observable_ref) {
-	return hash_citer(observable_hd, &observable_ref, sizeof(observable_ref));
-}
-
-dbref obs_next(struct hash_cursor *c) {
-	dbref key, value;
-	if (!hash_next(&key, &value, c))
-		return NOTHING;
-	return value;
-}
-
-void
-observer_add(dbref observable_ref, dbref observer_ref) {
-	hash_cput(observable_hd, &observable_ref, sizeof(observable_ref), &observer_ref, sizeof(observer_ref));
-}
-
-int
-observer_remove(dbref observable_ref, dbref observer_ref) {
-	hash_vdel(observable_hd, &observable_ref, sizeof(observable_ref), &observer_ref, sizeof(observer_ref));
-	return 0;
-}
 
 dbref
 ref_read(FILE * f)
@@ -749,7 +695,7 @@ object_move(dbref what_ref, dbref where_ref)
 
         if (what.location != NOTHING) {
                 mcp_content_out(what.location, what_ref);
-		hash_vdel(contents_hd, &what.location, sizeof(what.location), &what_ref, sizeof(what_ref));
+		contents_remove(what.location, what_ref);
         }
 
 	struct hash_cursor c = obs_iter(what_ref);
@@ -757,7 +703,7 @@ object_move(dbref what_ref, dbref where_ref)
 	while ((first_ref = obs_next(&c)) != NOTHING) {
 		ENT efirst = ent_get(first_ref);
 		efirst.last_observed = what.location;
-		observer_remove(what_ref, first_ref);
+		obs_remove(what_ref, first_ref);
 		ent_set(first_ref, &efirst);
 	}
 
@@ -776,14 +722,11 @@ object_move(dbref what_ref, dbref where_ref)
 		case TYPE_ROOM:
 			map_delete(what_ref);
 		}
-		free((void *) what.name);
+		if (what.name)
+			free((void *) what.name);
 		if (what.description)
 			free((void *) what.description);
-		hash_del(obj_hd, &what_ref, sizeof(what_ref));
-
-		struct free_id *new_id = malloc(sizeof(struct free_id));
-		new_id->value = what_ref;
-		SLIST_INSERT_HEAD(&free_ids, new_id, entry);
+		lhash_del(&obj_lhash, what_ref);
 		return;
 	}
 
@@ -793,14 +736,14 @@ object_move(dbref what_ref, dbref where_ref)
 	if (what.type == TYPE_ENTITY) {
 		ENT ewhat = ent_get(what_ref);
 		if (ewhat.last_observed != NOTHING)
-			observer_remove(ewhat.last_observed, what_ref);
+			obs_remove(ewhat.last_observed, what_ref);
 		if ((ewhat.flags & EF_SITTING)) {
 			stand(what_ref, &ewhat);
 			ent_set(what_ref, &ewhat);
 		}
 	}
 
-	contents_put(where_ref, what_ref);
+	contents_add(where_ref, what_ref);
 	mcp_content_in(where_ref, what_ref);
 }
 
@@ -859,19 +802,4 @@ object_icon(dbref what_ref)
                 break;
         }
         return ret;
-}
-
-struct hash_cursor contents_iter(dbref parent) {
-	return hash_citer(contents_hd, &parent, sizeof(parent));
-}
-
-dbref contents_next(struct hash_cursor *c) {
-	dbref key, value;
-	if (!hash_next(&key, &value, c))
-		return NOTHING;
-	return value;
-}
-
-void obj_del(dbref obj_ref) {
-	object_move(obj_ref, NOTHING);
 }

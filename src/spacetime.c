@@ -545,7 +545,7 @@ room_clean(dbref here_ref)
 		}
 	}
 
-	obj_del(here_ref);
+	object_move(here_ref, NOTHING);
 	return NOTHING;
 }
 
@@ -687,7 +687,7 @@ unwall(dbref player_ref, enum exit e)
 		return;
 	}
 
-	debug("will create exit here %d there %d dir %c\n", here_ref, there_ref, e_dir(e));
+	debug("will create exit here %u there %u dir %c\n", here_ref, there_ref, e_dir(e));
 	rhere->exits |= e;
 	there_ref = e_move(player_ref, e);
 	if (there_ref == NOTHING)

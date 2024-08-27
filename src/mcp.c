@@ -264,7 +264,7 @@ mcp_look(dbref player_ref, dbref loc_ref)
 	default:
 		eplayer.last_observed = loc_ref;
 		ent_set(player_ref, &eplayer);
-		observer_add(loc_ref, player_ref);
+		obs_add(loc_ref, player_ref);
 	}
 
         if (loc_ref != player_ref && loc.type == TYPE_ENTITY && !(eplayer.flags & EF_WIZARD))

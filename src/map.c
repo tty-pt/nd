@@ -294,7 +294,7 @@ _map_put(morton_t code, dbref thing_ref, int flags)
 
 	ret = ipdb->put(ipdb, NULL, &key, &data, flags);
 	if (ret) {
-		debug("room %d %s", thing_ref, db_strerror(ret));
+		debug("room %u %s", thing_ref, db_strerror(ret));
 	}
 	CBUG(ret);
 }
@@ -323,7 +323,7 @@ map_mwhere(dbref where)
 		static morton_t code = 130056652770671ULL;
 		/* if (bad == DB_NOTFOUND) */
 		/* 	_map_put(code, room, 0); */
-		debug("room %d %s", room, db_strerror(bad));
+		debug("room %u %s", room, db_strerror(bad));
 		return code;
 	}
 

@@ -176,7 +176,7 @@ do_toad(int fd, int argc, char *argv[]) {
 		dbref tmp_ref;
 		struct hash_cursor c = contents_iter(victim_ref);
 		while ((tmp_ref = contents_next(&c)) != NOTHING)
-			obj_del(tmp_ref);
+			object_move(tmp_ref, NOTHING);
 		struct hash_cursor c2 = obj_iter();
 		OBJ tmp;
 		while ((tmp_ref = obj_next(&tmp, &c2)) != NOTHING) {

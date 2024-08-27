@@ -48,7 +48,7 @@ do_consume(int fd, int argc, char *argv[])
 	notify_wts(player_ref, "consume", "consumes", " %s\n", vial.name);
 
 	if (!cvial->quantity && !cvial->capacity)
-		obj_del(vial_ref);
+		object_move(vial_ref, NOTHING);
 	else
 		obj_set(vial_ref, &vial);
 

@@ -184,6 +184,6 @@ do_recycle(int fd, int argc, char *argv[])
 			break;
 		}
 		nd_writef(player_ref, "Thank you for recycling %.512s (#%d).\n", thing.name, thing_ref);
-		obj_del(thing_ref);
+		object_move(thing_ref, NOTHING);
 	}
 }

@@ -6,7 +6,7 @@
 #define ROOT ((dbref) 1)
 #define NOTHING ((dbref) -1)
 
-typedef int dbref;
+typedef unsigned dbref;
 
 enum object_flags {
 	OF_INF = 1,
@@ -206,22 +206,18 @@ struct icon {
 	char *icon;
 };
 
-OBJ obj_get(dbref ref);
-void obj_set(dbref ref, OBJ *obj);
+LHASH_DECL(obj, OBJ);
+
 int obj_exists(dbref ref);
 struct hash_cursor obj_iter();
 dbref obj_next(OBJ *iobj, struct hash_cursor *c);
-void obj_del(dbref thing_ref); // recycle
 
 dbref object_new(OBJ *obj);
 dbref object_copy(OBJ *nu, dbref old_ref);
 void object_move(dbref what_ref, dbref where_ref);
 
-struct hash_cursor obs_iter(dbref observable_ref);
-dbref obs_next(struct hash_cursor *c);
-
-struct hash_cursor contents_iter(dbref parent);
-dbref contents_next(struct hash_cursor *c);
+LHASH_ASSOC_DECL(obs, obj, obj);
+LHASH_ASSOC_DECL(contents, obj, obj);
 
 static inline int
 object_item(dbref obj_ref)

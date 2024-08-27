@@ -555,7 +555,7 @@ void ndc_disconnect(int fd) {
 		return;
 
 	dbref player_ref = FD_PLAYER(fd);
-	warn("%s(%d) disconnects on fd %d\n",
+	warn("%s(%u) disconnects on fd %d\n",
 			obj_get(player_ref).name, player_ref, fd);
 	FD_PLAYER(fd) = NOTHING;
 }

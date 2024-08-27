@@ -193,7 +193,7 @@ unparse(dbref loc_ref)
 		}
 	}
 
-	BUFF("%s(#%d)", loc.name, loc_ref);
+	BUFF("%s(#%u)", loc.name, loc_ref);
 
 	buf[buf_l] = '\0';
 	return buf;
@@ -451,7 +451,7 @@ entity_body(dbref mob_ref)
 		obj_set(dead_mob_ref, &dead_mob);
 		return dead_mob_ref;
 	} else {
-		obj_del(dead_mob_ref);
+		object_move(dead_mob_ref, NOTHING);
 		return NOTHING;
 	}
 }
@@ -481,7 +481,7 @@ entity_kill(dbref player_ref, ENT *eplayer, dbref target_ref, ENT *etarget)
 	dbref loc_ref = target.location;
 
 	if ((obj_get(target.location).sp.room.flags & RF_TEMP) && !(etarget->flags & EF_PLAYER)) {
-		obj_del(target_ref);
+		object_move(target_ref, NOTHING);
 		room_clean(loc_ref);
 		return NOTHING;
 	}
