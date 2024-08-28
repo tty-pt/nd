@@ -18,8 +18,6 @@ extern element_t element_map[];
 #define DEBUF_TYPE_MASK 0xf
 #define DEBUF_TYPE(sp) (sp->flags & DEBUF_TYPE_MASK)
 
-#define SPELL_SKELETON(idx) (&spell_skeleton_map[idx])
-#define SPELL_REF(sp) (sp - &spell_skeleton_map[0])
 #define SPELL_COST(dmg, y, no_bdmg) (no_bdmg ? 0 : dmg) + dmg / (1 << y)
 
 enum spell_type {
@@ -34,9 +32,8 @@ enum spell_type {
 	SPELL_LAVA_SHIELD,
 	SPELL_WIND_VEIL,
 	SPELL_STONE_SKIN,
+	SPELL_MAX,
 };
-
-extern struct spell_skeleton spell_skeleton_map[];
 
 void debuf_end(ENT *player, unsigned i);
 void debufs_end(ENT *player);
@@ -45,5 +42,6 @@ void debuf_notify(dbref player_ref, struct debuf *d, short val);
 int spell_cast(dbref player_ref, ENT *eplayer, dbref target_ref, unsigned slot);
 int spells_cast(dbref player_ref, ENT *eplayer, dbref target_ref);
 void spells_birth(ENT *entity);
+void spells_init();
 
 #endif

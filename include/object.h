@@ -6,8 +6,8 @@
 
 extern dbref db_top;
 
-dbref object_add(OBJ *nu, SKEL *o, dbref where, void *arg);
-void object_drop(dbref where_ref, struct drop **drop);
+dbref object_add(OBJ *nu, unsigned skel_id, dbref where, void *arg);
+void object_drop(dbref where_ref, unsigned skel_id);
 void observer_add(dbref observable_ref, dbref observer_ref);
 int observer_remove(dbref observable_ref, dbref observer_ref);
 int objects_init();

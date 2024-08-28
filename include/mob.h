@@ -5,7 +5,7 @@
 #include "spell.h"
 
 /* FIXME use ref as index */
-#define ENTITY_SKELETON(mob_id) (&entity_skeleton_map[mob_id])
+#define MOB_REF(idx) mob_refs[idx]
 
 #define BODYPART_ID(_c) ch_bodypart_map[(int) _c]
 /* #define BODYPART(_c) bodypart_map[BODYPART_ID(_c)] */
@@ -56,6 +56,8 @@ enum mob_type {
 	MOB_MAX,
 };
 
-extern struct object_skeleton entity_skeleton_map[];
+extern unsigned mob_refs[MOB_MAX];
+
+void mobs_init();
 
 #endif

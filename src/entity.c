@@ -428,11 +428,11 @@ entity_body(dbref mob_ref)
 {
 	dbref tmp_ref;
 	char buf[32];
-	struct object_skeleton skel = { .name = "", .description = "" };
+	SKEL skel = { .name = "", .description = "" };
 	OBJ mob = obj_get(mob_ref), dead_mob;
 	snprintf(buf, sizeof(buf), "%s's body.", mob.name);
 	skel.name = buf;
-	dbref dead_mob_ref = object_add(&dead_mob, &skel, mob.location, NULL);
+	dbref dead_mob_ref = object_add(&dead_mob, 0, mob.location, NULL);
 	unsigned n = 0;
 
 	struct hash_cursor c = contents_iter(mob_ref);
@@ -848,9 +848,10 @@ bird_is(SENT *sk)
 
 static inline dbref
 entity_add(enum mob_type mid, dbref where_ref, enum biome biome, long long pdn) {
-	struct object_skeleton *obj_skel = ENTITY_SKELETON(mid);
-	CBUG(obj_skel->type != S_TYPE_ENTITY);
-	struct entity_skeleton *mob_skel = &obj_skel->sp.entity;
+	unsigned mob_ref = mob_refs[mid];
+	SKEL skel = skel_get(mob_ref);
+	CBUG(skel.type != STYPE_ENTITY);
+	SENT *mob_skel = &skel.sp.entity;
 
 	if ((bird_is(mob_skel) && !pdn)
 	    || (!NIGHT_IS && (mob_skel->type == ELM_DARK || mob_skel->type == ELM_VAMP))
@@ -861,7 +862,7 @@ entity_add(enum mob_type mid, dbref where_ref, enum biome biome, long long pdn) 
 		return NOTHING;
 
 	OBJ obj;
-	dbref obj_ref = object_add(&obj, obj_skel, where_ref, NULL);
+	dbref obj_ref = object_add(&obj, mob_ref, where_ref, NULL);
 	obj_set(obj_ref, &obj);
 	return obj_ref;
 }

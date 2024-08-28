@@ -89,7 +89,7 @@ struct debuf {
 };
 
 struct spell {
-	int skel;
+	unsigned skel;
 	unsigned cost; 
 	unsigned short val;
 };

@@ -6,37 +6,46 @@
 #include "params.h"
 #include "debug.h"
 
-struct object_skeleton carrot = {
+SKEL carrot = {
         .name = "carrot",
         .description = "",
-        .type = S_TYPE_CONSUMABLE,
+        .type = STYPE_CONSUMABLE,
         .sp = { .consumable = { .food = 3 } },
 };
 
-struct drop carrot_drop = {
-        .i = &carrot,
+DROP carrot_drop = {
         .y = 0,
 };
 
-struct object_skeleton stick = {
+SKEL stick = {
         .name = "stick",
         .description = "",
-        .type = S_TYPE_OTHER,
+        .type = STYPE_OTHER,
 };
 
-struct drop stick_drop = {
-        .i = &stick,
+DROP stick_drop = {
         .y = 0,
         .yield = 1,
         .yield_v = 0x3,
 };
 
+SKEL tomato = {
+        .name = "tomato",
+        .description = "",
+        .type = STYPE_CONSUMABLE,
+        .sp = { .consumable = { .food = 4 } },
+};
+
+DROP tomato_drop = {
+        .y = 3,
+};
+
 /* TODO calculate water needs */
-struct object_skeleton plant_skeleton_map[] = {{
+SKEL plants_map[] = {{
 	// taiga
 	.name = "pinus sylvestris",
 	.description = "",
-	.type = S_TYPE_PLANT,
+	.type = STYPE_PLANT,
 	.sp = { .plant = {
 		.pre = ANSI_BOLD ANSI_FG_GREEN,
 		.small = 'x',
@@ -46,106 +55,115 @@ struct object_skeleton plant_skeleton_map[] = {{
 		.tmp_max = 70,
 		.rn_min = 50,
 		.rn_max = 1024,
-		.drop = { &stick_drop, NULL },
+		/* .drop = { &stick_drop, NULL }, */
 		.y = 4,
 	} },
-}, {	// temperate rainforest
+}, {
+	// temperate rainforest
 	.name = "pseudotsuga menziesii",
 	.description = "",
-	.type = S_TYPE_PLANT,
+	.type = STYPE_PLANT,
 	.sp = { .plant = {
 		ANSI_BOLD ANSI_FG_GREEN, 't', 'T', ANSI_RESET_BOLD,
 		32, 100, 180, 350,
-		.drop = { &stick_drop, NULL },
+		/* .drop = { &stick_drop, NULL }, */
 		1
 	} },
-}, {	// woodland / grassland / shrubland
+}, {
+	// woodland / grassland / shrubland
 	.name = "betula pendula",
 	.description = "",
-	.type = S_TYPE_PLANT,
+	.type = STYPE_PLANT,
 	.sp = { .plant = {
 		ANSI_FG_YELLOW, 'x', 'X', "",
 		30, 86, 0, 341,
-		.drop = { &stick_drop, NULL },
+		/* .drop = { &stick_drop, NULL }, */
 		4,
 	} },
 }, {
 	.name = "linum usitatissimum",
 	.description = "",
-	.type = S_TYPE_PLANT,
+	.type = STYPE_PLANT,
 	.sp = { .plant = {
 		ANSI_FG_YELLOW, 'x', 'X', "",
 		30, 86, 20, 341,
-		.drop = { &stick_drop, NULL },
+		/* .drop = { &stick_drop, NULL }, */
 		.y = 30,
 	} },
-}, {	// woodland / grassland?
+}, {
+	// woodland / grassland?
 	.name = "betula pubescens",
 	.description = "", 
-	.type = S_TYPE_PLANT,
+	.type = STYPE_PLANT,
 	.sp = { .plant = {
 		ANSI_FG_WHITE, 'x', 'X', "",
 		50, 146, 500, 900,
-		.drop = { &stick_drop, NULL },
+		/* .drop = { &stick_drop, NULL }, */
 		4
 	} },
-}, {	// temperate forest
+}, {
+	// temperate forest
 	.name = "abies alba",
 	.description = "",
-	.type = S_TYPE_PLANT,
+	.type = STYPE_PLANT,
 	.sp = { .plant = {
 		ANSI_BOLD ANSI_FG_GREEN, 'a', 'A', ANSI_RESET_BOLD,
 		-40, 86, 100, 200,
-		.drop = { &stick_drop, NULL },
+		/* .drop = { &stick_drop, NULL }, */
 		4,
 	} },
-}, {	// desert
+}, {
+	// desert
 	.name = "arthrocereus rondonianus",
 	.description = "",
-	.type = S_TYPE_PLANT,
+	.type = STYPE_PLANT,
 	.sp = { .plant = {
 		ANSI_BOLD ANSI_FG_GREEN, 'i', 'I', "",
 		110, 190, 10, 180,
-		{ NULL }, 4,
+		/* { NULL }, */
+		4,
 	} },
-}, {	// savannah
+}, {
+	// savannah
 	.name = "acacia senegal",
 	.description = "",
-	.type = S_TYPE_PLANT,
+	.type = STYPE_PLANT,
 	.sp = { .plant = {
 		ANSI_BOLD ANSI_FG_GREEN, 't', 'T', "",
 		40, 150, 20, 345,
-		.drop = { &stick_drop, NULL },
+		/* .drop = { &stick_drop, NULL }, */
 		4,
 	} },
 }, {
 	.name = "daucus carota",
 	.description = "",
-	.type = S_TYPE_PLANT,
+	.type = STYPE_PLANT,
 	.sp = { .plant = {
 		ANSI_FG_WHITE, 'x', 'X', "",
 		38, 96, 100, 200,
-		{ &carrot_drop, NULL }, 4
+		/* { &carrot_drop, NULL }, */
+		4
 	} },
 }, {
 	.name = "solanum lycopersicum",
 	.description = "",
-	.type = S_TYPE_PLANT,
+	.type = STYPE_PLANT,
 	.sp = { .plant = {
 		ANSI_FG_RED, 'x', 'X', "", 
 		50, 98, 100, 200,
 		/* { "tomato", "", "" }, 1, */
-		{ NULL }, 4
+		/* { NULL }, */
+		4
 	} },
 }};
 
-static inline int
-plant_noise(unsigned char *plid, coord_t tmp, ucoord_t rn, noise_t v, unsigned char n)
-{
-	struct object_skeleton *obj_skel = PLANT_SKELETON(n);
-	struct plant_skeleton *pl = &obj_skel->sp.plant;
+unsigned plant_refs[PLANT_MAX];
 
-	CBUG(n >= PLANT_MAX);
+static inline int
+plant_noise(unsigned char *plid, coord_t tmp, ucoord_t rn, noise_t v, unsigned n)
+{
+	SKEL skel = skel_get(plant_refs[n]);
+	SPLA *pl = &skel.sp.plant;
 
         /* warn("plant_noise %s y: %u v: %u O: %u\n", obj_skel->name, pl->y, v, NOISE_MAX >> pl->y); */
         if (v >= (NOISE_MAX >> pl->y))
@@ -188,7 +206,7 @@ plants_noise(struct plant_data *pd, noise_t ty, coord_t tmp, ucoord_t rn, unsign
 		}
 	}
 
-	pd->max = i;
+	pd->max = *idc;
 }
 
 void
@@ -230,9 +248,8 @@ _plants_add(dbref where_ref, struct bio *bio, pos_t pos)
 		if (!n)
 			continue;
 
-                struct object_skeleton *skel = PLANT_SKELETON(bio->pd.id[i]);
 		OBJ plant;
-		dbref plant_ref = object_add(&plant, skel, where_ref, &v);
+		dbref plant_ref = object_add(&plant, plant_refs[bio->pd.id[i]], where_ref, &v);
 		PLA *pplant = &plant.sp.plant;
 		pplant->plid = bio->pd.id[i];
 		pplant->size = n;
@@ -255,4 +272,32 @@ plants_add(dbref where_ref, void *arg, pos_t pos)
 
         /* if (epd.n) */
                 /* _plants_add(where, &epd, tmp); */
+}
+
+void plants_init() {
+	unsigned carrot_ref = skel_new(&carrot);
+	carrot_drop.skel = carrot_ref;
+	unsigned carrot_drop_ref = drop_new(&carrot_drop);
+
+	unsigned stick_ref = skel_new(&carrot);
+	stick_drop.skel = stick_ref;
+	unsigned stick_drop_ref = drop_new(&stick_drop);
+
+	unsigned tomato_ref = skel_new(&tomato);
+	tomato_drop.skel = tomato_ref;
+	unsigned tomato_drop_ref = drop_new(&tomato_drop);
+
+	for (unsigned i = 0; i < PLANT_MAX; i++)
+		plant_refs[i] = skel_new(&plants_map[i]);
+
+	adrop_add(plant_refs[PLANT_PINUS_SILVESTRIS], stick_drop_ref);
+	adrop_add(plant_refs[PLANT_PSEUDOTSUGA_MENZIESII], stick_drop_ref);
+	adrop_add(plant_refs[PLANT_BETULA_PENDULA], stick_drop_ref);
+	adrop_add(plant_refs[PLANT_LINUM_USITATISSIMUM], stick_drop_ref);
+	adrop_add(plant_refs[PLANT_BETULA_PUBESCENS], stick_drop_ref);
+	adrop_add(plant_refs[PLANT_ABIES_ALBA], stick_drop_ref);
+	adrop_add(plant_refs[PLANT_ARTHROCEREUS_RONDONIANUS], stick_drop_ref);
+	adrop_add(plant_refs[PLANT_ACACIA_SENEGAL], stick_drop_ref);
+	adrop_add(plant_refs[PLANT_DAUCUS_CAROTA], carrot_drop_ref);
+	adrop_add(plant_refs[PLANT_SOLANUM_LYCOPERSICUM], tomato_drop_ref);
 }

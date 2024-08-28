@@ -52,19 +52,6 @@ int obj_exists(dbref ref) {
 	return !!lhash_get(&obj_lhash, ref);
 }
 
-struct hash_cursor obj_iter() {
-	return hash_iter(obj_lhash.hd);
-}
-
-dbref obj_next(OBJ *iobj, struct hash_cursor *c) {
-	dbref iobj_ref;
-
-	if (hash_next(&iobj_ref, iobj, c) <= 0)
-		return NOTHING;
-	else
-		return iobj_ref;
-}
-
 dbref
 object_new(OBJ *newobj)
 {
@@ -188,69 +175,72 @@ art_idx(OBJ *obj) {
 }
 
 dbref
-object_add(OBJ *nu, SKEL *sk, dbref where_ref, void *arg)
+object_add(OBJ *nu, unsigned skel_id, dbref where_ref, void *arg)
 {
+	SKEL skel = skel_get(skel_id);
 	dbref nu_ref = object_new(nu);
-	nu->name = strdup(sk->name);
-	nu->description = strdup(sk->description);
+	nu->name = strdup(skel.name);
+	nu->description = strdup(skel.description);
 	nu->location = where_ref;
 	nu->owner = ROOT;
 	nu->type = TYPE_THING;
 	if (where_ref != NOTHING)
 		contents_add(nu->location, nu_ref);
 
-	switch (sk->type) {
-	case S_TYPE_EQUIPMENT:
+	switch (skel.type) {
+	case STYPE_SPELL:
+		break;
+	case STYPE_EQUIPMENT:
 		{
 			EQU *enu = &nu->sp.equipment;
 			nu->type = TYPE_EQUIPMENT;
-			enu->eqw = sk->sp.equipment.eqw;
-			enu->msv = sk->sp.equipment.msv;
+			enu->eqw = skel.sp.equipment.eqw;
+			enu->msv = skel.sp.equipment.msv;
 			enu->rare = rarity_get();
 			CBUG(where_ref == NOTHING || obj_get(where_ref).type != TYPE_ENTITY);
 			equip(where_ref, nu_ref);
 		}
 
 		break;
-	case S_TYPE_CONSUMABLE:
+	case STYPE_CONSUMABLE:
 		{
 			CON *cnu = &nu->sp.consumable;
 			nu->type = TYPE_CONSUMABLE;
-			cnu->food = sk->sp.consumable.food;
-			cnu->drink = sk->sp.consumable.drink;
+			cnu->food = skel.sp.consumable.food;
+			cnu->drink = skel.sp.consumable.drink;
 		}
 
 		break;
-	case S_TYPE_ENTITY:
+	case STYPE_ENTITY:
 		{
 			ENT ent;
 			memset(&ent, 0, sizeof(ent));
 			nu->type = TYPE_ENTITY;
-			stats_init(&ent, &sk->sp.entity);
-			ent.flags = sk->sp.entity.flags;
-			ent.wtso = sk->sp.entity.wt;
+			stats_init(&ent, &skel.sp.entity);
+			ent.flags = skel.sp.entity.flags;
+			ent.wtso = skel.sp.entity.wt;
 			ent.sat = NOTHING;
 			ent.last_observed = NOTHING;
 			birth(&ent);
 			spells_birth(&ent);
-			object_drop(nu_ref, sk->sp.entity.drop);
+			object_drop(nu_ref, skel_id);
 			ent.home = where_ref;
 			ent_set(nu_ref, &ent);
 			nu->art_id = art_idx(nu);
 		}
 
 		break;
-	case S_TYPE_PLANT:
+	case STYPE_PLANT:
 		{
 			noise_t v = * (noise_t *) arg;
 			nu->type = TYPE_PLANT;
-			object_drop(nu_ref, sk->sp.plant.drop);
+			object_drop(nu_ref, skel_id);
 			nu->owner = ROOT;
 			nu->art_id = 1 + (v & 0xf) % art_max(nu->name);
 		}
 
 		break;
-        case S_TYPE_BIOME:
+        case STYPE_BIOME:
 		{
 			struct bio *bio = arg;
 			ROO *rnu = &nu->sp.room;
@@ -261,7 +251,7 @@ object_add(OBJ *nu, SKEL *sk, dbref where_ref, void *arg)
 		}
 
 		break;
-	case S_TYPE_MINERAL:
+	case STYPE_MINERAL:
 		{
 			noise_t v = * (noise_t *) arg;
 			nu->type = TYPE_MINERAL;
@@ -270,7 +260,7 @@ object_add(OBJ *nu, SKEL *sk, dbref where_ref, void *arg)
 
 		break;
 
-	case S_TYPE_OTHER:
+	case STYPE_OTHER:
 		if (arg) {
 			noise_t v = * (noise_t *) arg;
 			nu->art_id = 1 + (v & 0xf) % art_max(nu->name);
@@ -281,7 +271,7 @@ object_add(OBJ *nu, SKEL *sk, dbref where_ref, void *arg)
 	}
 
 	obj_set(nu_ref, nu);
-	if (sk->type != S_TYPE_BIOME)
+	if (skel.type != STYPE_BIOME)
 		mcp_content_in(where_ref, nu_ref);
 
 	return nu_ref;
@@ -599,10 +589,10 @@ object_read(FILE * f)
 			ent.sat = ref_read(f);
 			for (j = 0; j < 8; j++) {
 				struct spell *sp = &ent.spells[j];
-				int ref = ref_read(f);
-				struct spell_skeleton *_sp = SPELL_SKELETON(ref);
+				unsigned spell_id = ref_read(f);
+				SKEL skel = skel_get(spell_id);
+				SSPE *_sp = &skel.sp.spell;
 				/* warn("entity! flags %d ref %d sp %p\n", eo->flags, ref); */
-				sp->skel = _sp - spell_skeleton_map;
 				sp->val = SPELL_DMG(&ent, _sp);
 				sp->cost = SPELL_COST(sp->val, _sp->y, _sp->flags & AF_BUF);
 			}
@@ -785,8 +775,8 @@ object_icon(dbref what_ref)
 		{
 			PLA *pwhat = &what.sp.plant;
 			aux = pwhat->plid;
-			struct object_skeleton *obj_skel = PLANT_SKELETON(aux);
-			struct plant_skeleton *pl = &obj_skel->sp.plant;
+			SKEL skel = skel_get(aux);
+			SPLA *pl = &skel.sp.plant;
 
 			ret.actions |= ACT_CHOP;
 			snprintf(buf, sizeof(buf), "%s%c%s", pl->pre,

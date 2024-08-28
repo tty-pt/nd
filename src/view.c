@@ -16,7 +16,7 @@
 #endif
 
 #define BIOME_BG(i) (NIGHT_IS \
-		? ANSI_RESET : biomes[i].sp.biome.bg)
+		? ANSI_RESET : skel_get(i).sp.biome.bg)
 
 // global buffer for map? // FIXME d bio_limit
 static const char * v = "|";
@@ -42,8 +42,8 @@ vtf_t vtf_map[] = {
 static inline char *
 dr_tree(struct plant_data pd, int n, char *b) {
 	if (PLANT_N(pd.n, n)) {
-		struct object_skeleton *obj_skel = PLANT_SKELETON(pd.id[n]);
-		struct plant_skeleton *pl = &obj_skel->sp.plant;
+		SKEL skel = skel_get(plant_refs[pd.id[n]]);
+		SPLA *pl = &skel.sp.plant;
 		b = stpcpy(b, pl->pre);
 		*b++ = PLANT_N(pd.n, n) > PLANT_HALF
 			? pl->big : pl->small;
@@ -142,7 +142,7 @@ dr_vs(char *b, view_tile_t *t)
 	unsigned floor;
 	enum exit exit; // loop cache
 
-	if (t->room < 0) {
+	if (t->room == NOTHING) {
 		floor = t->bio_idx;
 		wp = "";
 	} else {
@@ -162,7 +162,7 @@ dr_vs(char *b, view_tile_t *t)
 		if (t >= t_max)
 			break;
 
-		if (t->room < 0) {
+		if (t->room == NOTHING) {
 			floor = t->bio_idx;
 			bg = BIOME_BG(floor);
 		} else {
@@ -172,10 +172,10 @@ dr_vs(char *b, view_tile_t *t)
 			b = stpcpy(b, bg);
 		}
 
-		if (t->room >= 0) {
+		if (t->room != NOTHING) {
 			exit = E_WEST;
 			tp = t;
-		} else if (tp->room >= 0) {
+		} else if (tp->room != NOTHING) {
 			exit = E_EAST;
 		} else {
 			*b++ = ' ';
@@ -215,7 +215,7 @@ dr_hs_n(char *b, view_tile_t *t)
 
 	for (wp = "",
 	     bg = BIOME_BG(
-		     t->room < 0
+		     t->room == NOTHING
 		     ? t->bio_idx
 		     : floor_get(t->room)) ;
 	     t < t_max ;
@@ -228,10 +228,10 @@ dr_hs_n(char *b, view_tile_t *t)
 		      next = tn->room;
 
 		floor = t->bio_idx;
-		if (next >= 0) {
+		if (next != NOTHING) {
 			floor = tn->bio_idx;
 			toggle = 0;
-		} else if (curr >= 0) {
+		} else if (curr != NOTHING) {
 			floor = t->bio_idx;
 			toggle = 0;
 		} else {
@@ -361,7 +361,7 @@ view_build_tile(struct bio *n, dbref loc_ref, view_tile_t *t, pos_t p)
 		t->flags = view_build_flags(loc_ref);
 		t->bio_idx = floor_get(loc_ref);
 		if (rloc->flags & RF_TEMP)
-			t->room = -1;
+			t->room = NOTHING;
 	} else {
 		view_build_exit_s(t, p, E_EAST);
 		view_build_exit_s(t, p, E_NORTH);

@@ -29,8 +29,12 @@ enum biome {
 	BIOME_TROPICAL_RAINFOREST,
 
 	BIOME_VOLCANIC,
+
+	BIOME_MAX,
 };
 
-extern struct object_skeleton biomes[];
+extern unsigned biome_refs[BIOME_MAX];
+
+void biomes_init();
 
 #endif

@@ -317,6 +317,7 @@ main(int argc, char **argv)
 	if (euid && !nd_config.chroot)
 		nd_config.chroot = ".";
 
+	skel_init();
 	players_init();
 	entities_init();
 	objects_init();

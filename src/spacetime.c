@@ -31,6 +31,7 @@
 #define GEON_BDI (GEON_SIZE * (GEON_SIZE - 1))
 
 static long owner_hd = -1, sl_hd = -1;
+unsigned stone_skel_id;
 
 typedef void op_a_t(dbref player_ref, enum exit e);
 typedef int op_b_t(dbref player_ref, struct cmd_dir cd);
@@ -159,22 +160,25 @@ morton_pos(pos_t p, morton_t code)
 }
 
 void
-object_drop(dbref where_ref, struct drop **drop)
+object_drop(dbref where_ref, unsigned skel_id)
 {
 	pos_t pos;
         register int i;
+	unsigned drop_id;
+	struct hash_cursor c = adrop_iter(skel_id);
 
 	map_where(pos, obj_get(where_ref).location);
 
-	for (; *drop; drop++)
-		if (random() < (RAND_MAX >> (*drop)->y)) {
+	while ((drop_id = adrop_next(&c)) != NOTHING) {
+		DROP drop = drop_get(drop_id);
+		if (random() < (RAND_MAX >> drop.y)) {
 			noise_t v2 = XXH32((const char *) pos, sizeof(pos_t), 3);
-                        int yield = (*drop)->yield,
-                            yield_v = (*drop)->yield_v;
+                        int yield = drop.yield,
+                            yield_v = drop.yield_v;
 
                         if (!yield) {
 				OBJ obj;
-				dbref obj_ref = object_add(&obj, (*drop)->i, where_ref, &v2);
+				dbref obj_ref = object_add(&obj, drop.skel, where_ref, &v2);
 				obj_set(obj_ref, &obj);
                                 continue;
                         }
@@ -184,10 +188,11 @@ object_drop(dbref where_ref, struct drop **drop)
                         for (i = 0; i < yield; i++) {
 				v2 = XXH32((const char *) pos, sizeof(pos_t), 4 + i);
 				OBJ obj;
-                                dbref obj_ref = object_add(&obj, (*drop)->i, where_ref, &v2);
+                                dbref obj_ref = object_add(&obj, drop.skel, where_ref, &v2);
 				obj_set(obj_ref, &obj);
 			}
                 }
+	}
 }
 
 int
@@ -409,14 +414,6 @@ static inline void
 stones_add(dbref where_ref, struct bio *bio, pos_t p) {
 	noise_t v = XXH32((const char *) p, sizeof(pos_t), 0);
 	unsigned char n = v & 0x3, i;
-	static struct object_skeleton skel = {
-                .name = "stone",
-                .description = "Solid stone(s)",
-		.type = S_TYPE_MINERAL,
-		.sp = {
-			.mineral = { 0 } 
-		},
-        };
 
 	if (bio->bio_idx == BIOME_WATER)
 		return;
@@ -428,7 +425,7 @@ stones_add(dbref where_ref, struct bio *bio, pos_t p) {
 
         for (i = 0; i < n; i++, v2 >>= 4) {
 		OBJ stone;
-                dbref stone_ref = object_add(&stone, &skel, where_ref, &v2);
+                dbref stone_ref = object_add(&stone, stone_skel_id, where_ref, &v2);
 		obj_set(stone_ref, &stone);
 	}
 }
@@ -439,7 +436,7 @@ st_room_at(pos_t pos)
 	struct bio *bio;
 	bio = noise_point(pos);
 	OBJ there;
-	dbref there_ref = object_add(&there, &biomes[bio->bio_idx], NOTHING, bio);
+	dbref there_ref = object_add(&there, biome_refs[bio->bio_idx], NOTHING, bio);
 	ROO *rthere = &there.sp.room;
 	map_put(pos, there_ref, DB_NOOVERWRITE);
 	exits_infer(there_ref, rthere);
@@ -464,8 +461,9 @@ do_bio(int fd, int argc, char *argv[]) {
 	pos_t pos;
 	map_where(pos, obj_get(player_ref).location);
 	bio = noise_point(pos);
+	SKEL biome = skel_get(biome_refs[bio->bio_idx]);
 	nd_writef(player_ref, "tmp %d rn %u bio %s(%d)\n",
-		bio->tmp, bio->rn, biomes[bio->bio_idx].name, bio->bio_idx);
+		bio->tmp, bio->rn, biome.name, bio->bio_idx);
 }
 
 static dbref
@@ -1069,6 +1067,17 @@ void
 st_init() {
 	nd.echo = &echo;
 	nd.oecho = &oecho;
+
+	SKEL skel = {
+                .name = "stone",
+                .description = "Solid stone(s)",
+		.type = STYPE_MINERAL,
+		.sp = {
+			.mineral = { 0 } 
+		},
+        };
+
+	stone_skel_id = skel_new(&skel);
 
 	owner_hd = hash_cinit("/var/nd/st.db", NULL, 0644, 0);
 	sl_hd = hash_init();

@@ -1,4 +1,6 @@
 #include "mob.h"
+#include "uapi/skel.h"
+#include "uapi/wts.h"
 #include "io.h"
 #include "entity.h"
 #include "equipment.h"
@@ -9,6 +11,66 @@
 #define FIGHTER F(ATTR_STR) | F(ATTR_CON) | F(ATTR_DEX)
 #define ARMORSET_LIST(s) & s ## _helmet_drop, \
 	& s ## _chest_drop, & s ## _pants_drop
+
+#define ARMORSET(s, _type, min_stat, y) \
+	SKEL s ## _helmet = { \
+		.name = #s " armor helmet", \
+		.description = "", \
+		.type = STYPE_EQUIPMENT, \
+		.sp = { .equipment = { \
+			.eqw = EQ(ES_HEAD, _type), \
+			.msv = min_stat, \
+		} } \
+	}; \
+	unsigned s ## _helmet_ref = skel_new(&s ## _helmet); \
+	DROP s ## _helmet_drop = { y }; \
+	unsigned s ## _helmet_drop_ref = drop_new(&s ## _helmet_drop); \
+	adrop_add(s ## _helmet_ref, s ## _helmet_drop_ref); \
+	SKEL s ## _chest = { \
+		.name = #s " armor chest", \
+		.description = "", \
+		.type = STYPE_EQUIPMENT, \
+		.sp = { .equipment = { \
+			.eqw = EQ(ES_CHEST, _type), \
+			.msv = min_stat, \
+		} } \
+	}; \
+	unsigned s ## _chest_ref = skel_new(&s ## _chest); \
+	DROP s ## _chest_drop = { y }; \
+	unsigned s ## _chest_drop_ref = drop_new(&s ## _chest_drop); \
+	adrop_add(s ## _chest_ref, s ## _chest_drop_ref); \
+	SKEL s ## _pants = { \
+		.name = #s " armor leggings", \
+		.description = "", \
+		.type = STYPE_EQUIPMENT, \
+		.sp = { .equipment = { \
+			.eqw = EQ(ES_PANTS, _type), \
+			.msv = min_stat, \
+		} } \
+	}; \
+	unsigned s ## _pants_ref = skel_new(&s ## _pants); \
+	DROP s ## _pants_drop = { y }; \
+	unsigned s ## _pants_drop_ref = drop_new(&s ## _pants_drop); \
+	adrop_add(s ## _pants_ref, s ## _pants_drop_ref);
+
+#define ARMORSET_LIGHT(s, min_dex, y) \
+	ARMORSET(s, ARMOR_LIGHT, min_dex, y)
+
+#define ARMORSET_MEDIUM(s, min_stat, y) \
+	ARMORSET(s, ARMOR_MEDIUM, min_stat, y)
+
+#define ARMORSET_HEAVY(s, min_str, y) \
+	ARMORSET(s, ARMOR_HEAVY, min_str, y)
+
+SKEL dagger = {
+	.name = "dagger",
+	.description = "",
+	.type = STYPE_EQUIPMENT,
+	.sp = { .equipment = {
+		.eqw = EQ(ES_RHAND, WT_SLASH),
+		.msv = 5
+	} }
+};
 
 bodypart_t bodypart_map[] = {
 	[BP_HEAD] = {
@@ -52,16 +114,14 @@ enum bodypart ch_bodypart_map[] = {
 	['g'] = BP_LEGS,
 };
 
-#include "drop.c"
-
-struct object_skeleton entity_skeleton_map[] = {
+SKEL nodrop_skel[] = {
 	[MOB_HUMAN] = {
 		.name = "human",
 	},
 	[MOB_GOLDFISH] = {
 		.name = "goldfish",
 		.description = "",
-		.type = S_TYPE_ENTITY,
+		.type = STYPE_ENTITY,
 		.sp = {
 			.entity = {
 				.wt = WT_BITE,
@@ -74,7 +134,7 @@ struct object_skeleton entity_skeleton_map[] = {
 	[MOB_SALMON] = {
 		.name = "salmon",
 		.description = "",
-		.type = S_TYPE_ENTITY,
+		.type = STYPE_ENTITY,
 		.sp = {
 			.entity = {
 				.wt = WT_BITE,
@@ -87,7 +147,7 @@ struct object_skeleton entity_skeleton_map[] = {
 	[MOB_TUNA] = {
 		.name = "tuna",
 		.description = "",
-		.type = S_TYPE_ENTITY,
+		.type = STYPE_ENTITY,
 		.sp = {
 			.entity = {
 				.wt = WT_BITE,
@@ -100,7 +160,7 @@ struct object_skeleton entity_skeleton_map[] = {
 	[MOB_KOIFISH] = {
 		.name = "koifish",
 		.description = "",
-		.type = S_TYPE_ENTITY,
+		.type = STYPE_ENTITY,
 		.sp = {
 			.entity = {
 				.wt = WT_BITE,
@@ -113,7 +173,7 @@ struct object_skeleton entity_skeleton_map[] = {
 	[MOB_DOLPHIN] = {
 		.name = "dolphin",
 		.description = "",
-		.type = S_TYPE_ENTITY,
+		.type = STYPE_ENTITY,
 		.sp = {
 			.entity = {
 				.wt = WT_BITE,
@@ -126,7 +186,7 @@ struct object_skeleton entity_skeleton_map[] = {
 	[MOB_SHARK] = {
 		.name = "shark",
 		.description = "",
-		.type = S_TYPE_ENTITY,
+		.type = STYPE_ENTITY,
 		.sp = {
 			.entity = {
 				.wt = WT_BITE,
@@ -142,7 +202,7 @@ struct object_skeleton entity_skeleton_map[] = {
 	[MOB_MOONFISH] = {
 		.name = "moonfish",
 		.description = "",
-		.type = S_TYPE_ENTITY,
+		.type = STYPE_ENTITY,
 		.sp = {
 			.entity = {
 				.wt = WT_BITE,
@@ -156,7 +216,7 @@ struct object_skeleton entity_skeleton_map[] = {
 	[MOB_RAINBOWFISH] = {
 		.name = "rainbowfish",
 		.description = "",
-		.type = S_TYPE_ENTITY,
+		.type = STYPE_ENTITY,
 		.sp = {
 			.entity = {
 				.wt = WT_BITE,
@@ -170,7 +230,7 @@ struct object_skeleton entity_skeleton_map[] = {
 	[MOB_ICEBIRD] = {
 		.name = "icebird",
 		.description = "",
-		.type = S_TYPE_ENTITY,
+		.type = STYPE_ENTITY,
 		.sp = {
 			.entity = {
 				.wt = WT_PECK,
@@ -190,7 +250,7 @@ struct object_skeleton entity_skeleton_map[] = {
 	[MOB_PARROT] = {
 		.name = "parrot",
 		.description = "",
-		.type = S_TYPE_ENTITY,
+		.type = STYPE_ENTITY,
 		.sp = {
 			.entity = {
 				.wt = WT_PECK,
@@ -204,16 +264,9 @@ struct object_skeleton entity_skeleton_map[] = {
 	[MOB_BANDIT] = {
 		.name = "bandit",
 		.description = "A shady person under some robes",
-		.type = S_TYPE_ENTITY,
+		.type = STYPE_ENTITY,
 		.sp = {
 			.entity = {
-				.drop = {
-					&dagger_drop,
-					ARMORSET_LIST(padded),
-					ARMORSET_LIST(hide),
-					ARMORSET_LIST(chainmail),
-					NULL
-				},
 				.y = 4,
 				.stat = FIGHTER,
 				.lvl = 5,
@@ -233,7 +286,7 @@ struct object_skeleton entity_skeleton_map[] = {
 	[MOB_SWALLOW] = {
 		.name = "swallow",
 		.description = "",
-		.type = S_TYPE_ENTITY,
+		.type = STYPE_ENTITY,
 		.sp = { .entity = {
 			.wt = WT_PECK,
 			.type = ELM_AIR,
@@ -264,9 +317,8 @@ struct object_skeleton entity_skeleton_map[] = {
 	[MOB_VAMPIRE_SPAWN] = {
 		.name = "vampire spawn",
 		.description = "Undead that came into Being when a Vampire Slew a Mortal.",
-		.type = S_TYPE_ENTITY,
+		.type = STYPE_ENTITY,
 		.sp = { .entity = {
-			.drop = { NULL },
 			.y = 6,
 			.stat = FIGHTER,
 			.lvl = 80,
@@ -278,7 +330,7 @@ struct object_skeleton entity_skeleton_map[] = {
 	[MOB_WOODPECKER] = {
 		.name = "woodpecker",
 		.description = "",
-		.type = S_TYPE_ENTITY,
+		.type = STYPE_ENTITY,
 		.sp = { .entity = {
 			.wt = WT_PECK,
 			.type = ELM_AIR,
@@ -295,7 +347,7 @@ struct object_skeleton entity_skeleton_map[] = {
 	[MOB_SPARROW] = {
 		.name = "sparrow",
 		.description = "",
-		.type = S_TYPE_ENTITY,
+		.type = STYPE_ENTITY,
 		.sp = { .entity = {
 			.wt = WT_PECK, .type = ELM_AIR,
 			.y = 3,
@@ -311,7 +363,7 @@ struct object_skeleton entity_skeleton_map[] = {
 	[MOB_OWL] = {
 		.name = "owl",
 		.description = "",
-		.type = S_TYPE_ENTITY,
+		.type = STYPE_ENTITY,
 		.sp = { .entity = {
 			.wt = WT_PECK, .type = ELM_DARK,
 			.y = 7,
@@ -342,3 +394,27 @@ struct object_skeleton entity_skeleton_map[] = {
 	/* } */
 };
 
+unsigned mob_refs[MOB_MAX];
+
+void mobs_init() {
+	for (unsigned i = 0; i < MOB_MAX; i++)
+		mob_refs[i] = skel_new(&nodrop_skel[i]);
+
+	ARMORSET_LIGHT(padded, 15, 5);
+	ARMORSET_MEDIUM(hide, 15, 5);
+	ARMORSET_HEAVY(chainmail, 15, 5);
+
+	/* unsigned dagger_drop_ref = drop_new(&dagger_drop); */
+	/* adrop_add(bandit_ref, dagger_drop_ref); */
+
+	unsigned bandit_ref  = mob_refs[MOB_BANDIT];
+	adrop_add(bandit_ref, padded_helmet_drop_ref);
+	adrop_add(bandit_ref, padded_chest_drop_ref);
+	adrop_add(bandit_ref, padded_pants_drop_ref);
+	adrop_add(bandit_ref, hide_helmet_drop_ref);
+	adrop_add(bandit_ref, hide_chest_drop_ref);
+	adrop_add(bandit_ref, hide_pants_drop_ref);
+	adrop_add(bandit_ref, chainmail_helmet_drop_ref);
+	adrop_add(bandit_ref, chainmail_chest_drop_ref);
+	adrop_add(bandit_ref, chainmail_pants_drop_ref);
+}

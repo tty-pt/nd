@@ -47,68 +47,134 @@ element_t element_map[] = {
 	},
 };
 
-struct spell_skeleton spell_skeleton_map[] = {
+unsigned heal_id;
+
+SKEL spell_map[] = {
 	[SPELL_HEAL] = {
-		{"Heal", "", },
-		ELM_PHYSICAL, 3, 1, 2, AF_HP,
+		.name = "Heal",
+		.description = "",
+		.type = STYPE_SPELL,
+		.sp = {
+			.spell = {
+				.element = ELM_PHYSICAL,
+				.ms = 3, .ra = 1, .y = 2,
+				.flags = AF_HP,
+			}
+		},
 	},
 
 	[SPELL_FOCUS] = {
-		{"Focus", "", },
-		ELM_PHYSICAL, 15, 3, 1,
-		AF_MDMG | AF_BUF,
+		.name = "Focus",
+		.description = "",
+		.type = STYPE_SPELL,
+		.sp = {
+			.spell = {
+				.element = ELM_PHYSICAL,
+				.ms = 15, .ra = 3, .y = 1,
+				.flags = AF_MDMG | AF_BUF,
+			}
+		},
 	},
 
 	[SPELL_FIRE_FOCUS] = {
-		{"Fire Focus", "", },
-		ELM_FIRE, 15, 3, 1,
-		AF_MDMG | AF_BUF,
+		.name = "Fire Focus",
+		.description = "",
+		.type = STYPE_SPELL,
+		.sp = {
+			.spell = {
+				.element = ELM_FIRE,
+				.ms = 15, .ra = 3, .y = 1,
+				.flags = AF_MDMG | AF_BUF,
+			}
+		},
 	},
 
 	[SPELL_CUT] = {
-		{"Cut", "", },
-		ELM_PHYSICAL, 15, 1, 2,
-		AF_NEG,
+		.name = "Cut",
+		.description = "",
+		.type = STYPE_SPELL,
+		.sp = {
+			.spell = {
+				.element = ELM_PHYSICAL,
+				.ms = 15, .ra = 1, .y = 2,
+				.flags = AF_NEG,
+			}
+		},
 	},
 
 	[SPELL_FIREBALL] = {
-		{"Fireball", "", },
-		ELM_FIRE, 3, 1, 2,
-		AF_NEG,
+		.name = "Fireball",
+		.description = "",
+		.type = STYPE_SPELL,
+		.sp = {
+			.spell = {
+				.element = ELM_FIRE,
+				.ms = 3, .ra = 1, .y = 2,
+				.flags = AF_NEG,
+			}
+		},
 	}, // 1/4 chance of burning
 
 	[SPELL_WEAKEN] = {
-		{"Weaken", "", },
-		ELM_PHYSICAL, 15, 3, 1,
-		AF_MDMG | AF_BUF | AF_NEG,
+		.name = "Weaken",
+		.description = "",
+		.type = STYPE_SPELL,
+		.sp = { .spell = {
+			.element = ELM_PHYSICAL,
+			.ms = 15, .ra = 3, .y = 1,
+			.flags = AF_MDMG | AF_BUF | AF_NEG,
+		} },
 	},
 
 	[SPELL_DISTRACT] = {
-		{"Distract", "", },
-		ELM_PHYSICAL, 15, 3, 1,
-		AF_MDEF | AF_BUF | AF_NEG,
+		.name = "Distract",
+		.description = "",
+		.type = STYPE_SPELL,
+		.sp = { .spell = {
+			.element = ELM_PHYSICAL,
+			.ms = 15, .ra = 3, .y = 1,
+			.flags = AF_MDEF | AF_BUF | AF_NEG,
+		} },
 	},
 
 	[SPELL_FREEZE] = {
-		{"Freeze", "", },
-		ELM_ICE, 10, 2, 4,
-		AF_MOV | AF_NEG,
+		.name = "Freeze",
+		.description = "",
+		.type = STYPE_SPELL,
+		.sp = { .spell = {
+			.element = ELM_ICE,
+			.ms = 10, .ra = 2, .y = 4,
+			.flags = AF_MOV | AF_NEG,
+		} },
 	},
 
 	[SPELL_LAVA_SHIELD] = {
-		{"Lava Shield", "", },
-		ELM_FIRE, 15, 3, 1,
-		AF_MDEF | AF_BUF,
+		.name = "Lava Shield",
+		.description = "",
+		.type = STYPE_SPELL,
+		.sp = { .spell = {
+			.element = ELM_FIRE,
+			.ms = 15, .ra = 3, .y = 1,
+			.flags = AF_MDEF | AF_BUF,
+		} },
 	},
 
 	[SPELL_WIND_VEIL] = {
-		{"Wind Veil", "", },
-		.flags = AF_DODGE,
+		.name = "Wind Veil",
+		.description = "",
+		.type = STYPE_SPELL,
+		.sp = { .spell = {
+			.flags = AF_DODGE,
+		} },
 	},
 
 	[SPELL_STONE_SKIN] = {
-		{"Stone Skin", "", },
-		.flags = AF_DEF,
+		.name = "Stone Skil",
+		.description = "",
+		.type = STYPE_SPELL,
+		.sp = { .spell = {
+			.flags = AF_DEF,
+		} },
 	},
 };
 
@@ -155,7 +221,9 @@ char *buf_wts[] = {
 enum element
 element_next(ENT *ent, register unsigned char a)
 {
-	struct spell_skeleton *sp = &spell_skeleton_map[ent->debufs[__builtin_ffs(a) - 1].skel];
+	unsigned skel_id = ent->debufs[__builtin_ffs(a) - 1].skel;
+	SKEL skel = skel_get(skel_id);
+	SSPE *sp = &skel.sp.spell;
 	return a ? sp->element : ELM_PHYSICAL;
 }
 
@@ -163,7 +231,8 @@ void
 debuf_end(ENT *eplayer, unsigned i)
 {
 	struct debuf *d = &eplayer->debufs[i];
-	struct spell_skeleton *sp = &spell_skeleton_map[d->skel];
+	SKEL skel = skel_get(d->skel);
+	SSPE *sp = &skel.sp.spell;
 	struct effect *e = &eplayer->e[DEBUF_TYPE(sp)];
 	i = 1 << i;
 
@@ -194,7 +263,8 @@ void
 debuf_notify(dbref player_ref, struct debuf *d, short val)
 {
 	char buf[BUFSIZ];
-	register struct spell_skeleton *_sp = &spell_skeleton_map[d->skel];
+	SKEL skel = skel_get(d->skel);
+	SSPE *_sp = &skel.sp.spell;
 	char const *color = sp_color(_sp);
 	char *wts = debuf_wts(_sp);
 
@@ -224,7 +294,8 @@ debufs_process(dbref player_ref, ENT *eplayer)
 			debuf_end(eplayer, i);
 			continue;
 		}
-		struct spell_skeleton *sp = &spell_skeleton_map[d->skel];
+		SKEL skel = skel_get(d->skel);
+		SSPE *sp = &skel.sp.spell;
 		// wtf is this special code?
 		if (DEBUF_TYPE(sp) == AF_HP) {
 			dmg = kill_dmg(sp->element, d->val,
@@ -259,7 +330,8 @@ debufs_end(ENT *eplayer)
 static inline int
 debuf_start(dbref player_ref, struct spell *sp, short val)
 {
-	struct spell_skeleton *_sp = &spell_skeleton_map[sp->skel];
+	SKEL skel = skel_get(sp->skel);
+	SSPE *_sp = &skel.sp.spell;
 	ENT eplayer = ent_get(player_ref);
 	struct debuf *d;
 	int i;
@@ -273,7 +345,7 @@ debuf_start(dbref player_ref, struct spell *sp, short val)
 		i = 0;
 
 	d = &eplayer.debufs[i];
-	d->skel = _sp - spell_skeleton_map;
+	d->skel = sp->skel;
 	d->duration = DEBUF_DURATION(_sp->ra);
 	d->val = DEBUF_DMG(val, d->duration);
 
@@ -295,7 +367,8 @@ spell_cast(dbref player_ref, ENT *eplayer, dbref target_ref, unsigned slot)
 {
 	ENT etarget = ent_get(target_ref);
 	struct spell sp = eplayer->spells[slot];
-	struct spell_skeleton *_sp = &spell_skeleton_map[sp.skel];
+	SKEL skel = skel_get(sp.skel);
+	SSPE *_sp = &skel.sp.spell;
 
 	unsigned mana = eplayer->mp;
 	char a[BUFSIZ]; // FIXME way too big?
@@ -306,7 +379,7 @@ spell_cast(dbref player_ref, ENT *eplayer, dbref target_ref, unsigned slot)
 	if (mana < sp.cost)
 		return -1;
 
-	snprintf(a, sizeof(a), "%s%s"ANSI_RESET, color, _sp->o.name);
+	snprintf(a, sizeof(a), "%s%s"ANSI_RESET, color, skel.name);
 
 	mana -= sp.cost;
 	eplayer->mp = mana > 0 ? mana : 0;
@@ -357,9 +430,16 @@ spells_birth(ENT *entity) {
 	register int j;
 	for (j = 0; j < 8; j++) {
 		struct spell *sp = &entity->spells[j];
-		struct spell_skeleton *_sp = SPELL_SKELETON(0);
+		SKEL skel = skel_get(heal_id);
+		struct spell_skeleton *_sp = &skel.sp.spell;
 		sp->skel = 0;
 		sp->val = SPELL_DMG(entity, _sp);
 		sp->cost = SPELL_COST(sp->val, _sp->y, _sp->flags & AF_BUF);
 	}
+}
+
+void
+spells_init() {
+	for (int i = 0; i < SPELL_MAX; i++)
+		skel_new(&spell_map[i]);
 }

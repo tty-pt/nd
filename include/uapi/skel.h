@@ -1,7 +1,7 @@
 #ifndef UAPI_SKEL_H
 #define UAPI_SKEL_H
 
-struct lhash skel_lhash, drop_lhash;
+#include "qhash.h"
 
 enum element {
 	ELM_PHYSICAL,
@@ -22,6 +22,7 @@ enum object_skeleton_type {
 	STYPE_PLANT,
 	STYPE_BIOME,
 	STYPE_MINERAL,
+	STYPE_SPELL,
 };
 
 typedef struct drop {
@@ -41,6 +42,12 @@ typedef struct plant_skel {
 	uint16_t rn_min, rn_max;
 	unsigned y;
 } SPLA;
+
+typedef struct spell_skeleton {
+       enum element element;
+       unsigned char ms, ra, y, flags;
+       char *name, *description;
+} SSPE;
 
 typedef struct object_skel {
 	char const *name;
@@ -64,12 +71,13 @@ typedef struct object_skel {
                 struct {
                         short unsigned unused;
                 } mineral;
+		SSPE spell;
         } sp;
 } SKEL;
 
 LHASH_DECL(skel, SKEL);
 LHASH_DECL(drop, DROP);
-LHASH_ASSOC_DECL(drop, skel, drop);
+LHASH_ASSOC_DECL(adrop, skel, drop);
 
 /* is like:
 unsigned skel_new(SKEL *skel);
