@@ -2,8 +2,8 @@
 #define UAPI_ENTITY_H
 
 #include <math.h>
-#include "uapi/skel.h"
-#include "uapi/object.h"
+#include "./skel.h"
+#include "./object.h"
 
 #define EQUIP(ent, y) (ent)->equipment[y]
 #define EFFECT(ent, w) (ent)->e[AF_ ## w]
@@ -54,36 +54,64 @@ enum bodypart {
 	BP_LEGS,
 };
 
-ENT ent_get(unsigned ref);
-void ent_set(unsigned ref, ENT *tmp);
-void ent_del(unsigned ref);
-void ent_reset(ENT *ent);
-void birth(ENT *eplayer);
+typedef ENT ent_get_t(unsigned ref);
+ent_get_t ent_get;
 
-void sit(unsigned player_ref, ENT *eplayer, char *what);
-int stand_silent(unsigned player_ref, ENT *eplayer);
-void stand(unsigned player_ref, ENT *eplayer);
+typedef void ent_set_t(unsigned ref, ENT *tmp);
+ent_set_t ent_set;
 
-int controls(unsigned who_ref, unsigned what_ref);
-int payfor(unsigned who_ref, OBJ *who, int cost);
+typedef void ent_del_t(unsigned ref);
+ent_del_t ent_del;
 
-void look_around(unsigned player_ref);
+typedef void ent_reset_t(ENT *ent);
+ent_reset_t ent_reset;
 
-int equip_affect(ENT *ewho, EQU *equ);
-int equip(unsigned player_ref, unsigned eq_ref);
-unsigned unequip(unsigned player_ref, unsigned eql);
+typedef void birth_t(ENT *eplayer);
+birth_t birth;
 
-enum element mask_element(ENT *ref, register unsigned char a);
+typedef void sit_t(unsigned player_ref, ENT *eplayer, char *what);
+sit_t sit;
 
-int entity_damage(unsigned player_ref, ENT *eplayer, unsigned target_ref, ENT *etarget, short amt);
+typedef int stand_silent_t(unsigned player_ref, ENT *eplayer);
+stand_silent_t stand_silent;
 
-void enter(unsigned player_ref, unsigned loc_ref, enum exit e);
+typedef void stand_t(unsigned player_ref, ENT *eplayer);
+stand_t stand;
 
-int kill_dodge(unsigned player_ref, char *wts);
-short kill_dmg(enum element dmg_type,
+typedef int controls_t(unsigned who_ref, unsigned what_ref);
+controls_t controls;
+
+typedef int payfor_t(unsigned who_ref, OBJ *who, int cost);
+payfor_t payfor;
+
+typedef void look_around_t(unsigned player_ref);
+look_around_t look_around;
+
+typedef int equip_affect_t(ENT *ewho, EQU *equ);
+equip_affect_t equip_affect;
+
+typedef int equip_t(unsigned player_ref, unsigned eq_ref);
+equip_t equip;
+
+typedef unsigned unequip_t(unsigned player_ref, unsigned eql);
+unequip_t unequip;
+
+typedef enum element mask_element_t(ENT *ref, register unsigned char a);
+mask_element_t mask_element;
+
+typedef int entity_damage_t(unsigned player_ref, ENT *eplayer, unsigned target_ref, ENT *etarget, short amt);
+entity_damage_t entity_damage;
+
+typedef void enter_t(unsigned player_ref, unsigned loc_ref, enum exit e);
+enter_t enter;
+
+typedef int kill_dodge_t(unsigned player_ref, char *wts);
+kill_dodge_t kill_dodge;
+
+typedef short kill_dmg_t(enum element dmg_type,
 		short dmg, short def,
 		enum element def_type);
-
+kill_dmg_t kill_dmg;
 
 static inline unsigned
 xsqrtx(unsigned x)
@@ -93,7 +121,10 @@ xsqrtx(unsigned x)
 
 /* spell */
 
-int spell_cast(unsigned player_ref, ENT *eplayer, unsigned target_ref, unsigned slot);
-void debufs_end(ENT *player);
+typedef int spell_cast_t(unsigned player_ref, ENT *eplayer, unsigned target_ref, unsigned slot);
+spell_cast_t spell_cast;
+
+typedef void debufs_end_t(ENT *player);
+debufs_end_t debufs_end;
 
 #endif

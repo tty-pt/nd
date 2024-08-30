@@ -27,15 +27,24 @@ obj-y := skel.o object.o entity.o spacetime.o mcp.o map.o \
 src = ${obj-y:%.o=%.c}
 LD := ${CC}
 
-all: ${exe}
+all: ${exe} libnd.a
 
 $(exe): ${obj-y}
 	@echo LD $@
 	@${LINK.c} -o $@ ${obj-y} ${LDLIBS} -lutil
 
+libnd.so: libnd.c
+	${CC} -shared -g -o $@ -fPIC ${CFLAGS} libnd.c
+
+libnd.o: libnd.c
+	${CC} -g -c -o $@ -fPIC ${CFLAGS} libnd.c
+
+libnd.a: libnd.o
+	ar rcs libnd.a libnd.o
+
 .c.o:
 	@echo CC $@
-	@${COMPILE.c} -o $@ ${<:%=${RELDIR}/%}
+	@${COMPILE.c} -o $@ -fPIC ${<:%=${RELDIR}/%}
 
 CTAGS ?= ctags
 

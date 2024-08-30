@@ -117,14 +117,14 @@ enter(unsigned player_ref, unsigned loc_ref, enum exit e)
 	OBJ player = obj_get(player_ref);
 	unsigned old_loc_ref = player.location;
 
-	st_run(player_ref, "leave");
+	st_run(player_ref, "ndst_leave");
 	if (e == E_NULL)
 		nd_owritef(player_ref, "%s teleports out.\n", player.name);
 	object_move(player_ref, loc_ref);
 	room_clean(old_loc_ref);
 	if (e == E_NULL)
 		nd_owritef(player_ref, "%s teleports in.\n", player.name);
-	st_run(player_ref, "enter");
+	st_run(player_ref, "ndst_enter");
 	entities_aggro(player_ref);
 }
 

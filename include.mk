@@ -16,11 +16,15 @@ uapi != ls items/nd/include/uapi
 items/nd/nd: FORCE
 	${MAKE} -C items/nd PWD=${PWD:%=%/items/nd}
 
+usr/lib/libnd.a: FORCE
+	${MAKE} -C items/nd/src PWD=${PWD:%=%/items/nd} libnd.a
+	cp items/nd/src/libnd.a usr/lib/
+
 -include items/nd/man/include.mk
 
 all: items/nd/nd var/nd/std.db.ok mounts dev/ nods etc/ etc/vim/vimrc.local \
 	${pages:%=usr/share/man/man10/%} usr/share/man/mandoc.db \
-	${uapi:%=usr/include/%}
+	${uapi:%=usr/include/%} usr/lib/libnd.a
 
 var/nd/std.db.ok:
 	mkdir -p var/nd || true

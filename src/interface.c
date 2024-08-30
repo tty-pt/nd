@@ -377,15 +377,6 @@ nd_dwritef(unsigned player_ref, const char *fmt, va_list args) {
 }
 
 void
-nd_writef(unsigned player_ref, const char *fmt, ...)
-{
-	va_list va;
-	va_start(va, fmt);
-	nd_dwritef(player_ref, fmt, va);
-	va_end(va);
-}
-
-void
 nd_rwrite(unsigned room_ref, unsigned exception_ref, char *str, size_t len) {
 	unsigned tmp_ref;
 	struct hash_cursor c = contents_iter(room_ref);
@@ -402,15 +393,6 @@ nd_dowritef(unsigned player_ref, const char *fmt, va_list args) {
 	nd_rwrite(obj_get(player_ref).location, player_ref, buf, len);
 }
 
-void
-nd_owritef(unsigned player_ref, char *format, ...)
-{
-	va_list args;
-	va_start(args, format);
-	nd_dowritef(player_ref, format, args);
-	va_end(args);
-}
-
 void nd_tdwritef(unsigned player_ref, const char *fmt, va_list args) {
 	static char buf[BUFSIZ];
 	ssize_t len = vsnprintf(buf, sizeof(buf), fmt, args);
@@ -420,13 +402,6 @@ void nd_tdwritef(unsigned player_ref, const char *fmt, va_list args) {
 	while ((fd = fds_next(&c)))
 		if (!(ndc_flags(fd) & DF_WEBSOCKET))
 			ndc_write(fd, buf, len);
-}
-
-void nd_twritef(unsigned player_ref, const char *fmt, ...) {
-	va_list va;
-	va_start(va, fmt);
-	nd_tdwritef(player_ref, fmt, va);
-	va_end(va);
 }
 
 void nd_wwrite(unsigned player_ref, void *msg, size_t len) {
@@ -542,7 +517,7 @@ auth(int fd, char *qsession)
 	look_around(player_ref);
         mcp_bars(player_ref);
 	do_view(fd, 0, NULL);
-	st_run(player_ref, "auth");
+	st_run(player_ref, "ndst_auth");
 	return player_ref;
 }
 
