@@ -206,16 +206,23 @@ struct icon {
 
 LHASH_DECL(obj, OBJ);
 
-int obj_exists(unsigned ref);
-struct hash_cursor obj_iter();
-unsigned obj_next(OBJ *iobj, struct hash_cursor *c);
+typedef int obj_exists_t(unsigned ref);
+obj_exists_t obj_exists;
 
-unsigned object_new(OBJ *obj);
-unsigned object_copy(OBJ *nu, unsigned old_ref);
-void object_move(unsigned what_ref, unsigned where_ref);
+typedef unsigned object_new_t(OBJ *obj);
+object_new_t object_new;
 
-unsigned object_add(OBJ *nu, unsigned skel_id, unsigned where, void *arg);
-void object_drop(unsigned where_ref, unsigned skel_id);
+typedef unsigned object_copy_t(OBJ *nu, unsigned old_ref);
+object_copy_t object_copy;
+
+typedef void object_move_t(unsigned what_ref, unsigned where_ref);
+object_move_t object_move;
+
+typedef unsigned object_add_t(OBJ *nu, unsigned skel_id, unsigned where, void *arg);
+object_add_t object_add;
+
+typedef void object_drop_t(unsigned where_ref, unsigned skel_id);
+object_drop_t object_drop;
 
 LHASH_ASSOC_DECL(obs, obj, obj);
 LHASH_ASSOC_DECL(contents, obj, obj);
@@ -229,9 +236,16 @@ object_item(unsigned obj_ref)
 		|| obj.type == TYPE_EQUIPMENT;
 }
 
-struct icon object_icon(unsigned thing_ref);
-unsigned art_max(char *name);
-char *object_art(unsigned ref);
-const char * unparse(unsigned loc_ref);
+typedef struct icon object_icon_t(unsigned thing_ref);
+object_icon_t object_icon;
+
+typedef unsigned art_max_t(char *name);
+art_max_t art_max;
+
+typedef char *object_art_t(unsigned ref);
+object_art_t object_art;
+
+typedef const char *unparse_t(unsigned loc_ref);
+unparse_t unparse;
 
 #endif

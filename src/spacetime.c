@@ -15,10 +15,8 @@
 #include "noise.h"
 #include "params.h"
 #include "player.h"
-#include "uapi/entity.h"
-#include "uapi/io.h"
-#include "uapi/map.h"
 #include "view.h"
+#include "papi/nd.h"
 
 #define PRECOVERY
 
@@ -42,6 +40,7 @@ typedef struct {
 } op_t;
 unsigned g_player_ref;
 OBJ *g_player;
+struct nd nd;
 
 enum exit e_map[] = {
 	[0 ... 254] = E_NULL,
@@ -1026,8 +1025,11 @@ st_open(struct st_key st_key, int owner)
 
 	if (!sl)
 		fprintf(stderr, "dlopen error for %d, %s: %s\n", owner, filename, dlerror());
-	else
+	else {
 		fprintf(stderr, "dlopen %d, %s\n", owner, filename);
+		struct nd *ind = dlsym(sl, "nd");
+		*ind = nd;
+	}
 
 	hash_cput(sl_hd, &st_key, sizeof(st_key), &sl, sizeof(void *));
 	hash_cput(owner_hd, &st_key, sizeof(st_key), &owner, sizeof(owner));
@@ -1069,6 +1071,95 @@ st_init() {
 
 	owner_hd = hash_cinit("/var/nd/st.db", NULL, 0644, 0);
 	sl_hd = hash_init();
+	st_put(1, 0, 64);
+
+	nd.fd_player = fd_player;
+	nd.fds_iter = fds_iter;
+	nd.fds_next = fds_next;
+	/* nd.fds_has = fds_has; */
+	nd.nd_close = nd_close;
+	nd.nd_write = nd_write;
+	nd.nd_dwritef = nd_dwritef;
+	nd.nd_rwrite = nd_rwrite;
+	nd.nd_dowritef = nd_dowritef;
+	nd.dnotify_wts = dnotify_wts;
+	nd.dnotify_wts_to = dnotify_wts_to;
+	nd.notify_attack = notify_attack;
+	nd.nd_tdwritef = nd_tdwritef;
+	nd.nd_wwrite = nd_wwrite;
+
+	nd.map_has = map_has;
+	nd.map_mwhere = map_mwhere;
+	nd.map_where = map_where;
+	nd.map_delete = map_delete;
+	nd.map_get = map_get;
+
+	nd.st_teleport = st_teleport;
+	nd.st_run = st_run;
+
+	nd.wts_plural = wts_plural;
+
+	nd.skel_new = skel_new;
+	nd.skel_get = skel_get;
+	nd.skel_set = skel_set;
+	nd.skel_iter = skel_iter;
+	nd.skel_next = skel_next;
+	nd.drop_new = drop_new;
+	nd.drop_get = drop_get;
+	nd.drop_set = drop_set;
+	nd.drop_iter = drop_iter;
+	nd.drop_next = drop_next;
+	nd.adrop_add = adrop_add;
+	nd.adrop_iter = adrop_iter;
+	nd.adrop_next = adrop_next;
+	nd.adrop_remove = adrop_remove;
+
+	nd.obj_new = obj_new;
+	nd.obj_get = obj_get;
+	nd.obj_set = obj_set;
+	nd.obj_iter = obj_iter;
+	nd.obj_next = obj_next;
+	nd.obj_exists = obj_exists;
+	nd.object_new = object_new;
+	nd.object_copy = object_copy;
+	nd.object_move = object_move;
+	nd.object_add = object_add;
+	nd.object_drop = object_drop;
+	nd.obs_add = obs_add;
+	nd.obs_iter = obs_iter;
+	nd.obs_next = obs_next;
+	nd.obs_remove = obs_remove;
+	nd.contents_add = contents_add;
+	nd.contents_iter = contents_iter;
+	nd.contents_next = contents_next;
+	nd.contents_remove = contents_remove;
+	nd.object_icon = object_icon;
+	nd.art_max = art_max;
+	nd.object_art = object_art;
+	nd.unparse = unparse;
+
+	nd.ent_get = ent_get;
+	nd.ent_set = ent_set;
+	nd.ent_del = ent_del;
+	nd.ent_reset = ent_reset;
+	nd.birth = birth;
+	nd.sit = sit;
+	nd.stand_silent = stand_silent;
+	nd.stand = stand;
+	nd.controls = controls;
+	nd.payfor = payfor;
+	nd.look_around = look_around;
+	nd.equip_affect = equip_affect;
+	nd.equip = equip;
+	nd.unequip = unequip;
+	nd.mask_element = mask_element;
+	nd.entity_damage = entity_damage;
+	nd.enter = enter;
+	nd.kill_dodge = kill_dodge;
+	nd.kill_dmg = kill_dmg;
+	nd.spell_cast = spell_cast;
+	nd.debufs_end = debufs_end;
+
 	struct hash_cursor c = hash_iter(owner_hd);
 	struct st_key st_key;
 	int owner;

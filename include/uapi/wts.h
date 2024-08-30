@@ -1,7 +1,7 @@
 #ifndef UAPI_WTS_H
 #define UAPI_WTS_H
 
-#include "uapi/object.h"
+#include "./object.h"
 
 enum wt {
 	WT_PUNCH,
@@ -62,7 +62,10 @@ enum wt {
 };
 
 extern char *wts_map[];
-char *wts_plural(char *singular);
+
+typedef char *wts_plural_t(char *singular);
+wts_plural_t wts_plural;
+
 static inline char *wts_cond(char *singular, int number) {
 	return number == 1 || number == -1 ? singular : wts_plural(singular);
 }

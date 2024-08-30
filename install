@@ -106,6 +106,9 @@ man
 /usr/include/stdarg.h
 /usr/include/stddef.h
 /usr/include/stdio.h
+/usr/include/math.h
+/usr/include/sys/limits.h
+/usr/include/machine/limits.h
 /usr/local/include/qhash.h
 /usr/include/sys/queue.h
 /usr/include/string.h

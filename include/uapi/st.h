@@ -2,7 +2,7 @@
 #define UAPI_ST_H
 
 #include <sys/types.h>
-#include "uapi/object.h"
+#include "./object.h"
 
 #define DIM 2
 
@@ -22,7 +22,11 @@ struct cmd_dir {
 	morton_t rep;
 };
 
-int st_teleport(unsigned player_ref, struct cmd_dir cd);
+typedef int st_teleport_t(unsigned player_ref, struct cmd_dir cd);
+st_teleport_t st_teleport;
+
+typedef void st_run_t(unsigned player_ref, char *symbol);
+st_run_t st_run;
 
 #endif
 

@@ -5,13 +5,28 @@
 
 #define NOMATCH_MESSAGE "I don't know what you mean.\n"
 
-unsigned ematch_at(unsigned player_ref, unsigned where_ref, char *name);
-unsigned ematch_player(char *name);
-unsigned ematch_absolute(char *name);
-unsigned ematch_me(unsigned player_ref, char *str);
-unsigned ematch_here(unsigned player_ref, char *str);
-unsigned ematch_mine(unsigned player_ref, char *str);
-unsigned ematch_near(unsigned player_ref, char *str);
-unsigned ematch_all(unsigned player_ref, char *name);
+typedef unsigned ematch_at_t(unsigned player_ref, unsigned where_ref, char *name);
+ematch_at_t ematch_at;
+
+typedef unsigned ematch_player_t(char *name);
+ematch_player_t ematch_player;
+
+typedef unsigned ematch_absolute_t(char *name);
+ematch_absolute_t ematch_absolute;
+
+typedef unsigned ematch_me_t(unsigned player_ref, char *str);
+ematch_me_t ematch_me;
+
+typedef unsigned ematch_here_t(unsigned player_ref, char *str);
+ematch_here_t ematch_here;
+
+typedef unsigned ematch_mine_t(unsigned player_ref, char *str);
+ematch_mine_t ematch_mine;
+
+typedef unsigned ematch_near_t(unsigned player_ref, char *str);
+ematch_near_t ematch_near;
+
+typedef unsigned ematch_all_t(unsigned player_ref, char *name);
+ematch_all_t ematch_all;
 
 #endif /* _MATCH_H */

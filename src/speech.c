@@ -65,25 +65,19 @@ do_wall(int fd, int argc, char *argv[])
 }
 
 void
-notify_wts(unsigned who_ref, char const *a, char const *b, char *format, ...)
+dnotify_wts(unsigned who_ref, char const *a, char const *b, char *format, va_list args)
 {
-	va_list args;
 	char buf[BUFFER_LEN];
-	va_start(args, format);
 	vsnprintf(buf, sizeof(buf), format, args);
-	va_end(args);
 	nd_writef(who_ref, "You %s%s.\n", a, buf);
 	nd_owritef(who_ref, "%s %s%s.\n", obj_get(who_ref).name, b, buf);
 }
 
 void
-notify_wts_to(unsigned who_ref, unsigned tar_ref, char const *a, char const *b, char *format, ...)
+dnotify_wts_to(unsigned who_ref, unsigned tar_ref, char const *a, char const *b, char *format, va_list args)
 {
-	va_list args;
 	char buf[BUFFER_LEN];
-	va_start(args, format);
 	vsnprintf(buf, sizeof(buf), format, args);
-	va_end(args);
 	OBJ who = obj_get(who_ref),
 	    tar = obj_get(tar_ref);
 	nd_writef(who_ref, "You %s %s%s.\n", a, tar.name, buf);
