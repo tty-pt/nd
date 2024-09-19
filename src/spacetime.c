@@ -1021,11 +1021,12 @@ st_open(struct st_key st_key, int owner)
 
 	uint64_t short_key = st_key.key >> st_key.shift;
 	snprintf(filename, sizeof(filename), "/var/nd/st/%u/%llu/libnd.so", st_key.shift, short_key);
-	void *sl = dlopen(filename, RTLD_LAZY | RTLD_LOCAL);
+	void *sl = dlopen(filename, RTLD_NOW | RTLD_LOCAL | RTLD_NODELETE);
 
 	if (!sl)
 		fprintf(stderr, "dlopen error for %d, %s: %s\n", owner, filename, dlerror());
 	else {
+		dlerror();
 		fprintf(stderr, "dlopen %d, %s\n", owner, filename);
 		struct nd *ind = dlsym(sl, "nd");
 		*ind = nd;
@@ -1138,6 +1139,7 @@ st_init() {
 	nd.object_art = object_art;
 	nd.unparse = unparse;
 
+	nd.me_get = me_get;
 	nd.ent_get = ent_get;
 	nd.ent_set = ent_set;
 	nd.ent_del = ent_del;
@@ -1211,7 +1213,7 @@ _st_can(int ref, uint64_t key, unsigned shift) {
 }
 
 static long int
-st_hish_shift(unsigned player_ref, uint64_t position)
+st_high_shift(unsigned player_ref, uint64_t position)
 {
 	int ref = player_ref;
 
@@ -1291,7 +1293,7 @@ do_stchown(int fd, int argc, char *argv[]) {
 		? strtoull(argv[3], NULL, 10)
 		: map_mwhere(player.location);
 
-	long int high_shift = st_hish_shift(player_ref, position);
+	long int high_shift = st_high_shift(player_ref, position);
 
 	unsigned shift = argc < 3 ? high_shift : strtoul(argv[2], NULL, 10);
 
@@ -1315,7 +1317,7 @@ do_streload(int fd, int argc, char *argv[]) {
 		? strtoull(argv[2], NULL, 10)
 		: map_mwhere(player.location);
 
-	long int high_shift = st_hish_shift(player_ref, position);
+	long int high_shift = st_high_shift(player_ref, position);
 
 	unsigned shift = argc < 2 ? high_shift : strtoul(argv[1], NULL, 10);
 

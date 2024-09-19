@@ -14,6 +14,8 @@
 #include "uapi/object.h"
 #include "view.h"
 
+#include "papi/nd.h"
+
 enum opts {
 	OPT_DETACH = 1,
 };
@@ -556,6 +558,10 @@ void ndc_vim(int fd, int argc, char *argv[]) {
 		s += ofs;
 		ofs = kill_v(player_ref, s);
 	}
+}
+
+void ndc_command(int fd, int argc, char *argv[]) {
+	me = fd_player(fd);
 }
 
 void ndc_connect(int fd) {

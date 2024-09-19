@@ -54,6 +54,9 @@ enum bodypart {
 	BP_LEGS,
 };
 
+typedef unsigned me_get_t();
+me_get_t me_get;
+
 typedef ENT ent_get_t(unsigned ref);
 ent_get_t ent_get;
 
@@ -126,5 +129,7 @@ spell_cast_t spell_cast;
 
 typedef void debufs_end_t(ENT *player);
 debufs_end_t debufs_end;
+
+extern unsigned me;
 
 #endif

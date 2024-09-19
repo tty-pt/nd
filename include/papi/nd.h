@@ -79,6 +79,7 @@ struct nd {
 	unparse_t *unparse;
 
 	/* entity */
+	me_get_t *me_get;
 	ent_get_t *ent_get;
 	ent_set_t *ent_set;
 	ent_del_t *ent_del;
@@ -101,5 +102,7 @@ struct nd {
 	spell_cast_t *spell_cast;
 	debufs_end_t *debufs_end;
 };
+
+extern struct nd nd;
 
 #endif

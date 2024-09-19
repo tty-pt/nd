@@ -242,6 +242,10 @@ void contents_remove(unsigned cont_ref, unsigned item_ref) {
 
 /* ENTITY */
 
+unsigned me_get() {
+	return nd.me_get();
+}
+
 ENT ent_get(unsigned ref) {
 	return nd.ent_get(ref);
 }

@@ -11,6 +11,8 @@
 #include "uapi/wts.h"
 #include "view.h"
 
+#include "papi/nd.h"
+
 #define MODIFIER(ent, a) ((ent->attr[a] - 10) >> 1) // / 2
 #define EQT(x)		(x>>6)
 #define EQL(x)		(x & 15)
@@ -22,6 +24,7 @@ unsigned huth_y[2] = {
 };
 
 unsigned tmp_hds = -1;
+unsigned me = -1;
 
 static const char *rarity_str[] = {
 	ANSI_BOLD ANSI_FG_BLACK "Poor" ANSI_RESET,
@@ -31,6 +34,10 @@ static const char *rarity_str[] = {
 	ANSI_BOLD ANSI_FG_GREEN "Epic" ANSI_RESET,
 	ANSI_BOLD ANSI_FG_MAGENTA "Mythical" ANSI_RESET
 };
+
+unsigned me_get() {
+	return me;
+}
 
 ENT ent_get(unsigned ref) {
 	ENT ent;
