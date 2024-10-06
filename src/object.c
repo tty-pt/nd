@@ -33,13 +33,10 @@ enum actions {
 struct object *db = 0;
 char std_db[BUFSIZ];
 char std_db_ok[BUFSIZ];
-
-LHASH_DEF(obj, OBJ);
-LHASH_ASSOC_DEF(obs, obj, obj);
-LHASH_ASSOC_DEF(contents, obj, obj);
+unsigned obj_hd, contents_hd, obs_hd;
 
 int obj_exists(unsigned ref) {
-	return !!lhash_get(&obj_lhash, ref);
+	return uhash_exists(obj_hd, ref);
 }
 
 unsigned
@@ -49,7 +46,7 @@ object_new(OBJ *newobj)
 	newobj->name = NULL;
 	newobj->location = NOTHING;
 	newobj->owner = ROOT;
-	return obj_new(newobj);
+	return lhash_new(obj_hd, newobj);
 }
 
 static inline int
@@ -157,7 +154,7 @@ unsigned art_hd = -1;
 
 unsigned art_max(char *name) {
 	unsigned max;
-	hash_cget(art_hd, &max, name, strlen(name));
+	shash_get(art_hd, &max, name);
 	return max;
 }
 
@@ -171,7 +168,8 @@ void stats_init(ENT *enu, SENT *sk);
 unsigned
 object_add(OBJ *nu, unsigned skel_id, unsigned where_ref, void *arg)
 {
-	SKEL skel = skel_get(skel_id);
+	SKEL skel;
+	lhash_get(skel_hd, &skel, skel_id);
 	unsigned nu_ref = object_new(nu);
 	nu->name = strdup(skel.name);
 	nu->description = strdup(skel.description);
@@ -179,7 +177,7 @@ object_add(OBJ *nu, unsigned skel_id, unsigned where_ref, void *arg)
 	nu->owner = ROOT;
 	nu->type = TYPE_THING;
 	if (where_ref != NOTHING)
-		contents_add(nu->location, nu_ref);
+		ahash_add(contents_hd, nu->location, nu_ref);
 
 	switch (skel.type) {
 	case STYPE_SPELL:
@@ -262,7 +260,7 @@ object_add(OBJ *nu, unsigned skel_id, unsigned where_ref, void *arg)
 		break;
 	}
 
-	obj_set(nu_ref, nu);
+	lhash_put(obj_hd, nu_ref, nu);
 	if (skel.type != STYPE_BIOME)
 		mcp_content_in(where_ref, nu_ref);
 
@@ -272,7 +270,8 @@ object_add(OBJ *nu, unsigned skel_id, unsigned where_ref, void *arg)
 char *
 object_art(unsigned thing_ref)
 {
-	OBJ thing = obj_get(thing_ref);
+	OBJ thing;
+	lhash_get(obj_hd, &thing, thing_ref);
 	static char art[BUFSIZ];
 	char *type = NULL;
 
@@ -316,7 +315,8 @@ static void
 object_write(FILE * f, unsigned ref)
 {
 	int j;
-	OBJ obj = obj_get(ref);
+	OBJ obj;
+	lhash_get(obj_hd, &obj, ref);
 	putstring(f, obj.name);
 	putref(f, obj.location);
 	putref(f, NOTHING);
@@ -395,11 +395,11 @@ object_write(FILE * f, unsigned ref)
 static inline void
 db_write_list(FILE * f)
 {
+	struct hash_cursor c = lhash_iter(obj_hd);
 	unsigned ref;
-
-	struct hash_cursor c = obj_iter();
 	OBJ oi;
-	while ((ref = obj_next(&oi, &c)) != NOTHING) {
+
+	while (hash_next(&ref, &oi, &c)) {
 		if (fprintf(f, "#%u\n", ref) < 0)
 			abort();
 		object_write(f, ref);
@@ -411,9 +411,9 @@ static unsigned objects_read(FILE *f);
 int
 objects_init()
 {
-	obj_lhash = lhash_init();
-	contents_ahd = hash_cinit(NULL, NULL, 0644, QH_DUP);
-	obs_ahd = hash_cinit(NULL, NULL, 0644, QH_DUP);
+	obj_hd = lhash_init(sizeof(OBJ));
+	contents_hd = ahash_init();
+	obs_hd = ahash_init();
 	art_hd = hash_init();
 
 	snprintf(std_db, sizeof(std_db), "%s%s", euid ? nd_config.chroot : "", STD_DB);
@@ -433,10 +433,10 @@ objects_init()
 
 	objects_read(f);
 	unsigned ref;
-	struct hash_cursor c = obj_iter();
+	struct hash_cursor c = lhash_iter(obj_hd);
 	OBJ oi;
-	while ((ref = obj_next(&oi, &c)) != NOTHING)
-		contents_add(oi.location, ref);
+	while (hash_next(&ref, &oi, &c))
+		ahash_add(contents_hd, oi.location, ref);
 
 	return 0;
 }
@@ -504,7 +504,7 @@ object_read(FILE * f)
 {
 	OBJ o;
 	memset(&o, 0, sizeof(struct object));
-	unsigned ref = obj_new(&o);
+	unsigned ref = lhash_new(obj_hd, &o);
 	int j = 0;
 
 	ref_read(f);
@@ -588,7 +588,7 @@ object_read(FILE * f)
 		}
 	}
 
-	obj_set(ref, &o);
+	lhash_put(obj_hd, ref, &o);
 }
 
 static unsigned
@@ -600,7 +600,7 @@ objects_read(FILE * f)
 	int hash_i = 0;
 	for (; hash_i < sizeof(core_art) / sizeof(struct core_art); hash_i++) {
 		struct core_art *art = &core_art[hash_i];
-		hash_cput(art_hd, art->name, strlen(art->name), &art->max, sizeof(art->max));
+		suhash_put(art_hd, art->name, art->max);
 	}
 
 	/* Parse the header */
@@ -638,7 +638,8 @@ objects_read(FILE * f)
 unsigned
 object_copy(OBJ *nu, unsigned old_ref)
 {
-	OBJ old = obj_get(old_ref);
+	OBJ old;
+	lhash_get(obj_hd, &old, old_ref);
 	unsigned ref = object_new(nu);
 	nu->name = strdup(old.name);
 	nu->location = NOTHING;
@@ -653,8 +654,8 @@ objects_update(double dt)
 {
 	OBJ obj;
 	unsigned obj_ref;
-	struct hash_cursor c = obj_iter();
-	while ((obj_ref = obj_next(&obj, &c)) != NOTHING)
+	struct hash_cursor c = lhash_iter(obj_hd);
+	while (hash_next(&obj_ref, &obj, &c))
 		if (!obj.name)
 			continue;
 		else if (obj.type == TYPE_ENTITY)
@@ -664,19 +665,20 @@ objects_update(double dt)
 void
 object_move(unsigned what_ref, unsigned where_ref)
 {
-	OBJ what = obj_get(what_ref);
+	OBJ what;
+	lhash_get(obj_hd, &what, what_ref);
 
         if (what.location != NOTHING) {
                 mcp_content_out(what.location, what_ref);
-		contents_remove(what.location, what_ref);
+		ahash_remove(contents_hd, what.location, what_ref);
         }
 
-	struct hash_cursor c = obs_iter(what_ref);
+	struct hash_cursor c = fhash_iter(obs_hd, what_ref);
 	unsigned first_ref;
-	while ((first_ref = obs_next(&c)) != NOTHING) {
+	while (ahash_next(&first_ref, &c)) {
 		ENT efirst = ent_get(first_ref);
 		efirst.last_observed = what.location;
-		obs_remove(what_ref, first_ref);
+		ahash_remove(obs_hd, what_ref, first_ref);
 		ent_set(first_ref, &efirst);
 	}
 
@@ -684,8 +686,8 @@ object_move(unsigned what_ref, unsigned where_ref)
 	if (where_ref == NOTHING) {
 		unsigned first_ref;
 
-		struct hash_cursor c = contents_iter(what_ref);
-		while ((first_ref = contents_next(&c)) != NOTHING)
+		struct hash_cursor c = fhash_iter(contents_hd, what_ref);
+		while (ahash_next(&first_ref, &c))
 			object_move(first_ref, NOTHING);
 
 		switch (what.type) {
@@ -699,31 +701,33 @@ object_move(unsigned what_ref, unsigned where_ref)
 			free((void *) what.name);
 		if (what.description)
 			free((void *) what.description);
-		lhash_del(&obj_lhash, what_ref);
+		lhash_del(obj_hd, what_ref);
 		return;
 	}
 
 	what.location = where_ref;
-	obj_set(what_ref, &what);
+	lhash_put(obj_hd, what_ref, &what);
 
 	if (what.type == TYPE_ENTITY) {
 		ENT ewhat = ent_get(what_ref);
 		if (ewhat.last_observed != NOTHING)
-			obs_remove(ewhat.last_observed, what_ref);
+			ahash_remove(obs_hd, ewhat.last_observed, what_ref);
 		if ((ewhat.flags & EF_SITTING)) {
 			stand(what_ref, &ewhat);
 			ent_set(what_ref, &ewhat);
 		}
 	}
 
-	contents_add(where_ref, what_ref);
+	ahash_add(contents_hd, where_ref, what_ref);
 	mcp_content_in(where_ref, what_ref);
 }
 
 struct icon
 object_icon(unsigned what_ref)
 {
-	OBJ what = obj_get(what_ref);
+	OBJ what;
+	lhash_get(obj_hd, &what, what_ref);
+
         static char buf[BUFSIZ];
         struct icon ret = {
                 .actions = ACT_LOOK,
@@ -758,7 +762,8 @@ object_icon(unsigned what_ref)
 		{
 			PLA *pwhat = &what.sp.plant;
 			aux = pwhat->plid;
-			SKEL skel = skel_get(aux);
+			SKEL skel;
+			lhash_get(skel_hd, &skel, aux);
 			SPLA *pl = &skel.sp.plant;
 
 			ret.actions |= ACT_CHOP;

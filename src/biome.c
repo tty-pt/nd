@@ -178,5 +178,5 @@ SKEL biomes_skel[] = {
 
 void biomes_init() {
 	for (unsigned i = 0; i < BIOME_MAX; i++)
-		biome_refs[i] = skel_new(&biomes_skel[i]);
+		biome_refs[i] = lhash_new(skel_hd, &biomes_skel[i]);
 }

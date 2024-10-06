@@ -8,12 +8,8 @@ unsigned fd_player(int fd) {
 	return nd.fd_player(fd);
 }
 
-struct hash_cursor fds_iter(unsigned player) {
-	return nd.fds_iter(player);
-}
-
-int fds_next(struct hash_cursor *c) {
-	return nd.fds_next(c);
+unsigned fds_hd_get() {
+	return nd.fds_hd;
 }
 
 /* int fds_has(unsigned player) { */
@@ -102,90 +98,26 @@ char *wts_plural(char *singular) {
 
 /* void skel_init(); */
 
-unsigned skel_new(SKEL *skel) {
-	return nd.skel_new(skel);
-}
-
-SKEL skel_get(unsigned ref) {
-	return nd.skel_get(ref);
-}
-
-void skel_set(unsigned ref, SKEL *skel) {
-	nd.skel_set(ref, skel);
-}
-
-struct hash_cursor skel_iter() {
-	return nd.skel_iter();
-}
-
-unsigned skel_next(SKEL *skel, struct hash_cursor *c) {
-	return nd.skel_next(skel, c);
+unsigned skel_hd_get() {
+	return nd.skel_hd;
 }
 
 /* void drop_init(); */
 
-unsigned drop_new(DROP *drop) {
-	return nd.drop_new(drop);
+unsigned drop_hd_get() {
+	return nd.drop_hd;
 }
 
-DROP drop_get(unsigned ref) {
-	return nd.drop_get(ref);
-}
-
-void drop_set(unsigned ref, DROP *drop) {
-	nd.drop_set(ref, drop);
-}
-
-struct hash_cursor drop_iter() {
-	return nd.drop_iter();
-}
-
-unsigned drop_next(DROP *drop, struct hash_cursor *c) {
-	return nd.drop_next(drop, c);
-}
-
-void adrop_add(unsigned cont_ref, unsigned item_ref) {
-	nd.adrop_add(cont_ref, item_ref);
-}
-
-struct hash_cursor adrop_iter(unsigned cont_ref) {
-	return nd.adrop_iter(cont_ref);
-}
-
-unsigned adrop_next(struct hash_cursor *c) {
-	return nd.adrop_next(c);
-}
-
-void adrop_remove(unsigned cont_ref, unsigned item_ref) {
-	return nd.adrop_remove(cont_ref, item_ref);
+unsigned adrop_hd_get() {
+	return nd.adrop_hd;
 }
 
 /* OBJECT */
 
 /* void drop_init(); */
 
-unsigned obj_new(OBJ *obj) {
-	return nd.obj_new(obj);
-}
-
-OBJ obj_get(unsigned ref) {
-	return nd.obj_get(ref);
-}
-
-void obj_set(unsigned ref, OBJ *obj) {
-	nd.obj_set(ref, obj);
-}
-
-struct hash_cursor obj_iter() {
-	return nd.obj_iter();
-}
-
-unsigned obj_next(OBJ *obj, struct hash_cursor *c) {
-	return nd.obj_next(obj, c);
-}
-
-int obj_exists(unsigned ref) {
-	return nd.obj_exists(ref);
+unsigned obj_hd_get() {
+	return nd.obj_hd;
 }
 
 unsigned object_new(OBJ *obj) {
@@ -208,36 +140,12 @@ void object_drop(unsigned where_ref, unsigned skel_id) {
 	return nd.object_drop(where_ref, skel_id);
 }
 
-void obs_add(unsigned cont_ref, unsigned item_ref) {
-	nd.obs_add(cont_ref, item_ref);
+unsigned obs_hd_get() {
+	return nd.obs_hd;
 }
 
-struct hash_cursor obs_iter(unsigned cont_ref) {
-	return nd.obs_iter(cont_ref);
-}
-
-unsigned obs_next(struct hash_cursor *c) {
-	return nd.obs_next(c);
-}
-
-void obs_remove(unsigned cont_ref, unsigned item_ref) {
-	return nd.obs_remove(cont_ref, item_ref);
-}
-
-void contents_add(unsigned cont_ref, unsigned item_ref) {
-	nd.contents_add(cont_ref, item_ref);
-}
-
-struct hash_cursor contents_iter(unsigned cont_ref) {
-	return nd.contents_iter(cont_ref);
-}
-
-unsigned contents_next(struct hash_cursor *c) {
-	return nd.contents_next(c);
-}
-
-void contents_remove(unsigned cont_ref, unsigned item_ref) {
-	return nd.contents_remove(cont_ref, item_ref);
+unsigned contents_hd_get() {
+	return nd.contents_hd;
 }
 
 /* ENTITY */

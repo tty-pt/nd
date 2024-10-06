@@ -162,7 +162,8 @@ unsigned plant_refs[PLANT_MAX];
 static inline int
 plant_noise(unsigned char *plid, coord_t tmp, ucoord_t rn, noise_t v, unsigned plant_ref)
 {
-	SKEL skel = skel_get(plant_ref);
+	SKEL skel;
+	lhash_get(skel_hd, &skel, plant_ref);
 	SPLA *pl = &skel.sp.plant;
 
         /* warn("plant_noise %s y: %u v: %u O: %u\n", obj_skel->name, pl->y, v, NOISE_MAX >> pl->y); */
@@ -253,7 +254,7 @@ _plants_add(unsigned where_ref, struct bio *bio, pos_t pos)
 		PLA *pplant = &plant.sp.plant;
 		pplant->plid = bio->pd.id[i];
 		pplant->size = n;
-		obj_set(plant_ref, &plant);
+		lhash_put(obj_hd, plant_ref, &plant);
         }
 }
 
@@ -275,29 +276,29 @@ plants_add(unsigned where_ref, void *arg, pos_t pos)
 }
 
 void plants_init() {
-	unsigned carrot_ref = skel_new(&carrot);
+	unsigned carrot_ref = lhash_new(skel_hd, &carrot);
 	carrot_drop.skel = carrot_ref;
-	unsigned carrot_drop_ref = drop_new(&carrot_drop);
+	unsigned carrot_drop_ref = lhash_new(drop_hd, &carrot_drop);
 
-	unsigned stick_ref = skel_new(&carrot);
+	unsigned stick_ref = lhash_new(skel_hd, &stick);
 	stick_drop.skel = stick_ref;
-	unsigned stick_drop_ref = drop_new(&stick_drop);
+	unsigned stick_drop_ref = lhash_new(drop_hd, &stick_drop);
 
-	unsigned tomato_ref = skel_new(&tomato);
+	unsigned tomato_ref = lhash_new(skel_hd, &tomato);
 	tomato_drop.skel = tomato_ref;
-	unsigned tomato_drop_ref = drop_new(&tomato_drop);
+	unsigned tomato_drop_ref = lhash_new(drop_hd, &tomato_drop);
 
 	for (unsigned i = 0; i < PLANT_MAX; i++)
-		plant_refs[i] = skel_new(&plants_map[i]);
+		plant_refs[i] = lhash_new(skel_hd, &plants_map[i]);
 
-	adrop_add(plant_refs[PLANT_PINUS_SILVESTRIS], stick_drop_ref);
-	adrop_add(plant_refs[PLANT_PSEUDOTSUGA_MENZIESII], stick_drop_ref);
-	adrop_add(plant_refs[PLANT_BETULA_PENDULA], stick_drop_ref);
-	adrop_add(plant_refs[PLANT_LINUM_USITATISSIMUM], stick_drop_ref);
-	adrop_add(plant_refs[PLANT_BETULA_PUBESCENS], stick_drop_ref);
-	adrop_add(plant_refs[PLANT_ABIES_ALBA], stick_drop_ref);
-	adrop_add(plant_refs[PLANT_ARTHROCEREUS_RONDONIANUS], stick_drop_ref);
-	adrop_add(plant_refs[PLANT_ACACIA_SENEGAL], stick_drop_ref);
-	adrop_add(plant_refs[PLANT_DAUCUS_CAROTA], carrot_drop_ref);
-	adrop_add(plant_refs[PLANT_SOLANUM_LYCOPERSICUM], tomato_drop_ref);
+	ahash_add(adrop_hd, plant_refs[PLANT_PINUS_SILVESTRIS], stick_drop_ref);
+	ahash_add(adrop_hd, plant_refs[PLANT_PSEUDOTSUGA_MENZIESII], stick_drop_ref);
+	ahash_add(adrop_hd, plant_refs[PLANT_BETULA_PENDULA], stick_drop_ref);
+	ahash_add(adrop_hd, plant_refs[PLANT_LINUM_USITATISSIMUM], stick_drop_ref);
+	ahash_add(adrop_hd, plant_refs[PLANT_BETULA_PUBESCENS], stick_drop_ref);
+	ahash_add(adrop_hd, plant_refs[PLANT_ABIES_ALBA], stick_drop_ref);
+	ahash_add(adrop_hd, plant_refs[PLANT_ARTHROCEREUS_RONDONIANUS], stick_drop_ref);
+	ahash_add(adrop_hd, plant_refs[PLANT_ACACIA_SENEGAL], stick_drop_ref);
+	ahash_add(adrop_hd, plant_refs[PLANT_DAUCUS_CAROTA], carrot_drop_ref);
+	ahash_add(adrop_hd, plant_refs[PLANT_SOLANUM_LYCOPERSICUM], tomato_drop_ref);
 }

@@ -54,6 +54,9 @@ do_unequip(int fd, int argc, char *argv[])
 
 	if ((eq_ref = unequip(player_ref, bp)) == NOTHING)
 		nd_writef(player_ref, "You don't have that equipped.\n");
-	else
-		nd_writef(player_ref, "You unequip %s.\n", obj_get(eq_ref).name);
+	else {
+		OBJ eq;
+		lhash_get(obj_hd, &eq, eq_ref);
+		nd_writef(player_ref, "You unequip %s.\n", eq.name);
+	}
 }

@@ -74,7 +74,8 @@ static int
 _fbcp_item(char *bcp_buf, unsigned obj_ref, unsigned char dynflags)
 {
 	int aux, aux1;
-	OBJ obj = obj_get(obj_ref);
+	OBJ obj;
+	lhash_get(obj_hd, &obj, obj_ref);
 	struct icon ico = object_icon(obj_ref);
 	unsigned char iden = BCP_ITEM;
 	char *p = bcp_buf, *aux2;
@@ -130,7 +131,9 @@ _fbcp_out(char *bcp_buf, unsigned obj_ref)
 	memcpy(p += 2, &iden, sizeof(iden));
 	aux = obj_ref;
 	memcpy(p += sizeof(iden), &aux, sizeof(aux));
-	aux = obj_get(obj_ref).location;
+	OBJ obj;
+	lhash_get(obj_hd, &obj, obj_ref);
+	aux = obj.location;
 	memcpy(p += sizeof(aux), &aux, sizeof(aux));
 	p += sizeof(aux);
 	return p - bcp_buf;
@@ -220,7 +223,8 @@ void
 mcp_look(unsigned player_ref, unsigned loc_ref)
 {
 	ENT eplayer = ent_get(player_ref);
-	OBJ loc = obj_get(loc_ref);
+	OBJ loc;
+	lhash_get(obj_hd, &loc, loc_ref);
 	unsigned thing_ref;
 
 	fbcp_item(player_ref, loc_ref, 1);
@@ -230,15 +234,15 @@ mcp_look(unsigned player_ref, unsigned loc_ref)
 	default:
 		eplayer.last_observed = loc_ref;
 		ent_set(player_ref, &eplayer);
-		obs_add(loc_ref, player_ref);
+		ahash_add(obs_hd, loc_ref, player_ref);
 	}
 
         if (loc_ref != player_ref && loc.type == TYPE_ENTITY && !(eplayer.flags & EF_WIZARD))
                 return;
 
 	// use callbacks for mcp like this versus telnet
-	struct hash_cursor c = contents_iter(loc_ref);
-	while ((thing_ref = contents_next(&c)) != NOTHING)
+	struct hash_cursor c = fhash_iter(contents_hd, loc_ref);
+	while (ahash_next(&thing_ref, &c))
 		fbcp_item(player_ref, thing_ref, 0);
 
 	nd_twritef(player_ref, "%s\n", unparse(loc_ref));
@@ -248,8 +252,8 @@ mcp_look(unsigned player_ref, unsigned loc_ref)
         char buf[BUFSIZ];
         size_t buf_l = 0;
 
-	struct hash_cursor c2 = contents_iter(loc_ref);
-	while ((thing_ref = contents_next(&c2)) != NOTHING) {
+	struct hash_cursor c2 = fhash_iter(contents_hd, loc_ref);
+	while (ahash_next(&thing_ref, &c2)) {
 	/* check to see if there is anything there */
 			if (thing_ref == player_ref)
 				continue;
@@ -264,11 +268,13 @@ mcp_look(unsigned player_ref, unsigned loc_ref)
 static void
 fbcp_room(unsigned room_ref, char *msg, size_t len)
 {
-	struct hash_cursor c = contents_iter(room_ref);
+	struct hash_cursor c = fhash_iter(contents_hd, room_ref);
 	unsigned tmp_ref;
 
-	while ((tmp_ref = contents_next(&c)) != NOTHING) {
-		if (obj_get(tmp_ref).type != TYPE_ENTITY)
+	while (ahash_next(&tmp_ref, &c)) {
+		OBJ tmp;
+		lhash_get(obj_hd, &tmp, tmp_ref);
+		if (tmp.type != TYPE_ENTITY)
 			continue;
 
 		nd_wwrite(tmp_ref, msg, len);
@@ -278,11 +284,12 @@ fbcp_room(unsigned room_ref, char *msg, size_t len)
 static void
 fbcp_observers(unsigned thing_ref, char *msg, size_t len)
 {
-	struct hash_cursor c = obs_iter(thing_ref);;
+	struct hash_cursor c = fhash_iter(obs_hd, thing_ref);;
 	unsigned tmp_ref = 0;
 
-	while ((tmp_ref = obs_next(&c)) != NOTHING) {
-		OBJ tmp = obj_get(tmp_ref);
+	while (ahash_next(&tmp_ref, &c)) {
+		OBJ tmp;
+		lhash_get(obj_hd, &tmp, tmp_ref);
 		if (tmp.type != TYPE_ENTITY)
 			continue;
 		nd_wwrite(tmp_ref, msg, len);
@@ -293,8 +300,10 @@ void
 mcp_content_out(unsigned loc_ref, unsigned thing_ref) {
 	char bcp_buf[2 + sizeof(unsigned char) + sizeof(int) * 2];
 	size_t len = _fbcp_out(bcp_buf, thing_ref);
+	OBJ loc;
+	lhash_get(obj_hd, &loc, loc_ref);
 
-	if (obj_get(loc_ref).type == TYPE_ROOM)
+	if (loc.type == TYPE_ROOM)
 		fbcp_room(loc_ref, bcp_buf, len);
 	else
 		fbcp_observers(loc_ref, bcp_buf, len);
@@ -304,8 +313,10 @@ void
 mcp_content_in(unsigned loc_ref, unsigned thing_ref) {
 	static char bcp_buf[SUPERBIGSIZ];
 	size_t len = _fbcp_item(bcp_buf, thing_ref, 2);
+	OBJ loc;
+	lhash_get(obj_hd, &loc, loc_ref);
 
-	if (obj_get(loc_ref).type == TYPE_ROOM)
+	if (loc.type == TYPE_ROOM)
 		fbcp_room(loc_ref, bcp_buf, len);
 	else
 		fbcp_observers(loc_ref, bcp_buf, len);

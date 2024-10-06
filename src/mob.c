@@ -23,10 +23,10 @@
 			.msv = min_stat, \
 		} } \
 	}; \
-	unsigned s ## _helmet_ref = skel_new(&s ## _helmet); \
+	unsigned s ## _helmet_ref = lhash_new(skel_hd, &s ## _helmet); \
 	DROP s ## _helmet_drop = { y }; \
-	unsigned s ## _helmet_drop_ref = drop_new(&s ## _helmet_drop); \
-	adrop_add(s ## _helmet_ref, s ## _helmet_drop_ref); \
+	unsigned s ## _helmet_drop_ref = lhash_new(drop_hd, &s ## _helmet_drop); \
+	ahash_add(adrop_hd, s ## _helmet_ref, s ## _helmet_drop_ref); \
 	SKEL s ## _chest = { \
 		.name = #s " armor chest", \
 		.description = "", \
@@ -36,10 +36,10 @@
 			.msv = min_stat, \
 		} } \
 	}; \
-	unsigned s ## _chest_ref = skel_new(&s ## _chest); \
+	unsigned s ## _chest_ref = lhash_new(skel_hd, &s ## _chest); \
 	DROP s ## _chest_drop = { y }; \
-	unsigned s ## _chest_drop_ref = drop_new(&s ## _chest_drop); \
-	adrop_add(s ## _chest_ref, s ## _chest_drop_ref); \
+	unsigned s ## _chest_drop_ref = lhash_new(drop_hd, &s ## _chest_drop); \
+	ahash_add(adrop_hd, s ## _chest_ref, s ## _chest_drop_ref); \
 	SKEL s ## _pants = { \
 		.name = #s " armor leggings", \
 		.description = "", \
@@ -49,10 +49,10 @@
 			.msv = min_stat, \
 		} } \
 	}; \
-	unsigned s ## _pants_ref = skel_new(&s ## _pants); \
+	unsigned s ## _pants_ref = lhash_new(skel_hd, &s ## _pants); \
 	DROP s ## _pants_drop = { y }; \
-	unsigned s ## _pants_drop_ref = drop_new(&s ## _pants_drop); \
-	adrop_add(s ## _pants_ref, s ## _pants_drop_ref);
+	unsigned s ## _pants_drop_ref = lhash_new(drop_hd, &s ## _pants_drop); \
+	ahash_add(adrop_hd, s ## _pants_ref, s ## _pants_drop_ref);
 
 #define ARMORSET_LIGHT(s, min_dex, y) \
 	ARMORSET(s, ARMOR_LIGHT, min_dex, y)
@@ -385,25 +385,25 @@ unsigned corpse_ref;
 
 void mobs_init() {
 	for (unsigned i = 0; i < MOB_MAX; i++)
-		mob_refs[i] = skel_new(&nodrop_skel[i]);
+		mob_refs[i] = lhash_new(skel_hd, &nodrop_skel[i]);
 
 	ARMORSET_LIGHT(padded, 15, 5);
 	ARMORSET_MEDIUM(hide, 15, 5);
 	ARMORSET_HEAVY(chainmail, 15, 5);
 
 	/* unsigned dagger_drop_ref = drop_new(&dagger_drop); */
-	/* adrop_add(bandit_ref, dagger_drop_ref); */
+	/* ahash_add(adrop_hd, bandit_ref, dagger_drop_ref); */
 
 	unsigned bandit_ref  = mob_refs[MOB_BANDIT];
-	adrop_add(bandit_ref, padded_helmet_drop_ref);
-	adrop_add(bandit_ref, padded_chest_drop_ref);
-	adrop_add(bandit_ref, padded_pants_drop_ref);
-	adrop_add(bandit_ref, hide_helmet_drop_ref);
-	adrop_add(bandit_ref, hide_chest_drop_ref);
-	adrop_add(bandit_ref, hide_pants_drop_ref);
-	adrop_add(bandit_ref, chainmail_helmet_drop_ref);
-	adrop_add(bandit_ref, chainmail_chest_drop_ref);
-	adrop_add(bandit_ref, chainmail_pants_drop_ref);
+	ahash_add(adrop_hd, bandit_ref, padded_helmet_drop_ref);
+	ahash_add(adrop_hd, bandit_ref, padded_chest_drop_ref);
+	ahash_add(adrop_hd, bandit_ref, padded_pants_drop_ref);
+	ahash_add(adrop_hd, bandit_ref, hide_helmet_drop_ref);
+	ahash_add(adrop_hd, bandit_ref, hide_chest_drop_ref);
+	ahash_add(adrop_hd, bandit_ref, hide_pants_drop_ref);
+	ahash_add(adrop_hd, bandit_ref, chainmail_helmet_drop_ref);
+	ahash_add(adrop_hd, bandit_ref, chainmail_chest_drop_ref);
+	ahash_add(adrop_hd, bandit_ref, chainmail_pants_drop_ref);
 
 	corpse_ref = mob_refs[MOB_HUMAN];
 }
@@ -417,7 +417,8 @@ bird_is(SENT *sk)
 static inline unsigned
 mob_add(enum mob_type mid, unsigned where_ref, enum biome biome, long long pdn) {
 	unsigned mob_ref = mob_refs[mid];
-	SKEL skel = skel_get(mob_ref);
+	SKEL skel;
+	lhash_get(skel_hd, &skel, mob_ref);
 	SENT *mob_skel = &skel.sp.entity;
 
 	if ((bird_is(mob_skel) && !pdn)
@@ -430,7 +431,7 @@ mob_add(enum mob_type mid, unsigned where_ref, enum biome biome, long long pdn) 
 
 	OBJ obj;
 	unsigned obj_ref = object_add(&obj, mob_ref, where_ref, NULL);
-	obj_set(obj_ref, &obj);
+	lhash_put(obj_hd, obj_ref, &obj);
 	return obj_ref;
 }
 
@@ -441,4 +442,3 @@ mobs_add(unsigned where_ref, enum biome biome, long long pdn) {
 	for (mid = 1; mid < MOB_MAX; mid++)
 		mob_add(mid, where_ref, biome, pdn);
 }
-

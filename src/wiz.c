@@ -26,7 +26,8 @@ do_teleport(int fd, int argc, char *argv[]) {
 	} else
 		to = arg2;
 
-	OBJ victim = obj_get(victim_ref);
+	OBJ victim;
+	lhash_get(obj_hd, &victim, victim_ref);
 
 	destination_ref = ematch_all(player_ref, to);
 
@@ -35,7 +36,8 @@ do_teleport(int fd, int argc, char *argv[]) {
 		return;
 	}
 
-	OBJ destination = obj_get(destination_ref);
+	OBJ destination;
+	lhash_get(obj_hd, &destination, destination_ref);
 
 	if (victim_ref == destination_ref || destination.location == victim_ref) {
 		nd_writef(player_ref, "You move a thing inside itself!\n");
@@ -104,7 +106,8 @@ do_boot(int fd, int argc, char *argv[]) {
 	if (victim_ref == ROOT)
 		nd_writef(player_ref, "You can't boot root!\n");
 
-	OBJ victim = obj_get(victim_ref);
+	OBJ victim;
+	lhash_get(obj_hd, &victim, victim_ref);
 
 	if (victim.type != TYPE_ENTITY)
 		nd_writef(player_ref, "You can only boot entities!\n");
@@ -151,7 +154,8 @@ do_toad(int fd, int argc, char *argv[]) {
 		}
 	}
 
-	OBJ victim = obj_get(victim_ref);
+	OBJ victim;
+	lhash_get(obj_hd, &victim, victim_ref);
 
 	if (victim.type != TYPE_ENTITY)
 		nd_writef(player_ref, "You can only turn entities into toads!\n");
@@ -160,12 +164,12 @@ do_toad(int fd, int argc, char *argv[]) {
 		nd_writef(player_ref, "You can't turn a Wizard into a toad.\n");
 	else {
 		unsigned tmp_ref;
-		struct hash_cursor c = contents_iter(victim_ref);
-		while ((tmp_ref = contents_next(&c)) != NOTHING)
+		struct hash_cursor c = fhash_iter(contents_hd, victim_ref);
+		while (ahash_next(&tmp_ref, &c))
 			object_move(tmp_ref, NOTHING);
-		struct hash_cursor c2 = obj_iter();
+		struct hash_cursor c2 = lhash_iter(obj_hd);
 		OBJ tmp;
-		while ((tmp_ref = obj_next(&tmp, &c2)) != NOTHING) {
+		while (hash_next(&tmp_ref, &tmp, &c2)) {
 			if (tmp.owner == victim_ref) {
 				switch (tmp.type) {
 				case TYPE_ROOM:
@@ -173,7 +177,7 @@ do_toad(int fd, int argc, char *argv[]) {
 				case TYPE_EQUIPMENT:
 				case TYPE_THING:
 					tmp.owner = recipient_ref;
-					obj_set(tmp_ref, &tmp);
+					lhash_put(obj_hd, tmp_ref, &tmp);
 				}
 			}
 		}
@@ -188,7 +192,7 @@ do_toad(int fd, int argc, char *argv[]) {
 		victim.type = TYPE_THING;
 		victim.owner = player_ref;
 		victim.value = 1;
-		obj_set(victim_ref, &victim);
+		lhash_put(obj_hd, victim_ref, &victim);
 	}
 }
 

@@ -37,19 +37,22 @@ void
 do_fight(int fd, int argc, char *argv[])
 {
 	unsigned player_ref = fd_player(fd);
-	OBJ player = obj_get(player_ref);
+	OBJ player, loc, target;
+	lhash_get(obj_hd, &player, player_ref);
 	unsigned target_ref = strcmp(argv[1], "me")
 		? ematch_near(player_ref, argv[1])
 		: player_ref;
 
-	if (player.location == 0 || (obj_get(player.location).flags & RF_HAVEN)) {
+	lhash_get(obj_hd, &loc, player.location);
+	if (player.location == 0 || (loc.flags & RF_HAVEN)) {
 		nd_writef(player_ref, "You may not fight here.\n");
 		return;
 	}
 
+	lhash_get(obj_hd, &target, target_ref);
 	if (target_ref == NOTHING
 	    || player_ref == target_ref
-	    || obj_get(target_ref).type != TYPE_ENTITY)
+	    || target.type != TYPE_ENTITY)
 	{
 		nd_writef(player_ref, "You can't target that.\n");
 		return;
@@ -96,8 +99,11 @@ do_heal(int fd, int argc, char *argv[])
 		return;
 	}
 
+	OBJ player;
+	lhash_get(obj_hd, &player, player_ref);
+
 	if (!(ent_get(player_ref).flags & EF_WIZARD)
-	    || obj_get(target_ref).type != TYPE_ENTITY) {
+	    || player.type != TYPE_ENTITY) {
                 nd_writef(player_ref, "Invalid target\n");
                 return;
         }
@@ -124,7 +130,8 @@ do_advitam(int fd, int argc, char *argv[])
 		return;
 	}
 
-	OBJ target = obj_get(target_ref);
+	OBJ target;
+	lhash_get(obj_hd, &target, target_ref);
 
 	if (target.owner != player_ref) {
 		nd_writef(player_ref, "You don't own that.\n");
@@ -135,7 +142,7 @@ do_advitam(int fd, int argc, char *argv[])
 	birth(&etarget);
 	ent_set(target_ref, &etarget);
 	target.type = TYPE_ENTITY;
-	obj_set(target_ref, &target);
+	lhash_put(obj_hd, target_ref, &target);
 	nd_writef(player_ref, "You infuse %s with life.\n", target.name);
 }
 
@@ -198,7 +205,9 @@ kill_v(unsigned player_ref, char const *opcs)
 		return end - opcs;
 	} else if (*opcs == 'c' && isdigit(opcs[1])) {
 		unsigned slot = strtol(opcs + 1, &end, 0);
-		if (obj_get(player_ref).location == 0)
+		OBJ player;
+		lhash_get(obj_hd, &player, player_ref);
+		if (player.location == 0)
 			nd_writef(player_ref, "You may not cast spells in room 0.\n");
 		else {
 			spell_cast(player_ref, &eplayer, eplayer.target, slot);

@@ -42,3 +42,4 @@ compile_commands.json
 /var/
 /pnpm-lock.yaml
 /src/*.a
+/.cache

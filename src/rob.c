@@ -28,28 +28,30 @@ do_give(int fd, int argc, char *argv[])
 		return;
 	}
 
-	OBJ who = obj_get(who_ref);
+	OBJ who;
+	lhash_get(obj_hd, &who, who_ref);
 
 	if (!wizard && who.type != TYPE_ENTITY) {
 		nd_writef(player_ref, "You can only give to other entities.\n");
 		return;
 	}
 
-	OBJ player = obj_get(player_ref);
+	OBJ player;
+	lhash_get(obj_hd, &player, player_ref);
 
 	if (!payfor(player_ref, &player, amount)) {
 		nd_writef(player_ref, "You don't have that many shekels to give!\n");
 		return;
 	}
 
-	obj_set(player_ref, &player);
+	lhash_put(obj_hd, player_ref, &player);
 	if (who.type != TYPE_ENTITY) {
 		nd_writef(player_ref, "You can't give shekels to that!\n");
 		return;
 	}
 
 	who.value += amount;
-	obj_set(who_ref, &who);
+	lhash_put(obj_hd, who_ref, &who);
 
 	char *unit = wts_cond("shekel", amount);
 

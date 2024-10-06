@@ -39,7 +39,8 @@ do_clone(int fd, int argc, char *argv[])
 	}
 
 	/* Further sanity checks */
-	OBJ thing = obj_get(thing_ref);
+	OBJ thing;
+	lhash_get(obj_hd, &thing, thing_ref);
 
 	/* things only. */
 	if(thing.type != TYPE_THING) {
@@ -63,13 +64,14 @@ do_clone(int fd, int argc, char *argv[])
 	/* there ain't no such lunch as a free thing. */
 	cost = thing.value;
 	
-	OBJ player = obj_get(player_ref);
+	OBJ player;
+	lhash_get(obj_hd, &player, player_ref);
 	if (!payfor(player_ref, &player, cost)) {
 		nd_writef(player_ref, "Sorry, you don't have enough shekels.\n");
 		return;
 	} else {
 		/* create the object */
-		obj_set(player_ref, &player);
+		lhash_put(obj_hd, player_ref, &player);
 		OBJ clone;
 		unsigned clone_ref = object_new(&clone);
 
@@ -97,7 +99,7 @@ do_clone(int fd, int argc, char *argv[])
 		clone.type = thing.type;
 
 		/* link it in */
-		obj_set(clone_ref, &clone);
+		lhash_put(obj_hd, clone_ref, &clone);
 		object_move(clone_ref, player_ref);
 
 		/* and we're done */
@@ -130,14 +132,15 @@ do_create(int fd, int argc, char *argv[])
 		return;
 	}
 
-	OBJ player = obj_get(player_ref);
+	OBJ player;
+	lhash_get(obj_hd, &player, player_ref);
 
 	if (!payfor(player_ref, &player, cost)) {
 		nd_writef(player_ref, "Sorry, you don't have enough shekels.\n");
 		return;
 	}
 
-	obj_set(player_ref, &player);
+	lhash_put(obj_hd, player_ref, &player);
 
 	OBJ thing;
 	thing_ref = object_new(&thing);
@@ -148,7 +151,7 @@ do_create(int fd, int argc, char *argv[])
 	thing.value = cost;
 	thing.type = TYPE_THING;
 
-	obj_set(thing_ref, &thing);
+	lhash_put(obj_hd, thing_ref, &thing);
 	object_move(thing_ref, player_ref);
 
 	nd_writef(player_ref, "%s created with number %d.\n", name, thing_ref);

@@ -19,9 +19,11 @@ ematch_me(unsigned player_ref, char *str)
 unsigned
 ematch_here(unsigned player_ref, char *str)
 {
-	if (!strcmp(str, "here"))
-		return obj_get(player_ref).location;
-	else
+	if (!strcmp(str, "here")) {
+		OBJ player;
+		lhash_get(obj_hd, &player, player_ref);
+		return player.location;
+	} else
 		return NOTHING;
 }
 
@@ -34,7 +36,9 @@ ematch_mine(unsigned player_ref, char *str)
 unsigned
 ematch_near(unsigned player_ref, char *str)
 {
-	return ematch_at(player_ref, obj_get(player_ref).location, str);
+	OBJ player;
+	lhash_get(obj_hd, &player, player_ref);
+	return ematch_at(player_ref, player.location, str);
 }
 
 /* all ematch
@@ -134,8 +138,10 @@ unsigned
 ematch_at(unsigned player_ref, unsigned where_ref, char *name) {
 	unsigned what_ref = ematch_absolute(name),
 	      absolute_ref, tmp_ref = NOTHING;
+	OBJ what;
 
-	if (what_ref != NOTHING && obj_get(what_ref).location == where_ref)
+	lhash_get(obj_hd, &what, what_ref);
+	if (what_ref != NOTHING && what.location == where_ref)
 		return what_ref;
 
 	ENT ent = ent_get(player_ref);
@@ -148,12 +154,16 @@ ematch_at(unsigned player_ref, unsigned where_ref, char *name) {
 	if (absolute_ref != NOTHING && !controls(player_ref, absolute_ref))
 		absolute_ref = NOTHING;
 
-	struct hash_cursor c = contents_iter(where_ref);
-	while ((tmp_ref = contents_next(&c)) != NOTHING) {
+	struct hash_cursor c = fhash_iter(contents_hd, where_ref);
+	while (ahash_next(&tmp_ref, &c)) {
 		if (tmp_ref == absolute_ref) {
 			hash_fin(&c);
 			break;
-		} else if (string_match(obj_get(tmp_ref).name, name)) {
+		}
+
+		OBJ tmp;
+		lhash_get(obj_hd, &tmp, tmp_ref);
+		if (string_match(tmp.name, name)) {
 			if (nth <= 0) {
 				hash_fin(&c);
 				break;

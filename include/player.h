@@ -21,20 +21,20 @@ static inline unsigned
 player_get(char *name)
 {
 	unsigned res = NOTHING;
-	hash_cget(player_hd, &res, name, strlen(name));
+	shash_get(player_hd, &res, name);
 	return res;
 }
 
 static inline void
 player_put(char *name, unsigned player_ref)
 {
-	hash_cput(player_hd, name, strlen(name), &player_ref, sizeof(player_ref));
+	suhash_put(player_hd, name, player_ref);
 }
 
 static inline void
 player_delete(char *name)
 {
-	hash_sdel(player_hd, name);
+	shash_del(player_hd, name);
 }
 
 #endif

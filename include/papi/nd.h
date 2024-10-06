@@ -6,8 +6,9 @@
 struct nd {
 	/* io */
 	fd_player_t *fd_player;
-	fds_iter_t *fds_iter;
-	fds_next_t *fds_next;
+
+	unsigned fds_hd;
+
 	/* fds_has_t *fds_has; */
 	nd_close_t *nd_close;
 	nd_write_t *nd_write;
@@ -35,44 +36,23 @@ struct nd {
 	wts_plural_t *wts_plural;
 
 	/* skel */
+	unsigned skel_hd;
 	/* skel_init_t *skel_init; */
-	skel_new_t *skel_new;
-	skel_get_t *skel_get;
-	skel_set_t *skel_set;
-	lhash_iter_t *skel_iter;
-	skel_next_t *skel_next;
+	unsigned drop_hd;
 	/* drop_init_t *drop_init; */
-	drop_new_t *drop_new;
-	drop_get_t *drop_get;
-	drop_set_t *drop_set;
-	lhash_iter_t *drop_iter;
-	drop_next_t *drop_next;
-	alhash_add_t *adrop_add;
-	alhash_iter_t *adrop_iter;
-	alhash_next_t *adrop_next;
-	alhash_remove_t *adrop_remove;
+	unsigned adrop_hd;
 
 	/* object */
 	/* obj_init_t *obj_init; */
-	obj_new_t *obj_new;
-	obj_get_t *obj_get;
-	obj_set_t *obj_set;
-	lhash_iter_t *obj_iter;
-	obj_next_t *obj_next;
+	unsigned obj_hd;
 	obj_exists_t *obj_exists;
 	object_new_t *object_new;
 	object_copy_t *object_copy;
 	object_move_t *object_move;
 	object_add_t *object_add;
 	object_drop_t *object_drop;
-	alhash_add_t *obs_add;
-	alhash_iter_t *obs_iter;
-	alhash_next_t *obs_next;
-	alhash_remove_t *obs_remove;
-	alhash_add_t *contents_add;
-	alhash_iter_t *contents_iter;
-	alhash_next_t *contents_next;
-	alhash_remove_t *contents_remove;
+	unsigned obs_hd;
+	unsigned contents_hd;
 	object_icon_t *object_icon;
 	art_max_t *art_max;
 	object_art_t *object_art;

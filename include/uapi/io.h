@@ -5,7 +5,7 @@
 #include <stddef.h>
 #include <qhash.h>
 
-typedef unsigned fd_player_t(int fd);
+typedef unsigned fd_player_t(unsigned fd);
 fd_player_t fd_player;
 
 typedef struct hash_cursor fds_iter_t(unsigned player);
@@ -88,5 +88,7 @@ static inline void nd_twritef(unsigned player_ref, const char *fmt, ...) {
 
 typedef void nd_wwrite_t(unsigned player_ref, void *msg, size_t len);
 nd_wwrite_t nd_wwrite;
+
+extern unsigned fds_hd;
 
 #endif

@@ -10,8 +10,15 @@
 #include "uapi/io.h"
 #include "uapi/map.h"
 
-#define BIOME_BG(i) (NIGHT_IS \
-		? ANSI_RESET : skel_get(i).sp.biome.bg)
+
+static inline char * biome_bg(unsigned i) {
+	if (NIGHT_IS)
+		return ANSI_RESET;
+
+	SKEL skel;
+	lhash_get(skel_hd, &skel, i);
+	return (char *) skel.sp.biome.bg;
+}
 
 // global buffer for map? // FIXME d bio_limit
 static const char * v = "|";
@@ -37,7 +44,8 @@ vtf_t vtf_map[] = {
 static inline char *
 dr_tree(struct plant_data pd, int n, char *b) {
 	if (PLANT_N(pd.n, n)) {
-		SKEL skel = skel_get(pd.id[n]);
+		SKEL skel;
+		lhash_get(skel_hd, &skel, pd.id[n]);
 		SPLA *pl = &skel.sp.plant;
 		b = stpcpy(b, pl->pre);
 		*b++ = PLANT_N(pd.n, n) > PLANT_HALF
@@ -93,7 +101,8 @@ dr_room(char *buf, view_tile_t *t, const char *bg)
 
 static inline unsigned
 floor_get(unsigned what_ref) {
-	OBJ what = obj_get(what_ref);
+	OBJ what;
+	lhash_get(obj_hd, &what, what_ref);
 	ROO *rwhat = &what.sp.room;
 	unsigned char floor = rwhat->floor;
 
@@ -145,7 +154,7 @@ dr_vs(char *b, view_tile_t *t)
 		wp = wall_paint(floor);
 	}
 
-	bg = BIOME_BG(floor);
+	bg = biome_bg(floor);
 	b = stpcpy(b, " ");
 	for (;;) {
 		b = stpcpy(b, bg);
@@ -159,11 +168,11 @@ dr_vs(char *b, view_tile_t *t)
 
 		if (t->room == NOTHING) {
 			floor = t->bio_idx;
-			bg = BIOME_BG(floor);
+			bg = biome_bg(floor);
 		} else {
 			floor = t->bio_idx;
 			wp = wall_paint(floor);
-			bg = BIOME_BG(floor);
+			bg = biome_bg(floor);
 			b = stpcpy(b, bg);
 		}
 
@@ -209,12 +218,12 @@ dr_hs_n(char *b, view_tile_t *t)
 	int toggle;
 
 	for (wp = "",
-	     bg = BIOME_BG(
+	     bg = biome_bg(
 		     t->room == NOTHING
 		     ? t->bio_idx
 		     : floor_get(t->room)) ;
 	     t < t_max ;
-	     bg = BIOME_BG(floor),
+	     bg = biome_bg(floor),
 	     b = dr_h(b, bg, wp, w, toggle),
 	     t++)
 	{
@@ -299,7 +308,8 @@ view_build_exit_s(view_tile_t *t, pos_t p, enum exit e) {
 		return;
 	}
 
-	OBJ tmp = obj_get(tmp_ref);
+	OBJ tmp;
+	lhash_get(obj_hd, &tmp, tmp_ref);
 	ROO *rtmp = &tmp.sp.room;
 
 	// FIXME not returning correct room (at least for E_SOUTH)
@@ -317,12 +327,14 @@ view_build_exit_s(view_tile_t *t, pos_t p, enum exit e) {
 
 static inline ucoord_t
 view_build_flags(unsigned loc_ref) {
-	struct hash_cursor c = contents_iter(loc_ref);
+	struct hash_cursor c = fhash_iter(contents_hd, loc_ref);
 	unsigned tmp_ref;
 	ucoord_t flags = 0;
 
-	while ((tmp_ref = contents_next(&c)) != NOTHING) {
-		switch (obj_get(tmp_ref).type) {
+	while (ahash_next(&tmp_ref, &c)) {
+		OBJ tmp;
+		lhash_get(obj_hd, &tmp, tmp_ref);
+		switch (tmp.type) {
 		case TYPE_ENTITY:
 			flags |= VTF_ENTITY;
 
@@ -345,7 +357,8 @@ view_build_tile(struct bio *n, unsigned loc_ref, view_tile_t *t, pos_t p)
 {
 	t->room = loc_ref;
 	if (loc_ref != NOTHING) {
-		OBJ loc = obj_get(loc_ref);
+		OBJ loc;
+		lhash_get(obj_hd, &loc, loc_ref);
 		ROO *rloc = &loc.sp.room;
 		view_build_exit(t, rloc, E_EAST);
 		view_build_exit(t, rloc, E_NORTH);
@@ -391,7 +404,9 @@ view(unsigned player_ref)
 	struct bio bd[VIEW_M], *n_p = bd,
 		   *n_max = &bd[VIEW_BDI + 1];
 	pos_t pos, opos;
-	map_where(opos, obj_get(player_ref).location);
+	OBJ player;
+	lhash_get(obj_hd, &player, player_ref);
+	map_where(opos, player.location);
 	view_t view;
         view_tile_t *p = view;
 	unsigned o[VIEW_M], *o_p = o;

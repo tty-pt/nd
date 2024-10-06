@@ -8,15 +8,19 @@
 static inline unsigned
 vendor_find(unsigned where_ref)
 {
-	struct hash_cursor c = contents_iter(where_ref);
+	struct hash_cursor c = fhash_iter(contents_hd, where_ref);
 	unsigned tmp_ref;
 
-	while ((tmp_ref = contents_next(&c)) != NOTHING)
-		if (obj_get(tmp_ref).type == TYPE_ENTITY)
-			if (ent_get(tmp_ref).flags & EF_SHOP) {
-				hash_fin(&c);
-				return tmp_ref;
-			}
+	while (ahash_next(&tmp_ref, &c)) {
+		OBJ tmp;
+		lhash_get(obj_hd, &tmp, tmp_ref);
+		if (tmp.type != TYPE_ENTITY)
+			continue;
+		if (ent_get(tmp_ref).flags & EF_SHOP) {
+			hash_fin(&c);
+			return tmp_ref;
+		}
+	}
 
 	return NOTHING;
 }
@@ -24,21 +28,26 @@ vendor_find(unsigned where_ref)
 void
 do_shop(int fd, int argc, char *argv[])
 {
+	OBJ player, npc;
 	unsigned player_ref = fd_player(fd),
-	      npc_ref = vendor_find(obj_get(player_ref).location),
-	      tmp_ref;
+		 npc_ref, tmp_ref;
+
+	lhash_get(obj_hd, &player, player_ref);
+	npc_ref = vendor_find(player.location);
 
 	if (npc_ref == NOTHING) {
 		nd_writef(player_ref, "No one here wants to buy or sell anything.\n");
 		return;
 	}
 
-	nd_writef(player_ref, "%s shows you what's for sale.\n", obj_get(npc_ref).name);
+	lhash_get(obj_hd, &npc, npc_ref);
+	nd_writef(player_ref, "%s shows you what's for sale.\n", npc.name);
         mcp_look(player_ref, npc_ref);
 
-	struct hash_cursor c = contents_iter(npc_ref);
-	while ((tmp_ref = contents_next(&c)) != NOTHING) {
-		OBJ tmp = obj_get(tmp_ref);
+	struct hash_cursor c = fhash_iter(obj_hd, npc_ref);
+	while (ahash_next(&tmp_ref, &c)) {
+		OBJ tmp;
+		lhash_get(obj_hd, &tmp, tmp_ref);
 		if (tmp.flags & OF_INF)
 			nd_writef(player_ref, "%-13s %5dP (Inf)",
 				tmp.name, tmp.value);
@@ -52,7 +61,8 @@ void
 do_buy(int fd, int argc, char *argv[])
 {
 	unsigned player_ref = fd_player(fd);
-	OBJ player = obj_get(player_ref);
+	OBJ player;
+	lhash_get(obj_hd, &player, player_ref);
 	char *name = argv[1];
 	unsigned npc_ref = vendor_find(player.location);
 
@@ -61,7 +71,8 @@ do_buy(int fd, int argc, char *argv[])
 		return;
 	}
 
-	OBJ npc = obj_get(npc_ref);
+	OBJ npc;
+	lhash_get(obj_hd, &npc, npc_ref);
 	unsigned item_ref = ematch_at(player_ref, npc_ref, name);
 
 	if (item_ref == NOTHING) {
@@ -69,7 +80,8 @@ do_buy(int fd, int argc, char *argv[])
 		return;
 	}
 
-	OBJ item = obj_get(item_ref);
+	OBJ item;
+	lhash_get(obj_hd, &item, item_ref);
 	int cost = item.value;
 	int ihave = player.value;
 
@@ -80,14 +92,14 @@ do_buy(int fd, int argc, char *argv[])
 
 	player.value -= cost;
 	npc.value += cost;
-	obj_set(npc_ref, &npc);
-	obj_set(player_ref, &player);
+	lhash_put(obj_hd, npc_ref, &npc);
+	lhash_put(obj_hd, player_ref, &player);
 
         if (item.flags & OF_INF) {
 		OBJ nu;
 		unsigned nu_ref = object_copy(&nu, item_ref);
 		nu.flags &= ~OF_INF;
-		obj_set(nu_ref, &nu);
+		lhash_put(obj_hd, nu_ref, &nu);
                 object_move(nu_ref, player_ref);
         } else
                 object_move(item_ref, player_ref);
@@ -99,7 +111,8 @@ void
 do_sell(int fd, int argc, char *argv[])
 {
 	unsigned player_ref = fd_player(fd);
-	OBJ player = obj_get(player_ref);
+	OBJ player;
+	lhash_get(obj_hd, &player, player_ref);
 	unsigned npc_ref = vendor_find(player.location);
 
 	if (npc_ref == NOTHING) {
@@ -114,8 +127,10 @@ do_sell(int fd, int argc, char *argv[])
 		return;
         }
 
-	OBJ npc = obj_get(npc_ref);
-	OBJ item = obj_get(item_ref);
+	OBJ npc, item;
+
+	lhash_get(obj_hd, &npc, npc_ref);
+	lhash_get(obj_hd, &item, item_ref);
         int cost = item.value;
         int npchas = npc.value;
 
@@ -129,9 +144,8 @@ do_sell(int fd, int argc, char *argv[])
 
         player.value += cost;
         npc.value -= cost;
-	obj_set(player_ref, &player);
-	obj_set(npc_ref, &npc);
+	lhash_put(obj_hd, player_ref, &player);
+	lhash_put(obj_hd, npc_ref, &npc);
 
-        nd_writef(player_ref, "You sold %s for %dP.\n",
-                item.name, cost);
+        nd_writef(player_ref, "You sold %s for %dP.\n", item.name, cost);
 }

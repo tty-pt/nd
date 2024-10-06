@@ -81,11 +81,7 @@ typedef struct {
 	enum element weakness;
 } element_t;
 
-LHASH_DECL(skel, SKEL);
-LHASH_DECL(drop, DROP);
-LHASH_ASSOC_DECL(adrop, skel, drop);
-
-LHASH_DECL(element, element_t);
+extern unsigned skel_hd, drop_hd, adrop_hd, element_hd;
 
 /* is like:
 unsigned skel_new(SKEL *skel);

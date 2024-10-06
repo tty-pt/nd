@@ -41,12 +41,12 @@ unsigned me_get() {
 
 ENT ent_get(unsigned ref) {
 	ENT ent;
-	hash_cget(tmp_hds, &ent, &ref, sizeof(ref));
+	uhash_get(tmp_hds, &ent, ref);
 	return ent;
 }
 
 void ent_set(unsigned ref, ENT *tmp) {
-	hash_cput(tmp_hds, &ref, sizeof(ref), tmp, sizeof(ENT));
+	uhash_put(tmp_hds, ref, tmp, sizeof(ENT));
 }
 
 void ent_del(unsigned ref) {
@@ -83,7 +83,8 @@ void birth(ENT *eplayer)
 		if (eq <= 0)
 			continue;
 
-		OBJ oeq = obj_get(eq);
+		OBJ oeq;
+		lhash_get(obj_hd, &oeq, eq);
 		EQU *eeq = &oeq.sp.equipment;
 		equip_affect(eplayer, eeq);
 	}
@@ -94,13 +95,19 @@ void birth(ENT *eplayer)
 static inline int
 entities_aggro(unsigned player_ref)
 {
+	OBJ player;
 	ENT eplayer = ent_get(player_ref);
 	unsigned tmp_ref;
 	int klock = 0;
 
-	struct hash_cursor c = contents_iter(obj_get(player_ref).location);
-	while ((tmp_ref = contents_next(&c)) != NOTHING) {
-		if (obj_get(tmp_ref).type != TYPE_ENTITY)
+	lhash_get(obj_hd, &player, player_ref);
+	
+	struct hash_cursor c = fhash_iter(contents_hd, player.location);
+	while (ahash_next(&tmp_ref, &c)) {
+		OBJ tmp;
+		lhash_get(obj_hd, &tmp, tmp_ref);
+
+		if (tmp.type != TYPE_ENTITY)
 			continue;
 
 		ENT etmp = ent_get(tmp_ref);
@@ -121,7 +128,8 @@ entities_aggro(unsigned player_ref)
 void
 enter(unsigned player_ref, unsigned loc_ref, enum exit e)
 {
-	OBJ player = obj_get(player_ref);
+	OBJ player;
+	lhash_get(obj_hd, &player, player_ref);
 	unsigned old_loc_ref = player.location;
 
 	st_run(player_ref, "ndst_leave");
@@ -156,11 +164,13 @@ controls(unsigned who_ref, unsigned what_ref)
 		return 0;
 
 	/* Zombies and puppets use the permissions of their owner */
-	OBJ who = obj_get(who_ref);
+	OBJ who, what;
+
+	lhash_get(obj_hd, &who, who_ref);
 	if (who.type != TYPE_ENTITY)
 		who_ref = who.owner;
 
-	OBJ what = obj_get(what_ref);
+	lhash_get(obj_hd, &what, what_ref);
 
 	/* Wizard controls everything */
 	if (ent_get(who_ref).flags & EF_WIZARD) {
@@ -185,7 +195,8 @@ unparse(unsigned loc_ref)
 	if (loc_ref == NOTHING)
 		return "*NOTHING*";
 
-	OBJ loc = obj_get(loc_ref);
+	OBJ loc;
+	lhash_get(obj_hd, &loc, loc_ref);
 
 	if (loc.type == TYPE_EQUIPMENT) {
 		EQU *eloc = &loc.sp.equipment;
@@ -225,7 +236,8 @@ sit(unsigned player_ref, ENT *eplayer, char *name)
 		return;
 	}
 
-	OBJ seat = obj_get(seat_ref);
+	OBJ seat;
+	lhash_get(obj_hd, &seat, seat_ref);
 
 	if (seat.type != TYPE_SEAT) {
 		nd_writef(player_ref, "You can't sit on that.\n");
@@ -252,10 +264,11 @@ stand_silent(unsigned player_ref, ENT *eplayer)
 		return 1;
 
 	if (eplayer->sat != NOTHING) {
-		OBJ chair = obj_get(eplayer->sat);
+		OBJ chair;
+		lhash_get(obj_hd, &chair, eplayer->sat);
 		SEA *schair = &chair.sp.seat;
 		schair->quantity--;
-		obj_set(eplayer->sat, &chair);
+		lhash_put(obj_hd, eplayer->sat, &chair);
 		eplayer->sat = NOTHING;
 	}
 
@@ -273,7 +286,9 @@ stand(unsigned player_ref, ENT *eplayer) {
 void
 look_around(unsigned player_ref)
 {
-	mcp_look(player_ref, obj_get(player_ref).location);
+	OBJ player;
+	lhash_get(obj_hd, &player, player_ref);
+	mcp_look(player_ref, player.location);
 }
 
 int
@@ -328,7 +343,8 @@ equip_affect(ENT *ewho, EQU *equ)
 int
 equip(unsigned who_ref, unsigned eq_ref)
 {
-	OBJ eq = obj_get(eq_ref);
+	OBJ eq;
+	lhash_get(obj_hd, &eq, eq_ref);
 	ENT ewho = ent_get(who_ref);
 	EQU *eeq = &eq.sp.equipment;
 	unsigned eql = EQL(eeq->eqw);
@@ -358,7 +374,8 @@ unequip(unsigned player_ref, unsigned eql)
 	if (eq_ref == NOTHING)
 		return NOTHING;
 
-	OBJ eq = obj_get(eq_ref);
+	OBJ eq;
+	lhash_get(obj_hd, &eq, eq_ref);
 	EQU *eeq = &eq.sp.equipment;
 	eqt = EQT(eeq->eqw);
 	aux = 0;
@@ -433,14 +450,16 @@ entity_body(unsigned mob_ref)
 {
 	unsigned tmp_ref;
 	char buf[32];
-	OBJ mob = obj_get(mob_ref), dead_mob;
+	OBJ mob, dead_mob;
+	lhash_get(obj_hd, &mob, mob_ref);
 	snprintf(buf, sizeof(buf), "%s's body.", mob.name);
 	unsigned dead_mob_ref = object_add(&dead_mob, corpse_ref, mob.location, NULL);
 	unsigned n = 0;
 
-	struct hash_cursor c = contents_iter(mob_ref);
-	while ((tmp_ref = contents_next(&c)) != NOTHING) {
-		OBJ tmp = obj_get(tmp_ref);
+	struct hash_cursor c = fhash_iter(contents_hd, mob_ref);
+	while (ahash_next(&tmp_ref, &c)) {
+		OBJ tmp;
+		lhash_get(obj_hd, &tmp, tmp_ref);
 		if (tmp.type == TYPE_EQUIPMENT) {
 			EQU *etmp = &tmp.sp.equipment;
 			unequip(mob_ref, EQL(etmp->eqw));
@@ -452,7 +471,7 @@ entity_body(unsigned mob_ref)
 	if (n > 0) {
 		free(dead_mob.name);
 		dead_mob.name = strdup(buf);
-		obj_set(dead_mob_ref, &dead_mob);
+		lhash_put(obj_hd, dead_mob_ref, &dead_mob);
 		nd_owritef(mob_ref, "%s's body drops to the ground.\n", mob.name);
 		return dead_mob_ref;
 	} else {
@@ -473,7 +492,8 @@ entity_kill(unsigned player_ref, ENT *eplayer, unsigned target_ref, ENT *etarget
 		eplayer->target = NOTHING;
 	}
 
-	OBJ target = obj_get(target_ref);
+	OBJ target;
+	lhash_get(obj_hd, &target, target_ref);
 
 	if (etarget->target && (etarget->flags & EF_AGGRO)) {
 		ENT etartar = ent_get(etarget->target);
@@ -482,8 +502,11 @@ entity_kill(unsigned player_ref, ENT *eplayer, unsigned target_ref, ENT *etarget
 	}
 
 	unsigned loc_ref = target.location;
+	OBJ loc;
 
-	if ((obj_get(target.location).sp.room.flags & RF_TEMP) && !(etarget->flags & EF_PLAYER)) {
+	lhash_get(obj_hd, &loc, loc_ref);
+
+	if ((loc.sp.room.flags & RF_TEMP) && !(etarget->flags & EF_PLAYER)) {
 		object_move(target_ref, NOTHING);
 		room_clean(loc_ref);
 		return NOTHING;
@@ -531,10 +554,12 @@ void
 do_look_at(int fd, int argc, char *argv[])
 {
 	unsigned player_ref = fd_player(fd), thing_ref;
+	OBJ player, thing;
 	char *name = argv[1];
 
 	if (*name == '\0') {
-		thing_ref = obj_get(player_ref).location;
+		lhash_get(obj_hd, &player, player_ref);
+		thing_ref = player.location;
 	} else if (
 			(thing_ref = ematch_absolute(name)) == NOTHING
 			&& (thing_ref = ematch_here(player_ref, name)) == NOTHING
@@ -547,7 +572,8 @@ do_look_at(int fd, int argc, char *argv[])
 		return;
 	}
 
-	switch (obj_get(thing_ref).type) {
+	lhash_get(obj_hd, &thing, thing_ref);
+	switch (thing.type) {
 	case TYPE_ROOM:
 		view(player_ref);
 	default:
@@ -560,7 +586,8 @@ static void
 respawn(unsigned player_ref)
 {
 	ENT eplayer = ent_get(player_ref);
-	OBJ player = obj_get(player_ref);
+	OBJ player;
+	lhash_get(obj_hd, &player, player_ref);
 
 	nd_owritef(player_ref, "%s disappears.\n", player.name);
 
@@ -681,10 +708,15 @@ kill_dmg(enum element dmg_type, short dmg,
 	short def, enum element def_type)
 {
 	if (dmg > 0) {
-		if (dmg_type == element_get(def_type).weakness)
+		element_t element;
+		lhash_get(element_hd, &element, def_type);
+		if (dmg_type == element.weakness)
 			dmg *= 2;
-		else if (element_get(dmg_type).weakness == def_type)
-			dmg /= 2;
+		else {
+			lhash_get(element_hd, &element, dmg_type);
+			if (element.weakness == def_type)
+				dmg /= 2;
+		}
 
 		if (dmg < def)
 			return 0;
@@ -720,15 +752,20 @@ attack(unsigned player_ref, ENT *eplayer)
 
 	unsigned eq_ref = EQUIP(eplayer, ES_RHAND);
 
-	if (eq_ref != NOTHING)
-		wts = wts_map[EQT(obj_get(eq_ref).sp.equipment.eqw)];
+	if (eq_ref != NOTHING) {
+		OBJ eq;
+		lhash_get(obj_hd, &eq, eq_ref);
+		wts = wts_map[EQT(eq.sp.equipment.eqw)];
+	}
 
 	if (spells_cast(player_ref, eplayer, eplayer->target) && !kill_dodge(player_ref, wts)) {
 		enum element at = STAT_ELEMENT(eplayer, MDMG);
 		enum element dt = STAT_ELEMENT(&etarget, MDEF);
 		short aval = -kill_dmg(ELM_PHYSICAL, EFFECT(eplayer, DMG).value, EFFECT(&etarget, DEF).value + EFFECT(&etarget, MDEF).value, dt);
 		short bval = -kill_dmg(at, EFFECT(eplayer, MDMG).value, EFFECT(&etarget, MDEF).value, dt);
-		char const *color = element_get(at).color;
+		element_t element;
+		lhash_get(element_hd, &element, at);
+		char const *color = element.color;
 		notify_attack(player_ref, eplayer->target, wts, aval, color, bval);
 		if (!entity_damage(player_ref, eplayer, eplayer->target, &etarget, aval + bval))
 			ent_set(eplayer->target, &etarget);
@@ -765,7 +802,8 @@ int debufs_process(unsigned player_ref, ENT *eplayer);
 void
 entity_update(unsigned player_ref, double dt)
 {
-	OBJ player = obj_get(player_ref);
+	OBJ player;
+	lhash_get(obj_hd, &player, player_ref);
 	ENT eplayer = ent_get(player_ref);
 	unsigned short ohp = eplayer.hp;
 	unsigned short omp = eplayer.mp;
@@ -783,7 +821,7 @@ entity_update(unsigned player_ref, double dt)
 			if (player.location == 0) {
 				/* warn("%d is located at 0, so they shall respawn\n", player); */
 				respawn(player_ref);
-				player = obj_get(player_ref);
+				lhash_get(obj_hd, &player, player_ref);
 				eplayer = ent_get(player_ref);
 			}
 		} else {

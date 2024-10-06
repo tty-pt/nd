@@ -2,11 +2,7 @@
 #include "plant.h"
 #include "params.h"
 
-LHASH_DEF(skel, SKEL);
-LHASH_DEF(drop, DROP);
-LHASH_ASSOC_DEF(adrop, skel, drop);
-
-LHASH_DEF(element, element_t);
+unsigned skel_hd, drop_hd, adrop_hd, element_hd;
 
 element_t element_map[] = {
 	[ELM_PHYSICAL] = {
@@ -44,9 +40,9 @@ element_t element_map[] = {
 };
 
 static inline void elements_init() {
-	element_lhash = lhash_init();
+	element_hd = lhash_init(sizeof(element_t));
 	for (unsigned i = 0; i < ELM_MAX; i++)
-		element_new(&element_map[i]);
+		lhash_new(element_hd, &element_map[i]);
 }
 
 void biomes_init();
@@ -55,9 +51,9 @@ void spells_init();
 void mobs_init();
 
 void skel_init() {
-	skel_lhash = lhash_init();
-	drop_lhash = lhash_init();
-	adrop_ahd = hash_cinit(NULL, NULL, 0644, QH_DUP);
+	skel_hd = lhash_init(sizeof(SKEL));
+	drop_hd = lhash_init(sizeof(DROP));
+	adrop_hd = ahash_init();
 	elements_init();
 	biomes_init();
 	plants_init();

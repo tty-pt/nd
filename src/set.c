@@ -54,11 +54,12 @@ do_name(int fd, int argc, char *argv[])
 	}
 
 	/* everything ok, change the name */
-	OBJ thing = obj_get(thing_ref);
+	OBJ thing;
+	lhash_get(obj_hd, &thing, thing_ref);
 	if (thing.name)
 		free((void *) thing.name);
 	thing.name = strdup(newname);
-	obj_set(thing_ref, &thing);
+	lhash_put(obj_hd, thing_ref, &thing);
 	nd_writef(player_ref, "Name set.\n");
 }
 
@@ -81,7 +82,8 @@ do_chown(int fd, int argc, char *argv[])
 		return;
 	}
 
-	OBJ player = obj_get(player_ref);
+	OBJ player, owner, thing;
+	lhash_get(obj_hd, &player, player_ref);
 
 	if (*newowner && strcmp(newowner, "me")) {
 		owner_ref = player_get(newowner);
@@ -97,8 +99,8 @@ do_chown(int fd, int argc, char *argv[])
 		return;
 	}
 
-	OBJ owner = obj_get(owner_ref);
-	OBJ thing = obj_get(thing_ref);
+	lhash_get(obj_hd, &owner, owner_ref);
+	lhash_get(obj_hd, &thing, thing_ref);
 
 	switch (thing.type) {
 	case TYPE_ROOM:
@@ -127,5 +129,5 @@ do_chown(int fd, int argc, char *argv[])
 		nd_writef(player_ref, "Owner changed to %s.\n", unparse(owner_ref));
 	}
 
-	obj_set(thing_ref, &thing);
+	lhash_put(obj_hd, thing_ref, &thing);
 }

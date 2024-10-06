@@ -20,8 +20,10 @@ do_get(int fd, int argc, char *argv[])
 	}
 
 	cont_ref = thing_ref;
-	OBJ player = obj_get(player_ref);
-	OBJ thing = obj_get(cont_ref), cont = thing;
+	OBJ player, thing, cont;
+	lhash_get(obj_hd, &player, player_ref);
+	lhash_get(obj_hd, &thing, cont_ref);
+	cont = thing;
 
 	if (obj && *obj) {
 		thing_ref = ematch_at(player_ref, cont_ref, obj);
@@ -29,7 +31,7 @@ do_get(int fd, int argc, char *argv[])
 			nd_writef(player_ref, NOMATCH_MESSAGE);
 			return;
 		}
-		thing = obj_get(thing_ref);
+		lhash_get(obj_hd, &thing, thing_ref);
 		if (cont.type == TYPE_ENTITY) {
 			nd_writef(player_ref, "You can't steal from the living.\n");
 			return;
@@ -75,7 +77,8 @@ void
 do_drop(int fd, int argc, char *argv[])
 {
 	unsigned player_ref = fd_player(fd), thing_ref, cont_ref;
-	OBJ player = obj_get(player_ref);
+	OBJ player, cont, thing;
+	lhash_get(obj_hd, &player, player_ref);
 	char *name = argv[1];
 	char *obj = argv[2];
 
@@ -100,7 +103,7 @@ do_drop(int fd, int argc, char *argv[])
 		return;
 	}
 
-	OBJ cont = obj_get(cont_ref);
+	lhash_get(obj_hd, &cont, cont_ref);
 
 	if (cont.type != TYPE_ROOM && cont.type != TYPE_ENTITY &&
 		!object_item(cont_ref)) {
@@ -109,7 +112,7 @@ do_drop(int fd, int argc, char *argv[])
 	}
 
 	object_move(thing_ref, cont_ref);
-	OBJ thing = obj_get(thing_ref);
+	lhash_get(obj_hd, &thing, thing_ref);
 
 	if (object_item(cont_ref)) {
 		nd_writef(player_ref, "Put away.\n");
@@ -130,6 +133,7 @@ do_recycle(int fd, int argc, char *argv[])
 	unsigned player_ref = fd_player(fd);
 	char *name = argv[1];
 	unsigned thing_ref;
+	OBJ thing;
 
 	if (
 			(thing_ref = ematch_absolute(name)) == NOTHING
@@ -141,12 +145,13 @@ do_recycle(int fd, int argc, char *argv[])
 		return;
 	}
 
-	OBJ thing = obj_get(thing_ref);
+	lhash_get(obj_hd, &thing, thing_ref);
 
 	if (!controls(player_ref, thing_ref)) {
 		nd_writef(player_ref, "You can not do that.\n");
 	} else {
-		OBJ player = obj_get(player_ref);
+		OBJ player;
+		lhash_get(obj_hd, &player, player_ref);
 		switch (thing.type) {
 		case TYPE_ROOM:
 			if (thing.owner != player.owner) {

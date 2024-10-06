@@ -29,8 +29,11 @@ do_say(int fd, int argc, char *argv[])
 {
 	unsigned player_ref = fd_player(fd);
 	char *message = argscat(argc, argv);
+	OBJ player;
+
 	nd_writef(player_ref, "You say:%s.\n", message);
-	nd_owritef(player_ref, "%s says:%s\n", obj_get(player_ref).name, message);
+	lhash_get(obj_hd, &player, player_ref);
+	nd_owritef(player_ref, "%s says:%s\n", player.name, message);
 }
 
 void
@@ -38,9 +41,11 @@ do_pose(int fd, int argc, char *argv[])
 {
 	unsigned player_ref = fd_player(fd);
 	char *message = argscat(argc, argv);
+	OBJ player;
 
 	nd_writef(player_ref, "You %s\n", message);
-	nd_owritef(player_ref, "%s%s\n", obj_get(player_ref).name, message);
+	lhash_get(obj_hd, &player, player_ref);
+	nd_owritef(player_ref, "%s%s\n", player.name, message);
 }
 
 void
@@ -48,7 +53,7 @@ do_wall(int fd, int argc, char *argv[])
 {
 	unsigned player_ref = fd_player(fd);
 	unsigned oi_ref;
-	OBJ player = obj_get(player_ref);
+	OBJ player;
 	char buf[BUFFER_LEN];
 	char *message = argscat(argc, argv);
 
@@ -57,10 +62,11 @@ do_wall(int fd, int argc, char *argv[])
 		return;
 	}
 
+	lhash_get(obj_hd, &player, player_ref);
 	snprintf(buf, sizeof(buf), "%s shouts: %s", player.name, message);
-	struct hash_cursor c = obj_iter();
+	struct hash_cursor c = lhash_iter(obj_hd);
 	OBJ oi;
-	while ((oi_ref = obj_next(&oi, &c)) != NOTHING)
+	while (hash_next(&oi_ref, &oi, &c))
 		nd_writef(oi_ref, buf);
 }
 
@@ -68,9 +74,11 @@ void
 dnotify_wts(unsigned who_ref, char const *a, char const *b, char *format, va_list args)
 {
 	char buf[BUFFER_LEN];
+	OBJ who;
 	vsnprintf(buf, sizeof(buf), format, args);
 	nd_writef(who_ref, "You %s%s.\n", a, buf);
-	nd_owritef(who_ref, "%s %s%s.\n", obj_get(who_ref).name, b, buf);
+	lhash_get(obj_hd, &who, who_ref);
+	nd_owritef(who_ref, "%s %s%s.\n", who.name, b, buf);
 }
 
 void
@@ -78,8 +86,9 @@ dnotify_wts_to(unsigned who_ref, unsigned tar_ref, char const *a, char const *b,
 {
 	char buf[BUFFER_LEN];
 	vsnprintf(buf, sizeof(buf), format, args);
-	OBJ who = obj_get(who_ref),
-	    tar = obj_get(tar_ref);
+	OBJ who, tar;
+	lhash_get(obj_hd, &who, who_ref);
+	lhash_get(obj_hd, &tar, tar_ref);
 	nd_writef(who_ref, "You %s %s%s.\n", a, tar.name, buf);
 	nd_owritef(who_ref, "%s %s %s%s.\n", who.name, b, tar.name, buf);
 }

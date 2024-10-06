@@ -204,7 +204,7 @@ struct icon {
 	char *icon;
 };
 
-LHASH_DECL(obj, OBJ);
+extern unsigned obj_hd, contents_hd, obs_hd;
 
 typedef int obj_exists_t(unsigned ref);
 obj_exists_t obj_exists;
@@ -224,13 +224,11 @@ object_add_t object_add;
 typedef void object_drop_t(unsigned where_ref, unsigned skel_id);
 object_drop_t object_drop;
 
-LHASH_ASSOC_DECL(obs, obj, obj);
-LHASH_ASSOC_DECL(contents, obj, obj);
-
 static inline int
 object_item(unsigned obj_ref)
 {
-	OBJ obj = obj_get(obj_ref);
+	OBJ obj;
+	uhash_get(obj_hd, &obj, obj_ref);
 	return obj.type == TYPE_THING
 		|| obj.type == TYPE_CONSUMABLE
 		|| obj.type == TYPE_EQUIPMENT;

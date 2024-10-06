@@ -18,7 +18,8 @@ do_consume(int fd, int argc, char *argv[])
 		return;
 	}
 
-	OBJ vial = obj_get(vial_ref);
+	OBJ vial;
+	lhash_get(obj_hd, &vial, vial_ref);
 
 	if (vial.type != TYPE_CONSUMABLE) {
 		nd_writef(player_ref, "You can not consume that.\n");
@@ -48,7 +49,7 @@ do_consume(int fd, int argc, char *argv[])
 	if (!cvial->quantity && !cvial->capacity)
 		object_move(vial_ref, NOTHING);
 	else
-		obj_set(vial_ref, &vial);
+		lhash_put(obj_hd, vial_ref, &vial);
 
 	ent_set(player_ref, &eplayer);
 }
@@ -64,7 +65,8 @@ do_fill(int fd, int argc, char *argv[])
 		return;
 	}
 
-	OBJ vial = obj_get(vial_ref);
+	OBJ vial;
+	lhash_get(obj_hd, &vial, vial_ref);
 
 	if (vial.type != TYPE_CONSUMABLE) {
 		nd_writef(player_ref, "You can not fill that up.\n");
@@ -90,7 +92,8 @@ do_fill(int fd, int argc, char *argv[])
 		return;
 	}
 
-	OBJ source = obj_get(source_ref);
+	OBJ source;
+	lhash_get(obj_hd, &source, source_ref);
 
 	if (source.type != TYPE_CONSUMABLE) {
 		nd_writef(player_ref, "Invalid source.\n");
@@ -101,7 +104,7 @@ do_fill(int fd, int argc, char *argv[])
 	cvial->quantity = cvial->capacity;
 	cvial->drink = csource->drink;
 	cvial->food = csource->food;
-	obj_set(vial_ref, &vial);
+	lhash_put(obj_hd, vial_ref, &vial);
 
 	notify_wts(player_ref, "fill", "fills", " %s from %s\n",
 		vial.name, source.name);

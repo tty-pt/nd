@@ -10,7 +10,9 @@
 static inline void
 print_owner(unsigned player_ref, unsigned thing_ref)
 {
-	OBJ thing = obj_get(thing_ref);
+	OBJ thing, owner;
+
+	lhash_get(obj_hd, &thing, thing_ref);
 	switch (thing.type) {
 	case TYPE_ENTITY:
 		nd_writef(player_ref, "%s is an entity.\n", thing.name);
@@ -19,7 +21,8 @@ print_owner(unsigned player_ref, unsigned thing_ref)
 	case TYPE_CONSUMABLE:
 	case TYPE_EQUIPMENT:
 	case TYPE_THING:
-		nd_writef(player_ref, "Owner: %s\n", obj_get(thing.owner).name);
+		lhash_get(obj_hd, &owner, thing.owner);
+		nd_writef(player_ref, "Owner: %s\n", owner.name);
 		break;
 	}
 }
@@ -28,7 +31,8 @@ void
 do_examine(int fd, int argc, char *argv[])
 {
 	unsigned player_ref = fd_player(fd);
-	OBJ player = obj_get(player_ref);
+	OBJ player;
+	lhash_get(obj_hd, &player, player_ref);
 	char *name = argv[1];
 	unsigned thing_ref;
 
@@ -44,21 +48,23 @@ do_examine(int fd, int argc, char *argv[])
 		return;
 	}
 
-	OBJ thing = obj_get(thing_ref);
+	OBJ thing, thing_owner;
+	lhash_get(obj_hd, &thing, thing_ref);
+	lhash_get(obj_hd, &thing_owner, thing.owner);
 
 	nd_writef(player_ref, "%s (#%d) Owner: %s  Value: %d\n",
 			unparse(thing_ref),
 			thing_ref,
-			obj_get(thing.owner).name, thing.value);
+			thing_owner.name, thing.value);
 
 	if (thing.description)
 		nd_writef(player_ref, thing.description);
 
 	/* show him the contents */
-	struct hash_cursor c = contents_iter(thing_ref);
+	struct hash_cursor c = fhash_iter(contents_hd, thing_ref);
 	unsigned content_ref;
 
-	while ((content_ref = contents_next(&c)) != NOTHING)
+	while (ahash_next(&content_ref, &c))
 		nd_writef(player_ref, unparse(content_ref));
 
 	switch (thing.type) {
@@ -114,7 +120,8 @@ void
 do_score(int fd, int argc, char *argv[])
 {
 	unsigned player_ref = fd_player(fd);
-	OBJ player = obj_get(player_ref);
+	OBJ player;
+	lhash_get(obj_hd, &player, player_ref);
 
 	nd_writef(player_ref, "You have %d %s.\n", player.value,
 			wts_cond("shekel", player.value));
@@ -151,9 +158,10 @@ do_owned(int fd, int argc, char *argv[])
 	} else
 		victim_ref = player_ref;
 
-	OBJ victim = obj_get(victim_ref), oi;
-	struct hash_cursor c = obj_iter();
-	while ((oi_ref = obj_next(&oi, &c)) != NOTHING)
+	OBJ victim, oi;
+	lhash_get(obj_hd, &victim, victim_ref);
+	struct hash_cursor c = lhash_iter(obj_hd);
+	while (hash_next(&oi_ref, &oi, &c))
 		if (oi.owner == victim.owner) {
 			display_objinfo(player_ref, oi_ref);
 			total++;
@@ -170,7 +178,9 @@ do_contents(int fd, int argc, char *argv[])
 	int total = 0;
 
 	if (*name == '\0') {
-		thing_ref = obj_get(player_ref).location;
+		OBJ player;
+		lhash_get(obj_hd, &player, player_ref);
+		thing_ref = player.location;
 	} else if ((thing_ref = ematch_all(player_ref, name)) == NOTHING) {
 		nd_writef(player_ref, NOMATCH_MESSAGE);
 		return;
@@ -181,9 +191,9 @@ do_contents(int fd, int argc, char *argv[])
 		return;
 	}
 
-	struct hash_cursor c = contents_iter(thing_ref);
+	struct hash_cursor c = fhash_iter(contents_hd, thing_ref);
 	unsigned oi_ref;
-	while ((oi_ref = contents_next(&c)) != NOTHING) {
+	while (ahash_next(&oi_ref, &c)) {
 		display_objinfo(player_ref, oi_ref);
 		total++;
 	}

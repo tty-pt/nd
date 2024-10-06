@@ -65,9 +65,9 @@ void do_wall(int fd, int argc, char *argv[]);
 
 unsigned dplayer_hd = -1;
 
-unsigned fd_player(int fd) {
+unsigned fd_player(unsigned fd) {
 	unsigned ret;
-	hash_cget(dplayer_hd, &ret, &fd, sizeof(fd));
+	uhash_get(dplayer_hd, &ret, fd);
 	return ret;
 }
 
@@ -269,18 +269,6 @@ show_program_usage(char *prog)
 	exit(1);
 }
 
-struct hash_cursor fds_iter(unsigned player) {
-	return hash_citer(fds_hd, &player, sizeof(player));
-}
-
-int fds_next(struct hash_cursor *c) {
-	unsigned key;
-	int value = 0;
-	if (hash_next(&key, &value, c) < 0)
-		return 0;
-	return value;
-}
-
 void skel_init();
 int objects_init();
 void entities_init();
@@ -335,7 +323,7 @@ main(int argc, char **argv)
 	if (euid && !nd_config.chroot)
 		nd_config.chroot = ".";
 
-	fds_hd = hash_cinit(NULL, NULL, 0644, QH_DUP);
+	fds_hd = ahash_init();
 	skel_init();
 	players_init();
 	entities_init();
@@ -359,11 +347,15 @@ main(int argc, char **argv)
 
 void
 nd_write(unsigned player_ref, char *str, size_t len) {
-	struct hash_cursor c = fds_iter(player_ref);
-	int fd;
+	struct hash_cursor c = hash_iter(fds_hd, &player_ref, sizeof(player_ref));
+	unsigned fd;
 
-	while ((fd = fds_next(&c)))
+	fprintf(stderr, "nd_write %u %lu %s\n", player_ref, len, str);
+
+	while (ahash_next(&fd, &c)) {
+		fprintf(stderr, "next! %d\n", fd);
 		ndc_write(fd, str, len);
+	}
 }
 
 
@@ -371,56 +363,64 @@ void
 nd_dwritef(unsigned player_ref, const char *fmt, va_list args) {
 	static char buf[BUFSIZ];
 	ssize_t len = vsnprintf(buf, sizeof(buf), fmt, args);
-	struct hash_cursor c = fds_iter(player_ref);
-	int fd;
+	struct hash_cursor c = fhash_iter(fds_hd, player_ref);
+	unsigned fd;
 
-	while ((fd = fds_next(&c)))
+	while (ahash_next(&fd, &c))
 		ndc_write(fd, buf, len);
 }
 
 void
 nd_rwrite(unsigned room_ref, unsigned exception_ref, char *str, size_t len) {
 	unsigned tmp_ref;
-	struct hash_cursor c = contents_iter(room_ref);
-	while ((tmp_ref = contents_next(&c)) != NOTHING)
-		if (tmp_ref != exception_ref && obj_get(exception_ref).type == TYPE_ENTITY)
-			nd_write(tmp_ref, str, len);
+	struct hash_cursor c = fhash_iter(contents_hd, room_ref);
+	while (ahash_next(&tmp_ref, &c))
+		if (tmp_ref == exception_ref)
+			continue;
+		else {
+			OBJ tmp;
+			lhash_get(obj_hd, &tmp, tmp_ref);
+			if (tmp.type == TYPE_ENTITY)
+				nd_write(tmp_ref, str, len);
+		}
 }
 
 void
 nd_dowritef(unsigned player_ref, const char *fmt, va_list args) {
 	char buf[BUFFER_LEN];
 	size_t len;
+	OBJ player;
 	len = vsnprintf(buf, sizeof(buf), fmt, args);
-	nd_rwrite(obj_get(player_ref).location, player_ref, buf, len);
+	lhash_get(obj_hd, &player, player_ref);
+	nd_rwrite(player.location, player_ref, buf, len);
 }
 
 void nd_tdwritef(unsigned player_ref, const char *fmt, va_list args) {
 	static char buf[BUFSIZ];
 	ssize_t len = vsnprintf(buf, sizeof(buf), fmt, args);
-	struct hash_cursor c = fds_iter(player_ref);
-	int fd;
+	struct hash_cursor c = fhash_iter(fds_hd, player_ref);
+	unsigned fd;
 
-	while ((fd = fds_next(&c)))
+	while (ahash_next(&fd, &c))
 		if (!(ndc_flags(fd) & DF_WEBSOCKET))
 			ndc_write(fd, buf, len);
 }
 
 void nd_wwrite(unsigned player_ref, void *msg, size_t len) {
-	struct hash_cursor c = fds_iter(player_ref);
-	int fd;
+	struct hash_cursor c = fhash_iter(fds_hd, player_ref);
+	unsigned fd;
 
-	while ((fd = fds_next(&c)))
+	while (ahash_next(&fd, &c))
 		if ((ndc_flags(fd) & DF_WEBSOCKET))
 			ndc_write(fd, msg, len);
 }
 
 void
 nd_close(unsigned player_ref) {
-	struct hash_cursor c = fds_iter(player_ref);
-	int fd;
+	struct hash_cursor c = fhash_iter(fds_hd, player_ref);
+	unsigned fd;
 
-	while ((fd = fds_next(&c)))
+	while (ahash_next(&fd, &c))
 		ndc_close(fd);
 }
 
@@ -446,9 +446,9 @@ avatar(OBJ *player) {
 void
 do_avatar(int fd, int argc, char *argv[]) {
 	unsigned player_ref = fd_player(fd);
-	OBJ player = obj_get(player_ref);
+	OBJ player;
+	lhash_get(obj_hd, &player, player_ref);
 	avatar(&player);
-	obj_set(player_ref, &player);
 	mcp_content_out(player.location, player_ref);
 	mcp_content_in(player.location, player_ref);
 }
@@ -456,7 +456,7 @@ do_avatar(int fd, int argc, char *argv[]) {
 void reroll(unsigned player_ref, ENT *eplayer);
 
 unsigned
-auth(int fd, char *qsession)
+auth(unsigned fd, char *qsession)
 {
 	char buf[BUFSIZ];
 	FILE *fp;
@@ -481,7 +481,7 @@ auth(int fd, char *qsession)
 	fscanf(fp, "%s", buf);
 	fclose(fp);
 
-	fprintf(stderr, "lookup_player '%s' (%d)\n", buf, fd);
+	fprintf(stderr, "lookup_player '%s' (%u)\n", buf, fd);
 
 	unsigned player_ref = player_get(buf);
 
@@ -497,7 +497,7 @@ auth(int fd, char *qsession)
 		eplayer.flags = EF_PLAYER;
 
 		player_put(buf, player_ref);
-		hash_cput(fds_hd, &player_ref, sizeof(player_ref), &fd, sizeof(fd));
+		ahash_add(fds_hd, player_ref, fd);
 
 		birth(&eplayer);
 		avatar(&player);
@@ -505,13 +505,15 @@ auth(int fd, char *qsession)
 		eplayer.hp = HP_MAX(&eplayer);
 		eplayer.mp = MP_MAX(&eplayer);
 		ent_set(player_ref, &eplayer);
-		obj_set(player_ref, &player);
+		lhash_put(obj_hd, player_ref, &player);
 		st_start(player_ref);
 
         } else
-		hash_cput(fds_hd, &player_ref, sizeof(player_ref), &fd, sizeof(fd));
+		ahash_add(fds_hd, player_ref, fd);
 
-	hash_cput(dplayer_hd, &fd, sizeof(fd), &player_ref, sizeof(player_ref));
+	fprintf(stderr, "add fd %u to player %u fds_hd %u\n", fd, player_ref, fds_hd);
+
+	ahash_add(dplayer_hd, fd, player_ref);
 	ndc_auth(fd, buf);
         mcp_stats(player_ref);
         mcp_auth_success(player_ref);
@@ -565,10 +567,10 @@ void ndc_command(int fd, int argc, char *argv[]) {
 }
 
 void ndc_connect(int fd) {
-	static char *cookie;
+	char cookie[BUFSIZ];
 	int headers = ndc_headers(fd);
-	cookie = (char *) hash_sget(headers, "Cookie");
-	if (!cookie)
+	fprintf(stderr, "CONNECT %d\n", fd);
+	if (shash_get(headers, cookie, "Cookie"))
 		return;
 
 	auth(fd, strchr(cookie, '=') + 1);
@@ -579,7 +581,9 @@ void ndc_disconnect(int fd) {
 		return;
 
 	unsigned player_ref = fd_player(fd);
+	OBJ player;
+	lhash_get(obj_hd, &player, player_ref);
 	fprintf(stderr, "%s(%u) disconnects on fd %d\n",
-			obj_get(player_ref).name, player_ref, fd);
-	hash_del(dplayer_hd, &fd, sizeof(fd));
+			player.name, player_ref, fd);
+	uhash_del(dplayer_hd, fd);
 }

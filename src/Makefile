@@ -11,9 +11,9 @@ node_modules != realpath ../node_modules
 CFLAGS := -g -O0 -Wall -Wno-initializer-overrides ${cflags-${uname}} ${config} \
 	${npm-lib:%=-I%/include} -I/usr/local/include -I${srcdir}/include \
 	-D_GNU_SOURCE -std=c99 \
-	-Wno-gnu-zero-variadic-macro-arguments -Wno-gnu-designator
+	-Wno-gnu-designator
 ldlibs-Linux := -lbsd -lrt
-LDLIBS := -lxxhash -lpcre -lm -lc -lqhash -ldb -lndc ${ldlibs-${uname}}
+LDLIBS := -lxxhash -lpcre -lm -lc -lqhash -ldb -lndc -lcrypto -lssl ${ldlibs-${uname}}
 ldflags-Darwin += -L/usr/local/opt/berkeley-db@4/lib
 LDFLAGS	:= -L/usr/local/lib ${ldflags-${uname}} ${npm-lib:%=-L%} ${npm-lib:%=-Wl,-rpath,%}
 
@@ -31,7 +31,7 @@ all: ${exe} libnd.a
 
 $(exe): ${obj-y}
 	@echo LD $@
-	@${LINK.c} -o $@ ${obj-y} ${LDLIBS} -lutil
+	${LINK.c} -o $@ ${obj-y} ${LDLIBS} -lutil
 
 libnd.so: libnd.c
 	${CC} -shared -g -o $@ -fPIC ${CFLAGS} libnd.c
