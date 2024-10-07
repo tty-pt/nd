@@ -14,10 +14,10 @@ mkdir-OpenBSD := dev ${mkdir-}
 uapi != ls items/nd/include/uapi
 
 items/nd/nd: FORCE
-	${MAKE} -C items/nd PWD=${PWD:%=%/items/nd}
+	@${MAKE} -C items/nd PWD=${PWD:%=%/items/nd}
 
 usr/lib/libnd.a: FORCE
-	${MAKE} -C items/nd/src PWD=${PWD:%=%/items/nd} libnd.a
+	@${MAKE} -C items/nd/src PWD=${PWD:%=%/items/nd} libnd.a
 	cp items/nd/src/libnd.a usr/lib/
 
 -include items/nd/man/include.mk
@@ -93,7 +93,7 @@ osrun: all
 	${sudo} ./items/nd/nd -C ${PWD} -c /etc/ssl/tty.pt.crt -k /etc/ssl/private/tty.pt.key
 
 osdbg: all
-	${sudo} egdb -ex "handle SIGPIPE nostop print pass" -ex "set pagination off" -ex "run" --args ./items/nd/nd -C ${PWD} -c /etc/ssl/tty.pt.crt -k /etc/ssl/private/tty.pt.key
+	${sudo} egdb -ex "handle SIGPIPE nostop print pass" -ex "set pagination off" -ex "run" --args ./items/nd/nd -C ${PWD} -c /etc/ssl/tty.pt.pem -k /etc/ssl/private/tty.pt.key
 
 ss_key.pem:
 	openssl genpkey -algorithm RSA -out ss_key.pem -aes256
@@ -104,5 +104,7 @@ ss_cert.pem: ss_key.pem
 
 ${uapi:%=usr/include/%}: ${uapi:%=items/nd/include/uapi/%}
 	cp ${@:usr/include/%=items/nd/include/uapi/%} $@
+
+FORCE:
 
 mod-install += items/nd/install

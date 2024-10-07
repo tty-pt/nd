@@ -97,6 +97,10 @@ struct cmd_slot cmds[] = {
 		.cb = &do_POST,
 		.flags = CF_NOAUTH | CF_NOTRIM,
 	}, {
+		.name = "PRI",
+		.cb = &do_GET,
+		.flags = CF_NOAUTH | CF_NOTRIM,
+	}, {
 		.name = "auth",
 		.cb = &do_auth,
 		.flags = CF_NOAUTH,
@@ -350,12 +354,8 @@ nd_write(unsigned player_ref, char *str, size_t len) {
 	struct hash_cursor c = hash_iter(fds_hd, &player_ref, sizeof(player_ref));
 	unsigned fd;
 
-	fprintf(stderr, "nd_write %u %lu %s\n", player_ref, len, str);
-
-	while (ahash_next(&fd, &c)) {
-		fprintf(stderr, "next! %d\n", fd);
+	while (ahash_next(&fd, &c))
 		ndc_write(fd, str, len);
-	}
 }
 
 
@@ -510,8 +510,6 @@ auth(unsigned fd, char *qsession)
 
         } else
 		ahash_add(fds_hd, player_ref, fd);
-
-	fprintf(stderr, "add fd %u to player %u fds_hd %u\n", fd, player_ref, fds_hd);
 
 	ahash_add(dplayer_hd, fd, player_ref);
 	ndc_auth(fd, buf);

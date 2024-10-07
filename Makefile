@@ -8,7 +8,7 @@ htdocs/index.html htdocs/index.js: index.html index.js
 	pnpm build
 
 nd:
-	${MAKE} -C src ${MFLAGS} all
+	@${MAKE} -C src ${MFLAGS} all
 
 deps:
 	${MAKE} -C src ${MFLAGS} deps
