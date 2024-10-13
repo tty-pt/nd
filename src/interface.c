@@ -21,7 +21,6 @@ enum opts {
 };
 
 void do_advitam(int fd, int argc, char *argv[]);
-void do_auth(int fd, int argc, char *argv[]);
 void do_avatar(int fd, int argc, char *argv[]);
 void do_bio(int fd, int argc, char *argv[]);
 void do_boot(int fd, int argc, char *argv[]);
@@ -100,10 +99,6 @@ struct cmd_slot cmds[] = {
 		.name = "PRI",
 		.cb = &do_GET,
 		.flags = CF_NOAUTH | CF_NOTRIM,
-	}, {
-		.name = "auth",
-		.cb = &do_auth,
-		.flags = CF_NOAUTH,
 	/* }, { */
 	/* 	.name = "gpt", */
 	/* 	.cb = &do_gpt, */
@@ -455,48 +450,54 @@ do_avatar(int fd, int argc, char *argv[]) {
 
 void reroll(unsigned player_ref, ENT *eplayer);
 
-unsigned
-auth(unsigned fd, char *qsession)
-{
-	char buf[BUFSIZ];
+char *ndc_auth_check(int fd) {
+	static char user[BUFSIZ];
+	char cookie[BUFSIZ];
+	int headers = ndc_headers(fd);
 	FILE *fp;
-	OBJ player;
 
-	if (!*qsession) {
-		ndc_writef(fd, "No key provided.\n");
-		mcp_auth_fail(fd, 3);
-		return NOTHING;
-	}
+	if (shash_get(headers, cookie, "Cookie"))
+		return NULL;
 
-	fprintf(stderr, "AUTH '%s'\n", qsession);
-	snprintf(buf, sizeof(buf), "./sessions/%s", qsession);
-	fp = fopen(buf, "r");
+	snprintf(user, sizeof(user), "./sessions/%s", strchr(cookie, '=') + 1);
+	fp = fopen(user, "r");
 
-	if (!fp) {
-		ndc_writef(fd, "No such session\n");
-		mcp_auth_fail(fd, 1);
-		return NOTHING;
-	}
+	if (!fp)
+		return NULL;
 
-	fscanf(fp, "%s", buf);
+	fscanf(fp, "%s", user);
 	fclose(fp);
 
-	fprintf(stderr, "lookup_player '%s' (%u)\n", buf, fd);
+	return user;
+}
 
-	unsigned player_ref = player_get(buf);
+unsigned
+auth(unsigned fd)
+{
+	char *user = ndc_auth_check(fd);
+	OBJ player;
+
+	if (!user) {
+		mcp_auth_fail(fd, 3);
+		return 0;
+	}
+
+	fprintf(stderr, "lookup_player '%s' (%u)\n", user, fd);
+
+	unsigned player_ref = player_get(user);
 
 	if (player_ref == NOTHING) {
 		ENT eplayer;
 		memset(&eplayer, 0, sizeof(eplayer));
 		player_ref = object_new(&player);
-		player.name = strdup(buf);
+		player.name = strdup(user);
 		player.location = 0;
 		player.type = TYPE_ENTITY;
 		player.owner = player_ref;
 		player.value = 150;
 		eplayer.flags = EF_PLAYER;
 
-		player_put(buf, player_ref);
+		player_put(user, player_ref);
 		ahash_add(fds_hd, player_ref, fd);
 
 		birth(&eplayer);
@@ -512,7 +513,7 @@ auth(unsigned fd, char *qsession)
 		ahash_add(fds_hd, player_ref, fd);
 
 	ahash_add(dplayer_hd, fd, player_ref);
-	ndc_auth(fd, buf);
+	ndc_auth(fd, user);
         mcp_stats(player_ref);
         mcp_auth_success(player_ref);
         mcp_equipment(player_ref);
@@ -521,12 +522,6 @@ auth(unsigned fd, char *qsession)
 	do_view(fd, 0, NULL);
 	st_run(player_ref, "ndst_auth");
 	return player_ref;
-}
-
-void
-do_auth(int fd, int argc, char *argv[])
-{
-	auth(fd, argv[1]);
 }
 
 void
@@ -564,14 +559,8 @@ void ndc_command(int fd, int argc, char *argv[]) {
 	me = fd_player(fd);
 }
 
-void ndc_connect(int fd) {
-	char cookie[BUFSIZ];
-	int headers = ndc_headers(fd);
-	fprintf(stderr, "CONNECT %d\n", fd);
-	if (shash_get(headers, cookie, "Cookie"))
-		return;
-
-	auth(fd, strchr(cookie, '=') + 1);
+int ndc_connect(int fd) {
+	return auth(fd);
 }
 
 void ndc_disconnect(int fd) {
