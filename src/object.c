@@ -399,7 +399,7 @@ db_write_list(FILE * f)
 	unsigned ref;
 	OBJ oi;
 
-	while (hash_next(&ref, &oi, &c)) {
+	while (lhash_next(&ref, &oi, &c)) {
 		if (fprintf(f, "#%u\n", ref) < 0)
 			abort();
 		object_write(f, ref);
@@ -435,7 +435,7 @@ objects_init()
 	unsigned ref;
 	struct hash_cursor c = lhash_iter(obj_hd);
 	OBJ oi;
-	while (hash_next(&ref, &oi, &c))
+	while (lhash_next(&ref, &oi, &c))
 		ahash_add(contents_hd, oi.location, ref);
 
 	return 0;
@@ -655,7 +655,7 @@ objects_update(double dt)
 	OBJ obj;
 	unsigned obj_ref;
 	struct hash_cursor c = lhash_iter(obj_hd);
-	while (hash_next(&obj_ref, &obj, &c))
+	while (lhash_next(&obj_ref, &obj, &c))
 		if (!obj.name)
 			continue;
 		else if (obj.type == TYPE_ENTITY)

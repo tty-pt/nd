@@ -161,7 +161,7 @@ do_owned(int fd, int argc, char *argv[])
 	OBJ victim, oi;
 	lhash_get(obj_hd, &victim, victim_ref);
 	struct hash_cursor c = lhash_iter(obj_hd);
-	while (hash_next(&oi_ref, &oi, &c))
+	while (lhash_next(&oi_ref, &oi, &c))
 		if (oi.owner == victim.owner) {
 			display_objinfo(player_ref, oi_ref);
 			total++;

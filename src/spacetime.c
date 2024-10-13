@@ -279,7 +279,7 @@ st_update(double dt)
 	OBJ iobj;
 	unsigned iobj_ref;
 
-	while (hash_next(&iobj_ref, &iobj, &c))
+	while (lhash_next(&iobj_ref, &iobj, &c))
 		if (iobj.type == TYPE_ENTITY) {
 			view(iobj_ref);
 			nd_writef(iobj_ref, msg);

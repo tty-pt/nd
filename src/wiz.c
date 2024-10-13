@@ -169,7 +169,7 @@ do_toad(int fd, int argc, char *argv[]) {
 			object_move(tmp_ref, NOTHING);
 		struct hash_cursor c2 = lhash_iter(obj_hd);
 		OBJ tmp;
-		while (hash_next(&tmp_ref, &tmp, &c2)) {
+		while (lhash_next(&tmp_ref, &tmp, &c2)) {
 			if (tmp.owner == victim_ref) {
 				switch (tmp.type) {
 				case TYPE_ROOM:
