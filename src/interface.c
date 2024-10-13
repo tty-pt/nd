@@ -452,14 +452,18 @@ void reroll(unsigned player_ref, ENT *eplayer);
 
 char *ndc_auth_check(int fd) {
 	static char user[BUFSIZ];
-	char cookie[BUFSIZ];
+	char cookie[BUFSIZ], *eq;
 	int headers = ndc_headers(fd);
 	FILE *fp;
 
 	if (shash_get(headers, cookie, "Cookie"))
 		return NULL;
 
-	snprintf(user, sizeof(user), "./sessions/%s", strchr(cookie, '=') + 1);
+	eq = strchr(cookie, '=');
+	if (!eq)
+		return NULL;
+
+	snprintf(user, sizeof(user), "./sessions/%s", eq + 1);
 	fp = fopen(user, "r");
 
 	if (!fp)

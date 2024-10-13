@@ -66,7 +66,7 @@ do_wall(int fd, int argc, char *argv[])
 	snprintf(buf, sizeof(buf), "%s shouts: %s", player.name, message);
 	struct hash_cursor c = lhash_iter(obj_hd);
 	OBJ oi;
-	while (hash_next(&oi_ref, &oi, &c))
+	while (lhash_next(&oi_ref, &oi, &c))
 		nd_writef(oi_ref, buf);
 }
 
