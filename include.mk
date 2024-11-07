@@ -92,6 +92,9 @@ srun: all ss_key.pem ss_cert.pem
 osrun: all
 	${sudo} ./items/nd/nd -C ${PWD} -c /etc/ssl/tty.pt.crt -k /etc/ssl/private/tty.pt.key
 
+ostrace: all
+	${sudo} ktrace -di ./items/nd/nd -C ${PWD} -c /etc/ssl/tty.pt.pem -k /etc/ssl/private/tty.pt.key
+
 osdbg: all
 	${sudo} egdb -ex "handle SIGPIPE nostop noprint pass" -ex "set pagination off" -ex "run" --args ./items/nd/nd -C ${PWD} -c /etc/ssl/tty.pt.pem -k /etc/ssl/private/tty.pt.key
 
