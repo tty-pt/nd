@@ -1,6 +1,7 @@
 #include "uapi/map.h"
 
 #include <stdlib.h>
+#include <syslog.h>
 
 #include "config.h"
 #include "nddb.h"
@@ -248,7 +249,7 @@ map_init() {
 	int ret = 0;
 	if ((ret = db_create(&ipdb, dbe, 0))
 	    || (ret = ipdb->open(ipdb, NULL, filename, "dp", DB_HASH, DB_CREATE, 0664))) {
-		fprintf(stderr, "map_init %s", db_strerror(ret));
+		syslog(LOG_ERR, "map_init %s", db_strerror(ret));
 		exit(EXIT_FAILURE);
 		return;
 	}
@@ -259,7 +260,7 @@ map_init() {
 	    || (ret = ipdb->associate(ipdb, NULL, pdb, map_mki_code, DB_CREATE)))
 	{
 		pdb->close(pdb, 0);
-		fprintf(stderr, "map_init2 %s", db_strerror(ret));
+		syslog(LOG_ERR, "map_init2 %s", db_strerror(ret));
 		exit(EXIT_FAILURE);
 	}
 }
@@ -267,7 +268,7 @@ map_init() {
 int
 map_close()
 {
-	fprintf(stderr, "map_close\n");
+	syslog(LOG_INFO, "map_close");
 	return pdb->close(pdb, 0)
 		|| ipdb->close(ipdb, 0);
 }

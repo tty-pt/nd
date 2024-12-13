@@ -160,7 +160,7 @@ noise_full(size_t i, point_t s, ucoord_t obits)
 	NOISE_OCT(n_cl, x4, 1 + obits);
 	NOISE_OCT(n_tm, x3, 53 + obits);
 
-	/* fprintf(stderr, "noise max: %u, rain max: %u\n", NOISE_MAX, rn_max); */
+	/* syslog_err(LOG_ERR, "noise max: %u, rain max: %u", NOISE_MAX, rn_max); */
 
 	for (j = 0; j < CHUNK_M; j++) {
 		/* x_pos s[1] + (j % (1 << CHUNK_Y)); */

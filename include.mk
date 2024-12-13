@@ -87,16 +87,19 @@ run: all
 	${sudo-${USER}} ./items/nd/nd -C ${PWD} -p 8000
 
 srun: all ss_key.pem ss_cert.pem
-	${sudo} ./items/nd/nd -C ${PWD} -c ss_cert.pem -k ss_key.pem
+	${sudo} ./items/nd/nd -C ${PWD} -K certs.txt
 
 osrun: all
-	${sudo} ./items/nd/nd -C ${PWD} -c /etc/ssl/tty.pt.crt -k /etc/ssl/private/tty.pt.key
+	${sudo} ./items/nd/nd -C ${PWD} \
+		-K /var/www/certs.txt
 
 ostrace: all
-	${sudo} ktrace -di ./items/nd/nd -C ${PWD} -c /etc/ssl/tty.pt.pem -k /etc/ssl/private/tty.pt.key
+	${sudo} ktrace -di ./items/nd/nd -C ${PWD} \
+		-K /var/www/certs.txt
 
 osdbg: all
-	${sudo} egdb -ex "handle SIGPIPE nostop noprint pass" -ex "set pagination off" -ex "run" --args ./items/nd/nd -C ${PWD} -c /etc/ssl/tty.pt.pem -k /etc/ssl/private/tty.pt.key
+	${sudo} egdb -ex "handle SIGPIPE nostop noprint pass" -ex "set pagination off" -ex "run" --args ./items/nd/nd -C ${PWD} \
+		-K /var/www/certs.txt
 
 ss_key.pem:
 	openssl genpkey -algorithm RSA -out ss_key.pem -aes256

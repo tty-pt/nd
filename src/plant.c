@@ -166,7 +166,6 @@ plant_noise(unsigned char *plid, coord_t tmp, ucoord_t rn, noise_t v, unsigned p
 	lhash_get(skel_hd, &skel, plant_ref);
 	SPLA *pl = &skel.sp.plant;
 
-        /* warn("plant_noise %s y: %u v: %u O: %u\n", obj_skel->name, pl->y, v, NOISE_MAX >> pl->y); */
         if (v >= (NOISE_MAX >> pl->y))
                 return 0;
 	/* if (((v >> 6) ^ (v >> 3) ^ v) & 1) */

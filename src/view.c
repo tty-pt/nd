@@ -312,12 +312,6 @@ view_build_exit_s(view_tile_t *t, pos_t p, enum exit e) {
 	lhash_get(obj_hd, &tmp, tmp_ref);
 	ROO *rtmp = &tmp.sp.room;
 
-	// FIXME not returning correct room (at least for E_SOUTH)
-	/* debug("here 0x%llx -> 0x%llx (%d)\n", */
-	/* 		* (morton_t *) p, */
-	/* 		* (morton_t *) pa, */
-	/* 		tmp); */
-
 	if (rtmp->exits & e_simm(e)) {
 		t->exits |= e;
 		if (rtmp->doors & e_simm(e))

@@ -2,6 +2,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <syslog.h>
 #include <unistd.h>
 
 #include <ndc.h>
@@ -283,10 +284,15 @@ main(int argc, char **argv)
 {
 	register char c;
 
-	while ((c = getopt(argc, argv, "p:k:c:dvC:")) != -1) {
+	openlog("nd", LOG_PID | LOG_CONS, LOG_DAEMON);
+
+	ndc_pre_init();
+	nd_config.flags |= NDC_DETACH;
+
+	while ((c = getopt(argc, argv, "p:K:k:dvC:")) != -1) {
 		switch (c) {
 		case 'd':
-			optflags |= OPT_DETACH;
+			nd_config.flags &= ~NDC_DETACH;
 			break;
 		case 'v':
 			printf("0.0.1\n");
@@ -294,14 +300,16 @@ main(int argc, char **argv)
 		case 'p':
 			nd_config.port = atoi(optarg);
 			break;
+		case 'K':
+			nd_config.flags |= NDC_SSL;
+			ndc_certs_add(optarg);
+			break;
+
 		case 'k':
 			nd_config.flags |= NDC_SSL;
-			nd_config.ssl_key = strdup(optarg);
+			ndc_cert_add(optarg);
 			break;
-		case 'c':
-			nd_config.flags |= NDC_SSL;
-			nd_config.ssl_crt = strdup(optarg);
-			break;
+
 		case 'C':
 			nd_config.chroot = optarg;
 			break;
@@ -333,13 +341,14 @@ main(int argc, char **argv)
 	/* errno = 0; // TODO why? sanity fails to access file */
 
 	setenv("TERM", "xterm-256color", 1);
-	fprintf(stderr, "Done.\n");
+	syslog(LOG_INFO, "Done.");
 	ndc_main();
 
 	st_close();
 	map_close();
 	objects_sync();
 	sync();
+	closelog();
 
 	return 0;
 }
@@ -486,7 +495,7 @@ auth(unsigned fd)
 		return 0;
 	}
 
-	fprintf(stderr, "lookup_player '%s' (%u)\n", user, fd);
+	syslog(LOG_INFO, "auth '%s' (%u)", user, fd);
 
 	unsigned player_ref = player_get(user);
 
@@ -574,7 +583,7 @@ void ndc_disconnect(int fd) {
 	unsigned player_ref = fd_player(fd);
 	OBJ player;
 	lhash_get(obj_hd, &player, player_ref);
-	fprintf(stderr, "%s(%u) disconnects on fd %d\n",
+	syslog(LOG_INFO, "%s(%u) disconnects on fd %d",
 			player.name, player_ref, fd);
 	uhash_del(dplayer_hd, fd);
 }

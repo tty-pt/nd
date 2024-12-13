@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <syslog.h>
 #include <time.h>
 #include <xxhash.h>
 
@@ -131,7 +132,6 @@ pos_morton(pos_t p)
 		POOP3D res |= ((morton_t) ((up[I] >> i) & 1)) << (I + (3 * i));
 	}
 
-	/* debug("encoded point %d %d %d %d -> x%llx", p[0], p[1], p[2], p[3], res); */
 	return res;
 }
 
@@ -153,7 +153,6 @@ morton_pos(pos_t p, morton_t code)
 
 	POOP3D p[I] = sign(up[I]);
 	p[3] = OBITS(code);
-	/* debug("decoded point x%llx -> %d %d %d %d", code, p[0], p[1], p[2], p[3]); */
 }
 
 void
@@ -292,10 +291,6 @@ st_pos(pos_t p, unsigned loc, enum exit e)
 	pos_t aux;
 	map_where(aux, loc);
 	pos_move(p, aux, e);
-	/* debug("st_pos %s 0x%llx -> 0x%llx\n", */
-	/* 		e_name(e), */
-	/* 		* (morton_t *) aux, */
-	/* 		* (morton_t *) p); */
 }
 
 static unsigned
@@ -712,7 +707,6 @@ unwall(unsigned player_ref, enum exit e)
 		return;
 	}
 
-	/* debug("will create exit here %u there %u dir %c\n", here_ref, there_ref, e_dir(e)); */
 	rhere->exits |= e;
 	there_ref = e_move(player_ref, e);
 	if (there_ref == NOTHING)
@@ -1065,10 +1059,10 @@ st_open(struct st_key st_key, int owner)
 	void *sl = dlopen(filename, RTLD_NOW | RTLD_LOCAL | RTLD_NODELETE);
 
 	if (!sl)
-		fprintf(stderr, "dlopen error for %d, %s: %s\n", owner, filename, dlerror());
+		syslog(LOG_ERR, "dlopen error for %d, %s: %s", owner, filename, dlerror());
 	else {
 		dlerror();
-		fprintf(stderr, "dlopen %d, %s\n", owner, filename);
+		syslog(LOG_INFO, "dlopen %d, %s", owner, filename);
 		struct nd *ind = dlsym(sl, "nd");
 		*ind = nd;
 	}
@@ -1250,43 +1244,37 @@ st_high_shift(unsigned player_ref, uint64_t position)
 	return -1;
 }
 
-inline static void
+inline static int
 _st_run(unsigned player_ref, char *symbol, uint64_t key, unsigned shift) {
 	struct st_key st_key = st_key_new(key, shift);
 	void *sl;
 
-	if (hash_get(sl_hd, &sl, &st_key, sizeof(st_key))) {
-		fprintf(stderr, ".");
-		return;
-	}
+	if (hash_get(sl_hd, &sl, &st_key, sizeof(st_key)))
+		return 0;
 
 	st_run_cb cb = dlsym(sl, symbol);
 
-	if (!cb) {
-		fprintf(stderr, "x");
-		return;
-	}
+	if (!cb)
+		return 0;
 
-	fprintf(stderr, "X");
 	(*cb)(player_ref);
+	return 1;
 }
 
 void
 st_run(unsigned player_ref, char *symbol) {
 	OBJ player;
 	lhash_get(obj_hd, &player, player_ref);
-	uint64_t position = map_mwhere(player.location);
+	uint64_t position = map_mwhere(player.location), mask = 0;
 	int i;
 	g_player_ref = player_ref;
 
 	_st_run(player_ref, symbol, 0, 64);
 
-	fprintf(stderr, "%s", symbol);
-
 	for (i = 63; i >= 0; i--)
-		_st_run(player_ref, symbol, position, i);
+		mask |= _st_run(player_ref, symbol, position, i) << i;
 
-	fprintf(stderr, "\n");
+	syslog(LOG_INFO, "st_run %s %llx", symbol, mask);
 }
 
 void

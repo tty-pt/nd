@@ -597,7 +597,6 @@ respawn(unsigned player_ref)
 		cd.dir = '\0';
 		st_teleport(player_ref, cd);
 	} else {
-		/* warn("respawning %d to %d\n", who, where); */
 		object_move(player_ref, eplayer.home);
 	}
 
@@ -809,25 +808,18 @@ entity_update(unsigned player_ref, double dt)
 	unsigned short omp = eplayer.mp;
 
 	if (!(eplayer.flags & EF_PLAYER)) {
-		/* warn("%d hp %d/%d\n", player, eplayer.hp, HP_MAX(player)); */
 		if (eplayer.hp == HP_MAX(&eplayer)) {
-			/* warn("%d's hp is maximum\n", player); */
-
 			if ((eplayer.flags & EF_SITTING)) {
-				/* warn("%d is sitting so they shall stand\n", player); */
 				stand(player_ref, &eplayer);
 			}
 
 			if (player.location == 0) {
-				/* warn("%d is located at 0, so they shall respawn\n", player); */
 				respawn(player_ref);
 				lhash_get(obj_hd, &player, player_ref);
 				eplayer = ent_get(player_ref);
 			}
 		} else {
-			/* warn("%d's hp is not maximum\n", player); */
 			if (eplayer.target == NOTHING && !(eplayer.flags & EF_SITTING)) {
-				/* warn("%d is not sitting so they shall sit\n", player); */
 				sit(player_ref, &eplayer, "");
 			}
 		}
