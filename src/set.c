@@ -56,9 +56,7 @@ do_name(int fd, int argc, char *argv[])
 	/* everything ok, change the name */
 	OBJ thing;
 	lhash_get(obj_hd, &thing, thing_ref);
-	if (thing.name)
-		free((void *) thing.name);
-	thing.name = strdup(newname);
+	strcpy(thing.name, newname);
 	lhash_put(obj_hd, thing_ref, &thing);
 	nd_writef(player_ref, "Name set.\n");
 }

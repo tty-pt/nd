@@ -76,7 +76,7 @@ do_clone(int fd, int argc, char *argv[])
 		unsigned clone_ref = object_new(&clone);
 
 		/* initialize everything */
-		clone.name = strdup(thing.name);
+		strcpy(clone.name, thing.name);
 		clone.location = player_ref;
 		clone.owner = player.owner;
 		clone.value = thing.value;
@@ -145,7 +145,7 @@ do_create(int fd, int argc, char *argv[])
 	OBJ thing;
 	thing_ref = object_new(&thing);
 
-	thing.name = strdup(name);
+	strcpy(thing.name, name);
 	thing.location = player_ref;
 	thing.owner = player.owner;
 	thing.value = cost;

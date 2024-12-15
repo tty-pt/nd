@@ -14,34 +14,4 @@ Room Zero
 0
 255
 1
-#1
-root
-0 location
--1 contents
--1 next
-1600 value
-3 type
-0 flags
-135 art_id
-0 home
-49 entity flags
-0 lvl
-0 cxp
-1 spend
-1 str
-1 con
-1 dex
-1 int
-1 wiz
-1 cha
-0 wtso
--1 sat
-0 spell
-0 spell
-0 spell
-0 spell
-0 spell
-0 spell
-0 spell
-0 spell
 ***END OF DUMP***

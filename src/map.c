@@ -1,7 +1,6 @@
 #include "uapi/map.h"
 
 #include <stdlib.h>
-#include <syslog.h>
 
 #include "config.h"
 #include "nddb.h"
@@ -18,7 +17,7 @@ typedef struct {
 
 // see http://www.vision-tools.com/h-tropf/multidimensionalrangequery.pdf
 
-static DB_ENV *dbe = NULL;
+extern DB_ENV *env;
 static DB *pdb = NULL, *ipdb = NULL;
 
 static const morton_t m1 = 0x111111111111ULL;
@@ -245,22 +244,22 @@ map_mki_code(DB *sec, const DBT *key, const DBT *data, DBT *result)
 void
 map_init() {
 	char filename[BUFSIZ];
-	snprintf(filename, sizeof(filename), "%s%s", euid ? nd_config.chroot : "", GEO_DB);
+	snprintf(filename, sizeof(filename), "%s" STD_DB, "");
 	int ret = 0;
-	if ((ret = db_create(&ipdb, dbe, 0))
-	    || (ret = ipdb->open(ipdb, NULL, filename, "dp", DB_HASH, DB_CREATE, 0664))) {
-		syslog(LOG_ERR, "map_init %s", db_strerror(ret));
+	if ((ret = db_create(&ipdb, env, 0))
+	    || (ret = ipdb->open(ipdb, NULL, filename, "map_dp", DB_HASH, DB_CREATE, 0644))) {
+		ndclog(LOG_ERR, "map_init %s", db_strerror(ret));
 		exit(EXIT_FAILURE);
 		return;
 	}
 
-	if ((ret = db_create(&pdb, dbe, 0))
+	if ((ret = db_create(&pdb, env, 0))
 	    || (ret = pdb->set_bt_compare(pdb, map_cmp))
-	    || (ret = pdb->open(pdb, NULL, filename, "pd", DB_BTREE, DB_CREATE, 0664))
+	    || (ret = pdb->open(pdb, NULL, filename, "map_pd", DB_BTREE, DB_CREATE, 0644))
 	    || (ret = ipdb->associate(ipdb, NULL, pdb, map_mki_code, DB_CREATE)))
 	{
 		pdb->close(pdb, 0);
-		syslog(LOG_ERR, "map_init2 %s", db_strerror(ret));
+		ndclog(LOG_ERR, "map_init2 %s", db_strerror(ret));
 		exit(EXIT_FAILURE);
 	}
 }
@@ -268,7 +267,7 @@ map_init() {
 int
 map_close()
 {
-	syslog(LOG_INFO, "map_close");
+	ndclog(LOG_INFO, "map_close");
 	return pdb->close(pdb, 0)
 		|| ipdb->close(ipdb, 0);
 }

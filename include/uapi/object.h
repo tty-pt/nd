@@ -195,7 +195,7 @@ typedef struct object {
 
 	union specific sp;
 
-	char *name, *description;
+	char name[32];
 	// int skel;
 } OBJ;
 

@@ -12,6 +12,7 @@
 #include <time.h>
 #include <xxhash.h>
 
+#include "config.h"
 #include "nddb.h"
 #include "noise.h"
 #include "params.h"
@@ -1107,9 +1108,9 @@ st_init() {
 
 	stone_skel_id = lhash_new(skel_hd, &skel);
 
-	owner_hd = hash_cinit("/var/nd/st.db", NULL, 0644, 0);
+	owner_hd = hash_cinit(STD_DB, "st", 0644, 0);
 	sl_hd = hash_init();
-	st_put(1, 0, 64);
+	/* st_put(1, 0, 64); */
 
 	nd.fds_hd = fds_hd;
 	/* nd.fds_has = fds_has; */

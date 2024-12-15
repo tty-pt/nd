@@ -57,9 +57,6 @@ do_examine(int fd, int argc, char *argv[])
 			thing_ref,
 			thing_owner.name, thing.value);
 
-	if (thing.description)
-		nd_writef(player_ref, thing.description);
-
 	/* show him the contents */
 	struct hash_cursor c = fhash_iter(contents_hd, thing_ref);
 	unsigned content_ref;

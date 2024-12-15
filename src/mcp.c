@@ -246,8 +246,6 @@ mcp_look(unsigned player_ref, unsigned loc_ref)
 		fbcp_item(player_ref, thing_ref, 0);
 
 	nd_twritef(player_ref, "%s\n", unparse(loc_ref));
-	if (loc.description && *loc.description)
-		nd_twritef(player_ref, loc.description);
 
         char buf[BUFSIZ];
         size_t buf_l = 0;

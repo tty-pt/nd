@@ -15,9 +15,6 @@
 #include "uapi/io.h"
 #include "uapi/map.h"
 
-#define STD_DB "/var/nd/std.db"
-#define STD_DB_OK "/var/nd/std.db.ok"
-
 enum actions {
         ACT_LOOK = 1,
         ACT_KILL = 2,
@@ -43,7 +40,6 @@ unsigned
 object_new(OBJ *newobj)
 {
 	memset(newobj, 0, sizeof(OBJ));
-	newobj->name = NULL;
 	newobj->location = NOTHING;
 	newobj->owner = ROOT;
 	return lhash_new(obj_hd, newobj);
@@ -171,8 +167,7 @@ object_add(OBJ *nu, unsigned skel_id, unsigned where_ref, void *arg)
 	SKEL skel;
 	lhash_get(skel_hd, &skel, skel_id);
 	unsigned nu_ref = object_new(nu);
-	nu->name = strdup(skel.name);
-	nu->description = strdup(skel.description);
+	strcpy(nu->name, skel.name);
 	nu->location = where_ref;
 	nu->owner = ROOT;
 	nu->type = TYPE_THING;
@@ -290,176 +285,64 @@ object_art(unsigned thing_ref)
 	return art;
 }
 
+unsigned
+objects_read(FILE * f);
+
+#define OLD 0
+
 void
-putref(FILE * f, unsigned ref)
-{
-	if (fprintf(f, "%u\n", ref) < 0) {
-		abort();
-	}
-}
-
-static void
-putstring(FILE * f, const char *s)
-{
-	if (s) {
-		if (fputs(s, f) == EOF) {
-			abort();
-		}
-	}
-	if (putc('\n', f) == EOF) {
-		abort();
-	}
-}
-
-static void
-object_write(FILE * f, unsigned ref)
-{
-	int j;
-	OBJ obj;
-	lhash_get(obj_hd, &obj, ref);
-	putstring(f, obj.name);
-	putref(f, obj.location);
-	putref(f, NOTHING);
-	putref(f, NOTHING);
-	putref(f, obj.value);
-	putref(f, obj.type);
-	putref(f, obj.flags);
-	putref(f, obj.art_id);
-
-	switch (obj.type) {
-	case TYPE_ENTITY:
-		{
-			ENT ent = ent_get(ref);
-			putref(f, ent.home);
-			putref(f, ent.flags);
-			putref(f, ent.lvl);
-			putref(f, ent.cxp);
-			putref(f, ent.spend);
-			for (j = 0; j < ATTR_MAX; j++)
-				putref(f, ent.attr[j]);
-			putref(f, ent.wtso);
-			putref(f, ent.sat);
-			for (j = 0; j < 8; j++)
-				putref(f, ent.spells[j].skel);
-		}
-		break;
-
-	case TYPE_PLANT:
-		{
-			PLA *pla = &obj.sp.plant;
-			putref(f, pla->plid);
-			putref(f, pla->size);
-		}
-		break;
-
-	case TYPE_SEAT:
-		{
-			SEA *sea = &obj.sp.seat;
-			putref(f, sea->quantity);
-			putref(f, sea->capacity);
-		}
-		break;
-
-	case TYPE_CONSUMABLE:
-		{
-			CON *con = &obj.sp.consumable;
-			putref(f, con->food);
-			putref(f, con->drink);
-		}
-		break;
-	case TYPE_EQUIPMENT:
-		{
-			EQU *equ = &obj.sp.equipment;
-			putref(f, equ->eqw);
-			putref(f, equ->msv);
-		}
-		break;
-	case TYPE_THING:
-		putref(f, obj.owner);
-		break;
-
-	case TYPE_ROOM:
-		{
-			ROO *roo = &obj.sp.room;
-			putref(f, NOTHING);
-			putref(f, roo->flags);
-			putref(f, roo->exits);
-			putref(f, roo->doors);
-			putref(f, roo->floor);
-			putref(f, obj.owner);
-		}
-		break;
-	}
-}
-
-static inline void
-db_write_list(FILE * f)
-{
-	struct hash_cursor c = lhash_iter(obj_hd);
-	unsigned ref;
-	OBJ oi;
-
-	while (lhash_next(&ref, &oi, &c)) {
-		if (fprintf(f, "#%u\n", ref) < 0)
-			abort();
-		object_write(f, ref);
-	}
-}
-
-static unsigned objects_read(FILE *f);
-
-int
 objects_init()
 {
-	obj_hd = lhash_init(sizeof(OBJ));
+	unsigned ref;
+	obj_hd = lhash_cinit(sizeof(OBJ), STD_DB, "obj", 0644);
 	contents_hd = ahash_init();
 	obs_hd = ahash_init();
 	art_hd = hash_init();
 
-	snprintf(std_db, sizeof(std_db), "%s%s", euid ? nd_config.chroot : "", STD_DB);
-	snprintf(std_db_ok, sizeof(std_db_ok), "%s%s", euid ? nd_config.chroot : "", STD_DB_OK);
-	const char *name = std_db;
-	FILE *f;
+	srand(getpid());
 
-	if (access(std_db, F_OK) != 0)
-		name = std_db_ok;
+	int hash_i = 0;
+	for (; hash_i < sizeof(core_art) / sizeof(struct core_art); hash_i++) {
+		struct core_art *art = &core_art[hash_i];
+		suhash_put(art_hd, art->name, art->max);
+	}
+
+#if OLD
+	snprintf(std_db_ok, sizeof(std_db_ok), "%s%s", euid ? nd_config.chroot : "", STD_DB_OK);
+	const char *name = std_db_ok;
+	FILE *f;
 
 	f = fopen(name, "rb");
 
 	if (f == NULL)
-                return -1;
-
-	srand(getpid());			/* init random number generator */
+		return;
 
 	objects_read(f);
-	unsigned ref;
+#endif
+
 	struct hash_cursor c = lhash_iter(obj_hd);
 	OBJ oi;
-	while (lhash_next(&ref, &oi, &c))
+	while (lhash_next(&ref, &oi, &c)) {
 		ahash_add(contents_hd, oi.location, ref);
+#if !OLD
+		if (oi.type != TYPE_ENTITY)
+			continue;
 
-	return 0;
+		ENT ent = ent_get(ref);
+		if (ent.flags & EF_PLAYER)
+			player_put(oi.name, ref);
+#endif
+	}
+
 }
 
 void
 objects_sync()
 {
-	FILE *f = fopen(std_db, "wb");
-
-	if (f == NULL) {
-		perror("fopen");
-		return;
-	}
-
-	putref(f, 3);
-
-	db_write_list(f);
-
-	fseek(f, 0L, 2);
-	putstring(f, "***END OF DUMP***");
-
-	fflush(f);
-	fclose(f);
+	lhash_close(obj_hd);
+	hash_close(contents_hd);
+	hash_close(obs_hd);
+	hash_close(art_hd);
 }
 
 #define STRING_READ(x) strdup(string_read(x))
@@ -507,10 +390,11 @@ object_read(FILE * f)
 	unsigned ref = lhash_new(obj_hd, &o);
 	int j = 0;
 
-	ref_read(f);
+	int what = ref_read(f);
+	fprintf(stderr, "READ %d %d\n", ref, what);
 
 	o.owner = ROOT;
-	o.name = STRING_READ(f);
+	strcpy(o.name, string_read(f));
 	o.location = ref_read(f);
 	ref_read(f);
 	ref_read(f);
@@ -591,17 +475,11 @@ object_read(FILE * f)
 	lhash_put(obj_hd, ref, &o);
 }
 
-static unsigned
+unsigned
 objects_read(FILE * f)
 {
 	const char *special;
 	char c;
-
-	int hash_i = 0;
-	for (; hash_i < sizeof(core_art) / sizeof(struct core_art); hash_i++) {
-		struct core_art *art = &core_art[hash_i];
-		suhash_put(art_hd, art->name, art->max);
-	}
 
 	/* Parse the header */
 	ref_read(f);
@@ -641,7 +519,7 @@ object_copy(OBJ *nu, unsigned old_ref)
 	OBJ old;
 	lhash_get(obj_hd, &old, old_ref);
 	unsigned ref = object_new(nu);
-	nu->name = strdup(old.name);
+	strcpy(nu->name, old.name);
 	nu->location = NOTHING;
 	nu->owner = old.owner;
         return ref;
@@ -656,7 +534,7 @@ objects_update(double dt)
 	unsigned obj_ref;
 	struct hash_cursor c = lhash_iter(obj_hd);
 	while (lhash_next(&obj_ref, &obj, &c))
-		if (!obj.name)
+		if (!*obj.name)
 			continue;
 		else if (obj.type == TYPE_ENTITY)
 			entity_update(obj_ref, dt);
@@ -697,10 +575,6 @@ object_move(unsigned what_ref, unsigned where_ref)
 		case TYPE_ROOM:
 			map_delete(what_ref);
 		}
-		if (what.name)
-			free((void *) what.name);
-		if (what.description)
-			free((void *) what.description);
 		lhash_del(obj_hd, what_ref);
 		return;
 	}

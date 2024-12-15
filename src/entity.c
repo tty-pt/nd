@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "config.h"
 #include "mcp.h"
 #include "params.h"
 #include "st.h"
@@ -470,7 +471,7 @@ entity_body(unsigned mob_ref)
 
 	if (n > 0) {
 		free(dead_mob.name);
-		dead_mob.name = strdup(buf);
+		strcpy(dead_mob.name, buf);
 		lhash_put(obj_hd, dead_mob_ref, &dead_mob);
 		nd_owritef(mob_ref, "%s's body drops to the ground.\n", mob.name);
 		return dead_mob_ref;
@@ -910,5 +911,9 @@ do_reroll(int fd, int argc, char *argv[])
 }
 
 void entities_init() {
-	tmp_hds = hash_init();
+	tmp_hds = hash_cinit(STD_DB, "entity", 0644, 0);
+}
+
+void entities_sync() {
+	hash_close(tmp_hds);
 }

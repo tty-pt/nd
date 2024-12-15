@@ -205,7 +205,7 @@ mask_element(ENT *ent, register unsigned char a)
 {
 	unsigned skel_id = ent->debufs[__builtin_ffs(a) - 1].skel;
 	SKEL skel;
-	lhash_get(obj_hd, &skel, skel_id);
+	lhash_get(skel_hd, &skel, skel_id);
 	SSPE *sp = &skel.sp.spell;
 	return a ? sp->element : ELM_PHYSICAL;
 }
@@ -215,7 +215,7 @@ debuf_end(ENT *eplayer, unsigned i)
 {
 	struct debuf *d = &eplayer->debufs[i];
 	SKEL skel;
-	lhash_get(obj_hd, &skel, d->skel);
+	lhash_get(skel_hd, &skel, d->skel);
 	SSPE *sp = &skel.sp.spell;
 	struct effect *e = &eplayer->e[DEBUF_TYPE(sp)];
 	i = 1 << i;
@@ -251,7 +251,7 @@ debuf_notify(unsigned player_ref, struct debuf *d, short val)
 {
 	char buf[BUFSIZ];
 	SKEL skel;
-	lhash_get(obj_hd, &skel, d->skel);
+	lhash_get(skel_hd, &skel, d->skel);
 	SSPE *_sp = &skel.sp.spell;
 	char const *color = sp_color(_sp);
 	char *wts = debuf_wts(_sp);
@@ -283,7 +283,7 @@ debufs_process(unsigned player_ref, ENT *eplayer)
 			continue;
 		}
 		SKEL skel;
-		lhash_get(obj_hd, &skel, d->skel);
+		lhash_get(skel_hd, &skel, d->skel);
 		SSPE *sp = &skel.sp.spell;
 		// wtf is this special code?
 		if (DEBUF_TYPE(sp) == AF_HP) {
@@ -320,7 +320,7 @@ static inline int
 debuf_start(unsigned player_ref, struct spell *sp, short val)
 {
 	SKEL skel;
-	lhash_get(obj_hd, &skel, sp->skel);
+	lhash_get(skel_hd, &skel, sp->skel);
 	SSPE *_sp = &skel.sp.spell;
 	ENT eplayer = ent_get(player_ref);
 	struct debuf *d;
@@ -422,7 +422,7 @@ spells_birth(ENT *entity) {
 	for (j = 0; j < 8; j++) {
 		struct spell *sp = &entity->spells[j];
 		SKEL skel;
-		lhash_get(obj_hd, &skel, heal_id);
+		lhash_get(skel_hd, &skel, heal_id);
 		struct spell_skeleton *_sp = &skel.sp.spell;
 		sp->val = SPELL_DMG(entity, _sp);
 		sp->cost = SPELL_COST(sp->val, _sp->y, _sp->flags & AF_BUF);

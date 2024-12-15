@@ -2,6 +2,7 @@
 #define PLAYER_H
 
 #include "uapi/object.h"
+#include "config.h"
 
 #include <string.h>
 #include <qhash.h>
@@ -15,6 +16,11 @@ static inline void
 players_init()
 {
 	player_hd = hash_init();
+}
+
+static inline void
+players_sync() {
+	hash_close(player_hd);
 }
 
 static inline unsigned

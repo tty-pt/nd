@@ -2,7 +2,6 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <syslog.h>
 #include <unistd.h>
 
 #include <ndc.h>
@@ -14,6 +13,7 @@
 #include "uapi/entity.h"
 #include "uapi/object.h"
 #include "view.h"
+#include "nddb.h"
 
 #include "papi/nd.h"
 
@@ -270,14 +270,16 @@ show_program_usage(char *prog)
 }
 
 void skel_init();
-int objects_init();
+void objects_init();
 void entities_init();
 void objects_update(double dt);
 void objects_sync();
+void entities_sync();
 
 void map_init();
 int map_close(void);
 int map_sync(void);
+DB_ENV *env;
 
 int
 main(int argc, char **argv)
@@ -287,6 +289,7 @@ main(int argc, char **argv)
 	openlog("nd", LOG_PID | LOG_CONS, LOG_DAEMON);
 
 	ndc_pre_init();
+
 	nd_config.flags |= NDC_DETACH;
 
 	while ((c = getopt(argc, argv, "p:K:k:dvC:")) != -1) {
@@ -324,30 +327,40 @@ main(int argc, char **argv)
 		}
 	}
 
-	dplayer_hd = hash_init();
 	ndc_init(&nd_config);
 	euid = geteuid();
 	if (euid && !nd_config.chroot)
 		nd_config.chroot = ".";
 
+	dplayer_hd = hash_init();
 	fds_hd = ahash_init();
 	skel_init();
-	players_init();
-	entities_init();
-	objects_init();
-	map_init();
+	db_env_create(&env, 0);
+	env->open(env, "/var/nd/env", DB_CREATE | DB_INIT_MPOOL | DB_INIT_LOCK | DB_INIT_LOG | DB_INIT_TXN, 0);
+
+	hash_env_set(env);
 	st_init();
+	map_init();
+	entities_init();
+	players_init();
+	objects_init();
 
 	/* errno = 0; // TODO why? sanity fails to access file */
 
 	setenv("TERM", "xterm-256color", 1);
-	syslog(LOG_INFO, "Done.");
+	ndclog(LOG_INFO, "Done.");
 	ndc_main();
 
+	hash_close(dplayer_hd);
+	hash_close(fds_hd);
+	hash_close(skel_hd);
+	hash_close(drop_hd);
 	st_close();
 	map_close();
+	entities_sync();
+	players_sync();
 	objects_sync();
-	sync();
+	env->close(env, 0);
 	closelog();
 
 	return 0;
@@ -495,15 +508,15 @@ auth(unsigned fd)
 		return 0;
 	}
 
-	syslog(LOG_INFO, "auth '%s' (%u)", user, fd);
-
 	unsigned player_ref = player_get(user);
+
+	ndclog(LOG_INFO, "auth '%s' (%u/%u)", user, fd, player_ref);
 
 	if (player_ref == NOTHING) {
 		ENT eplayer;
 		memset(&eplayer, 0, sizeof(eplayer));
 		player_ref = object_new(&player);
-		player.name = strdup(user);
+		strcpy(player.name, user);
 		player.location = 0;
 		player.type = TYPE_ENTITY;
 		player.owner = player_ref;
@@ -583,7 +596,7 @@ void ndc_disconnect(int fd) {
 	unsigned player_ref = fd_player(fd);
 	OBJ player;
 	lhash_get(obj_hd, &player, player_ref);
-	syslog(LOG_INFO, "%s(%u) disconnects on fd %d",
+	ndclog(LOG_INFO, "%s(%u) disconnects on fd %d",
 			player.name, player_ref, fd);
 	uhash_del(dplayer_hd, fd);
 }

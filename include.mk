@@ -99,7 +99,7 @@ ostrace: all
 
 osdbg: all
 	${sudo} egdb -ex "handle SIGPIPE nostop noprint pass" -ex "set pagination off" -ex "run" --args ./items/nd/nd -C ${PWD} \
-		-K /var/www/certs.txt
+		-K /var/www/certs.txt -d
 
 ss_key.pem:
 	openssl genpkey -algorithm RSA -out ss_key.pem -aes256
