@@ -515,16 +515,11 @@ e_move(unsigned player_ref, enum exit e) {
 		nd_writef(player_ref, "You open the %s.\n", dwts);
 	}
 
-	nd_writef(player_ref, "You go %s%s%s.\n", ANSI_FG_BLUE ANSI_BOLD, e_name(e), ANSI_RESET);
-	nd_owritef(player_ref, "%s goes %s.\n", player.name, e_name(e));
-
 	dest_ref = st_there(player.location, e);
 	if (dest_ref == NOTHING)
 		dest_ref = st_room(player.location, e);
 
 	enter(player_ref, dest_ref, e);
-
-	nd_owritef(player_ref, "%s comes in from the %s.\n", player.name, e_name(e_simm(e)));
 
 	if (door)
 		nd_writef(player_ref, "You close the %s.\n", dwts);

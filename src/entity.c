@@ -133,13 +133,27 @@ enter(unsigned player_ref, unsigned loc_ref, enum exit e)
 	lhash_get(obj_hd, &player, player_ref);
 	unsigned old_loc_ref = player.location;
 
+	ENT eplayer = ent_get(player_ref);
+
+	if (eplayer.target != NOTHING) {
+		nd_writef(player_ref, "%s stops fighting.\n", player.name);
+		eplayer.target = NOTHING;
+		ent_set(player_ref, &eplayer);
+	}
+
 	st_run(player_ref, "ndst_leave");
 	if (e == E_NULL)
 		nd_owritef(player_ref, "%s teleports out.\n", player.name);
+	else {
+		nd_writef(player_ref, "You go %s%s%s.\n", ANSI_FG_BLUE ANSI_BOLD, e_name(e), ANSI_RESET);
+		nd_owritef(player_ref, "%s goes %s.\n", player.name, e_name(e));
+	}
 	object_move(player_ref, loc_ref);
 	room_clean(old_loc_ref);
 	if (e == E_NULL)
 		nd_owritef(player_ref, "%s teleports in.\n", player.name);
+	else
+		nd_owritef(player_ref, "%s comes in from the %s.\n", player.name, e_name(e_simm(e)));
 	st_run(player_ref, "ndst_enter");
 	entities_aggro(player_ref);
 }
