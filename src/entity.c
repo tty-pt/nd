@@ -752,7 +752,7 @@ attack(unsigned player_ref, ENT *eplayer)
 
 	unsigned eq_ref = EQUIP(eplayer, ES_RHAND);
 
-	if (eq_ref != NOTHING) {
+	if (eq_ref) {
 		OBJ eq;
 		lhash_get(obj_hd, &eq, eq_ref);
 		wts = wts_map[EQT(eq.sp.equipment.eqw)];

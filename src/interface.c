@@ -599,4 +599,5 @@ void ndc_disconnect(int fd) {
 	ndclog(LOG_INFO, "%s(%u) disconnects on fd %d",
 			player.name, player_ref, fd);
 	uhash_del(dplayer_hd, fd);
+	ahash_remove(fds_hd, player_ref, fd);
 }
