@@ -27,7 +27,21 @@ enum actions {
         ACT_TALK = 256,
 };
 
-struct object *db = 0;
+struct object room_zero = {
+	.location = NOTHING,
+	.owner = 1,
+	.art_id = 0,
+	.type = TYPE_ROOM,
+	.value = 9999999,
+	.flags = 0,
+	.sp.room = {
+		.flags = RF_HAVEN,
+		.doors = 0,
+		.exits = 0,
+		.floor = 0,
+	},
+};
+
 char std_db[BUFSIZ];
 char std_db_ok[BUFSIZ];
 unsigned obj_hd, contents_hd, obs_hd;
@@ -285,11 +299,6 @@ object_art(unsigned thing_ref)
 	return art;
 }
 
-unsigned
-objects_read(FILE * f);
-
-#define OLD 0
-
 void
 objects_init()
 {
@@ -307,33 +316,20 @@ objects_init()
 		suhash_put(art_hd, art->name, art->max);
 	}
 
-#if OLD
-	snprintf(std_db_ok, sizeof(std_db_ok), "%s%s", euid ? nd_config.chroot : "", STD_DB_OK);
-	const char *name = std_db_ok;
-	FILE *f;
-
-	f = fopen(name, "rb");
-
-	if (f == NULL)
-		return;
-
-	objects_read(f);
-#endif
-
 	struct hash_cursor c = lhash_iter(obj_hd);
 	OBJ oi;
 	while (lhash_next(&ref, &oi, &c)) {
 		ahash_add(contents_hd, oi.location, ref);
-#if !OLD
 		if (oi.type != TYPE_ENTITY)
 			continue;
 
 		ENT ent = ent_get(ref);
 		if (ent.flags & EF_PLAYER)
 			player_put(oi.name, ref);
-#endif
 	}
 
+	if (!uhash_exists(obj_hd, 0))
+		lhash_new(obj_hd, &room_zero);
 }
 
 void
@@ -344,174 +340,6 @@ objects_sync()
 	hash_close(obs_hd);
 	hash_close(art_hd);
 }
-
-#define STRING_READ(x) strdup(string_read(x))
-
-unsigned
-ref_read(FILE * f)
-{
-	char buf[BUFSIZ];
-	fgets(buf, sizeof(buf), f);
-	return (atol(buf));
-}
-
-static const char *
-string_read(FILE * f)
-{
-	static char xyzzybuf[BUFSIZ];
-	char *p;
-	char c;
-
-	if (fgets(xyzzybuf, sizeof(xyzzybuf), f) == NULL) {
-		xyzzybuf[0] = '\0';
-		return xyzzybuf;
-	}
-
-	if (strlen(xyzzybuf) == BUFSIZ - 1) {
-		/* ignore whatever comes after */
-		if (xyzzybuf[BUFSIZ - 2] != '\n')
-			while ((c = fgetc(f)) != '\n') ;
-	}
-	for (p = xyzzybuf; *p; p++) {
-		if (*p == '\n') {
-			*p = '\0';
-			break;
-		}
-	}
-
-	return xyzzybuf;
-}
-
-static void
-object_read(FILE * f)
-{
-	OBJ o;
-	memset(&o, 0, sizeof(struct object));
-	unsigned ref = lhash_new(obj_hd, &o);
-	int j = 0;
-
-	int what = ref_read(f);
-	fprintf(stderr, "READ %d %d\n", ref, what);
-
-	o.owner = ROOT;
-	strcpy(o.name, string_read(f));
-	o.location = ref_read(f);
-	ref_read(f);
-	ref_read(f);
-	o.value = ref_read(f);
-	o.type = ref_read(f);
-	o.flags = ref_read(f);
-	o.art_id = ref_read(f);
-
-	switch (o.type) {
-	case TYPE_PLANT:
-		{
-			PLA *po = &o.sp.plant;
-			po->plid = ref_read(f);
-			po->size = ref_read(f);
-		}
-		break;
-	case TYPE_SEAT:
-		{
-			SEA *ps = &o.sp.seat;
-			ps->quantity = ref_read(f);
-			ps->capacity = ref_read(f);
-		}
-		break;
-	case TYPE_CONSUMABLE:
-		{
-			CON *co = &o.sp.consumable;
-			co->food = ref_read(f);
-			co->drink = ref_read(f);
-		}
-		break;
-	case TYPE_EQUIPMENT:
-		{
-			EQU *eo = &o.sp.equipment;
-			eo->eqw = ref_read(f);
-			eo->msv = ref_read(f);
-		}
-		break;
-	case TYPE_THING:
-		o.owner = ref_read(f);
-		break;
-	case TYPE_ROOM:
-		{
-			ROO *ro = &o.sp.room;
-			ref_read(f);
-			ro->flags = ref_read(f);
-			ro->exits = ref_read(f);
-			ro->doors = ref_read(f);
-			ro->floor = ref_read(f);
-			o.owner = ref_read(f);
-		}
-		break;
-	case TYPE_ENTITY:
-		{
-			ENT ent;
-			memset(&ent, 0, sizeof(ent));
-			ent.home = ref_read(f);
-			ent_reset(&ent);
-			ent.flags = ref_read(f);
-			ent.lvl = ref_read(f);
-			ent.cxp = ref_read(f);
-			ent.spend = ref_read(f);
-			for (j = 0; j < ATTR_MAX; j++)
-				ent.attr[j] = ref_read(f);
-			ent.wtso = ref_read(f);
-			ent.sat = ref_read(f);
-			for (j = 0; j < 8; j++) {
-				struct spell *sp = &ent.spells[j];
-				sp->skel = ref_read(f);
-			}
-			o.owner = ref;
-			birth(&ent);
-			if (ent.flags & EF_PLAYER)
-				player_put(o.name, ref);
-			ent_set(ref, &ent);
-		}
-	}
-
-	lhash_put(obj_hd, ref, &o);
-}
-
-unsigned
-objects_read(FILE * f)
-{
-	const char *special;
-	char c;
-
-	/* Parse the header */
-	ref_read(f);
-
-	c = getc(f);			/* get next char */
-	for (;;) {
-		switch (c) {
-		case NUMBER_TOKEN:
-			/* another entry, yawn */
-			/* read it in */
-			object_read(f);
-			break;
-		case '*':
-			special = STRING_READ(f);
-			if (strcmp(special, "**END OF DUMP***")) {
-				free((void *) special);
-				return NOTHING;
-			} else {
-				free((void *) special);
-				special = STRING_READ(f);
-				if (special)
-					free((void *) special);
-				return 1;
-			}
-			break;
-		default:
-			return NOTHING;
-			/* break; */
-		}
-		c = getc(f);
-	}							/* for */
-}								/* db_read */
 
 unsigned
 object_copy(OBJ *nu, unsigned old_ref)
