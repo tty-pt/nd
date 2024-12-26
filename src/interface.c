@@ -1,5 +1,6 @@
 #include "uapi/io.h"
 
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -273,13 +274,41 @@ void skel_init();
 void objects_init();
 void entities_init();
 void objects_update(double dt);
-void objects_sync();
-void entities_sync();
 
 void map_init();
-int map_close(void);
+int map_close(unsigned flags);
 int map_sync(void);
 DB_ENV *env;
+
+void close_all(int i) {
+	unsigned flags = i ? DB_NOSYNC : 0;
+
+	// temporary
+	hash_close(dplayer_hd, flags);
+	hash_close(fds_hd, flags);
+	hash_close(skel_hd, flags);
+	hash_close(drop_hd, flags);
+
+	// permanent
+	st_dlclose();
+	hash_close(sl_hd, flags);
+	hash_close(owner_hd, flags);
+	map_close(flags);
+	hash_close(ent_hd, flags);
+	hash_close(player_hd, flags);
+	if (flags)
+		lhash_flush(obj_hd);
+	hash_close(obj_hd, flags);
+	hash_close(contents_hd, flags);
+	hash_close(obs_hd, flags);
+	hash_close(art_hd, flags);
+	env->close(env, 0);
+	closelog();
+	sync();
+
+	if (i)
+		exit(i);
+}
 
 int
 main(int argc, char **argv)
@@ -336,7 +365,9 @@ main(int argc, char **argv)
 	fds_hd = ahash_init();
 	skel_init();
 	db_env_create(&env, 0);
-	env->open(env, "/var/nd/env", DB_CREATE | DB_INIT_MPOOL | DB_INIT_LOCK | DB_INIT_LOG | DB_INIT_TXN, 0);
+	env->set_lk_detect(env, DB_LOCK_OLDEST);
+	signal(SIGSEGV, close_all);
+	env->open(env, "/var/nd/env", DB_CREATE | DB_RECOVER | DB_INIT_MPOOL | DB_INIT_LOCK | DB_INIT_LOG | DB_INIT_TXN, 0);
 
 	hash_env_set(env);
 	st_init();
@@ -351,17 +382,8 @@ main(int argc, char **argv)
 	ndclog(LOG_INFO, "Done.");
 	ndc_main();
 
-	hash_close(dplayer_hd);
-	hash_close(fds_hd);
-	hash_close(skel_hd);
-	hash_close(drop_hd);
-	st_close();
-	map_close();
-	entities_sync();
-	players_sync();
-	objects_sync();
-	env->close(env, 0);
-	closelog();
+	// temporary
+	close_all(0);
 
 	return 0;
 }
@@ -450,9 +472,13 @@ do_save(int fd, int argc, char *argv[]) {
 		return;
 	}
 
-	objects_sync();
-	st_sync();
+	hash_sync(owner_hd);
 	map_sync();
+	lhash_flush(obj_hd);
+	hash_sync(obj_hd);
+	hash_sync(contents_hd);
+	hash_sync(obs_hd);
+	hash_sync(art_hd);
 }
 
 static inline void

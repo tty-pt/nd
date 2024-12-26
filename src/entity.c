@@ -24,7 +24,7 @@ unsigned huth_y[2] = {
 	DAYTICK_Y + 3
 };
 
-unsigned tmp_hds = -1;
+unsigned ent_hd = -1;
 unsigned me = -1;
 
 static const char *rarity_str[] = {
@@ -42,16 +42,16 @@ unsigned me_get() {
 
 ENT ent_get(unsigned ref) {
 	ENT ent;
-	uhash_get(tmp_hds, &ent, ref);
+	uhash_get(ent_hd, &ent, ref);
 	return ent;
 }
 
 void ent_set(unsigned ref, ENT *tmp) {
-	uhash_put(tmp_hds, ref, tmp, sizeof(ENT));
+	uhash_put(ent_hd, ref, tmp, sizeof(ENT));
 }
 
 void ent_del(unsigned ref) {
-	hash_del(tmp_hds, &ref, sizeof(ref));
+	uhash_del(ent_hd, ref);
 }
 
 void ent_reset(ENT *ent) {
@@ -925,9 +925,5 @@ do_reroll(int fd, int argc, char *argv[])
 }
 
 void entities_init() {
-	tmp_hds = hash_cinit(STD_DB, "entity", 0644, 0);
-}
-
-void entities_sync() {
-	hash_close(tmp_hds);
+	ent_hd = hash_cinit(STD_DB, "entity", 0644, 0);
 }

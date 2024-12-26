@@ -131,5 +131,6 @@ typedef void debufs_end_t(ENT *player);
 debufs_end_t debufs_end;
 
 extern unsigned me;
+extern unsigned ent_hd;
 
 #endif

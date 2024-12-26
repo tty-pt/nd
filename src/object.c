@@ -332,15 +332,6 @@ objects_init()
 		lhash_new(obj_hd, &room_zero);
 }
 
-void
-objects_sync()
-{
-	lhash_close(obj_hd);
-	hash_close(contents_hd);
-	hash_close(obs_hd);
-	hash_close(art_hd);
-}
-
 unsigned
 object_copy(OBJ *nu, unsigned old_ref)
 {

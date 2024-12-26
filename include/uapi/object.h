@@ -204,7 +204,7 @@ struct icon {
 	char *icon;
 };
 
-extern unsigned obj_hd, contents_hd, obs_hd;
+extern unsigned obj_hd, contents_hd, obs_hd, art_hd;
 
 typedef int obj_exists_t(unsigned ref);
 obj_exists_t obj_exists;

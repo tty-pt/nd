@@ -90,10 +90,11 @@ int st_v(unsigned player_ref, const char *dir);
 void st_start(unsigned player_ref);
 
 void st_init();
-void st_close();
-void st_sync();
+void st_dlclose();
 void st_run(unsigned player_ref, char *symbol);
 void do_stchown(int fd, int argc, char *argv[]);
 void do_streload(int fd, int argc, char *argv[]);
+
+extern unsigned sl_hd, owner_hd;
 
 #endif

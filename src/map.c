@@ -265,11 +265,11 @@ map_init() {
 }
 
 int
-map_close()
+map_close(unsigned flags)
 {
 	ndclog(LOG_INFO, "map_close");
-	return pdb->close(pdb, 0)
-		|| ipdb->close(ipdb, 0);
+	return pdb->close(pdb, flags)
+		|| ipdb->close(ipdb, flags);
 }
 
 int

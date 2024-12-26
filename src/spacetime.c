@@ -29,7 +29,7 @@
 
 #define ROOM_COST 80
 
-static unsigned owner_hd = -1, sl_hd = -1, stone_skel_id;
+unsigned owner_hd = -1, sl_hd = -1, stone_skel_id;
 
 typedef void op_a_t(unsigned player_ref, enum exit e);
 typedef int op_b_t(unsigned player_ref, struct cmd_dir cd);
@@ -1183,22 +1183,13 @@ st_init() {
 		st_open(st_key, owner);
 }
 
-void
-st_sync() {
-	hash_sync(owner_hd);
-}
-
-void
-st_close() {
+void st_dlclose() {
 	struct hash_cursor c = hash_iter(sl_hd, NULL, 0);
 	struct st_key key;
 	void *sl;
 
 	while (hash_next(&key, &sl, &c))
 		dlclose(sl);
-
-	hash_close(sl_hd);
-	hash_close(owner_hd);
 }
 
 typedef void (*st_run_cb)(unsigned player_ref);

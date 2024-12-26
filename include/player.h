@@ -18,11 +18,6 @@ players_init()
 	player_hd = hash_init();
 }
 
-static inline void
-players_sync() {
-	hash_close(player_hd);
-}
-
 static inline unsigned
 player_get(char *name)
 {
