@@ -1,7 +1,7 @@
 import { Sub, SubscribedElement } from "@tty-pt/sub";
 import { createPopper } from "@popperjs/core";
 import ndc from "@tty-pt/ndc";
-import "xterm/css/xterm.css";
+import "@xterm/xterm/css/xterm.css";
 import "@tty-pt/ndc/ndc.css";
 import "./vim.css";
 import "./styles.css";
