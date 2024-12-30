@@ -3,15 +3,27 @@ chroot_mkdir += ${nd-chroot_mkdir_${uname}} etc etc/vim usr/lib usr/include var/
 ttys := 0 1 2 3 4 5 6 7 8 9
 ptys := ${ttys:%=ptyp%}
 ttys := ${ttys:%=ttyp%}
-nods-OpenBSD := ptm ${ptys} ${ttys} tty urandom null zero
+nods-OpenBSD := ptm ${ptys} ${ttys} tty
 nods-OpenBSD := ${nods-OpenBSD:%=dev/%}
-nods-Linux := dev/ptmx dev/pts
+nods-Linux := dev/ptmx dev/pts dev/urandom dev/null dev/zero
 nods := ${nods-${uname}}
 mounts-Linux := dev sys proc
 mounts := ${mounts-${uname}}
 mkdir := var/nd/st var/nd/env
 uapi != ls items/nd/include/uapi
 egdb != which egdb || echo gdb
+urandom-major-OpenBSD := 0
+urandom-minor-OpenBSD := 45
+urandom-major-Linux := 1
+urandom-minor-Linux := 9
+null-major-OpenBSD := 2
+null-minor-OpenBSD := 2
+null-major-Linux := 1
+null-minor-Linux := 3
+zero-major-OpenBSD := 2
+zero-minor-OpenBSD := 12
+zero-major-Linux := 1
+zero-minor-Linux := 5
 
 items/nd/nd: FORCE
 	@${MAKE} -C items/nd PWD=${PWD:%=%/items/nd}
@@ -49,15 +61,8 @@ dev/ptmx:
 		${sudo} sh -c "$$cmd" ; \
 		fi
 
-dev/urandom:
-	${sudo} mknod $@ c 45 0
-
-dev/null:
-	${sudo} mknod $@ c 2 2
-	${sudo} chmod 666 $@
-
-dev/zero:
-	${sudo} mknod $@ c 2 12
+dev/urandom dev/zero dev/null:
+	${sudo} mknod $@ c ${${@:dev/%=%}-major-${uname}} ${${@:dev/%=%}-minor-${uname}}
 	${sudo} chmod 666 $@
 
 dev/ptm:
@@ -85,10 +90,10 @@ dev/tty:
 	${sudo} chmod 666 $@
 	${sudo} chown root:wheel $@
 
-run: all
+run: all bin/qhash
 	${sudo-${USER}} ./items/nd/nd -C ${PWD} -p 8000
 
-srun: all ss_key.pem ss_cert.pem
+srun: all ss_key.pem ss_cert.pem bin/qhash
 	${sudo} ./items/nd/nd -C ${PWD} -K ${PWD}/certs.txt
 
 certs.txt:
