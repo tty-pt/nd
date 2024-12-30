@@ -321,39 +321,17 @@ main(int argc, char **argv)
 
 	nd_config.flags |= NDC_DETACH;
 
-	while ((c = getopt(argc, argv, "p:K:k:dvC:")) != -1) {
-		switch (c) {
-		case 'd':
-			nd_config.flags &= ~NDC_DETACH;
-			break;
-		case 'v':
-			printf("0.0.1\n");
-			break;
-		case 'p':
-			nd_config.port = atoi(optarg);
-			break;
-		case 'K':
-			nd_config.flags |= NDC_SSL;
-			ndc_certs_add(optarg);
-			break;
+	nd_config.port = 4201;
 
-		case 'k':
-			nd_config.flags |= NDC_SSL;
-			ndc_cert_add(optarg);
-			break;
-
-		case 'C':
-			nd_config.chroot = optarg;
-			break;
-			
-		default:
-			show_program_usage(*argv);
-			return 1;
-
-		case '?':
-			show_program_usage(*argv);
-			return 0;
-		}
+	while ((c = getopt(argc, argv, "p:K:k:dvC:")) != -1) switch (c) {
+		case 'd': nd_config.flags &= ~NDC_DETACH; break;
+		case 'v': printf("0.0.1\n"); break;
+		case 'p': nd_config.port = atoi(optarg); break;
+		case 'K': ndc_certs_add(optarg); break;
+		case 'k': ndc_cert_add(optarg); break;
+		case 'C': nd_config.chroot = optarg; break;
+		default: show_program_usage(*argv); return 1;
+		case '?': show_program_usage(*argv); return 0;
 	}
 
 	ndc_init(&nd_config);

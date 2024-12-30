@@ -24,7 +24,7 @@ usr/lib/libnd.a: usr/lib FORCE
 
 all: items/nd/nd var/nd/std.db.ok mounts dev/ nods etc/vim/vimrc.local \
 	${pages:%=usr/share/man/man10/%} usr/share/man/mandoc.db \
-	${uapi:%=usr/include/%} usr/lib/libnd.a var/nd/env
+	${uapi:%=usr/include/%} usr/lib/libnd.a var/nd/env certs.txt
 
 var/nd/std.db.ok:
 	mkdir -p var/nd || true
@@ -89,19 +89,22 @@ run: all
 	${sudo-${USER}} ./items/nd/nd -C ${PWD} -p 8000
 
 srun: all ss_key.pem ss_cert.pem
-	${sudo} ./items/nd/nd -C ${PWD} -K certs.txt
+	${sudo} ./items/nd/nd -C ${PWD} -K ${PWD}/certs.txt
+
+certs.txt:
+	touch certs.txt
 
 osrun: all
 	${sudo} ./items/nd/nd -C ${PWD} \
-		-K /var/www/certs.txt
+		-K ${PWD}/certs.txt
 
 ostrace: all
 	${sudo} ktrace -di ./items/nd/nd -C ${PWD} \
-		-K /var/www/certs.txt
+		-K ${PWD}/certs.txt
 
 osdbg: all
 	${sudo} ${egdb} -ex "handle SIGPIPE nostop noprint pass" -ex "set pagination off" -ex "run" --args ./items/nd/nd -C ${PWD} \
-		-K /var/www/certs.txt -d
+		-K ${PWD}/certs.txt -d
 
 ss_key.pem:
 	openssl genpkey -algorithm RSA -out ss_key.pem -aes256

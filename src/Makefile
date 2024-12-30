@@ -17,7 +17,7 @@ CFLAGS := -g -O0 -Wall -Wno-initializer-overrides ${cflags-${uname}} ${config} \
 ldlibs-Linux := -lbsd -lrt
 LDLIBS := -lxxhash -lpcre -lm -lc -lqhash -ldb -lndc -lcrypto -lssl ${ldlibs-${uname}}
 ldflags-Darwin += -L/usr/local/opt/berkeley-db@4/lib
-LDFLAGS	:= -L/usr/local/lib ${ldflags-${uname}} ${npm-lib:%=-L${node_modules}/%} ${npm-lib:%=-Wl,-rpath,${node_modules}/%}
+LDFLAGS	:= ${ldflags-${uname}} -L/usr/local/lib -Wl,-rpath,/usr/local/lib ${npm-lib:%=-L${node_modules}/%} ${npm-lib:%=-Wl,-rpath,${node_modules}/%}
 
 exe := ../nd
 obj-y := skel.o object.o entity.o spacetime.o mcp.o map.o \
