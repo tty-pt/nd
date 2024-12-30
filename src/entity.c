@@ -484,7 +484,6 @@ entity_body(unsigned mob_ref)
 	}
 
 	if (n > 0) {
-		free(dead_mob.name);
 		strcpy(dead_mob.name, buf);
 		lhash_put(obj_hd, dead_mob_ref, &dead_mob);
 		nd_owritef(mob_ref, "%s's body drops to the ground.\n", mob.name);

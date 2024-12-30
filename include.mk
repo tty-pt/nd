@@ -1,5 +1,5 @@
 nd-chroot_mkdir_OpenBSD += dev
-chroot_mkdir += ${nd-chroot_mkdir_${uname}} etc
+chroot_mkdir += ${nd-chroot_mkdir_${uname}} etc etc/vim usr/lib usr/include var/env
 ttys := 0 1 2 3 4 5 6 7 8 9
 ptys := ${ttys:%=ptyp%}
 ttys := ${ttys:%=ttyp%}
@@ -9,28 +9,30 @@ nods-Linux := dev/ptmx dev/pts
 nods := ${nods-${uname}}
 mounts-Linux := dev sys proc
 mounts := ${mounts-${uname}}
-mkdir- := var/nd/st
-mkdir-OpenBSD := dev ${mkdir-}
+mkdir := var/nd/st var/nd/env
 uapi != ls items/nd/include/uapi
+egdb != which egdb || echo gdb
 
 items/nd/nd: FORCE
 	@${MAKE} -C items/nd PWD=${PWD:%=%/items/nd}
 
-usr/lib/libnd.a: FORCE
+usr/lib/libnd.a: usr/lib FORCE
 	@${MAKE} -C items/nd/src PWD=${PWD:%=%/items/nd} libnd.a
 	cp items/nd/src/libnd.a usr/lib/
 
 -include items/nd/man/include.mk
 
-all: items/nd/nd var/nd/std.db.ok mounts dev/ nods etc/ etc/vim/vimrc.local \
+all: items/nd/nd var/nd/std.db.ok mounts dev/ nods etc/vim/vimrc.local \
 	${pages:%=usr/share/man/man10/%} usr/share/man/mandoc.db \
-	${uapi:%=usr/include/%} usr/lib/libnd.a
+	${uapi:%=usr/include/%} usr/lib/libnd.a var/nd/env
 
 var/nd/std.db.ok:
 	mkdir -p var/nd || true
 	cp items/nd/game/std.db.ok $@
 
-etc/vim/vimrc.local: etc/vim/
+etc/vim: etc
+
+etc/vim/vimrc.local: etc/vim
 	echo "colorscheme pablo" > $@
 
 dev/pts:
@@ -42,9 +44,9 @@ dev/pts:
 
 dev/ptmx:
 	@if test ! -c $@; then \
-		cmd="mknod $@ c 5 2 $@ && chmod 666 $@" ; \
-		echo ${sudo} sh -c \"$$cmd\" ; \
-		${sudo} sh -c \"$$cmd\" ; \
+		cmd="mknod $@ c 5 2 && chmod 666 $@" ; \
+		echo "${sudo} sh -c \"$$cmd\"" ; \
+		${sudo} sh -c "$$cmd" ; \
 		fi
 
 dev/urandom:
@@ -67,7 +69,7 @@ $(ptys:%=dev/%):
 $(ttys:%=dev/%):
 	${sudo} mknod $@ c 5 ${@:dev/ttyp%=%}
 
-${mkdir-${uname}}:
+$(mkdir):
 	mkdir -p $@
 
 mounts: ${mounts}
@@ -98,7 +100,7 @@ ostrace: all
 		-K /var/www/certs.txt
 
 osdbg: all
-	${sudo} egdb -ex "handle SIGPIPE nostop noprint pass" -ex "set pagination off" -ex "run" --args ./items/nd/nd -C ${PWD} \
+	${sudo} ${egdb} -ex "handle SIGPIPE nostop noprint pass" -ex "set pagination off" -ex "run" --args ./items/nd/nd -C ${PWD} \
 		-K /var/www/certs.txt -d
 
 ss_key.pem:
@@ -108,8 +110,11 @@ ss_cert.pem: ss_key.pem
 	openssl req -new -key ss_key.pem -out ss_csr.pem
 	openssl req -x509 -key ss_key.pem -in ss_csr.pem -out ss_cert.pem -days 365
 
-${uapi:%=usr/include/%}: ${uapi:%=items/nd/include/uapi/%}
+${uapi:%=usr/include/%}: usr/include ${uapi:%=items/nd/include/uapi/%}
 	cp ${@:usr/include/%=items/nd/include/uapi/%} $@
+
+$(chroot_mkdir):
+	mkdir -p $@
 
 FORCE:
 

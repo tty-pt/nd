@@ -4,7 +4,7 @@ struct nd nd;
 
 /* IO */
 
-unsigned fd_player(int fd) {
+unsigned fd_player(unsigned fd) {
 	return nd.fd_player(fd);
 }
 

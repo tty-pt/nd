@@ -186,7 +186,6 @@ do_toad(int fd, int argc, char *argv[]) {
 		nd_writef(player_ref, "You turned %s into a toad!", victim.name);
 		player_delete(victim.name);
 		snprintf(buf, sizeof(buf), "A slimy toad named %s", victim.name);
-		free((void *) victim.name);
 		strcpy(victim.name, buf);
 		nd_close(victim_ref);
 		victim.type = TYPE_THING;
