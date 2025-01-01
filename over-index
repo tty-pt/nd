@@ -18,8 +18,15 @@ case "$1" in
 		;;
 
 	*)
-		test -f htdocs/$1 || NotFound
-		FinishIt htdocs/$1 | Fin
+		path="`echo $@ | tr ' ' '/'`"
+		if test "$1" = "node_modules"; then
+			# for when we want to test modified libraries
+			test -f $path || NotFound
+			FinishIt $path | Fin
+		else
+			test -f htdocs/$1 || NotFound
+			FinishIt htdocs/$1 | Fin
+		fi
 		;;
 esac
 
