@@ -16,11 +16,14 @@ body {
         font-family: 'Lucida Console', Monaco, monospace;
 	margin: 0;
 	image-rendering: pixelated;
-        height: 100%;
+        height: 100vh;
         overflow: hidden;
         position: relative;
 	font-size: 10pt;
+	z-index: -4;
 }
+
+#main { z-index: -4; }
 
 a {
         background-repeat: no-repeat;
@@ -199,4 +202,25 @@ button.transparent {
 
 div[style*="top: -50000px"] {
 	visibility: hidden;
+}
+
+#bg { z-index: -3; background-repeat: no-repeat; background-size: cover; }
+#holder { z-index: -2; }
+#holder.terminal-mode { padding: 0px !important; }
+
+.terminal-mode > #left-panel,
+.terminal-mode > #right-panel {
+	position: absolute;
+}
+
+#left-panel { left: 8px; right: 32px; top: 8px; bottom: 8px; }
+#right-panel { right: 8px; top: 8px; bottom: 8px; z-index: -1; }
+#holder:not(.terminal-mode) > #right-panel { z-index: 0; }
+
+.fik {
+	align-items: end;
+}
+
+.xterm-viewport {
+	background-color: rgba(0, 0, 0, 0.5) !important;
 }

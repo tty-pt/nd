@@ -1,43 +1,17 @@
-<div id="main" class="f h8 fg oh">
+<div id="main" class="oh sfv">
 	<div id="bg" class="abs opacity-2 a bsf"></div>
-	<div class="p8 f h8 abs a">
-		<div class="f v8 fg shf overflow">
-			<div id="title" class="tm tac"></div>
+	<div id="holder" class="p8 f h8 sf abs a bb">
+		<div id="left-panel" class="f v8 fg overflow">
 			<pre id="term" class="fg overflow"></pre>
-			<nd-bar type="hp" x="c1"></nd-bar>
-			<nd-bar type="mp" x="c4"></nd-bar>
 		</div>
 
 		<textarea id="hid" aria-hidden="true"></textarea>
 
-		<div class="f v8 fg fic sh33">
+		<div id="right-panel" class="f v8 fg fic sh33">
 			<nd-look-at></nd-look-at>
 			<nd-contents class="fg overflow"></nd-contents>
-			<div id="directions" class="f v8 tar tnow dn fab">
-				<div class="f h8">
-					<nd-button hid></nd-button>
-					<nd-button onclick="sendCmd('k')">&uarr;</nd-button>
-					<nd-button onclick="sendCmd('K')">K</nd-button>
-				</div>
-				<div class="f h8">
-					<nd-button onclick="sendCmd('h')">&larr;</nd-button>
-					<nd-button hid></nd-button>
-					<nd-button onclick="sendCmd('l')">&rarr;</nd-button>
-				</div>
-				<div class="f h8">
-					<nd-button hid></nd-button>
-					<nd-button onclick="sendCmd('j')">&darr;</nd-button>
-					<nd-button onclick="sendCmd('J')">J</nd-button>
-				</div>
-			</div>
-			<div id="actions" class="f h8 v8 fw fcc">
-				<nd-button onclick="help_show()">❓</nd-button>
-				<nd-button onclick="modal_open('stats')">📋</nd-button>
-				<nd-button onclick="modal_open('equipment')">👕</nd-button>
-				<nd-button onclick="sendCmd('inventory')">📦</nd-button>
-				<nd-button onclick="sendCmd('look')">👁</nd-button>
-				<nd-button onclick="event.stopPropagation(); directions_show()">🗺️</nd-button>
-			</div>
+			<nd-bar type="hp" class="shf" x="c1"></nd-bar>
+			<nd-bar type="mp" class="shf" x="c4"></nd-bar>
 		</div>
 	</div>
 </div>

@@ -843,15 +843,52 @@ globalThis.modal_close = () => {
   modalParent.classList.add("dn");
 };
 
-const directions = document.getElementById("directions");
-const actions = document.getElementById("actions");
+const holder = document.getElementById("holder");
 
-globalThis.directions_show = () => {
-  directions.classList.remove("dn");
-  actions.classList.add("dn");
-};
-
-document.addEventListener("click", () => {
-  directions.classList.add("dn");
-  actions.classList.remove("dn");
+ndc.term.element.addEventListener("focusin", () => {
+	holder.classList.add("terminal-mode");
 });
+
+ndc.term.element.addEventListener("focusout", () => {
+	holder.classList.remove("terminal-mode");
+});
+
+const menu = document.getElementById("menu");
+menu.innerHTML += `
+<label id="index" class="btn round p8 ts17 menu">
+	⋯
+	<input type="checkbox" />
+	<div class="abs h ar8 p ts ttc">
+		<div class="f h fie fr">
+			<nd-button onclick="help_show()">❓</nd-button>
+			<nd-button onclick="modal_open('stats')">📋</nd-button>
+			<nd-button onclick="modal_open('equipment')">👕</nd-button>
+			<nd-button onclick="sendCmd('inventory')">📦</nd-button>
+			<nd-button onclick="sendCmd('look')">👁</nd-button>
+		</div>
+	</div>
+</label>
+<label id="index" class="btn round p8 ts17 menu">
+	🗺️
+	<input type="checkbox" />
+	<div class="abs v ar8 p ts ttc">
+		<div id="directions" class="f v8 tar tnow fab fik">
+			<div class="f h8">
+				<nd-button hid></nd-button>
+				<nd-button onclick="sendCmd('k')">&uarr;</nd-button>
+				<nd-button onclick="sendCmd('K')">K</nd-button>
+			</div>
+			<div class="f h8">
+				<nd-button onclick="sendCmd('h')">&larr;</nd-button>
+				<nd-button hid></nd-button>
+				<nd-button onclick="sendCmd('l')">&rarr;</nd-button>
+			</div>
+			<div class="f h8">
+				<nd-button hid></nd-button>
+				<nd-button onclick="sendCmd('j')">&darr;</nd-button>
+				<nd-button onclick="sendCmd('J')">J</nd-button>
+			</div>
+		</div>
+	</div>
+</label>
+`
