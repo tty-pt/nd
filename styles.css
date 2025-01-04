@@ -208,9 +208,11 @@ div[style*="top: -50000px"] {
 #holder { z-index: -2; }
 #holder.terminal-mode { padding: 0px !important; }
 
+@media only screen and (max-width: 600px) {
 .terminal-mode > #left-panel,
 .terminal-mode > #right-panel {
 	position: absolute;
+}
 }
 
 #left-panel { left: 8px; right: 32px; top: 8px; bottom: 8px; }

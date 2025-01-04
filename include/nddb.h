@@ -7,4 +7,7 @@
 #include <db.h>
 #endif
 
+extern DB_ENV *env;
+extern DB_TXN *txnid;
+
 #endif

@@ -17,7 +17,6 @@ typedef struct {
 
 // see http://www.vision-tools.com/h-tropf/multidimensionalrangequery.pdf
 
-extern DB_ENV *env;
 static DB *pdb = NULL, *ipdb = NULL;
 
 static const morton_t m1 = 0x111111111111ULL;
@@ -108,7 +107,7 @@ map_range_unsafe(map_range_t *res,
 	int ret = 0;
 	int dbflags;
 
-	if (pdb->cursor(pdb, NULL, &cur, 0))
+	if (pdb->cursor(pdb, txnid, &cur, 0))
 		return -1;
 
 	memset(&data, 0, sizeof(DBT));
@@ -247,7 +246,7 @@ map_init() {
 	snprintf(filename, sizeof(filename), "%s" STD_DB, "");
 	int ret = 0;
 	if ((ret = db_create(&ipdb, env, 0))
-	    || (ret = ipdb->open(ipdb, NULL, filename, "map_dp", DB_HASH, DB_CREATE, 0644))) {
+	    || (ret = ipdb->open(ipdb, txnid, filename, "map_dp", DB_HASH, DB_CREATE, 0644))) {
 		ndclog(LOG_ERR, "map_init %s", db_strerror(ret));
 		exit(EXIT_FAILURE);
 		return;
@@ -255,8 +254,8 @@ map_init() {
 
 	if ((ret = db_create(&pdb, env, 0))
 	    || (ret = pdb->set_bt_compare(pdb, map_cmp))
-	    || (ret = pdb->open(pdb, NULL, filename, "map_pd", DB_BTREE, DB_CREATE, 0644))
-	    || (ret = ipdb->associate(ipdb, NULL, pdb, map_mki_code, DB_CREATE)))
+	    || (ret = pdb->open(pdb, txnid, filename, "map_pd", DB_BTREE, DB_CREATE, 0644))
+	    || (ret = ipdb->associate(ipdb, txnid, pdb, map_mki_code, DB_CREATE)))
 	{
 		pdb->close(pdb, 0);
 		ndclog(LOG_ERR, "map_init2 %s", db_strerror(ret));
@@ -293,7 +292,7 @@ _map_put(morton_t code, unsigned thing_ref, int flags)
 	data.data = &code;
 	data.size = sizeof(code);
 
-	ipdb->put(ipdb, NULL, &key, &data, flags);
+	ipdb->put(ipdb, txnid, &key, &data, flags);
 }
 
 void
@@ -315,8 +314,9 @@ map_mwhere(unsigned where)
 	memset(&data, 0, sizeof(DBT));
 	key.data = &room;
 	key.size = sizeof(room);
+	data.flags = DB_DBT_MALLOC;
 
-	if ((bad = ipdb->get(ipdb, NULL, &key, &data, 0))) {
+	if ((bad = ipdb->get(ipdb, txnid, &key, &data, 0))) {
 		static morton_t code = 130056652770671ULL;
 		return code;
 	}
@@ -347,7 +347,7 @@ map_get(pos_t p)
 	unsigned ref;
 	int res;
 
-	if (pdb->cursor(pdb, NULL, &cur, 0))
+	if (pdb->cursor(pdb, txnid, &cur, 0))
 		return NOTHING;
 
 	memset(&pkey, 0, sizeof(DBT));
@@ -370,6 +370,7 @@ map_get(pos_t p)
 				continue;
 			}
 #endif
+			cur->close(cur);
 			return ref;
 		case DB_NOTFOUND:
 			cur->close(cur);
@@ -386,5 +387,5 @@ map_delete(unsigned what)
 	memset(&key, 0, sizeof(key));
 	key.data = &code;
 	key.size = sizeof(code);
-	return pdb->del(pdb, NULL, &key, 0);
+	return pdb->del(pdb, txnid, &key, 0);
 }

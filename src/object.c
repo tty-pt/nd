@@ -11,6 +11,7 @@
 #include "noise.h"
 #include "params.h"
 #include "player.h"
+#include "nddb.h"
 #include "uapi/entity.h"
 #include "uapi/io.h"
 #include "uapi/map.h"
@@ -303,10 +304,6 @@ void
 objects_init()
 {
 	unsigned ref;
-	obj_hd = lhash_cinit(sizeof(OBJ), STD_DB, "obj", 0644);
-	contents_hd = ahash_init();
-	obs_hd = ahash_init();
-	art_hd = hash_init();
 
 	srand(getpid());
 

@@ -66,6 +66,8 @@ void do_wall(int fd, int argc, char *argv[]);
 
 unsigned dplayer_hd = -1;
 
+DB_TXN *txnid;
+
 unsigned fd_player(unsigned fd) {
 	unsigned ret;
 	uhash_get(dplayer_hd, &ret, fd);
@@ -296,8 +298,6 @@ void close_all(int i) {
 	map_close(flags);
 	hash_close(ent_hd, flags);
 	hash_close(player_hd, flags);
-	if (flags)
-		lhash_flush(obj_hd);
 	hash_close(obj_hd, flags);
 	hash_close(contents_hd, flags);
 	hash_close(obs_hd, flags);
@@ -343,16 +343,35 @@ main(int argc, char **argv)
 	fds_hd = ahash_init();
 	skel_init();
 	db_env_create(&env, 0);
+	/* env->set_verbose(env, DB_VERB_DEADLOCK, 1); */
+	/* env->set_verbose(env, DB_VERB_WAITSFOR, 1); */
+	/* env->set_verbose(env, DB_VERB_RECOVERY, 1); */
+	env->set_flags(env, DB_AUTO_COMMIT, 1);
 	env->set_lk_detect(env, DB_LOCK_OLDEST);
+	/* env->set_timeout(env, 5000000, DB_SET_LOCK_TIMEOUT); */
+	env->set_tx_max(env, 5 * 60);
 	signal(SIGSEGV, close_all);
-	env->open(env, "/var/nd/env", DB_CREATE | DB_RECOVER | DB_INIT_MPOOL | DB_INIT_LOCK | DB_INIT_LOG | DB_INIT_TXN, 0);
+	env->open(env, "/var/nd/env", DB_CREATE | DB_RECOVER | DB_INIT_MPOOL | DB_INIT_TXN | DB_INIT_LOCK | DB_INIT_LOG, 0);
 
 	hash_env_set(env);
-	st_init();
+	env->txn_begin(env, NULL, &txnid, 0);
+
+	owner_hd = hash_cinit(STD_DB, "st", 0644, QH_TXN);
+	sl_hd = hash_init();
 	map_init();
-	entities_init();
+	ent_hd = hash_cinit(STD_DB, "entity", 0644, QH_TXN);
 	players_init();
+	obj_hd = lhash_cinit(sizeof(OBJ), STD_DB, "obj", 0644, QH_TXN);
+	contents_hd = ahash_init();
+	obs_hd = ahash_init();
+	art_hd = hash_init();
+
+	txnid->commit(txnid, 0);
+	txnid = NULL;
+
+	st_init();
 	objects_init();
+	env->txn_checkpoint(env, 0, 0, 0);
 
 	/* errno = 0; // TODO why? sanity fails to access file */
 
@@ -512,6 +531,7 @@ auth(unsigned fd)
 		return 0;
 	}
 
+	env->txn_begin(env, NULL, &txnid, 0);
 	unsigned player_ref = player_get(user);
 
 	ndclog(LOG_INFO, "auth '%s' (%u/%u)", user, fd, player_ref);
@@ -551,6 +571,8 @@ auth(unsigned fd)
         mcp_bars(player_ref);
 	do_view(fd, 0, NULL);
 	st_run(player_ref, "ndst_auth");
+	txnid->commit(txnid, 0);
+	txnid = NULL;
 	return player_ref;
 }
 

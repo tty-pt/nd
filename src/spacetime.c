@@ -993,6 +993,8 @@ st_v(unsigned player_ref, char const *opcs)
 	struct cmd_dir cd;
 	char const *s = opcs;
 
+	env->txn_begin(env, NULL, &txnid, 0);
+
 	for (;*s;) {
 		int ofs = 0;
 		op_t op = op_map[(int) *s]; // the op
@@ -1006,6 +1008,9 @@ st_v(unsigned player_ref, char const *opcs)
 		if (aop) {
 			if (cd.e == E_NULL) {
 				may_look(player_ref, old_loc);
+				if (txnid)
+					txnid->commit(txnid, 0);
+				txnid = NULL;
 				return opcs - s;
 			}
 
@@ -1020,6 +1025,9 @@ st_v(unsigned player_ref, char const *opcs)
 	}
 
 	may_look(player_ref, old_loc);
+	if (txnid)
+		txnid->commit(txnid, 0);
+	txnid = NULL;
 	return s - opcs;
 }
 
@@ -1103,8 +1111,6 @@ st_init() {
 
 	stone_skel_id = lhash_new(skel_hd, &skel);
 
-	owner_hd = hash_cinit(STD_DB, "st", 0644, 0);
-	sl_hd = hash_init();
 	/* st_put(1, 0, 64); */
 
 	nd.fds_hd = fds_hd;
