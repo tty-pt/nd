@@ -471,7 +471,7 @@ do_save(int fd, int argc, char *argv[]) {
 
 	hash_sync(owner_hd);
 	map_sync();
-	lhash_flush(obj_hd);
+	hash_sync(obj_hd);
 	hash_sync(obj_hd);
 	hash_sync(contents_hd);
 	hash_sync(obs_hd);
