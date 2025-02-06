@@ -26,7 +26,7 @@ vendor_find(unsigned where_ref)
 }
 
 void
-do_shop(int fd, int argc, char *argv[])
+do_shop(int fd, int argc __attribute__((unused)), char *argv[] __attribute__((unused)))
 {
 	OBJ player, npc;
 	unsigned player_ref = fd_player(fd),
@@ -58,7 +58,7 @@ do_shop(int fd, int argc, char *argv[])
 }
 
 void
-do_buy(int fd, int argc, char *argv[])
+do_buy(int fd, int argc __attribute__((unused)), char *argv[])
 {
 	unsigned player_ref = fd_player(fd);
 	OBJ player;
@@ -108,7 +108,7 @@ do_buy(int fd, int argc, char *argv[])
 }
 
 void
-do_sell(int fd, int argc, char *argv[])
+do_sell(int fd, int argc __attribute__((unused)), char *argv[])
 {
 	unsigned player_ref = fd_player(fd);
 	OBJ player;

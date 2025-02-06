@@ -344,7 +344,7 @@ void
 mcp_equipment(unsigned player_ref)
 {
 	ENT eplayer = ent_get(player_ref);
-	int aux;
+	unsigned aux;
 
 	fbcp(player_ref, sizeof(eplayer.equipment), BCP_EQUIPMENT, eplayer.equipment);
 	

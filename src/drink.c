@@ -6,7 +6,7 @@
 #define FOOD_VALUE(x) (1 << (16 - x->food))
 
 void
-do_consume(int fd, int argc, char *argv[])
+do_consume(int fd, int argc __attribute__((unused)), char *argv[])
 {
 	unsigned player_ref = fd_player(fd), vial_ref;
 	ENT eplayer = ent_get(player_ref);
@@ -55,7 +55,7 @@ do_consume(int fd, int argc, char *argv[])
 }
 
 void
-do_fill(int fd, int argc, char *argv[])
+do_fill(int fd, int argc __attribute__((unused)), char *argv[])
 {
 	unsigned player_ref = fd_player(fd),
 	      vial_ref = ematch_mine(player_ref, argv[1]);;

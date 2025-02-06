@@ -383,7 +383,7 @@ SKEL nodrop_skel[] = {
 unsigned mob_refs[MOB_MAX];
 unsigned corpse_ref;
 
-void mobs_init() {
+void mobs_init(void) {
 	for (unsigned i = 0; i < MOB_MAX; i++)
 		mob_refs[i] = lhash_new(skel_hd, &nodrop_skel[i]);
 

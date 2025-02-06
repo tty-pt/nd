@@ -224,7 +224,7 @@ dir_e(const char dir) {
 	return e_map[(int) dir];
 }
 
-const char
+char
 e_dir(enum exit e) {
 	return exit_map[e].name[0];
 }
@@ -234,14 +234,14 @@ e_simm(enum exit e) {
 	return exit_map[e].simm;
 }
 
-const char *
+char *
 e_name(enum exit e) {
-	return exit_map[e].name;
+	return (char *) exit_map[e].name;
 }
 
-const char *
+char *
 e_other(enum exit e) {
-	return exit_map[e].other;
+	return (char *) exit_map[e].other;
 }
 
 morton_t
@@ -303,7 +303,7 @@ st_there(unsigned where, enum exit e)
 }
 
 static inline int
-fee_fail(unsigned player_ref, OBJ *player, char *desc, char *info, int cost)
+fee_fail(unsigned player_ref, OBJ *player, char *desc, char *info, unsigned cost)
 {
 	if (player->value < cost) {
 		nd_writef(player_ref, "You can't afford to %s. (%dp)\n", desc, cost);
@@ -457,7 +457,7 @@ st_room_at(pos_t pos)
 }
 
 void
-do_bio(int fd, int argc, char *argv[]) {
+do_bio(int fd, int argc __attribute__((unused)), char *argv[] __attribute__((unused))) {
 	unsigned player_ref = fd_player(fd);
 	struct bio *bio;
 	pos_t pos;
@@ -1015,7 +1015,7 @@ st_v(unsigned player_ref, char const *opcs)
 			}
 
 			ofs ++;
-			int j;
+			morton_t j;
 			for (j = 0; j < cd.rep; j++)
 				aop(player_ref, cd.e);
 		} else
@@ -1042,7 +1042,7 @@ echo(char *fmt, ...) {
 	va_start(va, fmt);
 	nd_dwritef(g_player_ref, fmt, va);
 	va_end(va);
-};
+}
 
 void
 oecho(char *format, ...) {
@@ -1099,7 +1099,7 @@ st_put(unsigned owner_ref, uint64_t key, unsigned shift) {
 }
 
 void
-st_init() {
+st_init(void) {
 	SKEL skel = {
 		.name = "stone",
 		.description = "Solid stone(s)",
@@ -1189,7 +1189,7 @@ st_init() {
 		st_open(st_key, owner);
 }
 
-void st_dlclose() {
+void st_dlclose(void) {
 	struct hash_cursor c = hash_iter(sl_hd, NULL, 0);
 	struct st_key key;
 	void *sl;
@@ -1245,7 +1245,7 @@ _st_run(unsigned player_ref, char *symbol, uint64_t key, unsigned shift) {
 	if (hash_get(sl_hd, &sl, &st_key, sizeof(st_key)))
 		return 0;
 
-	st_run_cb cb = dlsym(sl, symbol);
+	st_run_cb cb = (st_run_cb) dlsym(sl, symbol);
 
 	if (!cb)
 		return 0;
@@ -1333,7 +1333,7 @@ do_streload(int fd, int argc, char *argv[]) {
 	long long unsigned key = shift > 63 ? 0 : position;
 
 	struct st_key st_key = st_key_new(key, shift);
-	int owner;
+	unsigned owner;
 	void *sl;
 
 	if (hash_get(owner_hd, &owner, &st_key, sizeof(st_key)) || owner != player_ref)

@@ -426,7 +426,7 @@ view(unsigned player_ref)
 }
 
 void
-do_view(int fd, int argc, char *argv[])
+do_view(int fd, int argc __attribute__((unused)), char *argv[] __attribute__((unused)))
 {
         view(fd_player(fd));
 }

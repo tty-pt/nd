@@ -210,8 +210,7 @@ map_search(unsigned *mat, pos_t pos, unsigned radius)
 
 	/* static const size_t m = 49; */
 	map_range_t buf[m];
-	size_t n;
-	int i;
+	size_t n, i;
 
 	n =  map_range_safe(buf, m, &vpr, 0);
 	memset(mat, -1, sizeof(unsigned) * m);
@@ -224,7 +223,7 @@ map_search(unsigned *mat, pos_t pos, unsigned radius)
 }
 
 static int
-map_cmp(DB *sec, const DBT *a_r, const DBT *b_r)
+map_cmp(DB *sec __attribute__((unused)), const DBT *a_r, const DBT *b_r)
 {
 	morton_t a = * (morton_t*) a_r->data,
 		 b = * (morton_t*) b_r->data;
@@ -233,7 +232,10 @@ map_cmp(DB *sec, const DBT *a_r, const DBT *b_r)
 }
 
 static int
-map_mki_code(DB *sec, const DBT *key, const DBT *data, DBT *result)
+map_mki_code(
+		DB *sec __attribute__((unused)),
+		const DBT *key __attribute__((unused)),
+		const DBT *data, DBT *result )
 {
 	result->size = sizeof(morton_t);
 	result->data = data->data;
@@ -241,7 +243,7 @@ map_mki_code(DB *sec, const DBT *key, const DBT *data, DBT *result)
 }
 
 void
-map_init() {
+map_init(void) {
 	char filename[BUFSIZ];
 	snprintf(filename, sizeof(filename), "%s" STD_DB, "");
 	int ret = 0;
@@ -272,7 +274,7 @@ map_close(unsigned flags)
 }
 
 int
-map_sync()
+map_sync(void)
 {
 	return pdb->sync(pdb, 0)
 		|| ipdb->sync(ipdb, 0);

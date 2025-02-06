@@ -7,7 +7,7 @@
 #include "uapi/wts.h"
 
 void
-do_give(int fd, int argc, char *argv[])
+do_give(int fd, int argc __attribute__((unused)), char *argv[])
 {
 	unsigned player_ref = fd_player(fd), who_ref;
 	int wizard = ent_get(player_ref).flags & EF_WIZARD;

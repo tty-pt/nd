@@ -430,7 +430,7 @@ spells_birth(ENT *entity) {
 }
 
 void
-spells_init() {
+spells_init(void) {
 	for (int i = 0; i < SPELL_MAX; i++)
 		lhash_new(skel_hd, &spell_map[i]);
 }

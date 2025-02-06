@@ -32,7 +32,7 @@ match_controlled(unsigned player_ref, char *name)
 int ok_name(const char *name);
 
 void
-do_name(int fd, int argc, char *argv[])
+do_name(int fd, int argc __attribute__((unused)), char *argv[])
 {
 	unsigned player_ref = fd_player(fd);
 	char *name = argv[1];
@@ -62,7 +62,7 @@ do_name(int fd, int argc, char *argv[])
 }
 
 void
-do_chown(int fd, int argc, char *argv[])
+do_chown(int fd, int argc __attribute__((unused)), char *argv[])
 {
 	unsigned player_ref = fd_player(fd), owner_ref, thing_ref;
 	int wizard = ent_get(player_ref).flags & EF_WIZARD;

@@ -67,7 +67,7 @@ extern double tick;
 extern enum exit e_map[];
 extern exit_t exit_map[];
 
-time_t get_tick();
+time_t get_tick(void);
 
 morton_t pos_morton(pos_t);
 void morton_pos(pos_t p, morton_t code);
@@ -77,10 +77,10 @@ int e_ground(unsigned room, enum exit e);
 
 void pos_move(pos_t d, pos_t o, enum exit e);
 enum exit dir_e(const char dir);
-const char e_dir(enum exit e);
+char e_dir(enum exit e);
 enum exit e_simm(enum exit e);
-const char * e_name(enum exit e);
-const char * e_other(enum exit e);
+char *e_name(enum exit e);
+char *e_other(enum exit e);
 morton_t point_rel_idx(point_t p, point_t s, smorton_t w);
 
 unsigned room_clean(unsigned loc_ref);
@@ -89,8 +89,8 @@ void st_update(double dt);
 int st_v(unsigned player_ref, const char *dir);
 void st_start(unsigned player_ref);
 
-void st_init();
-void st_dlclose();
+void st_init(void);
+void st_dlclose(void);
 void st_run(unsigned player_ref, char *symbol);
 void do_stchown(int fd, int argc, char *argv[]);
 void do_streload(int fd, int argc, char *argv[]);

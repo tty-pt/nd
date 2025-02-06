@@ -39,18 +39,18 @@ element_t element_map[] = {
 	},
 };
 
-static inline void elements_init() {
+static inline void elements_init(void) {
 	element_hd = lhash_init(sizeof(element_t));
 	for (unsigned i = 0; i < ELM_MAX; i++)
 		lhash_new(element_hd, &element_map[i]);
 }
 
-void biomes_init();
-void plants_init();
-void spells_init();
-void mobs_init();
+void biomes_init(void);
+void plants_init(void);
+void spells_init(void);
+void mobs_init(void);
 
-void skel_init() {
+void skel_init(void) {
 	skel_hd = lhash_init(sizeof(SKEL));
 	drop_hd = lhash_init(sizeof(DROP));
 	adrop_hd = ahash_init();

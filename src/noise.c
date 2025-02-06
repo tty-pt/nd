@@ -216,8 +216,7 @@ spread(unsigned ny)
 {
 	static const size_t bio_line_size = sizeof(struct bio) << CHUNK_Y;
 	static const unsigned nx = 2;
-	unsigned w;
-	int p;
+	unsigned w, p;
 
 	for (w = 0; w < ny * nx * CHUNK_M; w += nx * CHUNK_M)
 		for (p = 0; p <= nx * CHUNK_M; p += nx << CHUNK_Y) {

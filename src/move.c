@@ -4,7 +4,7 @@
 #include "uapi/match.h"
 
 void
-do_get(int fd, int argc, char *argv[])
+do_get(int fd, int argc __attribute__((unused)), char *argv[])
 {
 	unsigned player_ref = fd_player(fd), thing_ref, cont_ref;
 	char *what = argv[1];
@@ -74,7 +74,7 @@ do_get(int fd, int argc, char *argv[])
 }
 
 void
-do_drop(int fd, int argc, char *argv[])
+do_drop(int fd, int argc __attribute__((unused)), char *argv[])
 {
 	unsigned player_ref = fd_player(fd), thing_ref, cont_ref;
 	OBJ player, cont, thing;
@@ -128,7 +128,7 @@ do_drop(int fd, int argc, char *argv[])
 }
 
 void
-do_recycle(int fd, int argc, char *argv[])
+do_recycle(int fd, int argc __attribute__((unused)), char *argv[])
 {
 	unsigned player_ref = fd_player(fd);
 	char *name = argv[1];

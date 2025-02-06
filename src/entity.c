@@ -36,7 +36,7 @@ static const char *rarity_str[] = {
 	ANSI_BOLD ANSI_FG_MAGENTA "Mythical" ANSI_RESET
 };
 
-unsigned me_get() {
+unsigned me_get(void) {
 	return me;
 }
 
@@ -159,7 +159,7 @@ enter(unsigned player_ref, unsigned loc_ref, enum exit e)
 }
 
 int
-payfor(unsigned who_ref, OBJ *who, int cost)
+payfor(unsigned who_ref, OBJ *who, unsigned cost)
 {
 	if (ent_get(who_ref).flags & EF_WIZARD)
 		return 1;
@@ -309,7 +309,7 @@ look_around(unsigned player_ref)
 int
 equip_affect(ENT *ewho, EQU *equ)
 {
-	register int msv = equ->msv,
+	register unsigned msv = equ->msv,
 		 eqw = equ->eqw,
 		 eql = EQL(eqw),
 		 eqt = EQT(eqw);
@@ -565,7 +565,7 @@ entity_damage(unsigned player_ref, ENT *eplayer, unsigned target_ref, ENT *etarg
 }
 
 void
-do_look_at(int fd, int argc, char *argv[])
+do_look_at(int fd, int argc __attribute__((unused)), char *argv[] __attribute__((unused)))
 {
 	unsigned player_ref = fd_player(fd), thing_ref;
 	OBJ player, thing;
@@ -679,7 +679,7 @@ huth_notify(unsigned player_ref, ENT *eplayer, enum huth type)
 }
 
 static inline unsigned char
-d20()
+d20(void)
 {
 	return (random() % 20) + 1;
 }
@@ -786,7 +786,7 @@ attack(unsigned player_ref, ENT *eplayer)
 }
 
 static inline void
-kill_update(unsigned player_ref, ENT *eplayer, double dt)
+kill_update(unsigned player_ref, ENT *eplayer, double dt __attribute__((unused)))
 {
 	if (eplayer->target == NOTHING)
 		return;
@@ -889,7 +889,7 @@ stats_init(ENT *enu, SENT *sk)
 }
 
 void
-reroll(unsigned player_ref, ENT *eplayer) {
+reroll(ENT *eplayer) {
 	int i;
 
 	for (i = 0; i < ATTR_MAX; i++)
@@ -917,12 +917,12 @@ do_reroll(int fd, int argc, char *argv[])
 	}
 
 	ENT eplayer = ent_get(player_ref);
-	reroll(player_ref, &eplayer);
+	reroll(&eplayer);
 	ent_set(player_ref, &eplayer);
 	mcp_stats(player_ref);
 	mcp_bars(player_ref);
 }
 
-void entities_init() {
+void entities_init(void) {
 	ent_hd = hash_cinit(STD_DB, "entity", 0644, 0);
 }

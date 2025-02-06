@@ -9,7 +9,7 @@ config	!= cat ${srcdir}/.config | sed -n '/^.*=y$$/p' | sed 's/^\(.*\)=y$$/-D\1/
 cflags-Darwin	+= -I/usr/local/opt/berkeley-db@4/include
 node_modules != npm root
 npm-lib := @tty-pt/qhash @tty-pt/ndc
-CFLAGS := -g -O0 -Wall -Wno-initializer-overrides ${cflags-${uname}} ${config} \
+CFLAGS := -g -O0 -Wall -Wpedantic -Wextra -Wno-initializer-overrides ${cflags-${uname}} ${config} \
 	-I/usr/local/include -I${srcdir}/include \
 	${npm-lib:%=-I${node_modules}/%/include} \
 	-D_GNU_SOURCE -std=c99 \

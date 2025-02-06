@@ -34,7 +34,7 @@ notify_attack(unsigned player_ref, unsigned target_ref, char *wts, short val, ch
 
 
 void
-do_fight(int fd, int argc, char *argv[])
+do_fight(int fd, int argc __attribute__((unused)), char *argv[])
 {
 	unsigned player_ref = fd_player(fd);
 	OBJ player, loc, target;
@@ -65,7 +65,7 @@ do_fight(int fd, int argc, char *argv[])
 }
 
 void
-do_status(int fd, int argc, char *argv[])
+do_status(int fd, int argc __attribute__((unused)), char *argv[] __attribute__((unused)))
 {
 	unsigned player_ref = fd_player(fd);
 	ENT eplayer = ent_get(player_ref);
@@ -83,7 +83,7 @@ do_status(int fd, int argc, char *argv[])
 }
 
 void
-do_heal(int fd, int argc, char *argv[])
+do_heal(int fd, int argc __attribute__((unused)), char *argv[])
 {
 	char *name = argv[1];
 	unsigned player_ref = fd_player(fd), target_ref;
@@ -119,7 +119,7 @@ do_heal(int fd, int argc, char *argv[])
 }
 
 void
-do_advitam(int fd, int argc, char *argv[])
+do_advitam(int fd, int argc __attribute__((unused)), char *argv[])
 {
 	unsigned player_ref = fd_player(fd);
 	char *name = argv[1];
@@ -147,7 +147,7 @@ do_advitam(int fd, int argc, char *argv[])
 }
 
 void
-do_train(int fd, int argc, char *argv[]) {
+do_train(int fd, int argc __attribute__((unused)), char *argv[]) {
 	unsigned player_ref = fd_player(fd);
 	ENT eplayer = ent_get(player_ref);
 	const char *attrib = argv[1];
@@ -219,7 +219,7 @@ kill_v(unsigned player_ref, char const *opcs)
 }
 
 void
-do_sit(int fd, int argc, char *argv[])
+do_sit(int fd, int argc __attribute__((unused)), char *argv[])
 {
 	unsigned player_ref = fd_player(fd);
 	ENT eplayer = ent_get(player_ref);
@@ -228,7 +228,7 @@ do_sit(int fd, int argc, char *argv[])
 }
 
 void
-do_stand(int fd, int argc, char *argv[])
+do_stand(int fd, int argc __attribute__((unused)), char *argv[] __attribute__((unused)))
 {
 	unsigned player_ref = fd_player(fd);
 	ENT eplayer = ent_get(player_ref);

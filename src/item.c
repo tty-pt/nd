@@ -20,7 +20,7 @@ enum bodypart ch_bodypart_map[] = {
 };
 
 void
-do_select(int fd, int argc, char *argv[])
+do_select(int fd, int argc __attribute__((unused)), char *argv[] __attribute__((unused)))
 {
 	unsigned player_ref = fd_player(fd);
 	const char *n_s = argv[1];
@@ -32,7 +32,7 @@ do_select(int fd, int argc, char *argv[])
 }
 
 void
-do_equip(int fd, int argc, char *argv[])
+do_equip(int fd, int argc __attribute__((unused)), char *argv[] __attribute__((unused)))
 {
 	unsigned player_ref = fd_player(fd);
 	char *name = argv[1];
@@ -45,7 +45,7 @@ do_equip(int fd, int argc, char *argv[])
 }
 
 void
-do_unequip(int fd, int argc, char *argv[])
+do_unequip(int fd, int argc __attribute__((unused)), char *argv[] __attribute__((unused)))
 {
 	unsigned player_ref = fd_player(fd);
 	char const *name = argv[1];

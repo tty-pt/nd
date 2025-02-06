@@ -274,7 +274,7 @@ plants_add(unsigned where_ref, void *arg, pos_t pos)
                 /* _plants_add(where, &epd, tmp); */
 }
 
-void plants_init() {
+void plants_init(void) {
 	unsigned carrot_ref = lhash_new(skel_hd, &carrot);
 	carrot_drop.skel = carrot_ref;
 	unsigned carrot_drop_ref = lhash_new(drop_hd, &carrot_drop);

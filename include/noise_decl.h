@@ -103,7 +103,7 @@ step(noise_t *v, snoise_t *st, uint16_t vl, uint16_t mul)
  * fade between them and set target values acoordingly
  */
 static inline void
-noise_quad(noise_t *c, noise_t *vc, unsigned z, unsigned w, unsigned cy, uint8_t dim) {
+noise_quad(noise_t *c, noise_t *vc, unsigned z, unsigned cy, uint8_t dim) {
 	uint16_t ndim = dim - 1;
 	uint16_t tvl = 1 << ndim; /* length of input values */
 	snoise_t st[(tvl << 1) - 1], *stc = st;
@@ -153,7 +153,7 @@ _noise_mr(noise_t *c, noise_t *v, unsigned x, int16_t *qs, uint16_t ndim, unsign
 	for (; c < ce; qs[i] += (1<<x), c += cd)
 		if (ndim == 0) {
 			noise_get_v(v, qs, x, w, seed, dim);
-			noise_quad(c, v, x, w, cy, dim);
+			noise_quad(c, v, x, cy, dim);
 		} else
 			_noise_mr(c, v, x, qs, ndim - 1, w, seed, cy, dim);
 
@@ -186,7 +186,7 @@ start:			ce_p[ndim] = c + ced;
 
 		do {
 			noise_get_v(v, qs, x, w, seed, dim);
-			noise_quad(c, v, x, w, cy, dim);
+			noise_quad(c, v, x, cy, dim);
 			*qsc += 1 << x;
 			c += ced << x;
 		} while (c < ce_p[ndim]);
@@ -272,7 +272,7 @@ noise_m(noise_t *mat, int16_t *ms, unsigned x,
 		if (x > cy)
 			noise_fix_v(v, qs, ms, x, cy, dim);
 
-		noise_quad(mat, v, cy, w, cy, dim);
+		noise_quad(mat, v, cy, cy, dim);
 	}
 }
 

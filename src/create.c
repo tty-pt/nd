@@ -7,7 +7,7 @@ int ok_name(const char *name);
 
 /* TODO improve/remove this. use skeletons to copy objects? */
 void
-do_clone(int fd, int argc, char *argv[])
+do_clone(int fd, int argc __attribute__((unused)), char *argv[])
 {
 	unsigned player_ref = fd_player(fd), thing_ref;
 	char *name = argv[1];
@@ -113,7 +113,7 @@ do_clone(int fd, int argc, char *argv[])
  * Use this to create an object.
  */
 void
-do_create(int fd, int argc, char *argv[])
+do_create(int fd, int argc __attribute__((unused)), char *argv[])
 {
 	unsigned player_ref = fd_player(fd), thing_ref;
 	unsigned pflags = ent_get(player_ref).flags;

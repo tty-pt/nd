@@ -28,7 +28,7 @@ print_owner(unsigned player_ref, unsigned thing_ref)
 }
 
 void
-do_examine(int fd, int argc, char *argv[])
+do_examine(int fd, int argc __attribute__((unused)), char *argv[])
 {
 	unsigned player_ref = fd_player(fd);
 	OBJ player;
@@ -114,7 +114,7 @@ do_examine(int fd, int argc, char *argv[])
 
 
 void
-do_score(int fd, int argc, char *argv[])
+do_score(int fd, int argc __attribute__((unused)), char *argv[] __attribute__((unused)))
 {
 	unsigned player_ref = fd_player(fd);
 	OBJ player;
@@ -140,7 +140,7 @@ display_objinfo(unsigned player_ref, unsigned obj_ref)
 }
 
 void
-do_owned(int fd, int argc, char *argv[])
+do_owned(int fd, int argc __attribute__((unused)), char *argv[])
 {
 	unsigned player_ref = fd_player(fd), victim_ref, oi_ref;
 	char *name = argv[1];
@@ -168,7 +168,7 @@ do_owned(int fd, int argc, char *argv[])
 }
 
 void
-do_contents(int fd, int argc, char *argv[])
+do_contents(int fd, int argc __attribute__((unused)), char *argv[])
 {
 	unsigned player_ref = fd_player(fd), thing_ref;
 	char *name = argv[1];

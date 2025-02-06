@@ -10,7 +10,7 @@
 #include "player.h"
 
 void
-do_teleport(int fd, int argc, char *argv[]) {
+do_teleport(int fd, int argc __attribute__((unused)), char *argv[]) {
 	unsigned player_ref = fd_player(fd), victim_ref, destination_ref;
 	char *arg1 = argv[1];
 	char *arg2 = argv[2];
@@ -87,7 +87,7 @@ do_teleport(int fd, int argc, char *argv[]) {
 }
 
 void
-do_boot(int fd, int argc, char *argv[]) {
+do_boot(int fd, int argc __attribute__((unused)), char *argv[]) {
 	unsigned player_ref = fd_player(fd), victim_ref;
 	char *name = argv[1];
 
@@ -120,7 +120,7 @@ do_boot(int fd, int argc, char *argv[]) {
 }
 
 void
-do_toad(int fd, int argc, char *argv[]) {
+do_toad(int fd, int argc __attribute__((unused)), char *argv[]) {
 	unsigned player_ref = fd_player(fd);
 	char *name = argv[1];
 	char *recip = argv[2];
@@ -196,7 +196,7 @@ do_toad(int fd, int argc, char *argv[]) {
 }
 
 void
-do_usage(int fd, int argc, char *argv[]) {
+do_usage(int fd, int argc __attribute__((unused)), char *argv[] __attribute__((unused))) {
 	unsigned player_ref = fd_player(fd);
 	struct rusage usage;
 

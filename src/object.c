@@ -61,7 +61,7 @@ object_new(OBJ *newobj)
 }
 
 static inline int
-rarity_get() {
+rarity_get(void) {
 	register int r = random();
 	if (r > RAND_MAX >> 1)
 		return 0; // POOR
@@ -301,13 +301,13 @@ object_art(unsigned thing_ref)
 }
 
 void
-objects_init()
+objects_init(void)
 {
 	unsigned ref;
 
 	srand(getpid());
 
-	int hash_i = 0;
+	size_t hash_i = 0;
 	for (; hash_i < sizeof(core_art) / sizeof(struct core_art); hash_i++) {
 		struct core_art *art = &core_art[hash_i];
 		suhash_put(art_hd, art->name, art->max);

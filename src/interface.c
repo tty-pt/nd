@@ -75,14 +75,14 @@ unsigned fd_player(unsigned fd) {
 }
 
 void
-do_man(int fd, int argc, char *argv[]) {
+do_man(int fd, int argc __attribute__((unused)), char *argv[]) {
 	char *rargv[] = { "/usr/bin/man", "-s", "10", argv[1], NULL };
 
 	ndc_pty(fd, rargv);
 }
 
 void
-do_diff(int fd, int argc, char *argv[]) {
+do_diff(int fd, int argc __attribute__((unused)), char *argv[] __attribute__((unused))) {
 	char *command[] = { "git", "-C", "/items/nd", "diff", "origin/master", NULL };
 	ndc_pty(fd, command);
 }
@@ -272,12 +272,12 @@ show_program_usage(char *prog)
 	exit(1);
 }
 
-void skel_init();
-void objects_init();
-void entities_init();
+void skel_init(void);
+void objects_init(void);
+void entities_init(void);
 void objects_update(double dt);
 
-void map_init();
+void map_init(void);
 int map_close(unsigned flags);
 int map_sync(void);
 DB_ENV *env;
@@ -351,7 +351,7 @@ main(int argc, char **argv)
 	/* env->set_timeout(env, 5000000, DB_SET_LOCK_TIMEOUT); */
 	env->set_tx_max(env, 5 * 60);
 	signal(SIGSEGV, close_all);
-	env->open(env, "/var/nd/env", DB_CREATE | DB_RECOVER | DB_INIT_MPOOL | DB_INIT_TXN | DB_INIT_LOCK | DB_INIT_LOG, 0);
+	env->open(env, "/var/nd/env", DB_CREATE | DB_RECOVER | DB_INIT_MPOOL | DB_INIT_TXN | DB_INIT_LOCK | DB_INIT_LOG | DB_THREAD, 0);
 
 	hash_env_set(env);
 	env->txn_begin(env, NULL, &txnid, 0);
@@ -461,7 +461,7 @@ nd_close(unsigned player_ref) {
 }
 
 void
-do_save(int fd, int argc, char *argv[]) {
+do_save(int fd, int argc __attribute__((unused)), char *argv[] __attribute__((unused))) {
 	unsigned player_ref = fd_player(fd);
 
 	if (player_ref != 1) {
@@ -484,7 +484,7 @@ avatar(OBJ *player) {
 }
 
 void
-do_avatar(int fd, int argc, char *argv[]) {
+do_avatar(int fd, int argc __attribute__((unused)), char *argv[] __attribute__((unused))) {
 	unsigned player_ref = fd_player(fd);
 	OBJ player;
 	lhash_get(obj_hd, &player, player_ref);
@@ -590,7 +590,7 @@ ndc_update(unsigned long long dt)
 
 int kill_v(unsigned player_ref, const char *cmdstr);
 
-void ndc_vim(int fd, int argc, char *argv[]) {
+void ndc_vim(int fd, int argc __attribute__((unused)), char *argv[]) {
 	if (!(ndc_flags(fd) & DF_AUTHENTICATED))
 		return;
 
@@ -607,7 +607,7 @@ void ndc_vim(int fd, int argc, char *argv[]) {
 	}
 }
 
-void ndc_command(int fd, int argc, char *argv[]) {
+void ndc_command(int fd, int argc __attribute__((unused)), char *argv[] __attribute__((unused))) {
 	me = fd_player(fd);
 }
 

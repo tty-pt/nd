@@ -54,7 +54,7 @@ enum bodypart {
 	BP_LEGS,
 };
 
-typedef unsigned me_get_t();
+typedef unsigned me_get_t(void);
 me_get_t me_get;
 
 typedef ENT ent_get_t(unsigned ref);
@@ -84,7 +84,7 @@ stand_t stand;
 typedef int controls_t(unsigned who_ref, unsigned what_ref);
 controls_t controls;
 
-typedef int payfor_t(unsigned who_ref, OBJ *who, int cost);
+typedef int payfor_t(unsigned who_ref, OBJ *who, unsigned cost);
 payfor_t payfor;
 
 typedef void look_around_t(unsigned player_ref);
