@@ -32,7 +32,7 @@ do_say(int fd, int argc, char *argv[])
 	OBJ player;
 
 	nd_writef(player_ref, "You say:%s.\n", message);
-	lhash_get(obj_hd, &player, player_ref);
+	qdb_get(obj_hd, &player, &player_ref);
 	nd_owritef(player_ref, "%s says:%s\n", player.name, message);
 }
 
@@ -44,7 +44,7 @@ do_pose(int fd, int argc, char *argv[])
 	OBJ player;
 
 	nd_writef(player_ref, "You %s\n", message);
-	lhash_get(obj_hd, &player, player_ref);
+	qdb_get(obj_hd, &player, &player_ref);
 	nd_owritef(player_ref, "%s%s\n", player.name, message);
 }
 
@@ -58,15 +58,15 @@ do_wall(int fd, int argc, char *argv[])
 	char *message = argscat(argc, argv);
 
 	if (!(ent_get(player_ref).flags & EF_WIZARD)) {
-		nd_writef(player_ref, "But what do you want to do with the wall?\n");
+		nd_writef(player_ref, CANTDO_MESSAGE);
 		return;
 	}
 
-	lhash_get(obj_hd, &player, player_ref);
+	qdb_get(obj_hd, &player, &player_ref);
 	snprintf(buf, sizeof(buf), "%s shouts: %s", player.name, message);
-	struct hash_cursor c = lhash_iter(obj_hd);
+	qdb_cur_t c = qdb_iter(obj_hd, NULL);
 	OBJ oi;
-	while (lhash_next(&oi_ref, &oi, &c))
+	while (qdb_next(&oi_ref, &oi, &c))
 		nd_writef(oi_ref, buf);
 }
 
@@ -77,7 +77,7 @@ dnotify_wts(unsigned who_ref, char const *a, char const *b, char *format, va_lis
 	OBJ who;
 	vsnprintf(buf, sizeof(buf), format, args);
 	nd_writef(who_ref, "You %s%s.\n", a, buf);
-	lhash_get(obj_hd, &who, who_ref);
+	qdb_get(obj_hd, &who, &who_ref);
 	nd_owritef(who_ref, "%s %s%s.\n", who.name, b, buf);
 }
 
@@ -87,8 +87,8 @@ dnotify_wts_to(unsigned who_ref, unsigned tar_ref, char const *a, char const *b,
 	char buf[BUFFER_LEN];
 	vsnprintf(buf, sizeof(buf), format, args);
 	OBJ who, tar;
-	lhash_get(obj_hd, &who, who_ref);
-	lhash_get(obj_hd, &tar, tar_ref);
+	qdb_get(obj_hd, &who, &who_ref);
+	qdb_get(obj_hd, &tar, &tar_ref);
 	nd_writef(who_ref, "You %s %s%s.\n", a, tar.name, buf);
 	nd_owritef(who_ref, "%s %s %s%s.\n", who.name, b, tar.name, buf);
 }

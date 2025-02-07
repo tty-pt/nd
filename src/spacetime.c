@@ -4,7 +4,7 @@
 #include <dlfcn.h>
 #include <fcntl.h>
 #include <pwd.h>
-#include <qhash.h>
+#include <qdb.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
@@ -42,7 +42,8 @@ typedef struct {
 } op_t;
 unsigned g_player_ref;
 OBJ *g_player;
-struct nd nd;
+extern struct nd nd;
+static unsigned *biome_map;
 
 enum exit e_map[] = {
 	[0 ... 254] = E_NULL,
@@ -162,24 +163,24 @@ object_drop(unsigned where_ref, unsigned skel_id)
 	pos_t pos;
         register int i;
 	unsigned drop_id;
-	struct hash_cursor c = fhash_iter(adrop_hd, skel_id);
 	OBJ where;
-	lhash_get(obj_hd, &where, where_ref);
+	qdb_get(obj_hd, &where, &where_ref);
 
 	map_where(pos, where.location);
+	qdb_cur_t c = qdb_iter(adrop_hd, &skel_id);
 
-	while (ahash_next(&drop_id, &c)) {
+	while (qdb_next(&skel_id, &drop_id, &c)) {
 		DROP drop;
-		lhash_get(drop_hd, &drop, drop_id);
+		qdb_get(drop_hd, &drop, &drop_id);
 		if (random() < (RAND_MAX >> drop.y)) {
-			noise_t v2 = XXH32((const char *) pos, sizeof(pos_t), 3);
+			uint32_t v2 = XXH32((const char *) pos, sizeof(pos_t), 3);
                         int yield = drop.yield,
                             yield_v = drop.yield_v;
 
                         if (!yield) {
 				OBJ obj;
 				unsigned obj_ref = object_add(&obj, drop.skel, where_ref, &v2);
-				lhash_put(obj_hd, obj_ref, &obj);
+				qdb_put(obj_hd, &obj_ref, &obj);
                                 continue;
                         }
 
@@ -189,7 +190,7 @@ object_drop(unsigned where_ref, unsigned skel_id)
 				v2 = XXH32((const char *) pos, sizeof(pos_t), 4 + i);
 				OBJ obj;
                                 unsigned obj_ref = object_add(&obj, drop.skel, where_ref, &v2);
-				lhash_put(obj_hd, obj_ref, &obj);
+				qdb_put(obj_hd, &obj_ref, &obj);
 			}
                 }
 	}
@@ -275,11 +276,11 @@ st_update(double dt)
 	} else
 		return;
 
-	struct hash_cursor c = lhash_iter(obj_hd);
+	qdb_cur_t c = qdb_iter(obj_hd, NULL);
 	OBJ iobj;
 	unsigned iobj_ref;
 
-	while (lhash_next(&iobj_ref, &iobj, &c))
+	while (qdb_next(&iobj_ref, &iobj, &c))
 		if (iobj.type == TYPE_ENTITY) {
 			view(iobj_ref);
 			nd_writef(iobj_ref, msg);
@@ -330,11 +331,11 @@ st_claim(unsigned player_ref, OBJ *room) {
 	}
 
 	OBJ player;
-	lhash_get(obj_hd, &player, player_ref);
+	qdb_get(obj_hd, &player, &player_ref);
 	if (fee_fail(player_ref, &player, "claim a room", "", ROOM_COST))
 		return 1;
 
-	lhash_put(obj_hd, player_ref, &player);
+	qdb_put(obj_hd, &player_ref, &player);
 	rroom->flags ^= RF_TEMP;
 	room->owner = player_ref;
 
@@ -345,7 +346,7 @@ static inline void
 exits_fix(unsigned there_ref, enum exit e)
 {
 	OBJ there;
-	lhash_get(obj_hd, &there, there_ref);
+	qdb_get(obj_hd, &there, &there_ref);
 	ROO *rthere = &there.sp.room;
 	const char *s;
 
@@ -357,7 +358,7 @@ exits_fix(unsigned there_ref, enum exit e)
 			continue;
 
 		OBJ othere;
-		lhash_get(obj_hd, &othere, othere_ref);
+		qdb_get(obj_hd, &othere, &othere_ref);
 		ROO *rothere = &othere.sp.room;
 
 		if (rothere->flags & RF_TEMP) {
@@ -376,7 +377,7 @@ exits_fix(unsigned there_ref, enum exit e)
 			rthere->exits &= ~e2;
 	}
 
-	lhash_put(obj_hd, there_ref, &there);
+	qdb_put(obj_hd, &there_ref, &there);
 }
 
 static void
@@ -395,7 +396,7 @@ exits_infer(unsigned here_ref, ROO *rhere)
 		}
 
 		OBJ there;
-		lhash_get(obj_hd, &there, there_ref);
+		qdb_get(obj_hd, &there, &there_ref);
 		ROO *rthere = &there.sp.room;
 
 		if (rthere->exits & e_simm(e)) {
@@ -407,9 +408,10 @@ exits_infer(unsigned here_ref, ROO *rhere)
 
 // TODO make more add functions similar and easy to insert here
 
+/*
 static inline void
 stones_add(unsigned where_ref, struct bio *bio, pos_t p) {
-	noise_t v = XXH32((const char *) p, sizeof(pos_t), 0);
+	uint32_t v = XXH32((const char *) p, sizeof(pos_t), 0);
 	unsigned char n = v & 0x3, i;
 
 	if (bio->bio_idx == BIOME_WATER)
@@ -418,41 +420,49 @@ stones_add(unsigned where_ref, struct bio *bio, pos_t p) {
         if (!(n && (v & 0x18) && (v & 0x20)))
                 return;
 
-	noise_t v2 = XXH32((const char *) p, sizeof(pos_t), 0);
+	uint32_t v2 = XXH32((const char *) p, sizeof(pos_t), 0);
 
         for (i = 0; i < n; i++, v2 >>= 4) {
 		OBJ stone;
                 unsigned stone_ref = object_add(&stone, stone_skel_id, where_ref, &v2);
-		lhash_put(obj_hd, stone_ref, &stone);
+		qdb_put(obj_hd, &stone_ref, &stone);
 	}
 }
+*/
 
 struct bio * noise_point(pos_t p);
 void plants_add(unsigned where_ref, void *bio, pos_t pos);
-void mobs_add(unsigned where_ref, enum biome, long long pdn);
+/* void mobs_add(unsigned where_ref, enum biome, long long pdn); */
 void map_put(pos_t p, unsigned thing, int flags);
 
+void mod_run(char *symbol, void *arg);
+
 static unsigned
-st_room_at(pos_t pos)
+st_room_at(unsigned player_ref, pos_t pos)
 {
 	struct bio *bio;
 	bio = noise_point(pos);
 	OBJ there;
-	unsigned there_ref = object_add(&there, biome_refs[bio->bio_idx], NOTHING, bio);
+	biome_map = biome_map_get(* (uint64_t *) pos);
+	unsigned there_ref = object_add(&there, biome_map[bio->bio_idx], NOTHING, bio);
 	ROO *rthere = &there.sp.room;
 	map_put(pos, there_ref, DB_NOOVERWRITE);
 	exits_infer(there_ref, rthere);
 
 	if (pos[2] != 0) {
-		lhash_put(obj_hd, there_ref, &there);
+		qdb_put(obj_hd, &there_ref, &there);
 		return there_ref;
 	}
 
 	rthere->floor = bio->bio_idx;
-	lhash_put(obj_hd, there_ref, &there);
-	mobs_add(there_ref, bio->bio_idx, bio->pd.n);
-        stones_add(there_ref, bio, pos);
-	plants_add(there_ref, bio, pos);
+	qdb_put(obj_hd, &there_ref, &there);
+	struct spawn_arg sa = {
+		.where_ref = there_ref,
+		.arg = bio,
+		.pos = pos
+	};
+	mod_run("mod_spawn", &sa);
+	st_run(player_ref, "ndst_spawn");
 	return there_ref;
 }
 
@@ -463,30 +473,30 @@ do_bio(int fd, int argc __attribute__((unused)), char *argv[] __attribute__((unu
 	pos_t pos;
 	OBJ player;
 
-	lhash_get(obj_hd, &player, player_ref);
+	qdb_get(obj_hd, &player, &player_ref);
 	map_where(pos, player.location);
 	bio = noise_point(pos);
 	SKEL biome;
-	lhash_get(skel_hd, &biome, biome_refs[bio->bio_idx]);
+	qdb_get(skel_hd, &biome, &biome_map[bio->bio_idx]);
 	nd_writef(player_ref, "tmp %d rn %u bio %s(%d)\n",
 		bio->tmp, bio->rn, biome.name, bio->bio_idx);
 }
 
 static unsigned
-st_room(unsigned location, enum exit e)
+st_room(unsigned player_ref, unsigned location, enum exit e)
 {
 	pos_t pos;
 	st_pos(pos, location, e);
-	return st_room_at(pos);
+	return st_room_at(player_ref, pos);
 }
 
 static unsigned
 e_move(unsigned player_ref, enum exit e) {
 	OBJ player;
-	lhash_get(obj_hd, &player, player_ref);
+	qdb_get(obj_hd, &player, &player_ref);
 	ENT eplayer = ent_get(player_ref);
 	OBJ loc;
-	lhash_get(obj_hd, &loc, player.location);
+	qdb_get(obj_hd, &loc, &player.location);
 	unsigned dest_ref;
 	ROO *rloc = &loc.sp.room;
 	char const *dwts = "door";
@@ -517,7 +527,7 @@ e_move(unsigned player_ref, enum exit e) {
 
 	dest_ref = st_there(player.location, e);
 	if (dest_ref == NOTHING)
-		dest_ref = st_room(player.location, e);
+		dest_ref = st_room(player_ref, player.location, e);
 
 	enter(player_ref, dest_ref, e);
 
@@ -533,21 +543,21 @@ room_clean(unsigned here_ref)
 	unsigned tmp_ref;
 	OBJ here;
 
-	lhash_get(obj_hd, &here, here_ref);
+	qdb_get(obj_hd, &here, &here_ref);
 
 	if (!(here.sp.room.flags & RF_TEMP))
 		return here_ref;
 
-	struct hash_cursor c = fhash_iter(contents_hd, here_ref);
-	while (ahash_next(&tmp_ref, &c)) {
+	qdb_cur_t c = qdb_iter(contents_hd, &here_ref);
+	while (qdb_next(&here_ref, &tmp_ref, &c)) {
 		OBJ tmp;
-		lhash_get(obj_hd, &tmp, tmp_ref);
+		qdb_get(obj_hd, &tmp, &tmp_ref);
 
 		if (tmp.type != TYPE_ENTITY)
 			continue;
 
 		if (ent_get(tmp_ref).flags & EF_PLAYER) {
-			hash_fin(&c);
+			qdb_fin(&c);
 			return here_ref;
 		}
 	}
@@ -565,10 +575,10 @@ static void
 carve(unsigned player_ref, enum exit e)
 {
 	OBJ player;
-	lhash_get(obj_hd, &player, player_ref);
+	qdb_get(obj_hd, &player, &player_ref);
 	unsigned here_ref = player.location, there_ref = here_ref;
 	OBJ here;
-	lhash_get(obj_hd, &here, here_ref);
+	qdb_get(obj_hd, &here, &here_ref);
 	ROO *rhere = &here.sp.room;
 	int wall = 0;
 
@@ -577,11 +587,11 @@ carve(unsigned player_ref, enum exit e)
 			return;
 
 		rhere->exits |= e;
-		lhash_put(obj_hd, here_ref, &here);
+		qdb_put(obj_hd, &here_ref, &here);
 
 		there_ref = st_there(here_ref, e);
 		if (there_ref == NOTHING)
-			there_ref = st_room(here_ref, e);
+			there_ref = st_room(player_ref, here_ref, e);
 		wall = 1;
 	}
 
@@ -590,7 +600,7 @@ carve(unsigned player_ref, enum exit e)
 		return;
 
 	OBJ there;
-	lhash_get(obj_hd, &there, there_ref);
+	qdb_get(obj_hd, &there, &there_ref);
 	st_claim(player_ref, &there); // FIXME check success in advance
 
 	if (wall) {
@@ -606,18 +616,18 @@ carve(unsigned player_ref, enum exit e)
 		}
 	}
 
-	lhash_put(obj_hd, there_ref, &there);
+	qdb_put(obj_hd, &there_ref, &there);
 }
 
 static void
 uncarve(unsigned player_ref, enum exit e)
 {
 	OBJ player;
-	lhash_get(obj_hd, &player, player_ref);
+	qdb_get(obj_hd, &player, &player_ref);
 	const char *s0 = "is";
 	unsigned here_ref = player.location, there_ref;
 	OBJ here;
-	lhash_get(obj_hd, &here, here_ref);
+	qdb_get(obj_hd, &here, &here_ref);
 	ROO *rhere = &here.sp.room;
 	int ht, cd = e_ground(here_ref, e);
 
@@ -642,7 +652,7 @@ uncarve(unsigned player_ref, enum exit e)
 	}
 
 	OBJ there;
-	lhash_get(obj_hd, &there, there_ref);
+	qdb_get(obj_hd, &there, &there_ref);
 	ROO *rthere = &there.sp.room;
 
 	if ((rthere->flags & RF_TEMP) || there.owner != player_ref) {
@@ -655,14 +665,14 @@ uncarve(unsigned player_ref, enum exit e)
 	if (cd) {
 		if (ht && (rthere->doors & e_simm(e)))
 			rthere->doors &= ~e_simm(e);
-		lhash_put(obj_hd, there_ref, &there);
+		qdb_put(obj_hd, &there_ref, &there);
 	} else
 		room_clean(there_ref);
 
-	lhash_get(obj_hd, &player, player_ref);
+	qdb_get(obj_hd, &player, &player_ref);
 	player.value += ROOM_COST;
 	nd_writef(player_ref, "You collect your materials. (+%dp)\n", ROOM_COST);
-	lhash_put(obj_hd, player_ref, &player);
+	qdb_put(obj_hd, &player_ref, &player);
 }
 
 static void
@@ -670,10 +680,10 @@ unwall(unsigned player_ref, enum exit e)
 {
 	int a, b, c, d;
 	OBJ player;
-	lhash_get(obj_hd, &player, player_ref);
+	qdb_get(obj_hd, &player, &player_ref);
 	unsigned there_ref, here_ref = player.location;
 	OBJ here;
-	lhash_get(obj_hd, &here, here_ref);
+	qdb_get(obj_hd, &here, &here_ref);
 	ROO *rhere = &here.sp.room;
 
 	a = here.owner == player_ref;
@@ -681,7 +691,7 @@ unwall(unsigned player_ref, enum exit e)
 	there_ref = st_there(here_ref, e);
 
 	OBJ there;
-	lhash_get(obj_hd, &there, there_ref);
+	qdb_get(obj_hd, &there, &there_ref);
 	ROO *rthere = &there.sp.room;
 
 	if (there_ref != NOTHING) {
@@ -708,10 +718,10 @@ unwall(unsigned player_ref, enum exit e)
 	if (there_ref == NOTHING)
 		return;
 
-	lhash_get(obj_hd, &there, there_ref);
+	qdb_get(obj_hd, &there, &there_ref);
 	rthere = &there.sp.room;
 	rthere->exits |= e_simm(e);
-	lhash_put(obj_hd, there_ref, &there);
+	qdb_put(obj_hd, &there_ref, &there);
 	nd_writef(player_ref, "You tear down the wall.\n");
 }
 
@@ -720,11 +730,11 @@ gexit_claim(unsigned player_ref, enum exit e)
 {
 	int a, b, c, d;
 	OBJ player, here, there;
-	lhash_get(obj_hd, &player, player_ref);
+	qdb_get(obj_hd, &player, &player_ref);
 	unsigned here_ref = player.location,
 	      there_ref = st_there(player.location, e);
-	lhash_get(obj_hd, &here, here_ref);
-	lhash_get(obj_hd, &there, there_ref);
+	qdb_get(obj_hd, &here, &here_ref);
+	qdb_get(obj_hd, &there, &there_ref);
 	ROO *rthere = &there.sp.room;
 
 	a = here_ref != NOTHING && here.owner == player_ref;
@@ -750,9 +760,9 @@ static inline int
 gexit_claim_walk(unsigned player_ref, enum exit e)
 {
 	OBJ player, here;
-	lhash_get(obj_hd, &player, player_ref);
+	qdb_get(obj_hd, &player, &player_ref);
 	unsigned here_ref = player.location;
-	lhash_get(obj_hd, &here, here_ref);
+	qdb_get(obj_hd, &here, &here_ref);
 	ROO *rhere = &here.sp.room;
 
 	if (!(rhere->exits & e)) {
@@ -765,7 +775,7 @@ gexit_claim_walk(unsigned player_ref, enum exit e)
 		return 1;
 
 	player.location = there_ref;
-	lhash_put(obj_hd, player_ref, &player);
+	qdb_put(obj_hd, &player_ref, &player);
 
 	return gexit_claim(player_ref, e_simm(e));
 }
@@ -777,22 +787,22 @@ e_wall(unsigned player_ref, enum exit e)
 		return;
 
 	OBJ player, here;
-	lhash_get(obj_hd, &player, player_ref);
+	qdb_get(obj_hd, &player, &player_ref);
 	unsigned here_ref = player.location;
-	lhash_get(obj_hd, &here, here_ref);
+	qdb_get(obj_hd, &here, &here_ref);
 	ROO *rhere = &here.sp.room;
 
 	rhere->exits &= ~e_simm(e);
-	lhash_put(obj_hd, here_ref, &here);
+	qdb_put(obj_hd, &here_ref, &here);
 
 	unsigned there_ref = st_there(here_ref, e_simm(e));
 
 	if (there_ref != NOTHING) {
 		OBJ there;
-		lhash_get(obj_hd, &there, there_ref);
+		qdb_get(obj_hd, &there, &there_ref);
 		ROO *rthere = &there.sp.room;
 		rthere->exits &= ~e;
-		lhash_put(obj_hd, there_ref, &there);
+		qdb_put(obj_hd, &there_ref, &there);
 	}
 
 	nd_writef(player_ref, "You build a wall.\n");
@@ -805,20 +815,20 @@ door(unsigned player_ref, enum exit e)
 		return;
 
 	OBJ player, where;
-	lhash_get(obj_hd, &player, player_ref);
+	qdb_get(obj_hd, &player, &player_ref);
 	unsigned where_ref = player.location;
-	lhash_get(obj_hd, &where, where_ref);
+	qdb_get(obj_hd, &where, &where_ref);
 	ROO *rwhere = &where.sp.room;
 	rwhere->doors |= e_simm(e);
-	lhash_put(obj_hd, where_ref, &where);
+	qdb_put(obj_hd, &where_ref, &where);
 
 	where_ref = st_there(where_ref, e_simm(e));
 
 	if (where_ref == NOTHING) {
-		lhash_get(obj_hd, &where, where_ref);
+		qdb_get(obj_hd, &where, &where_ref);
 		rwhere = &where.sp.room;
 		rwhere->doors |= e;
-		lhash_put(obj_hd, where_ref, &where);
+		qdb_put(obj_hd, &where_ref, &where);
 	}
 
 	nd_writef(player_ref, "You place a door.\n");
@@ -831,20 +841,20 @@ undoor(unsigned player_ref, enum exit e)
 		return;
 
 	OBJ player, where;
-	lhash_get(obj_hd, &player, player_ref);
+	qdb_get(obj_hd, &player, &player_ref);
 	unsigned where_ref = player.location;
-	lhash_get(obj_hd, &where, where_ref);
+	qdb_get(obj_hd, &where, &where_ref);
 	ROO *rwhere = &where.sp.room;
 	rwhere->doors &= ~e_simm(e);
-	lhash_put(obj_hd, where_ref, &where);
+	qdb_put(obj_hd, &where_ref, &where);
 
 	where_ref = st_there(where_ref, e_simm(e));
 
 	if (where_ref != NOTHING) {
-		lhash_get(obj_hd, &where, where_ref);
+		qdb_get(obj_hd, &where, &where_ref);
 		rwhere = &where.sp.room;
 		rwhere->doors &= ~e;
-		lhash_put(obj_hd, where_ref, &where);
+		qdb_put(obj_hd, &where_ref, &where);
 	}
 
 	nd_writef(player_ref, "You remove a door.\n");
@@ -855,7 +865,7 @@ tell_pos(unsigned player_ref, struct cmd_dir cd) {
 	pos_t pos;
 	unsigned target_ref = cd.rep == 1 ? player_ref : cd.rep;
 	OBJ target;
-	lhash_get(obj_hd, &target, target_ref);
+	qdb_get(obj_hd, &target, &target_ref);
 	int ret = 1;
 
 	if (target.type != TYPE_ENTITY) {
@@ -879,7 +889,7 @@ st_teleport(unsigned player_ref, struct cmd_dir cd)
 		// X6? teleport to chivas
 		unsigned target_ref = cd.rep;
 		OBJ target;
-		lhash_get(obj_hd, &target, target_ref);
+		qdb_get(obj_hd, &target, &target_ref);
 		if (target.type == TYPE_ENTITY) {
 			map_where(pos, target.location);
 			ret = 1;
@@ -888,8 +898,9 @@ st_teleport(unsigned player_ref, struct cmd_dir cd)
 		memcpy(pos, &cd.rep, sizeof(cd.rep));
 
 	unsigned there_ref = map_get(pos);
+	biome_map = biome_map_get(* (uint16_t *) pos);
 	if (there_ref == NOTHING)
-		there_ref = st_room_at(pos);
+		there_ref = st_room_at(player_ref, pos);
 
 	/* if (!eplayer->gpt) */
 	nd_writef(player_ref, "Teleporting to 0x%llx.\n", cd.rep);
@@ -908,7 +919,7 @@ pull(unsigned player_ref, struct cmd_dir cd)
 	pos_t pos;
 	enum exit e = cd.e;
 	OBJ player;
-	lhash_get(obj_hd, &player, player_ref);
+	qdb_get(obj_hd, &player, &player_ref);
 	unsigned here_ref = player.location, there_ref;
 
 	if (e == E_NULL)
@@ -922,8 +933,8 @@ pull(unsigned player_ref, struct cmd_dir cd)
 	}
 
 	OBJ what, here;
-	lhash_get(obj_hd, &what, what_ref);
-	lhash_get(obj_hd, &here, here_ref);
+	qdb_get(obj_hd, &what, &what_ref);
+	qdb_get(obj_hd, &here, &here_ref);
 	ROO *rhere = &here.sp.room;
 
 	if (!(rhere->exits & e)
@@ -976,7 +987,7 @@ st_cmd_dir(struct cmd_dir *res, const char *cmd)
 
 static void may_look(unsigned player_ref, morton_t old_loc) {
 	OBJ player;
-	lhash_get(obj_hd, &player, player_ref);
+	qdb_get(obj_hd, &player, &player_ref);
 	morton_t new_loc = map_mwhere(player.location);
 	if (old_loc == new_loc)
 		return;
@@ -988,12 +999,15 @@ int
 st_v(unsigned player_ref, char const *opcs)
 {
 	OBJ player;
-	lhash_get(obj_hd, &player, player_ref);
+	qdb_get(obj_hd, &player, &player_ref);
 	morton_t old_loc = map_mwhere(player.location);
+	pos_t old_pos;
+	morton_pos(old_pos, old_loc);
+	biome_map = biome_map_get(* (uint64_t *) old_pos);
 	struct cmd_dir cd;
 	char const *s = opcs;
 
-	env->txn_begin(env, NULL, &txnid, 0);
+	qdb_begin();
 
 	for (;*s;) {
 		int ofs = 0;
@@ -1008,9 +1022,8 @@ st_v(unsigned player_ref, char const *opcs)
 		if (aop) {
 			if (cd.e == E_NULL) {
 				may_look(player_ref, old_loc);
-				if (txnid)
-					txnid->commit(txnid, 0);
-				txnid = NULL;
+				if (txnl_peek(&qdb_config.txnl))
+					qdb_commit();
 				return opcs - s;
 			}
 
@@ -1025,16 +1038,10 @@ st_v(unsigned player_ref, char const *opcs)
 	}
 
 	may_look(player_ref, old_loc);
-	if (txnid)
-		txnid->commit(txnid, 0);
-	txnid = NULL;
+	if (txnl_peek(&qdb_config.txnl))
+		qdb_commit();
 	return s - opcs;
 }
-
-struct st_key {
-	uint64_t key;
-	unsigned shift;
-} __attribute__((packed));
 
 void
 echo(char *fmt, ...) {
@@ -1069,18 +1076,10 @@ st_open(struct st_key st_key, int owner)
 		syslog(LOG_INFO, "dlopen %d, %s", owner, filename);
 		struct nd *ind = dlsym(sl, "nd");
 		*ind = nd;
+		qdb_put(sl_hd, &st_key, &sl);
 	}
 
-	hash_put(sl_hd, &st_key, sizeof(st_key), &sl, sizeof(void *));
-	hash_put(owner_hd, &st_key, sizeof(st_key), &owner, sizeof(owner));
-}
-
-struct st_key
-st_key_new(uint64_t key, unsigned shift) {
-	struct st_key st_key;
-	st_key.key = key >> shift;
-	st_key.shift = shift;
-	return st_key;
+	/* hash_put(owner_hd, &st_key, sizeof(st_key), &owner, sizeof(owner)); */
 }
 
 void
@@ -1092,7 +1091,7 @@ st_put(unsigned owner_ref, uint64_t key, unsigned shift) {
 	snprintf(buf + len, sizeof(buf) - len, "%llu", key >> shift);
 	mkdir(buf, 0750);
 	OBJ owner;
-	lhash_get(obj_hd, &owner, owner_ref);
+	qdb_get(obj_hd, &owner, &owner_ref);
 	struct passwd *pw = getpwnam(owner.name);
 	chown(buf, pw->pw_uid, pw->pw_gid);
 	st_open(st_key, owner_ref);
@@ -1100,101 +1099,22 @@ st_put(unsigned owner_ref, uint64_t key, unsigned shift) {
 
 void
 st_init(void) {
-	SKEL skel = {
-		.name = "stone",
-		.description = "Solid stone(s)",
-		.type = STYPE_MINERAL,
-		.sp = {
-			.mineral = { 0 } 
-		},
-	};
-
-	stone_skel_id = lhash_new(skel_hd, &skel);
-
 	/* st_put(1, 0, 64); */
 
-	nd.fds_hd = fds_hd;
-	/* nd.fds_has = fds_has; */
-	nd.nd_close = nd_close;
-	nd.nd_write = nd_write;
-	nd.nd_dwritef = nd_dwritef;
-	nd.nd_rwrite = nd_rwrite;
-	nd.nd_dowritef = nd_dowritef;
-	nd.dnotify_wts = dnotify_wts;
-	nd.dnotify_wts_to = dnotify_wts_to;
-	nd.notify_attack = notify_attack;
-	nd.nd_tdwritef = nd_tdwritef;
-	nd.nd_wwrite = nd_wwrite;
-
-	nd.map_has = map_has;
-	nd.map_mwhere = map_mwhere;
-	nd.map_where = map_where;
-	nd.map_delete = map_delete;
-	nd.map_get = map_get;
-
-	nd.st_teleport = st_teleport;
-	nd.st_run = st_run;
-
-	nd.wts_plural = wts_plural;
-
-	nd.skel_hd = skel_hd;
-	nd.drop_hd = drop_hd;
-	nd.adrop_hd = adrop_hd;
-
-	nd.obj_hd = obj_hd;
-	nd.obj_exists = obj_exists;
-	nd.object_new = object_new;
-	nd.object_copy = object_copy;
-	nd.object_move = object_move;
-	nd.object_add = object_add;
-	nd.object_drop = object_drop;
-
-	nd.obs_hd = obs_hd;
-
-	nd.contents_hd = contents_hd;
-
-	nd.object_icon = object_icon;
-	nd.art_max = art_max;
-	nd.object_art = object_art;
-	nd.unparse = unparse;
-
-	nd.me_get = me_get;
-	nd.ent_get = ent_get;
-	nd.ent_set = ent_set;
-	nd.ent_del = ent_del;
-	nd.ent_reset = ent_reset;
-	nd.birth = birth;
-	nd.sit = sit;
-	nd.stand_silent = stand_silent;
-	nd.stand = stand;
-	nd.controls = controls;
-	nd.payfor = payfor;
-	nd.look_around = look_around;
-	nd.equip_affect = equip_affect;
-	nd.equip = equip;
-	nd.unequip = unequip;
-	nd.mask_element = mask_element;
-	nd.entity_damage = entity_damage;
-	nd.enter = enter;
-	nd.kill_dodge = kill_dodge;
-	nd.kill_dmg = kill_dmg;
-	nd.spell_cast = spell_cast;
-	nd.debufs_end = debufs_end;
-
-	struct hash_cursor c = hash_iter(owner_hd, NULL, 0);
+	qdb_cur_t c = qdb_iter(owner_hd, NULL);
 	struct st_key st_key;
 	int owner;
 
-	while (hash_next(&st_key, &owner, &c))
+	while (qdb_next(&st_key, &owner, &c))
 		st_open(st_key, owner);
 }
 
 void st_dlclose(void) {
-	struct hash_cursor c = hash_iter(sl_hd, NULL, 0);
+	qdb_cur_t c = qdb_iter(sl_hd, NULL);
 	struct st_key key;
 	void *sl;
 
-	while (hash_next(&key, &sl, &c))
+	while (qdb_next(&key, &sl, &c))
 		dlclose(sl);
 }
 
@@ -1205,7 +1125,7 @@ st_get(uint64_t key, unsigned shift) {
 	struct st_key st_key = st_key_new(key, shift);
 	int owner;
 
-	if (hash_get(owner_hd, &owner, &st_key, sizeof(st_key)))
+	if (qdb_get(owner_hd, &owner, &st_key))
 		return -1;
 
 	return owner;
@@ -1216,7 +1136,7 @@ _st_can(int ref, uint64_t key, unsigned shift) {
 	struct st_key st_key = st_key_new(key, shift);
 	int owner;
 
-	if (hash_get(owner_hd, &owner, &st_key, sizeof(st_key)))
+	if (qdb_get(owner_hd, &owner, &st_key))
 		return 0;
 
 	return owner == ref;
@@ -1242,7 +1162,7 @@ _st_run(unsigned player_ref, char *symbol, uint64_t key, unsigned shift) {
 	struct st_key st_key = st_key_new(key, shift);
 	void *sl;
 
-	if (hash_get(sl_hd, &sl, &st_key, sizeof(st_key)))
+	if (qdb_get(sl_hd, &sl, &st_key))
 		return 0;
 
 	st_run_cb cb = (st_run_cb) dlsym(sl, symbol);
@@ -1257,7 +1177,7 @@ _st_run(unsigned player_ref, char *symbol, uint64_t key, unsigned shift) {
 void
 st_run(unsigned player_ref, char *symbol) {
 	OBJ player;
-	lhash_get(obj_hd, &player, player_ref);
+	qdb_get(obj_hd, &player, &player_ref);
 	uint64_t position = map_mwhere(player.location), mask = 0;
 	int i;
 	g_player_ref = player_ref;
@@ -1287,7 +1207,7 @@ do_stchown(int fd, int argc, char *argv[]) {
 	}
 
 	OBJ who;
-	lhash_get(obj_hd, &who, who_ref);
+	qdb_get(obj_hd, &who, &who_ref);
 
 	if (who.type != TYPE_ENTITY || !(ent_get(who_ref).flags & EF_PLAYER)) {
 		nd_writef(player_ref, "Invalid target\n");
@@ -1295,7 +1215,7 @@ do_stchown(int fd, int argc, char *argv[]) {
 	}
 
 	OBJ player;
-	lhash_get(obj_hd, &player, player_ref);
+	qdb_get(obj_hd, &player, &player_ref);
 
 	uint64_t position = argc > 2
 		? strtoull(argv[3], NULL, 10)
@@ -1320,7 +1240,7 @@ void
 do_streload(int fd, int argc, char *argv[]) {
 	unsigned player_ref = fd_player(fd);
 	OBJ player;
-	lhash_get(obj_hd, &player, player_ref);
+	qdb_get(obj_hd, &player, &player_ref);
 
 	uint64_t position = argc > 2
 		? strtoull(argv[2], NULL, 10)
@@ -1336,13 +1256,13 @@ do_streload(int fd, int argc, char *argv[]) {
 	unsigned owner;
 	void *sl;
 
-	if (hash_get(owner_hd, &owner, &st_key, sizeof(st_key)) || owner != player_ref)
+	if (qdb_get(owner_hd, &owner, &st_key) || owner != player_ref)
 	{
 		nd_writef(player_ref, "Permission denied\n");
 		return;
 	}
 
-	if (hash_get(sl_hd, &sl, &st_key, sizeof(st_key))) {
+	if (qdb_get(sl_hd, &sl, &st_key)) {
 		nd_writef(player_ref, "Not open\n");
 		return;
 	}

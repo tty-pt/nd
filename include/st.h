@@ -32,8 +32,6 @@
 #define VIEW_BDI (VIEW_SIZE * (VIEW_SIZE - 1))
 #define MORTON_READ(pos) (* (morton_t *) pos)
 
-typedef uint16_t ucoord_t;
-
 typedef ucoord_t upoint_t[DIM];
 
 typedef coord_t point3D_t[3];
@@ -60,6 +58,11 @@ typedef struct {
 	enum exit simm;
 	coord_t dim, dis;
 } exit_t;
+
+struct st_key {
+	uint64_t key;
+	unsigned shift;
+} __attribute__((packed));
 
 extern unsigned long long day_tick;
 extern unsigned short day_n;
@@ -96,5 +99,24 @@ void do_stchown(int fd, int argc, char *argv[]);
 void do_streload(int fd, int argc, char *argv[]);
 
 extern unsigned sl_hd, owner_hd;
+
+static inline struct st_key
+st_key_new(uint64_t key, unsigned shift) {
+	struct st_key st_key;
+	memset(&st_key, 0, sizeof(st_key));
+	st_key.key = key >> shift;
+	st_key.shift = shift;
+	return st_key;
+}
+
+static inline int sthd_get(unsigned hd, void *value, uint64_t key, unsigned shift) {
+	struct st_key st_key = st_key_new(key, shift);
+	return qdb_get(hd, value, &st_key);
+}
+
+static inline void sthd_put(unsigned hd, uint64_t key, unsigned shift, void *value) {
+	struct st_key st_key = st_key_new(key, shift);
+	qdb_put(hd, &st_key, value);
+}
 
 #endif

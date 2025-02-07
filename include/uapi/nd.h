@@ -4,6 +4,7 @@
 #include "./entity.h"
 #include "./io.h"
 #include "./map.h"
+#include "./match.h"
 #include "./object.h"
 #include "./skel.h"
 #include "./st.h"

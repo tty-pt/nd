@@ -1,23 +1,19 @@
-#include "uapi/io.h"
-
+#include <uapi/nd.h>
 #include "mcp.h"
-#include "uapi/entity.h"
-#include "uapi/match.h"
-#include "uapi/object.h"
 
 static inline unsigned
 vendor_find(unsigned where_ref)
 {
-	struct hash_cursor c = fhash_iter(contents_hd, where_ref);
+	nd_cur_t c = nd_iter(HD_CONTENTS, &where_ref);
 	unsigned tmp_ref;
 
-	while (ahash_next(&tmp_ref, &c)) {
+	while (nd_next(&where_ref, &tmp_ref, &c)) {
 		OBJ tmp;
-		lhash_get(obj_hd, &tmp, tmp_ref);
+		nd_get(HD_OBJ, &tmp, &tmp_ref);
 		if (tmp.type != TYPE_ENTITY)
 			continue;
 		if (ent_get(tmp_ref).flags & EF_SHOP) {
-			hash_fin(&c);
+			nd_fin(&c);
 			return tmp_ref;
 		}
 	}
@@ -32,7 +28,7 @@ do_shop(int fd, int argc __attribute__((unused)), char *argv[] __attribute__((un
 	unsigned player_ref = fd_player(fd),
 		 npc_ref, tmp_ref;
 
-	lhash_get(obj_hd, &player, player_ref);
+	nd_get(HD_OBJ, &player, &player_ref);
 	npc_ref = vendor_find(player.location);
 
 	if (npc_ref == NOTHING) {
@@ -40,20 +36,20 @@ do_shop(int fd, int argc __attribute__((unused)), char *argv[] __attribute__((un
 		return;
 	}
 
-	lhash_get(obj_hd, &npc, npc_ref);
+	nd_get(HD_OBJ, &npc, &npc_ref);
 	nd_writef(player_ref, "%s shows you what's for sale.\n", npc.name);
-        mcp_look(player_ref, npc_ref);
+	look_at(player_ref, npc_ref);
 
-	struct hash_cursor c = fhash_iter(obj_hd, npc_ref);
-	while (ahash_next(&tmp_ref, &c)) {
+	nd_cur_t c = nd_iter(HD_OBJ, &npc_ref);
+	while (nd_next(&npc_ref, &tmp_ref, &c)) {
 		OBJ tmp;
-		lhash_get(obj_hd, &tmp, tmp_ref);
+		nd_get(HD_OBJ, &tmp, &tmp_ref);
 		if (tmp.flags & OF_INF)
 			nd_writef(player_ref, "%-13s %5dP (Inf)",
-				tmp.name, tmp.value);
+					tmp.name, tmp.value);
 		else
 			nd_writef(player_ref, "%-13s %5dP",
-				tmp.name, tmp.value);
+					tmp.name, tmp.value);
 	}
 }
 
@@ -62,7 +58,7 @@ do_buy(int fd, int argc __attribute__((unused)), char *argv[])
 {
 	unsigned player_ref = fd_player(fd);
 	OBJ player;
-	lhash_get(obj_hd, &player, player_ref);
+	nd_get(HD_OBJ, &player, &player_ref);
 	char *name = argv[1];
 	unsigned npc_ref = vendor_find(player.location);
 
@@ -72,7 +68,7 @@ do_buy(int fd, int argc __attribute__((unused)), char *argv[])
 	}
 
 	OBJ npc;
-	lhash_get(obj_hd, &npc, npc_ref);
+	nd_get(HD_OBJ, &npc, &npc_ref);
 	unsigned item_ref = ematch_at(player_ref, npc_ref, name);
 
 	if (item_ref == NOTHING) {
@@ -81,7 +77,7 @@ do_buy(int fd, int argc __attribute__((unused)), char *argv[])
 	}
 
 	OBJ item;
-	lhash_get(obj_hd, &item, item_ref);
+	nd_get(HD_OBJ, &item, &item_ref);
 	int cost = item.value;
 	int ihave = player.value;
 
@@ -92,17 +88,17 @@ do_buy(int fd, int argc __attribute__((unused)), char *argv[])
 
 	player.value -= cost;
 	npc.value += cost;
-	lhash_put(obj_hd, npc_ref, &npc);
-	lhash_put(obj_hd, player_ref, &player);
+	nd_put(HD_OBJ, &npc_ref, &npc);
+	nd_put(HD_OBJ, &player_ref, &player);
 
-        if (item.flags & OF_INF) {
+	if (item.flags & OF_INF) {
 		OBJ nu;
 		unsigned nu_ref = object_copy(&nu, item_ref);
 		nu.flags &= ~OF_INF;
-		lhash_put(obj_hd, nu_ref, &nu);
-                object_move(nu_ref, player_ref);
-        } else
-                object_move(item_ref, player_ref);
+		nd_put(HD_OBJ, &nu_ref, &nu);
+		object_move(nu_ref, player_ref);
+	} else
+		object_move(item_ref, player_ref);
 
 	nd_writef(player_ref, "You bought %s for %dP.\n", item.name, cost);
 }
@@ -112,7 +108,7 @@ do_sell(int fd, int argc __attribute__((unused)), char *argv[])
 {
 	unsigned player_ref = fd_player(fd);
 	OBJ player;
-	lhash_get(obj_hd, &player, player_ref);
+	nd_get(HD_OBJ, &player, &player_ref);
 	unsigned npc_ref = vendor_find(player.location);
 
 	if (npc_ref == NOTHING) {
@@ -125,27 +121,37 @@ do_sell(int fd, int argc __attribute__((unused)), char *argv[])
 	if (item_ref == NOTHING) {
 		nd_writef(player_ref, "You don't have that item.\n");
 		return;
-        }
+	}
 
 	OBJ npc, item;
 
-	lhash_get(obj_hd, &npc, npc_ref);
-	lhash_get(obj_hd, &item, item_ref);
-        int cost = item.value;
-        int npchas = npc.value;
+	nd_get(HD_OBJ, &npc, &npc_ref);
+	nd_get(HD_OBJ, &item, &item_ref);
+	int cost = item.value;
+	int npchas = npc.value;
 
-        if (cost > npchas) {
-                nd_writef(player_ref, "%s can't afford to buy %s from you.\n",
-                        npc.name, item.name);
-                return;
-        }
+	if (cost > npchas) {
+		nd_writef(player_ref, "%s can't afford to buy %s from you.\n",
+				npc.name, item.name);
+		return;
+	}
 
-        object_move(item_ref, npc_ref);
+	object_move(item_ref, npc_ref);
 
-        player.value += cost;
-        npc.value -= cost;
-	lhash_put(obj_hd, player_ref, &player);
-	lhash_put(obj_hd, npc_ref, &npc);
+	player.value += cost;
+	npc.value -= cost;
+	nd_put(HD_OBJ, &player_ref, &player);
+	nd_put(HD_OBJ, &npc_ref, &npc);
 
-        nd_writef(player_ref, "You sold %s for %dP.\n", item.name, cost);
+	nd_writef(player_ref, "You sold %s for %dP.\n", item.name, cost);
+}
+
+void mod_install(void *arg __attribute__((unused))) {
+	nd_register("shop", do_shop, 0);
+	nd_register("buy", do_buy, 0);
+	nd_register("sell", do_sell, 0);
+}
+
+void mod_open(void *arg __attribute__((unused))) {
+	mod_install(arg);
 }

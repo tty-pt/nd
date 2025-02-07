@@ -7,8 +7,6 @@ struct nd {
 	/* io */
 	fd_player_t *fd_player;
 
-	unsigned fds_hd;
-
 	/* fds_has_t *fds_has; */
 	nd_close_t *nd_close;
 	nd_write_t *nd_write;
@@ -36,23 +34,17 @@ struct nd {
 	wts_plural_t *wts_plural;
 
 	/* skel */
-	unsigned skel_hd;
 	/* skel_init_t *skel_init; */
-	unsigned drop_hd;
 	/* drop_init_t *drop_init; */
-	unsigned adrop_hd;
 
 	/* object */
 	/* obj_init_t *obj_init; */
-	unsigned obj_hd;
 	obj_exists_t *obj_exists;
 	object_new_t *object_new;
 	object_copy_t *object_copy;
 	object_move_t *object_move;
 	object_add_t *object_add;
 	object_drop_t *object_drop;
-	unsigned obs_hd;
-	unsigned contents_hd;
 	object_icon_t *object_icon;
 	art_max_t *art_max;
 	object_art_t *object_art;
@@ -81,6 +73,26 @@ struct nd {
 	kill_dmg_t *kill_dmg;
 	spell_cast_t *spell_cast;
 	debufs_end_t *debufs_end;
+	look_at_t *look_at;
+
+	nd_put_t *nd_put, *nd_get;
+	nd_open_t *nd_open;
+	nd_iter_t *nd_iter;
+	nd_next_t *nd_next;
+	nd_fin_t *nd_fin;
+	nd_register_t *nd_register;
+
+	ematch_at_t *ematch_at;
+	ematch_player_t *ematch_player;
+	ematch_absolute_t *ematch_absolute;
+	ematch_me_t *ematch_me;
+	ematch_here_t *ematch_here;
+	ematch_mine_t *ematch_mine;
+	ematch_near_t *ematch_near;
+	ematch_all_t *ematch_all;
+
+
+	unsigned hds[HD_MAX];
 };
 
 extern struct nd nd;

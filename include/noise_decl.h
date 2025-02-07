@@ -8,7 +8,7 @@
  * a point has DIM coordinates
  *
  * a matrix has 2^y (l) edge length.
- * It is an array of noise_t where we want to store the result.
+ * It is an array of uint32_t where we want to store the result.
  *
  * A noise feature quad has 2^x (d) edge length
  * and 2^DIM vertices with random values.
@@ -33,15 +33,12 @@
 #include <stdint.h>
 #include <stddef.h>
 
-#define NOISE_MAX ((noise_t) -1)
-
-typedef uint32_t noise_t;
-typedef int32_t snoise_t;
+#define NOISE_MAX ((uint32_t) -1)
 
 typedef struct { unsigned x, w; } octave_t;
 
 void
-noise_oct(noise_t *m, int16_t *s, size_t oct_n,
+noise_oct(uint32_t *m, int16_t *s, size_t oct_n,
 	  octave_t *oct, unsigned seed, unsigned cy, uint8_t dim);
 
 #endif
@@ -57,15 +54,15 @@ noise_oct(noise_t *m, int16_t *s, size_t oct_n,
 #define COORDMASK_LSHIFT(x) (uint16_t) ((((uint16_t) -1) << x))
 
 /* gets a (deterministic) random value for point p */
-static inline noise_t
+static inline uint32_t
 noise_r(int16_t *p, unsigned seed, unsigned w, uint8_t dim) {
-	register noise_t v = HASH(p, sizeof(int16_t) * dim, seed);
+	register uint32_t v = HASH(p, sizeof(int16_t) * dim, seed);
 		return ((long long unsigned) v) >> w;
 }
 
 /* generate values at quad vertices. */
 static inline void
-noise_get_v(noise_t *v, int16_t *s, uint16_t x, unsigned w, unsigned seed, uint8_t dim) {
+noise_get_v(uint32_t *v, int16_t *s, uint16_t x, unsigned w, unsigned seed, uint8_t dim) {
 	const int16_t d = 1 << x;
 	int16_t va[dim * (1 << dim)];
 	int i, j;
@@ -79,8 +76,8 @@ noise_get_v(noise_t *v, int16_t *s, uint16_t x, unsigned w, unsigned seed, uint8
 }
 
 static inline void
-calc_steps(snoise_t *st,
-	   noise_t *v,
+calc_steps(int32_t *st,
+	   uint32_t *v,
 	   uint16_t z,
 	   uint16_t vl,
 	   unsigned y)
@@ -92,7 +89,7 @@ calc_steps(snoise_t *st,
 }
 
 static inline void
-step(noise_t *v, snoise_t *st, uint16_t vl, uint16_t mul)
+step(uint32_t *v, int32_t *st, uint16_t vl, uint16_t mul)
 {
 	int n;
 	for (n = 0; n < vl; n++)
@@ -103,11 +100,11 @@ step(noise_t *v, snoise_t *st, uint16_t vl, uint16_t mul)
  * fade between them and set target values acoordingly
  */
 static inline void
-noise_quad(noise_t *c, noise_t *vc, unsigned z, unsigned cy, uint8_t dim) {
+noise_quad(uint32_t *c, uint32_t *vc, unsigned z, unsigned cy, uint8_t dim) {
 	uint16_t ndim = dim - 1;
 	uint16_t tvl = 1 << ndim; /* length of input values */
-	snoise_t st[(tvl << 1) - 1], *stc = st;
-	noise_t *ce_p[dim], *vt;
+	int32_t st[(tvl << 1) - 1], *stc = st;
+	uint32_t *ce_p[dim], *vt;
 	size_t cd = 1 << cy * ndim; /* (2^y)^ndim */
 	goto start;
 	do {
@@ -119,7 +116,7 @@ start:			ce_p[ndim] = c + (cd << z);
 			vt = vc + (tvl<<1);
 
 			calc_steps(stc, vc, z, tvl, 0);
-			memcpy(vt, vc, tvl * sizeof(noise_t));
+			memcpy(vt, vc, tvl * sizeof(uint32_t));
 		} while (ndim);
 
 		for (; c < ce_p[0]; c += cd, vt[0] += *stc)
@@ -142,10 +139,10 @@ start:			ce_p[ndim] = c + (cd << z);
 // FIXME there is a memory leak on the non recursive version on linux
 #ifndef __OpenBSD__
 static inline void
-_noise_mr(noise_t *c, noise_t *v, unsigned x, int16_t *qs, uint16_t ndim, unsigned w, unsigned seed, unsigned cy, uint8_t dim) {
+_noise_mr(uint32_t *c, uint32_t *v, unsigned x, int16_t *qs, uint16_t ndim, unsigned w, unsigned seed, unsigned cy, uint8_t dim) {
 	int i = dim - 1 - ndim;
 	uint16_t ced = (1 << (cy * (ndim + 1))), cd;
-	noise_t *ce = c + ced;
+	uint32_t *ce = c + ced;
 
 	ced >>= cy;
 	cd = ced << x;
@@ -161,7 +158,7 @@ _noise_mr(noise_t *c, noise_t *v, unsigned x, int16_t *qs, uint16_t ndim, unsign
 }
 
 static inline void
-_noise_m(noise_t *c, noise_t *v, unsigned x, int16_t *qs, unsigned w, unsigned seed, unsigned cy, uint8_t dim)
+_noise_m(uint32_t *c, uint32_t *v, unsigned x, int16_t *qs, unsigned w, unsigned seed, unsigned cy, uint8_t dim)
 {
 	_noise_mr(c, v, x, qs, dim - 1, w, seed, cy, dim);
 }
@@ -169,9 +166,9 @@ _noise_m(noise_t *c, noise_t *v, unsigned x, int16_t *qs, unsigned w, unsigned s
 #else
 
 static inline void
-_noise_m(noise_t *c, noise_t *v, unsigned x, int16_t *qs, unsigned w, unsigned seed, unsigned cy, uint8_t dim) {
-	noise_t *ce_p[dim];
-	noise_t ced = 1<<(cy * dim);
+_noise_m(uint32_t *c, uint32_t *v, unsigned x, int16_t *qs, unsigned w, unsigned seed, unsigned cy, uint8_t dim) {
+	uint32_t *ce_p[dim];
+	uint32_t ced = 1<<(cy * dim);
 	int16_t *qsc = qs; /* quad coordinate */
 	uint16_t ndim = dim - 1;
 
@@ -209,8 +206,8 @@ start:			ce_p[ndim] = c + ced;
  * vl = 1 << ndim
  */
 static inline void
-__fix_v(noise_t *v, snoise_t *st, int16_t *ms, int16_t *qs, unsigned x, uint16_t vl, unsigned cy) {
-	register noise_t *vn = v + vl;
+__fix_v(uint32_t *v, int32_t *st, int16_t *ms, int16_t *qs, unsigned x, uint16_t vl, unsigned cy) {
+	register uint32_t *vn = v + vl;
 	register uint16_t dd = (*ms - *qs) >> cy;
 
 	// TODO make this more efficient
@@ -219,15 +216,15 @@ __fix_v(noise_t *v, snoise_t *st, int16_t *ms, int16_t *qs, unsigned x, uint16_t
 	if (dd) /* ms > qs */
 		step(v, st, vl, dd);
 
-	memcpy(vn, v, sizeof(noise_t) * vl); // COPY to opposite values
+	memcpy(vn, v, sizeof(uint32_t) * vl); // COPY to opposite values
 	step(vn, st, vl, 1); // STEP by side length of M
 }
 
 // yes this does work fine a bit of a hack but ok i guess
 static inline void
-noise_fix_v(noise_t *v, int16_t *qs, int16_t *ms, unsigned x, unsigned cy, uint8_t dim) {
+noise_fix_v(uint32_t *v, int16_t *qs, int16_t *ms, unsigned x, unsigned cy, uint8_t dim) {
 	uint16_t vl = 1 << dim;
-	snoise_t st[vl - 1], *stc = st;
+	int32_t st[vl - 1], *stc = st;
 	int ndim = dim - 1;
 	int first = 1;
 	vl >>= 1;
@@ -257,10 +254,10 @@ noise_get_s(int16_t *s, int16_t *p, uint16_t mask, uint8_t dim) {
  * "y" 2^y = side length of matrix "mat".
  * */
 static inline void
-noise_m(noise_t *mat, int16_t *ms, unsigned x,
+noise_m(uint32_t *mat, int16_t *ms, unsigned x,
 	unsigned w, unsigned seed, unsigned cy, uint8_t dim)
 {
-	noise_t v[(1 << (dim + 1)) - 1];
+	uint32_t v[(1 << (dim + 1)) - 1];
 
 	if (cy > x)
 		_noise_m(mat, v, x, ms, w, seed, cy, dim);
@@ -277,12 +274,12 @@ noise_m(noise_t *mat, int16_t *ms, unsigned x,
 }
 
 void
-noise_oct(noise_t *m, int16_t *s, size_t oct_n,
+noise_oct(uint32_t *m, int16_t *s, size_t oct_n,
 	  octave_t *oct, unsigned seed, unsigned cy, uint8_t dim)
 {
 	unsigned cm = 1 << dim * cy;
 	octave_t *oe;
-	memset(m, 0, sizeof(noise_t) * cm);
+	memset(m, 0, sizeof(uint32_t) * cm);
 	for (oe = oct + oct_n; oct < oe; oct++)
 		noise_m(m, s, oct->x, oct->w, seed, cy, dim);
 }

@@ -99,7 +99,7 @@ equip_t equip;
 typedef unsigned unequip_t(unsigned player_ref, unsigned eql);
 unequip_t unequip;
 
-typedef enum element mask_element_t(ENT *ref, register unsigned char a);
+typedef unsigned mask_element_t(ENT *ref, register unsigned char a);
 mask_element_t mask_element;
 
 typedef int entity_damage_t(unsigned player_ref, ENT *eplayer, unsigned target_ref, ENT *etarget, short amt);
@@ -111,10 +111,13 @@ enter_t enter;
 typedef int kill_dodge_t(unsigned player_ref, char *wts);
 kill_dodge_t kill_dodge;
 
-typedef short kill_dmg_t(enum element dmg_type,
+typedef short kill_dmg_t(unsigned dmg_type,
 		short dmg, short def,
-		enum element def_type);
+		unsigned def_type);
 kill_dmg_t kill_dmg;
+
+typedef void look_at_t(unsigned player_ref, unsigned loc_ref);
+look_at_t look_at;
 
 static inline unsigned
 xsqrtx(unsigned x)

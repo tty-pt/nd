@@ -1,5 +1,5 @@
 nd-chroot_mkdir_OpenBSD += dev
-chroot_mkdir += ${nd-chroot_mkdir_${uname}} etc etc/vim usr/lib usr/include var/env
+chroot_mkdir += ${nd-chroot_mkdir_${uname}} etc etc/vim usr/lib usr/include/nd var/env
 ttys := 0 1 2 3 4 5 6 7 8 9
 ptys := ${ttys:%=ptyp%}
 ttys := ${ttys:%=ttyp%}
@@ -36,7 +36,7 @@ usr/lib/libnd.a: usr/lib FORCE
 
 all: items/nd/nd var/nd/std.db.ok mounts dev/ nods etc/vim/vimrc.local \
 	${pages:%=usr/share/man/man10/%} usr/share/man/mandoc.db \
-	${uapi:%=usr/include/%} usr/lib/libnd.a var/nd/env certs.txt
+	${uapi:%=usr/include/nd/%} usr/lib/libnd.a var/nd/env certs.txt
 
 var/nd/std.db.ok:
 	mkdir -p var/nd || true
@@ -90,10 +90,10 @@ dev/tty:
 	${sudo} chmod 666 $@
 	${sudo} chown root:wheel $@
 
-run: all bin/qhash
+run: all bin/qdb
 	${sudo-${USER}} ./items/nd/nd -C ${PWD} -p 8000
 
-srun: all ss_key.pem ss_cert.pem bin/qhash
+srun: all ss_key.pem ss_cert.pem bin/qdb
 	${sudo} ./items/nd/nd -C ${PWD} -K ${PWD}/certs.txt
 
 certs.txt:
@@ -118,12 +118,14 @@ ss_cert.pem: ss_key.pem
 	openssl req -new -key ss_key.pem -out ss_csr.pem
 	openssl req -x509 -key ss_key.pem -in ss_csr.pem -out ss_cert.pem -days 365
 
-${uapi:%=usr/include/%}: usr/include ${uapi:%=items/nd/include/uapi/%}
-	cp ${@:usr/include/%=items/nd/include/uapi/%} $@
+${uapi:%=usr/include/nd/%}: usr/include/nd ${uapi:%=items/nd/include/uapi/%}
+	cp ${@:usr/include/nd/%=items/nd/include/uapi/%} $@
 
 $(chroot_mkdir):
 	mkdir -p $@
 
 FORCE:
+
+install: ${uapi:%=usr/include/nd/%}
 
 mod-install += items/nd/install

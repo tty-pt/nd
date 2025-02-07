@@ -443,8 +443,12 @@ ndc.setOnMessage(function onMessage(ev) {
         actions: read_32(arr, aux += 1),
         name: read_string(arr, aux += 4, ret),
         pname: read_string(arr, aux += ret[aux] + 1, ret),
-        icon: read_string(arr, aux += ret[aux] + 1, ret),
-        art: read_string(arr, aux += ret[aux] + 1, ret),
+        icon: {
+          fg: read_32(arr, aux += ret[aux] + 1),
+          flags: read_u32(arr, aux += 4),
+          ch: arr[aux += 4],
+        },
+        art: read_string(arr, aux += 1, ret),
       };
 
       switch (base.type) {
@@ -581,6 +585,8 @@ class Avatar extends Button {
   setImageClass(obj) {
     const src = pkg.publicPath + "/art/" + (obj?.art ?? obj?.avatar ?? "unknown.jpg");
     this.setAttribute("src", src);
+    this.setAttribute("x", "cf" + (obj.icon.fg + 8));
+    this.textContent = String.fromCharCode(obj.icon.ch);
   }
 }
 

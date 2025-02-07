@@ -21,4 +21,6 @@ void mcp_equipment(unsigned player_ref);
 void fbcp_view(unsigned player_ref, view_t *view);
 void fbcp_view_buf(unsigned player_ref, char *view);
 
+void fbcp_item(unsigned player_ref, unsigned obj_ref, unsigned char dynflags);
+
 #endif							/* MCP_H */

@@ -8,10 +8,6 @@ unsigned fd_player(unsigned fd) {
 	return nd.fd_player(fd);
 }
 
-unsigned fds_hd_get() {
-	return nd.fds_hd;
-}
-
 /* int fds_has(unsigned player) { */
 /* 	return nd.fds_has(player); */
 /* } */
@@ -44,16 +40,16 @@ void dnotify_wts_to(unsigned who_ref, unsigned tar_ref, char const *a, char cons
 	nd.dnotify_wts_to(who_ref, tar_ref, a, b, format, args);
 }
 
-void notify_attack(unsigned player_ref, unsigned target_ref, char *wts, short val, char const *color, short mval) {
+void notify_attack(unsigned player_ref, unsigned target_ref, char *wts, short val, enum color color, short mval) {
 	nd.notify_attack(player_ref, target_ref, wts, val, color, mval);
 }
 
 void nd_tdwritef(unsigned player_ref, const char *fmt, va_list args) {
-	return nd.nd_tdwritef(player_ref, fmt, args);
+	nd.nd_tdwritef(player_ref, fmt, args);
 }
 
 void nd_wwrite(unsigned player_ref, void *msg, size_t len) {
-	return nd.nd_wwrite(player_ref, msg, len);
+	nd.nd_wwrite(player_ref, msg, len);
 }
 
 /* MAP */
@@ -67,7 +63,7 @@ morton_t map_mwhere(unsigned thing) {
 }
 
 void map_where(pos_t p, unsigned thing) {
-	return nd.map_where(p, thing);
+	nd.map_where(p, thing);
 }
 
 int map_delete(unsigned what) {
@@ -98,27 +94,11 @@ char *wts_plural(char *singular) {
 
 /* void skel_init(); */
 
-unsigned skel_hd_get() {
-	return nd.skel_hd;
-}
-
 /* void drop_init(); */
-
-unsigned drop_hd_get() {
-	return nd.drop_hd;
-}
-
-unsigned adrop_hd_get() {
-	return nd.adrop_hd;
-}
 
 /* OBJECT */
 
 /* void drop_init(); */
-
-unsigned obj_hd_get() {
-	return nd.obj_hd;
-}
 
 unsigned object_new(OBJ *obj) {
 	return nd.object_new(obj);
@@ -137,20 +117,12 @@ unsigned object_add(OBJ *nu, unsigned skel_id, unsigned where, void *arg) {
 }
 
 void object_drop(unsigned where_ref, unsigned skel_id) {
-	return nd.object_drop(where_ref, skel_id);
-}
-
-unsigned obs_hd_get() {
-	return nd.obs_hd;
-}
-
-unsigned contents_hd_get() {
-	return nd.contents_hd;
+	nd.object_drop(where_ref, skel_id);
 }
 
 /* ENTITY */
 
-unsigned me_get() {
+unsigned me_get(void) {
 	return nd.me_get();
 }
 
@@ -190,7 +162,7 @@ int controls(unsigned who_ref, unsigned what_ref) {
 	return nd.controls(who_ref, what_ref);
 }
 
-int payfor(unsigned who_ref, OBJ *who, int cost) {
+int payfor(unsigned who_ref, OBJ *who, unsigned cost) {
 	return nd.payfor(who_ref, who, cost);
 }
 
@@ -210,7 +182,7 @@ unsigned unequip(unsigned player_ref, unsigned eql) {
 	return nd.unequip(player_ref, eql);
 }
 
-enum element mask_element(ENT *ref, register unsigned char a) {
+unsigned mask_element(ENT *ref, register unsigned char a) {
 	return nd.mask_element(ref, a);
 }
 
@@ -226,7 +198,7 @@ int kill_dodge(unsigned player_ref, char *wts) {
 	return nd.kill_dodge(player_ref, wts);
 }
 
-short kill_dmg(enum element dmg_type, short dmg, short def, enum element def_type) {
+short kill_dmg(unsigned dmg_type, short dmg, short def, unsigned def_type) {
 	return nd.kill_dmg(dmg_type, dmg, def, def_type);
 }
 
@@ -236,4 +208,72 @@ int spell_cast(unsigned player_ref, ENT *eplayer, unsigned target_ref, unsigned 
 
 void debufs_end(ENT *player) {
 	nd.debufs_end(player);
+}
+
+void look_at(unsigned player_ref, unsigned thing_ref) {
+	nd.look_at(player_ref, thing_ref);
+}
+
+inline static unsigned hd_get(unsigned hd) {
+	return hd >= HD_MAX ? hd : nd.hds[hd];
+}
+
+unsigned nd_put(unsigned hd, void *key, void *value) {
+	return nd.nd_put(hd_get(hd), key, value);
+}
+
+unsigned nd_get(unsigned hd, void *value, void *key) {
+	return nd.nd_get(hd_get(hd), value, key);
+}
+
+unsigned nd_open(char *database, char *key_sip, char *value_sip, unsigned flags) {
+	return nd.nd_open(database, key_sip, value_sip, flags);
+}
+
+nd_cur_t nd_iter(unsigned hd, void *key) {
+	return nd.nd_iter(hd_get(hd), key);
+}
+
+int nd_next(void *key, void *value, nd_cur_t *cur) {
+	return nd.nd_next(key, value, cur);
+}
+
+void nd_fin(nd_cur_t *cur) {
+	nd.nd_fin(cur);
+}
+
+void nd_register(char *cmd, nd_cb_t *cb, unsigned flags) {
+	nd.nd_register(cmd, cb, flags);
+}
+
+unsigned ematch_at(unsigned player_ref, unsigned where_ref, char *name) {
+	return nd.ematch_at(player_ref, where_ref, name);
+}
+
+unsigned ematch_player(char *name) {
+	return nd.ematch_player(name);
+}
+
+unsigned ematch_absolute(char *name) {
+	return nd.ematch_absolute(name);
+}
+
+unsigned ematch_me(unsigned player_ref, char *str) {
+	return nd.ematch_me(player_ref, str);
+}
+
+unsigned ematch_here(unsigned player_ref, char *str) {
+	return nd.ematch_here(player_ref, str);
+}
+
+unsigned ematch_mine(unsigned player_ref, char *str) {
+	return nd.ematch_mine(player_ref, str);
+}
+
+unsigned ematch_near(unsigned player_ref, char *str) {
+	return nd.ematch_near(player_ref, str);
+}
+
+unsigned ematch_all(unsigned player_ref, char *str) {
+	return nd.ematch_all(player_ref, str);
 }

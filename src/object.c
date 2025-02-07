@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-#include <qhash.h>
+#include <qdb.h>
 
 #include "config.h"
 #include "mcp.h"
@@ -15,6 +15,7 @@
 #include "uapi/entity.h"
 #include "uapi/io.h"
 #include "uapi/map.h"
+#include "uapi/match.h"
 
 enum actions {
         ACT_LOOK = 1,
@@ -28,27 +29,12 @@ enum actions {
         ACT_TALK = 256,
 };
 
-struct object room_zero = {
-	.location = NOTHING,
-	.owner = 1,
-	.art_id = 0,
-	.type = TYPE_ROOM,
-	.value = 9999999,
-	.flags = 0,
-	.sp.room = {
-		.flags = RF_HAVEN,
-		.doors = 0,
-		.exits = 0,
-		.floor = 0,
-	},
-};
-
 char std_db[BUFSIZ];
 char std_db_ok[BUFSIZ];
 unsigned obj_hd, contents_hd, obs_hd;
 
 int obj_exists(unsigned ref) {
-	return uhash_exists(obj_hd, ref);
+	return qdb_exists(obj_hd, &ref);
 }
 
 unsigned
@@ -57,7 +43,7 @@ object_new(OBJ *newobj)
 	memset(newobj, 0, sizeof(OBJ));
 	newobj->location = NOTHING;
 	newobj->owner = ROOT;
-	return lhash_new(obj_hd, newobj);
+	return qdb_put(obj_hd, NULL, newobj);
 }
 
 static inline int
@@ -118,7 +104,7 @@ biome_art_idx(struct bio *bio) {
 
 struct core_art {
 	unsigned max;
-	char *name;
+	char name[32];
 };
 
 struct core_art core_art[] = {
@@ -165,7 +151,7 @@ unsigned art_hd = -1;
 
 unsigned art_max(char *name) {
 	unsigned max;
-	shash_get(art_hd, &max, name);
+	qdb_get(art_hd, &max, name);
 	return max;
 }
 
@@ -180,14 +166,14 @@ unsigned
 object_add(OBJ *nu, unsigned skel_id, unsigned where_ref, void *arg)
 {
 	SKEL skel;
-	lhash_get(skel_hd, &skel, skel_id);
+	qdb_get(skel_hd, &skel, &skel_id);
 	unsigned nu_ref = object_new(nu);
 	strcpy(nu->name, skel.name);
 	nu->location = where_ref;
 	nu->owner = ROOT;
 	nu->type = TYPE_THING;
 	if (where_ref != NOTHING)
-		ahash_add(contents_hd, nu->location, nu_ref);
+		qdb_put(contents_hd, &nu->location, &nu_ref);
 
 	switch (skel.type) {
 	case STYPE_SPELL:
@@ -232,11 +218,12 @@ object_add(OBJ *nu, unsigned skel_id, unsigned where_ref, void *arg)
 		break;
 	case STYPE_PLANT:
 		{
-			noise_t v = * (noise_t *) arg;
+			uint32_t v = * (uint32_t *) arg;
 			nu->type = TYPE_PLANT;
 			object_drop(nu_ref, skel_id);
 			nu->owner = ROOT;
-			nu->art_id = 1 + (v & 0xf) % art_max(nu->name);
+			unsigned max = art_max(nu->name);
+			nu->art_id = max ? 1 + (v & 0xf) % max : 0;
 		}
 
 		break;
@@ -253,24 +240,26 @@ object_add(OBJ *nu, unsigned skel_id, unsigned where_ref, void *arg)
 		break;
 	case STYPE_MINERAL:
 		{
-			noise_t v = * (noise_t *) arg;
+			uint32_t v = * (uint32_t *) arg;
 			nu->type = TYPE_MINERAL;
-			nu->art_id = 1 + (v & 0xf) % art_max(nu->name);
+			unsigned max = art_max(nu->name);
+			nu->art_id = max ? 1 + (v & 0xf) % max : 0;
 		}
 
 		break;
 
 	case STYPE_OTHER:
 		if (arg) {
-			noise_t v = * (noise_t *) arg;
-			nu->art_id = 1 + (v & 0xf) % art_max(nu->name);
+			uint32_t v = * (uint32_t *) arg;
+			unsigned max = art_max(nu->name);
+			nu->art_id = max ? 1 + (v & 0xf) % max : 0;
 		}
 		nu->type = TYPE_THING;
 
 		break;
 	}
 
-	lhash_put(obj_hd, nu_ref, nu);
+	qdb_put(obj_hd, &nu_ref, nu);
 	if (skel.type != STYPE_BIOME)
 		mcp_content_in(where_ref, nu_ref);
 
@@ -281,7 +270,7 @@ char *
 object_art(unsigned thing_ref)
 {
 	OBJ thing;
-	lhash_get(obj_hd, &thing, thing_ref);
+	qdb_get(obj_hd, &thing, &thing_ref);
 	static char art[BUFSIZ];
 	char *type = NULL;
 
@@ -305,35 +294,32 @@ objects_init(void)
 {
 	unsigned ref;
 
-	srand(getpid());
-
 	size_t hash_i = 0;
 	for (; hash_i < sizeof(core_art) / sizeof(struct core_art); hash_i++) {
 		struct core_art *art = &core_art[hash_i];
-		suhash_put(art_hd, art->name, art->max);
+		qdb_put(art_hd, art->name, &art->max);
 	}
 
-	struct hash_cursor c = lhash_iter(obj_hd);
+	qdb_cur_t c = qdb_iter(obj_hd, NULL);
 	OBJ oi;
-	while (lhash_next(&ref, &oi, &c)) {
-		ahash_add(contents_hd, oi.location, ref);
+	while (qdb_next(&ref, &oi, &c)) {
+		qdb_put(contents_hd, &oi.location, &ref);
 		if (oi.type != TYPE_ENTITY)
 			continue;
 
 		ENT ent = ent_get(ref);
+		ent.last_observed = NOTHING;
+		qdb_put(ent_hd, &ref, &ent);
 		if (ent.flags & EF_PLAYER)
 			player_put(oi.name, ref);
 	}
-
-	if (!uhash_exists(obj_hd, 0))
-		lhash_new(obj_hd, &room_zero);
 }
 
 unsigned
 object_copy(OBJ *nu, unsigned old_ref)
 {
 	OBJ old;
-	lhash_get(obj_hd, &old, old_ref);
+	qdb_get(obj_hd, &old, &old_ref);
 	unsigned ref = object_new(nu);
 	strcpy(nu->name, old.name);
 	nu->location = NOTHING;
@@ -348,8 +334,8 @@ objects_update(double dt)
 {
 	OBJ obj;
 	unsigned obj_ref;
-	struct hash_cursor c = lhash_iter(obj_hd);
-	while (lhash_next(&obj_ref, &obj, &c))
+	qdb_cur_t c = qdb_iter(obj_hd, NULL);
+	while (qdb_next(&obj_ref, &obj, &c))
 		if (!*obj.name)
 			continue;
 		else if (obj.type == TYPE_ENTITY)
@@ -360,19 +346,19 @@ void
 object_move(unsigned what_ref, unsigned where_ref)
 {
 	OBJ what;
-	lhash_get(obj_hd, &what, what_ref);
+	qdb_get(obj_hd, &what, &what_ref);
 
         if (what.location != NOTHING) {
                 mcp_content_out(what.location, what_ref);
-		ahash_remove(contents_hd, what.location, what_ref);
+		qdb_del(contents_hd, &what.location, &what_ref);
         }
 
-	struct hash_cursor c = fhash_iter(obs_hd, what_ref);
+	qdb_cur_t c = qdb_iter(obs_hd, &what_ref);
 	unsigned first_ref;
-	while (ahash_next(&first_ref, &c)) {
+	while (qdb_next(&what_ref, &first_ref, &c)) {
 		ENT efirst = ent_get(first_ref);
 		efirst.last_observed = what.location;
-		ahash_remove(obs_hd, what_ref, first_ref);
+		qdb_cdel(&c);
 		ent_set(first_ref, &efirst);
 	}
 
@@ -380,8 +366,8 @@ object_move(unsigned what_ref, unsigned where_ref)
 	if (where_ref == NOTHING) {
 		unsigned first_ref;
 
-		struct hash_cursor c = fhash_iter(contents_hd, what_ref);
-		while (ahash_next(&first_ref, &c))
+		qdb_cur_t c = qdb_iter(contents_hd, &what_ref);
+		while (qdb_next(&what_ref, &first_ref, &c))
 			object_move(first_ref, NOTHING);
 
 		switch (what.type) {
@@ -391,24 +377,24 @@ object_move(unsigned what_ref, unsigned where_ref)
 		case TYPE_ROOM:
 			map_delete(what_ref);
 		}
-		lhash_del(obj_hd, what_ref);
+		qdb_del(obj_hd, &what_ref, NULL);
 		return;
 	}
 
 	what.location = where_ref;
-	lhash_put(obj_hd, what_ref, &what);
+	qdb_put(obj_hd, &what_ref, &what);
 
 	if (what.type == TYPE_ENTITY) {
 		ENT ewhat = ent_get(what_ref);
 		if (ewhat.last_observed != NOTHING)
-			ahash_remove(obs_hd, ewhat.last_observed, what_ref);
+			qdb_del(obs_hd, &ewhat.last_observed, &what_ref);
 		if ((ewhat.flags & EF_SITTING)) {
 			stand(what_ref, &ewhat);
 			ent_set(what_ref, &ewhat);
 		}
 	}
 
-	ahash_add(contents_hd, where_ref, what_ref);
+	qdb_put(contents_hd, &where_ref, &what_ref);
 	mcp_content_in(where_ref, what_ref);
 }
 
@@ -416,24 +402,29 @@ struct icon
 object_icon(unsigned what_ref)
 {
 	OBJ what;
-	lhash_get(obj_hd, &what, what_ref);
+	qdb_get(obj_hd, &what, &what_ref);
 
-        static char buf[BUFSIZ];
         struct icon ret = {
                 .actions = ACT_LOOK,
-                .icon = ANSI_RESET ANSI_BOLD "?",
+                .ch = '?',
+                .pi = { .fg = WHITE, .flags = BOLD, },
         };
         unsigned aux;
         switch (what.type) {
         case TYPE_ROOM:
-                ret.icon = ANSI_FG_YELLOW "-";
+                ret.ch = '-';
+                ret.pi.fg = YELLOW;
                 break;
         case TYPE_ENTITY:
 		ret.actions |= ACT_KILL;
-		ret.icon = ANSI_BOLD ANSI_FG_YELLOW "!";
+		ret.pi.flags = BOLD;
 		if (ent_get(what_ref).flags & EF_SHOP) {
 			ret.actions |= ACT_SHOP;
-			ret.icon = ANSI_BOLD ANSI_FG_GREEN "$";
+			ret.pi.fg = GREEN;
+			ret.ch = '$';
+		} else {
+			ret.ch = '!';
+			ret.pi.fg = YELLOW;
 		}
                 break;
 	case TYPE_CONSUMABLE:
@@ -441,9 +432,11 @@ object_icon(unsigned what_ref)
 			CON *cwhat = &what.sp.consumable;
 			if (cwhat->drink) {
 				ret.actions |= ACT_FILL;
-				ret.icon = ANSI_BOLD ANSI_FG_BLUE "~";
+				ret.pi.fg = BLUE;
+				ret.ch = '~';
 			} else {
-				ret.icon = ANSI_BOLD ANSI_FG_RED "o";
+				ret.pi.fg = RED;
+				ret.ch = 'o';
 			}
 			ret.actions |= ACT_CONSUME;
 		}
@@ -453,16 +446,12 @@ object_icon(unsigned what_ref)
 			PLA *pwhat = &what.sp.plant;
 			aux = pwhat->plid;
 			SKEL skel;
-			lhash_get(skel_hd, &skel, aux);
+			qdb_get(skel_hd, &skel, &aux);
 			SPLA *pl = &skel.sp.plant;
 
 			ret.actions |= ACT_CHOP;
-			snprintf(buf, sizeof(buf), "%s%c%s", pl->pre,
-					pwhat->size > PLANT_HALF ? pl->big : pl->small,
-					pl->post); 
-
-			// use the icon immediately
-			ret.icon = buf;
+			ret.pi = pl->pi;
+			ret.ch = pwhat->size > PLANT_HALF ? pl->big : pl->small;
 		}
 		break;
 	default:
@@ -470,4 +459,299 @@ object_icon(unsigned what_ref)
                 break;
         }
         return ret;
+}
+
+static inline int
+ok_name(const char *name)
+{
+	return (name
+			&& *name
+			&& *name != NUMBER_TOKEN
+			&& !strchr(name, ' ')
+			&& !strchr(name, '\r')
+			&& !strchr(name, ESCAPE_CHAR)
+			&& strcmp(name, "me")
+			&& strcmp(name, "home")
+			&& strcmp(name, "here"));
+}
+
+void
+do_clone(int fd, int argc __attribute__((unused)), char *argv[])
+{
+	unsigned player_ref = fd_player(fd), thing_ref;
+	char *name = argv[1];
+
+	if (!(ent_get(player_ref).flags & EF_WIZARD) || !*name || !ok_name(name)) {
+		nd_writef(player_ref, CANTDO_MESSAGE);
+		return;
+	}
+	
+	if (
+			(thing_ref = ematch_absolute(name)) == NOTHING
+			&& (thing_ref = ematch_mine(player_ref, name)) == NOTHING
+			&& (thing_ref = ematch_near(player_ref, name)) == NOTHING
+	   )
+	{
+		nd_writef(player_ref, NOMATCH_MESSAGE);
+		return;
+	}
+
+	OBJ thing;
+	qdb_get(obj_hd, &thing, &thing_ref);
+
+	if(!controls(player_ref, thing_ref)) {
+		nd_writef(player_ref, CANTDO_MESSAGE);
+		return;
+	}
+
+	OBJ player;
+	qdb_get(obj_hd, &player, &player_ref);
+	OBJ clone;
+	unsigned clone_ref = object_new(&clone);
+
+	strcpy(clone.name, thing.name);
+	clone.location = player_ref;
+	clone.owner = player.owner;
+	clone.value = thing.value;
+
+	switch (thing.type) {
+		case TYPE_ROOM:
+			{
+				ROO *rclone = &clone.sp.room;
+				rclone->exits = rclone->doors = 0;
+			}
+			break;
+		case TYPE_ENTITY:
+			{
+				ENT eclone = ent_get(clone_ref);
+				eclone.home = ent_get(thing_ref).home;
+				ent_set(clone_ref, &eclone);
+			}
+			break;
+	}
+	clone.type = thing.type;
+
+	qdb_put(obj_hd, &clone_ref, &clone);
+	object_move(clone_ref, player_ref);
+}
+
+void
+do_create(int fd, int argc __attribute__((unused)), char *argv[])
+{
+	unsigned player_ref = fd_player(fd), thing_ref;
+	unsigned pflags = ent_get(player_ref).flags;
+	char *name = argv[1];
+	int cost = 30;
+
+	if (!(pflags & EF_WIZARD) || *name == '\0' || !ok_name(name)) {
+		nd_writef(player_ref, "You can't do that.\n");
+		return;
+	}
+
+	OBJ player;
+	qdb_get(obj_hd, &player, &player_ref);
+
+	OBJ thing;
+	thing_ref = object_new(&thing);
+
+	strcpy(thing.name, name);
+	thing.location = player_ref;
+	thing.owner = player.owner;
+	thing.value = cost;
+	thing.type = TYPE_THING;
+
+	qdb_put(obj_hd, &thing_ref, &thing);
+	object_move(thing_ref, player_ref);
+}
+void
+do_name(int fd, int argc __attribute__((unused)), char *argv[])
+{
+	unsigned player_ref = fd_player(fd);
+	char *name = argv[1];
+	char *newname = argv[2];
+	unsigned thing_ref = ematch_all(player_ref, name);
+
+	if (thing_ref == NOTHING) {
+		nd_writef(player_ref, NOMATCH_MESSAGE);
+		return;
+	}
+
+	if (!controls(player_ref, thing_ref) || !*newname || !ok_name(newname)) {
+		nd_writef(player_ref, CANTDO_MESSAGE);
+		return;
+	}
+
+	OBJ thing;
+	qdb_get(obj_hd, &thing, &thing_ref);
+	strcpy(thing.name, newname);
+	qdb_put(obj_hd, &thing_ref, &thing);
+}
+
+void
+do_chown(int fd, int argc __attribute__((unused)), char *argv[])
+{
+	unsigned player_ref = fd_player(fd), owner_ref, thing_ref;
+	int wizard = ent_get(player_ref).flags & EF_WIZARD;
+	char *name = argv[1];
+	char *newowner = argv[2];
+
+	if (!*name || (thing_ref = ematch_all(player_ref, name)) == NOTHING) {
+		nd_writef(player_ref, NOMATCH_MESSAGE);
+		return;
+	}
+
+	OBJ player, thing;
+	qdb_get(obj_hd, &player, &player_ref);
+
+	owner_ref = *newowner && strcmp(newowner, "me") ? player_get(newowner) : player.owner;
+	if (owner_ref == NOTHING)
+		goto error;
+
+	qdb_get(obj_hd, &thing, &thing_ref);
+
+	if (thing.type == TYPE_ENTITY ||
+			(!wizard && ((thing.type == TYPE_ROOM && player.location != thing_ref)
+				     || (thing.type != TYPE_ROOM && thing.location != player_ref ))))
+		goto error;
+
+	thing.owner = owner_ref;
+	qdb_put(obj_hd, &thing_ref, &thing);
+	return;
+
+error:
+	nd_writef(player_ref, CANTDO_MESSAGE);
+}
+
+void
+do_recycle(int fd, int argc __attribute__((unused)), char *argv[])
+{
+	unsigned player_ref = fd_player(fd);
+	char *name = argv[1];
+	unsigned thing_ref;
+	OBJ thing;
+
+	if (
+			(thing_ref = ematch_absolute(name)) == NOTHING
+			&& (thing_ref = ematch_near(player_ref, name)) == NOTHING
+			&& (thing_ref = ematch_mine(player_ref, name)) == NOTHING
+	   )
+	{
+		nd_writef(player_ref, NOMATCH_MESSAGE);
+		return;
+	}
+
+	qdb_get(obj_hd, &thing, &thing_ref);
+
+	if (!controls(player_ref, thing_ref) || thing.owner != player_ref) {
+		nd_writef(player_ref, CANTDO_MESSAGE);
+		return;
+	}
+
+	object_move(thing_ref, NOTHING);
+}
+
+void
+do_get(int fd, int argc __attribute__((unused)), char *argv[])
+{
+	unsigned player_ref = fd_player(fd), thing_ref, cont_ref;
+	char *what = argv[1];
+	char *obj = argv[2];
+
+	if (
+			(thing_ref = ematch_near(player_ref, what)) == NOTHING
+			&& (thing_ref = ematch_mine(player_ref, what)) == NOTHING
+	   )
+	{
+		nd_writef(player_ref, NOMATCH_MESSAGE);
+		return;
+	}
+
+	cont_ref = thing_ref;
+	OBJ player, thing, cont;
+	qdb_get(obj_hd, &player, &player_ref);
+	qdb_get(obj_hd, &thing, &cont_ref);
+	cont = thing;
+
+	if (obj && *obj) {
+		thing_ref = ematch_at(player_ref, cont_ref, obj);
+		if (thing_ref == NOTHING) {
+			nd_writef(player_ref, NOMATCH_MESSAGE);
+			return;
+		}
+		qdb_get(obj_hd, &thing, &thing_ref);
+		if (cont.type == TYPE_ENTITY)
+			goto error;
+	}
+
+	if (thing.location == player_ref
+			|| thing_ref == player_ref
+			|| thing_ref == player.location)
+		goto error;
+
+	switch (thing.type) {
+	case TYPE_ENTITY:
+	case TYPE_PLANT: if (player_ref != ROOT)
+				 goto error;
+			 break;
+	case TYPE_SEAT: if (thing.owner != player_ref)
+				goto error;
+			break;
+	case TYPE_ROOM: goto error;
+	default: break;
+	}
+
+	object_move(thing_ref, player_ref);
+	return;
+error:
+	nd_writef(player_ref, CANTDO_MESSAGE);
+}
+
+void
+do_drop(int fd, int argc __attribute__((unused)), char *argv[])
+{
+	unsigned player_ref = fd_player(fd), thing_ref, cont_ref;
+	OBJ player, cont, thing;
+	qdb_get(obj_hd, &player, &player_ref);
+	char *name = argv[1];
+	char *obj = argv[2];
+
+	if ((thing_ref = ematch_mine(player_ref, name)) == NOTHING) {
+		nd_writef(player_ref, NOMATCH_MESSAGE);
+		return;
+	}
+
+	cont_ref = player.location;
+	if (
+			obj && *obj
+			&& (cont_ref = ematch_mine(player_ref, obj)) == NOTHING
+			&& (cont_ref = ematch_near(player_ref, obj)) == NOTHING
+	   )
+	{
+		nd_writef(player_ref, NOMATCH_MESSAGE);
+		return;
+	}
+        
+	if (thing_ref == cont_ref)
+		goto error;
+
+	qdb_get(obj_hd, &cont, &cont_ref);
+
+	if (cont.type != TYPE_ROOM && cont.type != TYPE_ENTITY && !object_item(cont_ref))
+		goto error;
+
+	object_move(thing_ref, cont_ref);
+	qdb_get(obj_hd, &thing, &thing_ref);
+
+	if (object_item(cont_ref))
+		return;
+
+	if (cont.type == TYPE_ENTITY) {
+		nd_writef(cont_ref, "%s hands you %s.\n", player.name, thing.name);
+		return;
+	}
+
+	nd_owritef(player_ref, "%s drops %s.\n", player.name, thing.name);
+	return;
+error:
+	nd_writef(player_ref, CANTDO_MESSAGE);
 }
