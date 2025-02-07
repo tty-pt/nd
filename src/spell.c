@@ -14,198 +14,14 @@
 
 #define SPELL_COST(dmg, y, no_bdmg) (no_bdmg ? 0 : dmg) + dmg / (1 << y)
 
-enum spell_type {
-	SPELL_HEAL,
-	SPELL_FOCUS,
-	SPELL_FIRE_FOCUS,
-	SPELL_CUT,
-	SPELL_FIREBALL,
-	SPELL_WEAKEN,
-	SPELL_DISTRACT,
-	SPELL_FREEZE,
-	SPELL_LAVA_SHIELD,
-	SPELL_WIND_VEIL,
-	SPELL_STONE_SKIN,
-	SPELL_MAX,
-};
+#define HEAL_SKEL_REF 1
 
-unsigned heal_id;
-
-SKEL spell_map[] = {
-	[SPELL_HEAL] = {
-		.name = "Heal",
-		.description = "",
-		.type = STYPE_SPELL,
-		.sp = {
-			.spell = {
-				.element = ELM_PHYSICAL,
-				.ms = 3, .ra = 1, .y = 2,
-				.flags = AF_HP,
-			}
-		},
-	},
-
-	[SPELL_FOCUS] = {
-		.name = "Focus",
-		.description = "",
-		.type = STYPE_SPELL,
-		.sp = {
-			.spell = {
-				.element = ELM_PHYSICAL,
-				.ms = 15, .ra = 3, .y = 1,
-				.flags = AF_MDMG | AF_BUF,
-			}
-		},
-	},
-
-	[SPELL_FIRE_FOCUS] = {
-		.name = "Fire Focus",
-		.description = "",
-		.type = STYPE_SPELL,
-		.sp = {
-			.spell = {
-				.element = ELM_FIRE,
-				.ms = 15, .ra = 3, .y = 1,
-				.flags = AF_MDMG | AF_BUF,
-			}
-		},
-	},
-
-	[SPELL_CUT] = {
-		.name = "Cut",
-		.description = "",
-		.type = STYPE_SPELL,
-		.sp = {
-			.spell = {
-				.element = ELM_PHYSICAL,
-				.ms = 15, .ra = 1, .y = 2,
-				.flags = AF_NEG,
-			}
-		},
-	},
-
-	[SPELL_FIREBALL] = {
-		.name = "Fireball",
-		.description = "",
-		.type = STYPE_SPELL,
-		.sp = {
-			.spell = {
-				.element = ELM_FIRE,
-				.ms = 3, .ra = 1, .y = 2,
-				.flags = AF_NEG,
-			}
-		},
-	}, // 1/4 chance of burning
-
-	[SPELL_WEAKEN] = {
-		.name = "Weaken",
-		.description = "",
-		.type = STYPE_SPELL,
-		.sp = { .spell = {
-			.element = ELM_PHYSICAL,
-			.ms = 15, .ra = 3, .y = 1,
-			.flags = AF_MDMG | AF_BUF | AF_NEG,
-		} },
-	},
-
-	[SPELL_DISTRACT] = {
-		.name = "Distract",
-		.description = "",
-		.type = STYPE_SPELL,
-		.sp = { .spell = {
-			.element = ELM_PHYSICAL,
-			.ms = 15, .ra = 3, .y = 1,
-			.flags = AF_MDEF | AF_BUF | AF_NEG,
-		} },
-	},
-
-	[SPELL_FREEZE] = {
-		.name = "Freeze",
-		.description = "",
-		.type = STYPE_SPELL,
-		.sp = { .spell = {
-			.element = ELM_ICE,
-			.ms = 10, .ra = 2, .y = 4,
-			.flags = AF_MOV | AF_NEG,
-		} },
-	},
-
-	[SPELL_LAVA_SHIELD] = {
-		.name = "Lava Shield",
-		.description = "",
-		.type = STYPE_SPELL,
-		.sp = { .spell = {
-			.element = ELM_FIRE,
-			.ms = 15, .ra = 3, .y = 1,
-			.flags = AF_MDEF | AF_BUF,
-		} },
-	},
-
-	[SPELL_WIND_VEIL] = {
-		.name = "Wind Veil",
-		.description = "",
-		.type = STYPE_SPELL,
-		.sp = { .spell = {
-			.flags = AF_DODGE,
-		} },
-	},
-
-	[SPELL_STONE_SKIN] = {
-		.name = "Stone Skil",
-		.description = "",
-		.type = STYPE_SPELL,
-		.sp = { .spell = {
-			.flags = AF_DEF,
-		} },
-	},
-};
-
-char *buf_wts[] = {
-	// HP
-	"heal",
-
-	// - HP
-	[16] =
-	"bleed",
-	"burn",
-
-	// 32 MOV
-
-	// - MOV
-	[48] =
-	"stunned",
-	"",
-	"frozen",
-
-	// MDMG
-	[64] =
-	"focus on attacking",
-	"focus on fire",
-
-	// - MDMG
-	[80] =
-	"weaken",
-
-	// MDEF
-	[96] =
-	"focus on defending",
-	"are protected by flames",
-
-	// - MDEF
-	[112] =
-	"are distracted",
-
-	// 128 DODGE
-
-	// 144 - DDGE
-};
-
-enum element
+unsigned
 mask_element(ENT *ent, register unsigned char a)
 {
 	unsigned skel_id = ent->debufs[__builtin_ffs(a) - 1].skel;
 	SKEL skel;
-	lhash_get(skel_hd, &skel, skel_id);
+	qdb_get(skel_hd, &skel, &skel_id);
 	SSPE *sp = &skel.sp.spell;
 	return a ? sp->element : ELM_PHYSICAL;
 }
@@ -215,7 +31,7 @@ debuf_end(ENT *eplayer, unsigned i)
 {
 	struct debuf *d = &eplayer->debufs[i];
 	SKEL skel;
-	lhash_get(skel_hd, &skel, d->skel);
+	qdb_get(skel_hd, &skel, &d->skel);
 	SSPE *sp = &skel.sp.spell;
 	struct effect *e = &eplayer->e[DEBUF_TYPE(sp)];
 	i = 1 << i;
@@ -225,25 +41,30 @@ debuf_end(ENT *eplayer, unsigned i)
 	e->value -= d->val;
 }
 
-static inline char const *
+static inline enum color
 sp_color(struct spell_skeleton *_sp)
 {
 	if (DEBUF_TYPE(_sp) != AF_HP || (_sp->flags & AF_NEG)) {
 		element_t element;
-		lhash_get(element_hd, &element, _sp->element);
+		qdb_get(element_hd, &element, &_sp->element);
 		return element.color;
 	}
 
-	return ANSI_BOLD ANSI_FG_GREEN;
+	return GREEN;
 }
 
 static inline char*
 debuf_wts(struct spell_skeleton *_sp)
 {
+	static char ret[BUFSIZ];
 	register unsigned char mask = _sp->flags;
 	register unsigned idx = (DEBUF_TYPE(_sp) << 1) + ((mask >> 4) & 1);
-	idx = (idx << 4) + _sp->element;
-	return buf_wts[idx];
+	unsigned wts_ref;
+	extern unsigned awts_hd, wts_hd;
+	unsigned ref = (_sp->element << 4) | idx;
+	qdb_get(awts_hd, &wts_ref, &ref);
+	qdb_get(wts_hd, ret, &wts_ref);
+	return ret;
 }
 
 void
@@ -251,13 +72,12 @@ debuf_notify(unsigned player_ref, struct debuf *d, short val)
 {
 	char buf[BUFSIZ];
 	SKEL skel;
-	lhash_get(skel_hd, &skel, d->skel);
+	qdb_get(skel_hd, &skel, &d->skel);
 	SSPE *_sp = &skel.sp.spell;
-	char const *color = sp_color(_sp);
 	char *wts = debuf_wts(_sp);
 
 	if (val)
-		snprintf(buf, sizeof(buf), " (%s%d%s)", color, val, ANSI_RESET);
+		snprintf(buf, sizeof(buf), " (%s%d%s)", ansi_fg[sp_color(_sp)], val, ANSI_RESET);
 	else
 		*buf = '\0';
 
@@ -283,7 +103,7 @@ debufs_process(unsigned player_ref, ENT *eplayer)
 			continue;
 		}
 		SKEL skel;
-		lhash_get(skel_hd, &skel, d->skel);
+		qdb_get(skel_hd, &skel, &d->skel);
 		SSPE *sp = &skel.sp.spell;
 		// wtf is this special code?
 		if (DEBUF_TYPE(sp) == AF_HP) {
@@ -298,7 +118,7 @@ debufs_process(unsigned player_ref, ENT *eplayer)
 
 	if (hpi) {
 		debuf_notify(player_ref, hd, hpi);
-		return entity_damage(NOTHING, NULL, player_ref, eplayer, hpi);
+		return hpi;
 	}
 
 	return 0;
@@ -320,7 +140,7 @@ static inline int
 debuf_start(unsigned player_ref, struct spell *sp, short val)
 {
 	SKEL skel;
-	lhash_get(skel_hd, &skel, sp->skel);
+	qdb_get(skel_hd, &skel, &sp->skel);
 	SSPE *_sp = &skel.sp.spell;
 	ENT eplayer = ent_get(player_ref);
 	struct debuf *d;
@@ -358,19 +178,19 @@ spell_cast(unsigned player_ref, ENT *eplayer, unsigned target_ref, unsigned slot
 	ENT etarget = ent_get(target_ref);
 	struct spell sp = eplayer->spells[slot];
 	SKEL skel;
-	lhash_get(skel_hd, &skel, sp.skel);
+	qdb_get(skel_hd, &skel, &sp.skel);
 	SSPE *_sp = &skel.sp.spell;
 
 	unsigned mana = eplayer->mp;
 	char a[BUFSIZ]; // FIXME way too big?
 	char c[BUFSIZ + 32];
 
-	char const *color = sp_color(_sp);
+	enum color color = sp_color(_sp);
 
 	if (mana < sp.cost)
 		return -1;
 
-	snprintf(a, sizeof(a), "%s%s"ANSI_RESET, color, skel.name);
+	snprintf(a, sizeof(a), "%s%s"ANSI_RESET, ansi_fg[color], skel.name);
 
 	mana -= sp.cost;
 	eplayer->mp = mana > 0 ? mana : 0;
@@ -422,15 +242,10 @@ spells_birth(ENT *entity) {
 	for (j = 0; j < 8; j++) {
 		struct spell *sp = &entity->spells[j];
 		SKEL skel;
-		lhash_get(skel_hd, &skel, heal_id);
+		unsigned ref = HEAL_SKEL_REF;
+		qdb_get(skel_hd, &skel, &ref);
 		struct spell_skeleton *_sp = &skel.sp.spell;
 		sp->val = SPELL_DMG(entity, _sp);
 		sp->cost = SPELL_COST(sp->val, _sp->y, _sp->flags & AF_BUF);
 	}
-}
-
-void
-spells_init(void) {
-	for (int i = 0; i < SPELL_MAX; i++)
-		lhash_new(skel_hd, &spell_map[i]);
 }

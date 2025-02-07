@@ -1,10 +1,11 @@
 #ifndef UAPI_OBJECT_H
 #define UAPI_OBJECT_H
 
-#include <qhash.h>
+#include <qdb.h>
+#include "./azoth.h"
 
 #define ROOT ((unsigned) 1)
-#define NOTHING ((unsigned) -1)
+#define NOTHING QDB_NOTFOUND
 
 enum object_flags {
 	OF_INF = 1,
@@ -50,7 +51,7 @@ enum entity_flags {
 	EF_SITTING = 4,
 	EF_SHOP = 8,
 	EF_WIZARD = 16,
-	EF_BUILDER = 32,
+	EF_BAN = 32,
 };
 
 enum huth {
@@ -201,9 +202,11 @@ typedef struct object {
 
 struct icon {
 	int actions;
-	char *icon;
+	struct print_info pi;
+	char ch;
 };
 
+/* FIXME: not for plugins */
 extern unsigned obj_hd, contents_hd, obs_hd, art_hd;
 
 typedef int obj_exists_t(unsigned ref);
@@ -228,7 +231,7 @@ static inline int
 object_item(unsigned obj_ref)
 {
 	OBJ obj;
-	uhash_get(obj_hd, &obj, obj_ref);
+	qdb_get(obj_hd, &obj, &obj_ref);
 	return obj.type == TYPE_THING
 		|| obj.type == TYPE_CONSUMABLE
 		|| obj.type == TYPE_EQUIPMENT;

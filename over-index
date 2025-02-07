@@ -1,32 +1,27 @@
 #!/bin/sh
 
-FinishIt() {
-	echo ${STATUS_STR}200 Ok
-	echo
-	cat "$@"
-}
-
 test ! -z "$REMOTE_USER" || SeeOther /login?ret=/nd
+
+set -- `echo $DOCUMENT_URI | tr '/' ' '`
+shift
 
 case "$1" in
 	"") ;;
 	art)
 		shift
 		urld="`urldecode $DOCUMENT_URI`"
-		test -f "../$urld" || NotFound
-		FinishIt "../$urld" | Fin
+		Static "../$urld" | Fin
 		;;
 
 	*)
 		path="`echo $@ | tr ' ' '/'`"
 		if test "$1" = "node_modules"; then
-			# for when we want to test modified libraries
-			test -f $path || NotFound
-			FinishIt $path | Fin
+			# for when we want to test
+			# modified libraries
+			Static $path
 		else
-			test -f htdocs/$1 || NotFound
-			FinishIt htdocs/$1 | Fin
-		fi
+			Static htdocs/$1
+		fi | Fin
 		;;
 esac
 

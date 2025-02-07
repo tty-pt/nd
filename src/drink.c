@@ -14,15 +14,15 @@ do_consume(int fd, int argc __attribute__((unused)), char *argv[])
 	int aux;
 
 	if (!*name || (vial_ref = ematch_mine(player_ref, name)) == NOTHING) {
-		nd_writef(player_ref, "Consume what?\n");
+		nd_writef(player_ref, NOMATCH_MESSAGE);
 		return;
 	}
 
 	OBJ vial;
-	lhash_get(obj_hd, &vial, vial_ref);
+	qdb_get(obj_hd, &vial, &vial_ref);
 
 	if (vial.type != TYPE_CONSUMABLE) {
-		nd_writef(player_ref, "You can not consume that.\n");
+		nd_writef(player_ref, CANTDO_MESSAGE);
 		return;
 	}
 
@@ -44,12 +44,14 @@ do_consume(int fd, int argc __attribute__((unused)), char *argv[])
 	}
 
 	cvial->quantity--;
-	notify_wts(player_ref, "consume", "consumes", " %s\n", vial.name);
+	OBJ player;
+	qdb_get(obj_hd, &player, &player_ref);
+	nd_owritef(player_ref, "%s consumes %s\n", player.name, vial.name);
 
 	if (!cvial->quantity && !cvial->capacity)
 		object_move(vial_ref, NOTHING);
 	else
-		lhash_put(obj_hd, vial_ref, &vial);
+		qdb_put(obj_hd, &vial_ref, &vial);
 
 	ent_set(player_ref, &eplayer);
 }
@@ -58,54 +60,37 @@ void
 do_fill(int fd, int argc __attribute__((unused)), char *argv[])
 {
 	unsigned player_ref = fd_player(fd),
-	      vial_ref = ematch_mine(player_ref, argv[1]);;
+		 vial_ref = ematch_mine(player_ref, argv[1]),
+		 source_ref = ematch_near(player_ref, argv[2]);
 
-	if (vial_ref == NOTHING) {
-		nd_writef(player_ref, "Fill what?\n");
+	if (vial_ref == NOTHING || source_ref == NOTHING) {
+		nd_writef(player_ref, NOMATCH_MESSAGE);
 		return;
 	}
 
 	OBJ vial;
-	lhash_get(obj_hd, &vial, vial_ref);
-
-	if (vial.type != TYPE_CONSUMABLE) {
-		nd_writef(player_ref, "You can not fill that up.\n");
-		return;
-	}
-
+	qdb_get(obj_hd, &vial, &vial_ref);
 	CON *cvial = &vial.sp.consumable;
 
-	if (!cvial->capacity) {
-		nd_writef(player_ref, "You can not fill that up.\n");
-		return;
-	}
-
-	if (cvial->quantity) {
-		nd_writef(player_ref, "%s is not empty.\n", vial.name);
-		return;
-	}
-
-	unsigned source_ref = ematch_near(player_ref, argv[2]);
-
-	if (source_ref == NOTHING) {
-		nd_writef(player_ref, "Invalid source.\n");
-		return;
-	}
+	if (vial.type != TYPE_CONSUMABLE || !cvial->capacity)
+		goto error;
 
 	OBJ source;
-	lhash_get(obj_hd, &source, source_ref);
+	qdb_get(obj_hd, &source, &source_ref);
 
-	if (source.type != TYPE_CONSUMABLE) {
-		nd_writef(player_ref, "Invalid source.\n");
-		return;
-	}
+	if (source.type != TYPE_CONSUMABLE)
+		goto error;
 
 	CON *csource = &source.sp.consumable;
 	cvial->quantity = cvial->capacity;
 	cvial->drink = csource->drink;
 	cvial->food = csource->food;
-	lhash_put(obj_hd, vial_ref, &vial);
+	qdb_put(obj_hd, &vial_ref, &vial);
 
-	notify_wts(player_ref, "fill", "fills", " %s from %s\n",
-		vial.name, source.name);
+	OBJ player;
+	qdb_get(obj_hd, &player, &player_ref);
+	nd_owritef(player_ref, "%s fills %s from %s\n", player.name, vial.name, source.name);
+	return;
+error:
+	nd_writef(player_ref, CANTDO_MESSAGE);
 }

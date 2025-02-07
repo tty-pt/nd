@@ -3,15 +3,31 @@
 
 #include <stdarg.h>
 #include <stddef.h>
-#include <qhash.h>
+#include <qdb.h>
+#include "azoth.h"
+
+enum hd {
+	HD_FD,
+	HD_SKEL,
+	HD_DROP,
+	HD_ADROP,
+	HD_BIOME,
+	HD_PLANT,
+	HD_WTS,
+	HD_RWTS,
+	HD_OBJ,
+	HD_OBS,
+	HD_CONTENTS,
+	HD_MAX,
+};
 
 typedef unsigned fd_player_t(unsigned fd);
 fd_player_t fd_player;
 
-typedef struct hash_cursor fds_iter_t(unsigned player);
+typedef qdb_cur_t fds_iter_t(unsigned player);
 fds_iter_t fds_iter;
 
-typedef int fds_next_t(struct hash_cursor *c);
+typedef int fds_next_t(qdb_cur_t *c);
 fds_next_t fds_next;
 
 /* typedef int fds_has_t(unsigned player); */
@@ -73,7 +89,7 @@ notify_wts_to(unsigned who_ref, unsigned tar_ref, char const *a, char const *b, 
 	va_end(args);
 }
 
-typedef void notify_attack_t(unsigned player_ref, unsigned target_ref, char *wts, short val, char const *color, short mval);
+typedef void notify_attack_t(unsigned player_ref, unsigned target_ref, char *wts, short val, enum color color, short mval);
 notify_attack_t notify_attack;
 
 typedef void nd_tdwritef_t(unsigned player_ref, const char *fmt, va_list args);
@@ -90,5 +106,29 @@ typedef void nd_wwrite_t(unsigned player_ref, void *msg, size_t len);
 nd_wwrite_t nd_wwrite;
 
 extern unsigned fds_hd;
+
+typedef unsigned (nd_put_t)(unsigned, void *, void *);
+nd_put_t nd_put, nd_get;
+
+typedef unsigned (nd_open_t)(char *, char *, char *, unsigned);
+nd_open_t nd_open;
+
+typedef struct {
+	int flags;
+	void *internal;
+} nd_cur_t;
+
+typedef nd_cur_t (nd_iter_t)(unsigned, void *);
+nd_iter_t nd_iter;
+
+typedef int (nd_next_t)(void *, void *, nd_cur_t *cur);
+nd_next_t nd_next;
+
+typedef void (nd_fin_t)(nd_cur_t *cur);
+nd_fin_t nd_fin;
+
+typedef void nd_cb_t(int fd, int argc, char *argv[]);
+typedef void nd_register_t(char *, nd_cb_t *, unsigned);
+nd_register_t nd_register;
 
 #endif

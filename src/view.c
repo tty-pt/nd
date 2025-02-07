@@ -10,17 +10,41 @@
 #include "uapi/io.h"
 #include "uapi/map.h"
 
+static unsigned *biome_map;
+
+char *ansi_bg[] = {
+	[BLACK] = ANSI_BG_BLACK,
+	[RED] = ANSI_BG_RED,
+	[YELLOW] = ANSI_BG_YELLOW,
+	[GREEN] = ANSI_BG_GREEN,
+	[CYAN] = ANSI_BG_CYAN,
+	[BLUE] = ANSI_BG_BLUE,
+	[MAGENTA] = ANSI_BG_MAGENTA,
+	[WHITE] = ANSI_BG_WHITE,
+};
+
+char *ansi_fg[] = {
+	[BLACK] = ANSI_FG_BLACK,
+	[RED] = ANSI_FG_RED,
+	[YELLOW] = ANSI_FG_YELLOW,
+	[GREEN] = ANSI_FG_GREEN,
+	[CYAN] = ANSI_FG_CYAN,
+	[BLUE] = ANSI_FG_BLUE,
+	[MAGENTA] = ANSI_FG_MAGENTA,
+	[WHITE] = ANSI_FG_WHITE,
+};
 
 static inline char * biome_bg(unsigned i) {
+	static char ret[16];
 	if (NIGHT_IS)
 		return ANSI_RESET;
 
 	SKEL skel;
-	lhash_get(skel_hd, &skel, i);
-	return (char *) skel.sp.biome.bg;
+	qdb_get(skel_hd, &skel, &biome_map[i]);
+	memcpy(ret, ansi_bg[skel.sp.biome.bg], sizeof(ret));
+	return ret;
 }
 
-// global buffer for map? // FIXME d bio_limit
 static const char * v = "|";
 static const char * l = ANSI_FG_WHITE "+";
 static const char *h_open	= "   ";
@@ -45,17 +69,21 @@ static inline char *
 dr_tree(struct plant_data pd, int n, char *b) {
 	if (PLANT_N(pd.n, n)) {
 		SKEL skel;
-		lhash_get(skel_hd, &skel, pd.id[n]);
+		qdb_get(skel_hd, &skel, &pd.id[n]);
 		SPLA *pl = &skel.sp.plant;
-		b = stpcpy(b, pl->pre);
+
+		if (pl->pi.flags & BOLD)
+			b = stpcpy(b, ANSI_BOLD);
+		b = stpcpy(b, ansi_fg[pl->pi.fg]);
 		*b++ = PLANT_N(pd.n, n) > PLANT_HALF
 			? pl->big : pl->small;
+		b = stpcpy(b, ansi_fg[pl->pi.fg]);
+		if (pl->pi.flags & BOLD)
+			b = stpcpy(b, ANSI_RESET_BOLD);
 	} else
 		*b++ = ' ';
 	return b;
 }
-
-// TODO remove phantom trees
 
 static inline char *
 dr_room(char *buf, view_tile_t *t, const char *bg)
@@ -102,7 +130,7 @@ dr_room(char *buf, view_tile_t *t, const char *bg)
 static inline unsigned
 floor_get(unsigned what_ref) {
 	OBJ what;
-	lhash_get(obj_hd, &what, what_ref);
+	qdb_get(obj_hd, &what, &what_ref);
 	ROO *rwhat = &what.sp.room;
 	unsigned char floor = rwhat->floor;
 
@@ -247,10 +275,6 @@ dr_hs_n(char *b, view_tile_t *t)
 
 		wp = wall_paint(floor);
 
-		// TODO fix t exits
-		//  if (!(t->exits & E_SOUTH)) should work
-		// see FIXME below
-
 		if (!(t->exits & E_SOUTH) || !(tn->exits & E_NORTH))
 			w = (char *) h_closed;
 		else if ((t->doors & E_SOUTH) || (tn->doors & E_NORTH)) {
@@ -309,7 +333,7 @@ view_build_exit_s(view_tile_t *t, pos_t p, enum exit e) {
 	}
 
 	OBJ tmp;
-	lhash_get(obj_hd, &tmp, tmp_ref);
+	qdb_get(obj_hd, &tmp, &tmp_ref);
 	ROO *rtmp = &tmp.sp.room;
 
 	if (rtmp->exits & e_simm(e)) {
@@ -321,13 +345,13 @@ view_build_exit_s(view_tile_t *t, pos_t p, enum exit e) {
 
 static inline ucoord_t
 view_build_flags(unsigned loc_ref) {
-	struct hash_cursor c = fhash_iter(contents_hd, loc_ref);
+	qdb_cur_t c = qdb_iter(contents_hd, &loc_ref);
 	unsigned tmp_ref;
 	ucoord_t flags = 0;
 
-	while (ahash_next(&tmp_ref, &c)) {
+	while (qdb_next(&loc_ref, &tmp_ref, &c)) {
 		OBJ tmp;
-		lhash_get(obj_hd, &tmp, tmp_ref);
+		qdb_get(obj_hd, &tmp, &tmp_ref);
 		switch (tmp.type) {
 		case TYPE_ENTITY:
 			flags |= VTF_ENTITY;
@@ -352,7 +376,7 @@ view_build_tile(struct bio *n, unsigned loc_ref, view_tile_t *t, pos_t p)
 	t->room = loc_ref;
 	if (loc_ref != NOTHING) {
 		OBJ loc;
-		lhash_get(obj_hd, &loc, loc_ref);
+		qdb_get(obj_hd, &loc, &loc_ref);
 		ROO *rloc = &loc.sp.room;
 		view_build_exit(t, rloc, E_EAST);
 		view_build_exit(t, rloc, E_NORTH);
@@ -399,11 +423,13 @@ view(unsigned player_ref)
 		   *n_max = &bd[VIEW_BDI + 1];
 	pos_t pos, opos;
 	OBJ player;
-	lhash_get(obj_hd, &player, player_ref);
+	qdb_get(obj_hd, &player, &player_ref);
 	map_where(opos, player.location);
 	view_t view;
         view_tile_t *p = view;
 	unsigned o[VIEW_M], *o_p = o;
+	uint64_t position = map_mwhere(player.location);
+	biome_map = biome_map_get(position);
 
 	memcpy(pos, opos, sizeof(pos));
 	noise_view(bd, pos);

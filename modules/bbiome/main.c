@@ -1,182 +1,166 @@
-#include "biome.h"
-#include "params.h"
-
-unsigned biome_refs[BIOME_MAX];
+#include <uapi/nd.h>
+#include "./bbiome.h"
 
 SKEL biomes_skel[] = {
 	[BIOME_WATER] = {
                 .name = "water",
-                .description = "",
                 .type = STYPE_BIOME,
                 .sp = { .biome = {
-                        .bg = ANSI_BG_BLUE,
+                        .bg = BLUE,
                 } },
 	},
 
 	[BIOME_PERMANENT_ICE] = {
 		.name = "permanent ice",
-                .description = "",
                 .type = STYPE_BIOME,
                 .sp = { .biome = {
-                        .bg = ANSI_BG_WHITE,
+                        .bg = WHITE,
                 } },
 	},
 
 	[BIOME_TUNDRA] = {
 		.name = "tundra",
-                .description = "",
                 .type = STYPE_BIOME,
                 .sp = { .biome = {
-                        .bg = ANSI_BG_CYAN,
+                        .bg = CYAN,
                 } },
 	},
 
 	[BIOME_TUNDRA2] = {
 		.name = "tundra2",
-                .description = "",
                 .type = STYPE_BIOME,
                 .sp = { .biome = {
-                        .bg = ANSI_BG_CYAN,
+                        .bg = CYAN,
                 } },
 	},
 
 	[BIOME_TUNDRA3] = {
 		.name = "tundra3",
-                .description = "",
                 .type = STYPE_BIOME,
                 .sp = { .biome = {
-                        .bg = ANSI_BG_CYAN,
+                        .bg = CYAN,
                 } },
 	},
 
 	[BIOME_TUNDRA4] = {
 		.name = "tundra4",
-                .description = "",
                 .type = STYPE_BIOME,
                 .sp = { .biome = {
-                        .bg = ANSI_BG_CYAN,
+                        .bg = CYAN,
                 } },
 	},
 
 	[BIOME_COLD_DESERT] = {
 		.name = "cold desert",
-                .description = "",
                 .type = STYPE_BIOME,
                 .sp = { .biome = {
-                        .bg = ANSI_BG_CYAN,
+                        .bg = CYAN,
                 } },
 	},
 
 	[BIOME_SHRUBLAND] = {
 		.name = "shrubland",
-                .description = "",
                 .type = STYPE_BIOME,
                 .sp = { .biome = {
-                        .bg = ANSI_BG_GREEN,
+                        .bg = GREEN,
                 } },
 	},
 
 	[BIOME_CONIFEROUS_FOREST] = {
 		.name = "coniferous forest",
-                .description = "",
                 .type = STYPE_BIOME,
                 .sp = { .biome = {
-                        .bg = ANSI_BG_GREEN,
+                        .bg = GREEN,
                 } },
 	},
 
 	[BIOME_BOREAL_FOREST] = {
 		.name = "boreal forest",
-                .description = "",
                 .type = STYPE_BIOME,
                 .sp = { .biome = {
-                        .bg = ANSI_BG_GREEN,
+                        .bg = GREEN,
                 } },
 	},
 
 	[BIOME_TEMPERATE_GRASSLAND] = {
 		.name = "temperate grassland",
-                .description = "",
                 .type = STYPE_BIOME,
                 .sp = { .biome = {
-                        .bg = ANSI_BG_GREEN,
+                        .bg = GREEN,
                 } },
 	},
 
 	[BIOME_WOODLAND] = {
 		.name = "woodland",
-                .description = "",
                 .type = STYPE_BIOME,
                 .sp = { .biome = {
-                        .bg = ANSI_BG_GREEN,
+                        .bg = GREEN,
                 } },
 	},
 
 	[BIOME_TEMPERATE_SEASONAL_FOREST] = {
 		.name = "temperate seasonal forest",
-                .description = "",
                 .type = STYPE_BIOME,
                 .sp = { .biome = {
-                        .bg = ANSI_BG_GREEN,
+                        .bg = GREEN,
                 } },
 	},
 
 	[BIOME_TEMPERATE_RAINFOREST] = {
 		.name = "temperate rainforest",
-                .description = "",
                 .type = STYPE_BIOME,
                 .sp = { .biome = {
-                        .bg = ANSI_BG_GREEN,
+                        .bg = GREEN,
                 } },
 	},
 
 	[BIOME_DESERT] = {
 		.name = "desert",
-                .description = "",
                 .type = STYPE_BIOME,
                 .sp = { .biome = {
-                        .bg = ANSI_BG_YELLOW,
+                        .bg = YELLOW,
                 } },
 	},
 
 	[BIOME_SAVANNAH] = {
 		.name = "savannah",
-                .description = "a place that is hot and dry",
                 .type = STYPE_BIOME,
                 .sp = { .biome = {
-                        .bg = ANSI_BG_YELLOW,
+                        .bg = YELLOW,
                 } },
 	},
 
 	[BIOME_TROPICAL_SEASONAL_FOREST] = {
 		.name = "tropical seasonal forest",
-                .description = "",
                 .type = STYPE_BIOME,
                 .sp = { .biome = {
-                        .bg = ANSI_BG_GREEN,
+                        .bg = GREEN,
                 } },
 	},
 
 	[BIOME_TROPICAL_RAINFOREST] = {
 		.name = "tropical rainforest",
-                .description = "",
                 .type = STYPE_BIOME,
                 .sp = { .biome = {
-                        .bg = ANSI_BG_BLACK,
+                        .bg = BLACK,
                 } },
 	},
 
 	[BIOME_VOLCANIC] = {
 		.name = "volcanic",
-                .description = "",
                 .type = STYPE_BIOME,
                 .sp = { .biome = {
-                        .bg = ANSI_BG_BLACK,
+                        .bg = BLACK,
                 } },
 	},
 };
 
-void biomes_init(void) {
-	for (unsigned i = 0; i < BIOME_MAX; i++)
-		biome_refs[i] = lhash_new(skel_hd, &biomes_skel[i]);
+void mod_install(void *arg __attribute__((unused))) {
+	unsigned biome_map[BIOME_MAX];
+	for (unsigned i = 0; i < BIOME_MAX; i++) {
+		unsigned biome_ref = nd_put(HD_SKEL, NULL, &biomes_skel[i]);
+		biome_map[i] = biome_ref;
+	}
+	unsigned ref = 16;
+	nd_put(HD_BIOME, &ref, biome_map);
 }

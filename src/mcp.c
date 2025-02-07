@@ -75,7 +75,7 @@ _fbcp_item(char *bcp_buf, unsigned obj_ref, unsigned char dynflags)
 {
 	int aux, aux1;
 	OBJ obj;
-	lhash_get(obj_hd, &obj, obj_ref);
+	qdb_get(obj_hd, &obj, &obj_ref);
 	struct icon ico = object_icon(obj_ref);
 	unsigned char iden = BCP_ITEM;
 	char *p = bcp_buf, *aux2;
@@ -91,9 +91,11 @@ _fbcp_item(char *bcp_buf, unsigned obj_ref, unsigned char dynflags)
 	memcpy(p += sizeof(ico.actions), obj.name, aux = strlen(obj.name) + 1);
 	aux2 = (char *) unparse(obj_ref);
 	memcpy(p += aux, aux2, aux1 = strlen(aux2) + 1);
-	memcpy(p += aux1, ico.icon, aux = strlen(ico.icon) + 1);
+	memcpy(p += aux1, &ico.pi.fg, sizeof(ico.pi.fg));
+	memcpy(p += sizeof(ico.pi.fg), &ico.pi.flags, sizeof(ico.pi.flags));
+	memcpy(p += sizeof(ico.pi.flags), &ico.ch, sizeof(ico.ch));
 	aux2 = object_art(obj_ref);
-	memcpy(p += aux, aux2, aux1 = strlen(aux2) + 1);
+	memcpy(p += sizeof(ico.ch), aux2, aux1 = strlen(aux2) + 1);
 	switch (obj.type) {
 	case TYPE_ROOM: {
 		ROO *roo = &obj.sp.room;
@@ -113,7 +115,7 @@ _fbcp_item(char *bcp_buf, unsigned obj_ref, unsigned char dynflags)
 	return p - bcp_buf;
 }
 
-static void
+void
 fbcp_item(unsigned player_ref, unsigned obj_ref, unsigned char dynflags)
 {
 	static char bcp_buf[SUPERBIGSIZ];
@@ -132,7 +134,7 @@ _fbcp_out(char *bcp_buf, unsigned obj_ref)
 	aux = obj_ref;
 	memcpy(p += sizeof(iden), &aux, sizeof(aux));
 	OBJ obj;
-	lhash_get(obj_hd, &obj, obj_ref);
+	qdb_get(obj_hd, &obj, &obj_ref);
 	aux = obj.location;
 	memcpy(p += sizeof(aux), &aux, sizeof(aux));
 	p += sizeof(aux);
@@ -219,59 +221,15 @@ fbcp_view_buf(unsigned player_ref, char *view_buf)
 	nd_twritef(player_ref, view_buf);
 }
 
-void
-mcp_look(unsigned player_ref, unsigned loc_ref)
-{
-	ENT eplayer = ent_get(player_ref);
-	OBJ loc;
-	lhash_get(obj_hd, &loc, loc_ref);
-	unsigned thing_ref;
-
-	fbcp_item(player_ref, loc_ref, 1);
-	switch (loc.type) {
-	case TYPE_ROOM: break;
-	case TYPE_ENTITY: // falls through
-	default:
-		eplayer.last_observed = loc_ref;
-		ent_set(player_ref, &eplayer);
-		ahash_add(obs_hd, loc_ref, player_ref);
-	}
-
-        if (loc_ref != player_ref && loc.type == TYPE_ENTITY && !(eplayer.flags & EF_WIZARD))
-                return;
-
-	// use callbacks for mcp like this versus telnet
-	struct hash_cursor c = fhash_iter(contents_hd, loc_ref);
-	while (ahash_next(&thing_ref, &c))
-		fbcp_item(player_ref, thing_ref, 0);
-
-	nd_twritef(player_ref, "%s\n", unparse(loc_ref));
-
-        char buf[BUFSIZ];
-        size_t buf_l = 0;
-
-	struct hash_cursor c2 = fhash_iter(contents_hd, loc_ref);
-	while (ahash_next(&thing_ref, &c2)) {
-	/* check to see if there is anything there */
-			if (thing_ref == player_ref)
-				continue;
-			buf_l += snprintf(&buf[buf_l], BUFSIZ - buf_l,
-					"%s\r\n", unparse(thing_ref));
-	}
-
-        buf[buf_l] = '\0';
-        nd_twritef(player_ref, "Contents: %s", buf);
-}
-
 static void
 fbcp_room(unsigned room_ref, char *msg, size_t len)
 {
-	struct hash_cursor c = fhash_iter(contents_hd, room_ref);
+	qdb_cur_t c = qdb_iter(contents_hd, &room_ref);
 	unsigned tmp_ref;
 
-	while (ahash_next(&tmp_ref, &c)) {
+	while (qdb_next(&room_ref, &tmp_ref, &c)) {
 		OBJ tmp;
-		lhash_get(obj_hd, &tmp, tmp_ref);
+		qdb_get(obj_hd, &tmp, &tmp_ref);
 		if (tmp.type != TYPE_ENTITY)
 			continue;
 
@@ -282,12 +240,12 @@ fbcp_room(unsigned room_ref, char *msg, size_t len)
 static void
 fbcp_observers(unsigned thing_ref, char *msg, size_t len)
 {
-	struct hash_cursor c = fhash_iter(obs_hd, thing_ref);;
+	qdb_cur_t c = qdb_iter(obs_hd, &thing_ref);;
 	unsigned tmp_ref = 0;
 
-	while (ahash_next(&tmp_ref, &c)) {
+	while (qdb_next(&thing_ref, &tmp_ref, &c)) {
 		OBJ tmp;
-		lhash_get(obj_hd, &tmp, tmp_ref);
+		qdb_get(obj_hd, &tmp, &tmp_ref);
 		if (tmp.type != TYPE_ENTITY)
 			continue;
 		nd_wwrite(tmp_ref, msg, len);
@@ -299,7 +257,7 @@ mcp_content_out(unsigned loc_ref, unsigned thing_ref) {
 	char bcp_buf[2 + sizeof(unsigned char) + sizeof(int) * 2];
 	size_t len = _fbcp_out(bcp_buf, thing_ref);
 	OBJ loc;
-	lhash_get(obj_hd, &loc, loc_ref);
+	qdb_get(obj_hd, &loc, &loc_ref);
 
 	if (loc.type == TYPE_ROOM)
 		fbcp_room(loc_ref, bcp_buf, len);
@@ -312,7 +270,7 @@ mcp_content_in(unsigned loc_ref, unsigned thing_ref) {
 	static char bcp_buf[SUPERBIGSIZ];
 	size_t len = _fbcp_item(bcp_buf, thing_ref, 2);
 	OBJ loc;
-	lhash_get(obj_hd, &loc, loc_ref);
+	qdb_get(obj_hd, &loc, &loc_ref);
 
 	if (loc.type == TYPE_ROOM)
 		fbcp_room(loc_ref, bcp_buf, len);

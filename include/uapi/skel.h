@@ -1,18 +1,16 @@
 #ifndef UAPI_SKEL_H
 #define UAPI_SKEL_H
 
-#include "qhash.h"
+#include <stdint.h>
+#include "./azoth.h"
 
-enum element {
-	ELM_PHYSICAL,
-	ELM_FIRE,
-	ELM_ICE,
-	ELM_AIR,
-	ELM_EARTH,
-	ELM_SPIRIT,
-	ELM_VAMP,
-	ELM_DARK,
-	ELM_MAX,
+enum base_element {
+	ELM_SPIRIT = 1,
+	ELM_FIRE = 2,
+	ELM_WATER = 4,
+	ELM_AIR = 8,
+	ELM_EARTH = 16,
+	ELM_PHYSICAL = 32,
 };
 
 enum object_skeleton_type {
@@ -26,6 +24,13 @@ enum object_skeleton_type {
 	STYPE_SPELL,
 };
 
+enum biome {
+	BIOME_WATER = 0,
+	BIOME_PERMANENT_ICE = 1,
+	BIOME_VOLCANIC = 18,
+	BIOME_MAX = 19,
+};
+
 typedef struct drop {
 	unsigned skel;
 	unsigned char y, yield, yield_v;
@@ -33,26 +38,26 @@ typedef struct drop {
 
 typedef struct entity_skel {
 	unsigned char y, stat, lvl, lvl_v, wt, flags;
-	enum element type;
+	unsigned element;
 	unsigned biomes;
 } SENT;
 
 typedef struct plant_skel {
-	char const *pre, small, big, *post;
+	struct print_info pi;
+	char const small, big;
 	int16_t tmp_min, tmp_max;
 	uint16_t rn_min, rn_max;
 	unsigned y;
 } SPLA;
 
 typedef struct spell_skeleton {
-       enum element element;
-       unsigned char ms, ra, y, flags;
-       char *name, *description;
+	unsigned element;
+	unsigned char ms, ra, y, flags;
+	char *name, *description;
 } SSPE;
 
 typedef struct object_skel {
-	char const *name;
-	char const *description;
+	char const name[32];
 
         enum object_skeleton_type type;
 
@@ -67,7 +72,7 @@ typedef struct object_skel {
                 SENT entity;
 		SPLA plant;
                 struct {
-                        const char *bg;
+			const enum color bg;
                 } biome;
                 struct {
                         short unsigned unused;
@@ -77,25 +82,11 @@ typedef struct object_skel {
 } SKEL;
 
 typedef struct {
-	char *color;
-	enum element weakness;
+	enum color color;
+	unsigned weakness;
 } element_t;
 
+/* FIXME: not for plugins */
 extern unsigned skel_hd, drop_hd, adrop_hd, element_hd;
-
-/* is like:
-unsigned skel_new(SKEL *skel);
-SKEL skel_get(unsigned ref);
-void skel_set(unsigned ref, SKEL *skel);
-
-unsigned drop_new(DROP *drop);
-DROP drop_get(unsigned ref);
-void drop_set(unsigned ref, DROP *drop);
-
-void drop_associate(unsigned skel_ref, unsigned drop_ref);
-struct hash_cursor drop_iter(unsigned skel_ref);
-unsigned drop_next(DROP *drop, struct hash_cursor *c);
-unsigned drop_vdel(unsigned skel_ref, unsigned drop_ref);
- */
 
 #endif

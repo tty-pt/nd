@@ -40,4 +40,7 @@
 #define ANSI_BG_MAGENTA	"\033[45m"
 #define ANSI_BG_WHITE	"\033[47m"
 
+extern char *ansi_bg[];
+extern char *ansi_fg[];
+
 #endif /* _PARAMS_H */

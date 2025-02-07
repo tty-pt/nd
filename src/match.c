@@ -21,7 +21,7 @@ ematch_here(unsigned player_ref, char *str)
 {
 	if (!strcmp(str, "here")) {
 		OBJ player;
-		lhash_get(obj_hd, &player, player_ref);
+		qdb_get(obj_hd, &player, &player_ref);
 		return player.location;
 	} else
 		return NOTHING;
@@ -37,7 +37,7 @@ unsigned
 ematch_near(unsigned player_ref, char *str)
 {
 	OBJ player;
-	lhash_get(obj_hd, &player, player_ref);
+	qdb_get(obj_hd, &player, &player_ref);
 	return ematch_at(player_ref, player.location, str);
 }
 
@@ -140,7 +140,7 @@ ematch_at(unsigned player_ref, unsigned where_ref, char *name) {
 	      absolute_ref, tmp_ref = NOTHING;
 	OBJ what;
 
-	lhash_get(obj_hd, &what, what_ref);
+	qdb_get(obj_hd, &what, &what_ref);
 	if (what_ref != NOTHING && what.location == where_ref)
 		return what_ref;
 
@@ -154,18 +154,18 @@ ematch_at(unsigned player_ref, unsigned where_ref, char *name) {
 	if (absolute_ref != NOTHING && !controls(player_ref, absolute_ref))
 		absolute_ref = NOTHING;
 
-	struct hash_cursor c = fhash_iter(contents_hd, where_ref);
-	while (ahash_next(&tmp_ref, &c)) {
+	qdb_cur_t c = qdb_iter(contents_hd, &where_ref);
+	while (qdb_next(&where_ref, &tmp_ref, &c)) {
 		if (tmp_ref == absolute_ref) {
-			hash_fin(&c);
+			qdb_fin(&c);
 			break;
 		}
 
 		OBJ tmp;
-		lhash_get(obj_hd, &tmp, tmp_ref);
+		qdb_get(obj_hd, &tmp, &tmp_ref);
 		if (string_match(tmp.name, name)) {
 			if (nth <= 0) {
-				hash_fin(&c);
+				qdb_fin(&c);
 				break;
 			}
 			nth--;

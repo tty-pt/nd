@@ -12,6 +12,10 @@ nd:
 
 deps:
 	${MAKE} -C src ${MFLAGS} deps
+	${MAKE} -C modules ${MFLAGS} deps
+
+modules:
+	${MAKE} -C modules
 
 node_modules/:
 	pnpm i
@@ -25,4 +29,4 @@ run: all
 
 FORCE:
 
-.PHONY: backup run clean nd deps
+.PHONY: backup run clean nd deps modules

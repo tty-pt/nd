@@ -6,33 +6,12 @@
 #include "uapi/match.h"
 #include "uapi/wts.h"
 
-/* prints owner of something */
-static inline void
-print_owner(unsigned player_ref, unsigned thing_ref)
-{
-	OBJ thing, owner;
-
-	lhash_get(obj_hd, &thing, thing_ref);
-	switch (thing.type) {
-	case TYPE_ENTITY:
-		nd_writef(player_ref, "%s is an entity.\n", thing.name);
-		break;
-	case TYPE_ROOM:
-	case TYPE_CONSUMABLE:
-	case TYPE_EQUIPMENT:
-	case TYPE_THING:
-		lhash_get(obj_hd, &owner, thing.owner);
-		nd_writef(player_ref, "Owner: %s\n", owner.name);
-		break;
-	}
-}
-
 void
 do_examine(int fd, int argc __attribute__((unused)), char *argv[])
 {
 	unsigned player_ref = fd_player(fd);
 	OBJ player;
-	lhash_get(obj_hd, &player, player_ref);
+	qdb_get(obj_hd, &player, &player_ref);
 	char *name = argv[1];
 	unsigned thing_ref;
 
@@ -43,25 +22,23 @@ do_examine(int fd, int argc __attribute__((unused)), char *argv[])
 		return;
 	}
 
+	OBJ thing, owner;
+	qdb_get(obj_hd, &thing, &thing_ref);
+	qdb_get(obj_hd, &owner, &thing.owner);
+
 	if (!controls(player_ref, thing_ref)) {
-		print_owner(player_ref, thing_ref);
+		nd_writef(player_ref, "Owner: %s\n", owner.name);
 		return;
 	}
 
-	OBJ thing, thing_owner;
-	lhash_get(obj_hd, &thing, thing_ref);
-	lhash_get(obj_hd, &thing_owner, thing.owner);
-
 	nd_writef(player_ref, "%s (#%d) Owner: %s  Value: %d\n",
-			unparse(thing_ref),
-			thing_ref,
-			thing_owner.name, thing.value);
+			unparse(thing_ref), thing_ref, owner.name, thing.value);
 
 	/* show him the contents */
-	struct hash_cursor c = fhash_iter(contents_hd, thing_ref);
+	qdb_cur_t c = qdb_iter(contents_hd, &thing_ref);
 	unsigned content_ref;
 
-	while (ahash_next(&content_ref, &c))
+	while (qdb_next(&thing_ref, &content_ref, &c))
 		nd_writef(player_ref, unparse(content_ref));
 
 	switch (thing.type) {
@@ -114,29 +91,15 @@ do_examine(int fd, int argc __attribute__((unused)), char *argv[])
 
 
 void
-do_score(int fd, int argc __attribute__((unused)), char *argv[] __attribute__((unused)))
+do_inventory(int fd, int argc __attribute__((unused)), char *argv[] __attribute__((unused)))
 {
 	unsigned player_ref = fd_player(fd);
 	OBJ player;
-	lhash_get(obj_hd, &player, player_ref);
 
+	look_at(player_ref, player_ref);
+	qdb_get(obj_hd, &player, &player_ref);
 	nd_writef(player_ref, "You have %d %s.\n", player.value,
 			wts_cond("shekel", player.value));
-}
-
-void
-do_inventory(int fd, int argc, char *argv[])
-{
-	unsigned player_ref = fd_player(fd);
-
-        mcp_look(player_ref, player_ref);
-	do_score(fd, argc, argv);
-}
-
-static void
-display_objinfo(unsigned player_ref, unsigned obj_ref)
-{
-	nd_writef(player_ref, "%s\n", unparse(obj_ref));
 }
 
 void
@@ -149,51 +112,19 @@ do_owned(int fd, int argc __attribute__((unused)), char *argv[])
 	if ((ent_get(player_ref).flags & EF_WIZARD) && *name) {
 		victim_ref = player_get(name);
 		if (victim_ref == NOTHING) {
-			nd_writef(player_ref, "I couldn't find that player.\n");
+			nd_writef(player_ref, NOMATCH_MESSAGE);
 			return;
 		}
 	} else
 		victim_ref = player_ref;
 
 	OBJ victim, oi;
-	lhash_get(obj_hd, &victim, victim_ref);
-	struct hash_cursor c = lhash_iter(obj_hd);
-	while (lhash_next(&oi_ref, &oi, &c))
+	qdb_get(obj_hd, &victim, &victim_ref);
+	qdb_cur_t c = qdb_iter(obj_hd, NULL);
+	while (qdb_next(&oi_ref, &oi, &c))
 		if (oi.owner == victim.owner) {
-			display_objinfo(player_ref, oi_ref);
+			nd_writef(player_ref, "%s\n", unparse(oi_ref));
 			total++;
 		}
-	nd_writef(player_ref, "***End of List***\n");
-	nd_writef(player_ref, "%d objects found.\n", total);
-}
-
-void
-do_contents(int fd, int argc __attribute__((unused)), char *argv[])
-{
-	unsigned player_ref = fd_player(fd), thing_ref;
-	char *name = argv[1];
-	int total = 0;
-
-	if (*name == '\0') {
-		OBJ player;
-		lhash_get(obj_hd, &player, player_ref);
-		thing_ref = player.location;
-	} else if ((thing_ref = ematch_all(player_ref, name)) == NOTHING) {
-		nd_writef(player_ref, NOMATCH_MESSAGE);
-		return;
-	}
-
-	if (!controls(player_ref, thing_ref)) {
-		nd_writef(player_ref, "Permission denied. (You can't get the contents of something you don't control)\n");
-		return;
-	}
-
-	struct hash_cursor c = fhash_iter(contents_hd, thing_ref);
-	unsigned oi_ref;
-	while (ahash_next(&oi_ref, &c)) {
-		display_objinfo(player_ref, oi_ref);
-		total++;
-	}
-	nd_writef(player_ref, "***End of List***\n");
 	nd_writef(player_ref, "%d objects found.\n", total);
 }

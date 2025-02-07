@@ -8,28 +8,31 @@ uname != uname
 config	!= cat ${srcdir}/.config | sed -n '/^.*=y$$/p' | sed 's/^\(.*\)=y$$/-D\1/' | tr '\n' ' '
 cflags-Darwin	+= -I/usr/local/opt/berkeley-db@4/include
 node_modules != npm root
-npm-lib := @tty-pt/qhash @tty-pt/ndc
-CFLAGS := -g -O0 -Wall -Wpedantic -Wextra -Wno-initializer-overrides ${cflags-${uname}} ${config} \
-	-I/usr/local/include -I${srcdir}/include \
-	${npm-lib:%=-I${node_modules}/%/include} \
-	-D_GNU_SOURCE -std=c99 \
-	-Wno-gnu-designator
+npm-lib := @tty-pt/qdb @tty-pt/ndc
+prefix := ${srcdir} \
+	  /usr/local \
+	  ${npm-lib:%=-I${node_modules}/%}
+CFLAGS := -g -O0 -Wall -Wpedantic -Wextra \
+	  -Wno-initializer-overrides ${cflags-${uname}} \
+	  ${config} ${prefix:%=-I%/include} \
+	  -D_GNU_SOURCE -std=c99 -Wno-gnu-designator
 ldlibs-Linux := -lbsd -lrt
-LDLIBS := -lxxhash -lpcre -lm -lc -lqhash -ldb -lndc -lcrypto -lssl ${ldlibs-${uname}}
+LDLIBS := -lxxhash -lpcre -lm -lc -lqdb -ldb -lndc -lcrypto -lssl ${ldlibs-${uname}}
 ldflags-Darwin += -L/usr/local/opt/berkeley-db@4/lib
-LDFLAGS	:= ${ldflags-${uname}} -L/usr/local/lib -Wl,-rpath,/usr/local/lib ${npm-lib:%=-L${node_modules}/%} ${npm-lib:%=-Wl,-rpath,${node_modules}/%}
+
+LDFLAGS := ${ldflags-${uname}} ${prefix:%=-L%/lib} \
+	   ${prefix:%=-Wl,-rpath,%/lib}
 
 exe := ../nd
-obj-y := skel.o object.o entity.o spacetime.o mcp.o map.o \
-	plant.o biome.o noise.o view.o item.o spell.o drink.o \
-	mob.o kill.o shop.o create.o look.o match.o \
-	move.o utils.o rob.o set.o speech.o wiz.o \
-	interface.o wts.o
+obj-y := object.o entity.o spacetime.o mcp.o map.o \
+	noise.o view.o item.o spell.o drink.o \
+	look.o match.o speech.o wiz.o interface.o
 
 src = ${obj-y:%.o=%.c}
+CC ?= clang
 LD := ${CC}
 
-all: ${exe} libnd.a
+all: ${exe} libnd.a ../compile_commands.json
 
 $(exe): ${obj-y}
 	@echo LD $@
@@ -46,7 +49,12 @@ libnd.a: libnd.o
 
 .c.o:
 	@echo CC $@
-	@${COMPILE.c} -o $@ -fPIC ${<:%=${RELDIR}/%}
+	${COMPILE.c} -MJ ${@:%.o=%.json} -o $@ -fPIC ${<:%=${RELDIR}/%}
+
+../compile_commands.json: ${obj-y}
+	@echo '[' > $@
+	@cat *.json >> $@
+	@echo ']' >> $@
 
 CTAGS ?= ctags
 
