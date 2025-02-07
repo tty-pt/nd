@@ -12,12 +12,14 @@
 
 
 static inline char * biome_bg(unsigned i) {
+	static char ret[16];
 	if (NIGHT_IS)
 		return ANSI_RESET;
 
 	SKEL skel;
 	lhash_get(skel_hd, &skel, i);
-	return (char *) skel.sp.biome.bg;
+	memcpy(ret, skel.sp.biome.bg, sizeof(skel.sp.biome.bg));
+	return ret;
 }
 
 // global buffer for map? // FIXME d bio_limit

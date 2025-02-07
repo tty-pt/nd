@@ -407,6 +407,7 @@ exits_infer(unsigned here_ref, ROO *rhere)
 
 // TODO make more add functions similar and easy to insert here
 
+/*
 static inline void
 stones_add(unsigned where_ref, struct bio *bio, pos_t p) {
 	noise_t v = XXH32((const char *) p, sizeof(pos_t), 0);
@@ -426,10 +427,11 @@ stones_add(unsigned where_ref, struct bio *bio, pos_t p) {
 		lhash_put(obj_hd, stone_ref, &stone);
 	}
 }
+*/
 
 struct bio * noise_point(pos_t p);
 void plants_add(unsigned where_ref, void *bio, pos_t pos);
-void mobs_add(unsigned where_ref, enum biome, long long pdn);
+/* void mobs_add(unsigned where_ref, enum biome, long long pdn); */
 void map_put(pos_t p, unsigned thing, int flags);
 
 static unsigned
@@ -450,8 +452,9 @@ st_room_at(pos_t pos)
 
 	rthere->floor = bio->bio_idx;
 	lhash_put(obj_hd, there_ref, &there);
-	mobs_add(there_ref, bio->bio_idx, bio->pd.n);
-        stones_add(there_ref, bio, pos);
+	// TODO call st function
+	/* mobs_add(there_ref, bio->bio_idx, bio->pd.n); */
+        /* stones_add(there_ref, bio, pos); */
 	plants_add(there_ref, bio, pos);
 	return there_ref;
 }
@@ -1102,7 +1105,6 @@ void
 st_init(void) {
 	SKEL skel = {
 		.name = "stone",
-		.description = "Solid stone(s)",
 		.type = STYPE_MINERAL,
 		.sp = {
 			.mineral = { 0 } 

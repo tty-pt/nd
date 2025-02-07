@@ -14,8 +14,10 @@
 
 #define SPELL_COST(dmg, y, no_bdmg) (no_bdmg ? 0 : dmg) + dmg / (1 << y)
 
+#define HEAL_SKEL_REF 1
+
+#if 0
 enum spell_type {
-	SPELL_HEAL,
 	SPELL_FOCUS,
 	SPELL_FIRE_FOCUS,
 	SPELL_CUT,
@@ -29,22 +31,7 @@ enum spell_type {
 	SPELL_MAX,
 };
 
-unsigned heal_id;
-
 SKEL spell_map[] = {
-	[SPELL_HEAL] = {
-		.name = "Heal",
-		.description = "",
-		.type = STYPE_SPELL,
-		.sp = {
-			.spell = {
-				.element = ELM_PHYSICAL,
-				.ms = 3, .ra = 1, .y = 2,
-				.flags = AF_HP,
-			}
-		},
-	},
-
 	[SPELL_FOCUS] = {
 		.name = "Focus",
 		.description = "",
@@ -159,6 +146,7 @@ SKEL spell_map[] = {
 		} },
 	},
 };
+#endif
 
 char *buf_wts[] = {
 	// HP
@@ -200,7 +188,7 @@ char *buf_wts[] = {
 	// 144 - DDGE
 };
 
-enum element
+unsigned
 mask_element(ENT *ent, register unsigned char a)
 {
 	unsigned skel_id = ent->debufs[__builtin_ffs(a) - 1].skel;
@@ -298,7 +286,7 @@ debufs_process(unsigned player_ref, ENT *eplayer)
 
 	if (hpi) {
 		debuf_notify(player_ref, hd, hpi);
-		return entity_damage(NOTHING, NULL, player_ref, eplayer, hpi);
+		return hpi;
 	}
 
 	return 0;
@@ -422,15 +410,17 @@ spells_birth(ENT *entity) {
 	for (j = 0; j < 8; j++) {
 		struct spell *sp = &entity->spells[j];
 		SKEL skel;
-		lhash_get(skel_hd, &skel, heal_id);
+		lhash_get(skel_hd, &skel, HEAL_SKEL_REF);
 		struct spell_skeleton *_sp = &skel.sp.spell;
 		sp->val = SPELL_DMG(entity, _sp);
 		sp->cost = SPELL_COST(sp->val, _sp->y, _sp->flags & AF_BUF);
 	}
 }
 
+/*
 void
 spells_init(void) {
 	for (int i = 0; i < SPELL_MAX; i++)
 		lhash_new(skel_hd, &spell_map[i]);
 }
+*/

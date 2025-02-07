@@ -28,21 +28,6 @@ enum actions {
         ACT_TALK = 256,
 };
 
-struct object room_zero = {
-	.location = NOTHING,
-	.owner = 1,
-	.art_id = 0,
-	.type = TYPE_ROOM,
-	.value = 9999999,
-	.flags = 0,
-	.sp.room = {
-		.flags = RF_HAVEN,
-		.doors = 0,
-		.exits = 0,
-		.floor = 0,
-	},
-};
-
 char std_db[BUFSIZ];
 char std_db_ok[BUFSIZ];
 unsigned obj_hd, contents_hd, obs_hd;
@@ -324,9 +309,6 @@ objects_init(void)
 		if (ent.flags & EF_PLAYER)
 			player_put(oi.name, ref);
 	}
-
-	if (!uhash_exists(obj_hd, 0))
-		lhash_new(obj_hd, &room_zero);
 }
 
 unsigned

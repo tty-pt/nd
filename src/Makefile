@@ -9,7 +9,7 @@ config	!= cat ${srcdir}/.config | sed -n '/^.*=y$$/p' | sed 's/^\(.*\)=y$$/-D\1/
 cflags-Darwin	+= -I/usr/local/opt/berkeley-db@4/include
 node_modules != npm root
 npm-lib := @tty-pt/qhash @tty-pt/ndc
-CFLAGS := -g -O0 -Wall -Wpedantic -Wextra -Wno-initializer-overrides ${cflags-${uname}} ${config} \
+CFLAGS := -g -O3 -Wall -Wpedantic -Wextra -Wno-initializer-overrides ${cflags-${uname}} ${config} \
 	-I/usr/local/include -I${srcdir}/include \
 	${npm-lib:%=-I${node_modules}/%/include} \
 	-D_GNU_SOURCE -std=c99 \
@@ -20,9 +20,9 @@ ldflags-Darwin += -L/usr/local/opt/berkeley-db@4/lib
 LDFLAGS	:= ${ldflags-${uname}} -L/usr/local/lib -Wl,-rpath,/usr/local/lib ${npm-lib:%=-L${node_modules}/%} ${npm-lib:%=-Wl,-rpath,${node_modules}/%}
 
 exe := ../nd
-obj-y := skel.o object.o entity.o spacetime.o mcp.o map.o \
+obj-y := object.o entity.o spacetime.o mcp.o map.o \
 	plant.o biome.o noise.o view.o item.o spell.o drink.o \
-	mob.o kill.o shop.o create.o look.o match.o \
+	kill.o shop.o create.o look.o match.o \
 	move.o utils.o rob.o set.o speech.o wiz.o \
 	interface.o wts.o
 

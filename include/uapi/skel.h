@@ -3,16 +3,13 @@
 
 #include "qhash.h"
 
-enum element {
-	ELM_PHYSICAL,
-	ELM_FIRE,
-	ELM_ICE,
-	ELM_AIR,
-	ELM_EARTH,
-	ELM_SPIRIT,
-	ELM_VAMP,
-	ELM_DARK,
-	ELM_MAX,
+enum base_element {
+	ELM_SPIRIT = 1,
+	ELM_FIRE = 2,
+	ELM_WATER = 4,
+	ELM_AIR = 8,
+	ELM_EARTH = 16,
+	ELM_PHYSICAL = 32,
 };
 
 enum object_skeleton_type {
@@ -33,26 +30,26 @@ typedef struct drop {
 
 typedef struct entity_skel {
 	unsigned char y, stat, lvl, lvl_v, wt, flags;
-	enum element type;
+	unsigned element;
 	unsigned biomes;
 } SENT;
 
 typedef struct plant_skel {
-	char const *pre, small, big, *post;
+	char const pre[16], post[16];
+	char const small, big;
 	int16_t tmp_min, tmp_max;
 	uint16_t rn_min, rn_max;
 	unsigned y;
 } SPLA;
 
 typedef struct spell_skeleton {
-       enum element element;
-       unsigned char ms, ra, y, flags;
-       char *name, *description;
+	unsigned element;
+	unsigned char ms, ra, y, flags;
+	char *name, *description;
 } SSPE;
 
 typedef struct object_skel {
-	char const *name;
-	char const *description;
+	char const name[32];
 
         enum object_skeleton_type type;
 
@@ -67,7 +64,7 @@ typedef struct object_skel {
                 SENT entity;
 		SPLA plant;
                 struct {
-                        const char *bg;
+                        const char bg[16];
                 } biome;
                 struct {
                         short unsigned unused;
@@ -78,7 +75,7 @@ typedef struct object_skel {
 
 typedef struct {
 	char *color;
-	enum element weakness;
+	unsigned weakness;
 } element_t;
 
 extern unsigned skel_hd, drop_hd, adrop_hd, element_hd;

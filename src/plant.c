@@ -3,6 +3,8 @@
 #include "noise.h"
 #include "params.h"
 
+#if 0
+
 enum plant {
 	PLANT_PINUS_SILVESTRIS,
 	PLANT_PSEUDOTSUGA_MENZIESII,
@@ -159,6 +161,10 @@ SKEL plants_map[] = {{
 
 unsigned plant_refs[PLANT_MAX];
 
+#endif
+
+unsigned plant_hd = -1;
+
 static inline int
 plant_noise(unsigned char *plid, coord_t tmp, ucoord_t rn, noise_t v, unsigned plant_ref)
 {
@@ -187,23 +193,28 @@ void
 plants_noise(struct plant_data *pd, noise_t ty, coord_t tmp, ucoord_t rn, unsigned n)
 {
 	noise_t v = ty;
-	register int i, cpln;
+	register int cpln;
 	unsigned char *idc = pd->id;
+	struct hash_cursor c = hash_iter(plant_hd, NULL, 0);
+	unsigned ign, ref;
 
-	memset(pd->id, 0, n);
-	pd->n = 0;
+	while (hash_next(&ign, &ref, &c)) {
+		if (idc < pd->id + n) {
+			hash_fin(&c);
+			break;
+		}
 
-	for (i = pd->max;
-	     i < PLANT_MAX && idc < pd->id + n;
-	     i++, v >>= 8) {
 		if (!v)
-			v = XXH32((const char *) &ty, sizeof(ty), i);
+			v = XXH32((const char *) &ty, sizeof(ty), ref);
 
-		cpln = plant_noise(idc, tmp, rn, v, plant_refs[i]);
+		cpln = plant_noise(idc, tmp, rn, v, ref);
+
 		if (cpln) {
                         pd->n |= cpln << ((idc - pd->id) * 2);
 			idc++;
 		}
+
+		v >>= 8;
 	}
 
 	pd->max = *idc;
@@ -274,6 +285,7 @@ plants_add(unsigned where_ref, void *arg, pos_t pos)
                 /* _plants_add(where, &epd, tmp); */
 }
 
+#if 0
 void plants_init(void) {
 	unsigned carrot_ref = lhash_new(skel_hd, &carrot);
 	carrot_drop.skel = carrot_ref;
@@ -301,3 +313,4 @@ void plants_init(void) {
 	ahash_add(adrop_hd, plant_refs[PLANT_DAUCUS_CAROTA], carrot_drop_ref);
 	ahash_add(adrop_hd, plant_refs[PLANT_SOLANUM_LYCOPERSICUM], tomato_drop_ref);
 }
+#endif

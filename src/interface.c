@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <sys/stat.h>
 
 #include <ndc.h>
 
@@ -15,12 +16,33 @@
 #include "uapi/object.h"
 #include "view.h"
 #include "nddb.h"
+#include "params.h"
 
 #include "papi/nd.h"
 
 enum opts {
 	OPT_DETACH = 1,
 };
+
+struct object room_zero = {
+	.location = NOTHING,
+	.owner = 1,
+	.art_id = 0,
+	.type = TYPE_ROOM,
+	.value = 9999999,
+	.flags = 0,
+	.sp.room = {
+		.flags = RF_HAVEN,
+		.doors = 0,
+		.exits = 0,
+		.floor = 0,
+	},
+};
+
+unsigned dplayer_hd = -1, skel_hd = -1, drop_hd = -1, adrop_hd = -1, element_hd = -1;
+extern unsigned plant_hd;
+
+DB_TXN *txnid;
 
 void do_advitam(int fd, int argc, char *argv[]);
 void do_avatar(int fd, int argc, char *argv[]);
@@ -63,10 +85,6 @@ void do_unequip(int fd, int argc, char *argv[]);
 void do_usage(int fd, int argc, char *argv[]);
 void do_view(int fd, int argc, char *argv[]);
 void do_wall(int fd, int argc, char *argv[]);
-
-unsigned dplayer_hd = -1;
-
-DB_TXN *txnid;
 
 unsigned fd_player(unsigned fd) {
 	unsigned ret;
@@ -302,6 +320,14 @@ void close_all(int i) {
 	hash_close(contents_hd, flags);
 	hash_close(obs_hd, flags);
 	hash_close(art_hd, flags);
+
+	// skel (permanent)
+	hash_close(skel_hd, flags);
+	hash_close(drop_hd, flags);
+	hash_close(adrop_hd, flags);
+	hash_close(element_hd, flags);
+	hash_close(plant_hd, flags);
+
 	env->close(env, 0);
 	closelog();
 	sync();
@@ -309,6 +335,9 @@ void close_all(int i) {
 	if (i)
 		exit(i);
 }
+
+void biomes_init(void);
+void plants_init(void);
 
 int
 main(int argc, char **argv)
@@ -341,7 +370,6 @@ main(int argc, char **argv)
 
 	dplayer_hd = hash_init();
 	fds_hd = ahash_init();
-	skel_init();
 	db_env_create(&env, 0);
 	/* env->set_verbose(env, DB_VERB_DEADLOCK, 1); */
 	/* env->set_verbose(env, DB_VERB_WAITSFOR, 1); */
@@ -351,6 +379,11 @@ main(int argc, char **argv)
 	/* env->set_timeout(env, 5000000, DB_SET_LOCK_TIMEOUT); */
 	env->set_tx_max(env, 5 * 60);
 	signal(SIGSEGV, close_all);
+
+	struct stat st;
+	if (stat("/var/nd/env", &st) != 0)
+		mkdir("/var/nd/env", 0755);
+
 	env->open(env, "/var/nd/env", DB_CREATE | DB_RECOVER | DB_INIT_MPOOL | DB_INIT_TXN | DB_INIT_LOCK | DB_INIT_LOG | DB_THREAD, 0);
 
 	hash_env_set(env);
@@ -360,11 +393,73 @@ main(int argc, char **argv)
 	sl_hd = hash_init();
 	map_init();
 	ent_hd = hash_cinit(STD_DB, "entity", 0644, QH_TXN);
-	players_init();
+	player_hd = hash_cinit(STD_DB, "player", 0644, QH_TXN);
+
 	obj_hd = lhash_cinit(sizeof(OBJ), STD_DB, "obj", 0644, QH_TXN);
-	contents_hd = ahash_init();
-	obs_hd = ahash_init();
-	art_hd = hash_init();
+	contents_hd = ahash_cinit(STD_DB, "contents", 0644, QH_TXN);
+	obs_hd = ahash_cinit(STD_DB, "obs", 0644, QH_TXN);
+	art_hd = hash_cinit(STD_DB, "art", 0644, QH_TXN);
+
+	// skel init
+	skel_hd = lhash_cinit(sizeof(SKEL), STD_DB, "skel", 0644, QH_TXN);
+	drop_hd = lhash_cinit(sizeof(DROP), STD_DB, "drop", 0644, QH_TXN);
+	adrop_hd = ahash_cinit(STD_DB, "adrop", 0644, QH_TXN);
+	element_hd = lhash_cinit(sizeof(element_t), STD_DB, "element", 0644, QH_TXN);
+	plant_hd = hash_cinit(STD_DB, "plant", 0644, QH_TXN);
+
+	if (!uhash_exists(obj_hd, 0)) {
+		lhash_new(obj_hd, &room_zero);
+
+
+		element_t spirit = {
+			.color = ANSI_FG_MAGENTA,
+			.weakness = ELM_SPIRIT,
+		}, fire = {
+			.color = ANSI_FG_RED,
+			.weakness = ELM_WATER,
+		}, water = {
+			.color = ANSI_FG_BLUE,
+			.weakness = ELM_FIRE,
+		}, air = {
+			.color = ANSI_FG_WHITE,
+			.weakness = ELM_EARTH,
+		}, earth = {
+			.color = ANSI_FG_YELLOW,
+			.weakness = ELM_AIR,
+		}, physical = {
+			.color = ANSI_FG_GREEN,
+			.weakness = ELM_SPIRIT,
+		};
+
+		lhash_new(element_hd, &spirit);
+		lhash_new(element_hd, &fire);
+		lhash_new(element_hd, &water);
+		lhash_new(element_hd, &air);
+		lhash_new(element_hd, &earth);
+		lhash_new(element_hd, &physical); // 5
+
+		biomes_init();
+
+		SKEL adam = {
+			.name = "human",
+		};
+
+		lhash_new(skel_hd, &adam); // 0
+
+		SKEL heal = {
+			.name = "Heal",
+			.type = STYPE_SPELL,
+			.sp = {
+				.spell = {
+					.element = ELM_PHYSICAL,
+					.ms = 3, .ra = 1, .y = 2,
+					.flags = AF_HP,
+				}
+			},
+		};
+
+		lhash_new(skel_hd, &heal); // 1
+	}
 
 	txnid->commit(txnid, 0);
 	txnid = NULL;
@@ -493,7 +588,7 @@ do_avatar(int fd, int argc __attribute__((unused)), char *argv[] __attribute__((
 	mcp_content_in(player.location, player_ref);
 }
 
-void reroll(unsigned player_ref, ENT *eplayer);
+void reroll(ENT *eplayer);
 
 char *ndc_auth_check(int fd) {
 	static char user[BUFSIZ];
@@ -552,23 +647,23 @@ auth(unsigned fd)
 
 		birth(&eplayer);
 		avatar(&player);
-		reroll(player_ref, &eplayer);
+		reroll(&eplayer);
 		eplayer.hp = HP_MAX(&eplayer);
 		eplayer.mp = MP_MAX(&eplayer);
 		ent_set(player_ref, &eplayer);
 		lhash_put(obj_hd, player_ref, &player);
 		st_start(player_ref);
 
-        } else
+	} else
 		ahash_add(fds_hd, player_ref, fd);
 
 	ahash_add(dplayer_hd, fd, player_ref);
 	ndc_auth(fd, user);
-        mcp_stats(player_ref);
-        mcp_auth_success(player_ref);
-        mcp_equipment(player_ref);
+	mcp_stats(player_ref);
+	mcp_auth_success(player_ref);
+	mcp_equipment(player_ref);
 	look_around(player_ref);
-        mcp_bars(player_ref);
+	mcp_bars(player_ref);
 	do_view(fd, 0, NULL);
 	st_run(player_ref, "ndst_auth");
 	txnid->commit(txnid, 0);

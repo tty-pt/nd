@@ -80,7 +80,12 @@ water_level(ucoord_t obits)
 }
 
 static inline unsigned
-rain(ucoord_t obits, noise_t w, noise_t he, noise_t cl, noise_t tmp)
+rain(
+		ucoord_t obits __attribute__((unused)),
+		noise_t w __attribute__((unused)),
+		noise_t he __attribute__((unused)),
+		noise_t cl,
+		noise_t tmp __attribute__((unused)) )
 {
 	noise_t x = cl / RAIN_DIV;
 	return x;
@@ -164,21 +169,21 @@ noise_full(size_t i, point_t s, ucoord_t obits)
 
 	for (j = 0; j < CHUNK_M; j++) {
 		/* x_pos s[1] + (j % (1 << CHUNK_Y)); */
-		struct bio *r = &bio[j];
+		struct bio r = bio[j];
 		noise_t _cl = n_cl[j], _tm = n_tm[j];
 		register noise_t _he = n_he[j], w = water_level(obits);
-		r->tmp = temp(obits, _he, _tm, s[Y_COORD] + (j >> CHUNK_Y));
-		r->rn = rain(obits, w, _he, _cl, r->tmp);
-		r->bio_idx = _he < w ? 0 : bio_idx(r->rn, r->tmp);
-		r->pd.max = 0;
+		r.tmp = temp(obits, _he, _tm, s[Y_COORD] + (j >> CHUNK_Y));
+		r.rn = rain(obits, w, _he, _cl, r.tmp);
+		r.bio_idx = _he < w ? 0 : bio_idx(r.rn, r.tmp);
+		r.pd.max = 0;
+		memset(r.pd.id, 0, 3);
+		r.pd.n = 0;
 		if (_he > w) {
-			r->ty = HASH(&_tm, sizeof(noise_t), PLANTS_SEED);
-			plants_noise(&r->pd, r->ty, r->tmp, r->rn, 3);
-			plants_shuffle(&r->pd, ~(r->ty >> 8));
-		} else {
-			memset(r->pd.id, 0, 3);
-			r->pd.n = 0;
+			r.ty = HASH(&_tm, sizeof(noise_t), PLANTS_SEED);
+			plants_noise(&r.pd, r.ty, r.tmp, r.rn, 3);
+			plants_shuffle(&r.pd, ~(r.ty >> 8));
 		}
+		bio[j] = r;
 	}
 }
 

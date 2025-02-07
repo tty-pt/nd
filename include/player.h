@@ -12,12 +12,6 @@ extern unsigned player_hd;
 OBJ *player_connect(const char *qsession);
 OBJ *player_create(char *name);
 
-static inline void
-players_init(void)
-{
-	player_hd = hash_init();
-}
-
 static inline unsigned
 player_get(char *name)
 {
