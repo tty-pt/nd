@@ -114,23 +114,15 @@ do_examine(int fd, int argc __attribute__((unused)), char *argv[])
 
 
 void
-do_score(int fd, int argc __attribute__((unused)), char *argv[] __attribute__((unused)))
+do_inventory(int fd, int argc __attribute__((unused)), char *argv[] __attribute__((unused)))
 {
 	unsigned player_ref = fd_player(fd);
 	OBJ player;
-	lhash_get(obj_hd, &player, player_ref);
-
-	nd_writef(player_ref, "You have %d %s.\n", player.value,
-			wts_cond("shekel", player.value));
-}
-
-void
-do_inventory(int fd, int argc, char *argv[])
-{
-	unsigned player_ref = fd_player(fd);
 
         mcp_look(player_ref, player_ref);
-	do_score(fd, argc, argv);
+	lhash_get(obj_hd, &player, player_ref);
+	nd_writef(player_ref, "You have %d %s.\n", player.value,
+			wts_cond("shekel", player.value));
 }
 
 static void

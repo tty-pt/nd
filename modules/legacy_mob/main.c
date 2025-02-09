@@ -16,7 +16,6 @@
 #define ARMORSET(s, _type, min_stat, y) \
 	SKEL s ## _helmet = { \
 		.name = #s " armor helmet", \
-		.description = "", \
 		.type = STYPE_EQUIPMENT, \
 		.sp = { .equipment = { \
 			.eqw = EQ(ES_HEAD, _type), \
@@ -29,7 +28,6 @@
 	ahash_add(adrop_hd, s ## _helmet_ref, s ## _helmet_drop_ref); \
 	SKEL s ## _chest = { \
 		.name = #s " armor chest", \
-		.description = "", \
 		.type = STYPE_EQUIPMENT, \
 		.sp = { .equipment = { \
 			.eqw = EQ(ES_CHEST, _type), \
@@ -42,7 +40,6 @@
 	ahash_add(adrop_hd, s ## _chest_ref, s ## _chest_drop_ref); \
 	SKEL s ## _pants = { \
 		.name = #s " armor leggings", \
-		.description = "", \
 		.type = STYPE_EQUIPMENT, \
 		.sp = { .equipment = { \
 			.eqw = EQ(ES_PANTS, _type), \
@@ -63,7 +60,7 @@
 #define ARMORSET_HEAVY(s, min_str, y) \
 	ARMORSET(s, ARMOR_HEAVY, min_str, y)
 
-enum mob_type {
+enum legacy_mob_type {
 	MOB_GOLDFISH,
 	MOB_SALMON,
 	MOB_TUNA,
@@ -90,7 +87,6 @@ enum mob_type {
 
 SKEL dagger = {
 	.name = "dagger",
-	.description = "",
 	.type = STYPE_EQUIPMENT,
 	.sp = { .equipment = {
 		.eqw = EQ(ES_RHAND, WT_SLASH),
@@ -101,7 +97,6 @@ SKEL dagger = {
 SKEL nodrop_skel[] = {
 	[MOB_GOLDFISH] = {
 		.name = "goldfish",
-		.description = "",
 		.type = STYPE_ENTITY,
 		.sp = {
 			.entity = {
@@ -114,7 +109,6 @@ SKEL nodrop_skel[] = {
 	},
 	[MOB_SALMON] = {
 		.name = "salmon",
-		.description = "",
 		.type = STYPE_ENTITY,
 		.sp = {
 			.entity = {
@@ -127,7 +121,6 @@ SKEL nodrop_skel[] = {
 	},
 	[MOB_TUNA] = {
 		.name = "tuna",
-		.description = "",
 		.type = STYPE_ENTITY,
 		.sp = {
 			.entity = {
@@ -140,7 +133,6 @@ SKEL nodrop_skel[] = {
 	},
 	[MOB_KOIFISH] = {
 		.name = "koifish",
-		.description = "",
 		.type = STYPE_ENTITY,
 		.sp = {
 			.entity = {
@@ -153,7 +145,6 @@ SKEL nodrop_skel[] = {
 	},
 	[MOB_DOLPHIN] = {
 		.name = "dolphin",
-		.description = "",
 		.type = STYPE_ENTITY,
 		.sp = {
 			.entity = {
@@ -166,7 +157,6 @@ SKEL nodrop_skel[] = {
 	},
 	[MOB_SHARK] = {
 		.name = "shark",
-		.description = "",
 		.type = STYPE_ENTITY,
 		.sp = {
 			.entity = {
@@ -182,7 +172,6 @@ SKEL nodrop_skel[] = {
 	},
 	[MOB_MOONFISH] = {
 		.name = "moonfish",
-		.description = "",
 		.type = STYPE_ENTITY,
 		.sp = {
 			.entity = {
@@ -196,7 +185,6 @@ SKEL nodrop_skel[] = {
 	},
 	[MOB_RAINBOWFISH] = {
 		.name = "rainbowfish",
-		.description = "",
 		.type = STYPE_ENTITY,
 		.sp = {
 			.entity = {
@@ -210,7 +198,6 @@ SKEL nodrop_skel[] = {
 	},
 	[MOB_ICEBIRD] = {
 		.name = "icebird",
-		.description = "",
 		.type = STYPE_ENTITY,
 		.sp = {
 			.entity = {
@@ -230,7 +217,6 @@ SKEL nodrop_skel[] = {
 	},
 	[MOB_PARROT] = {
 		.name = "parrot",
-		.description = "",
 		.type = STYPE_ENTITY,
 		.sp = {
 			.entity = {
@@ -244,7 +230,6 @@ SKEL nodrop_skel[] = {
 	},
 	[MOB_BANDIT] = {
 		.name = "bandit",
-		.description = "A shady person under some robes",
 		.type = STYPE_ENTITY,
 		.sp = {
 			.entity = {
@@ -266,7 +251,6 @@ SKEL nodrop_skel[] = {
 	},
 	[MOB_SWALLOW] = {
 		.name = "swallow",
-		.description = "",
 		.type = STYPE_ENTITY,
 		.sp = { .entity = {
 			.wt = WT_PECK,
@@ -283,7 +267,6 @@ SKEL nodrop_skel[] = {
 	},
 	/* [MOB_SKELETON] = { */
 	/* 	.name = "skeleton", */
-	/* 	.description = "Bones that almost shine with a white polish that never seems to dull.", */
 	/* 	.type = S_TYPE_ENTITY, */
 	/* 	.sp = { .entity = { */
 	/* 		.drop = { NULL }, */
@@ -297,7 +280,6 @@ SKEL nodrop_skel[] = {
 	/* }, */
 	[MOB_VAMPIRE_SPAWN] = {
 		.name = "vampire spawn",
-		.description = "Undead that came into Being when a Vampire Slew a Mortal.",
 		.type = STYPE_ENTITY,
 		.sp = { .entity = {
 			.y = 6,
@@ -310,7 +292,6 @@ SKEL nodrop_skel[] = {
 	},
 	[MOB_WOODPECKER] = {
 		.name = "woodpecker",
-		.description = "",
 		.type = STYPE_ENTITY,
 		.sp = { .entity = {
 			.wt = WT_PECK,
@@ -327,7 +308,6 @@ SKEL nodrop_skel[] = {
 	},
 	[MOB_SPARROW] = {
 		.name = "sparrow",
-		.description = "",
 		.type = STYPE_ENTITY,
 		.sp = { .entity = {
 			.wt = WT_PECK, .type = ELM_AIR,
@@ -343,7 +323,6 @@ SKEL nodrop_skel[] = {
 	},
 	[MOB_OWL] = {
 		.name = "owl",
-		.description = "",
 		.type = STYPE_ENTITY,
 		.sp = { .entity = {
 			.wt = WT_PECK, .type = ELM_DARK,
@@ -407,7 +386,7 @@ bird_is(SENT *sk)
 }
 
 static inline unsigned
-mob_add(enum mob_type mid, unsigned where_ref, enum biome biome, long long pdn) {
+mob_add(enum legacy_mob_type mid, unsigned where_ref, enum biome biome, long long pdn) {
 	unsigned mob_ref = mob_refs[mid];
 	SKEL skel;
 	lhash_get(skel_hd, &skel, mob_ref);
@@ -432,5 +411,9 @@ mobs_add(unsigned where_ref, enum biome biome, long long pdn) {
 	unsigned mid;
 
 	for (mid = 1; mid < MOB_MAX; mid++)
-		mob_add(mid, where_ref, biome, pdn);
+		mob_add(mob_refs[mid], where_ref, biome, pdn);
+}
+
+void
+spawn(void) {
 }

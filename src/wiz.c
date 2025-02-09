@@ -194,28 +194,3 @@ do_toad(int fd, int argc __attribute__((unused)), char *argv[]) {
 		lhash_put(obj_hd, victim_ref, &victim);
 	}
 }
-
-void
-do_usage(int fd, int argc __attribute__((unused)), char *argv[] __attribute__((unused))) {
-	unsigned player_ref = fd_player(fd);
-	struct rusage usage;
-
-	if (!(ent_get(player_ref).flags & EF_WIZARD)) {
-		nd_writef(player_ref, "Permission denied. (@usage is wizard-only)\n");
-		return;
-	}
-	getrusage(RUSAGE_SELF, &usage);
-
-	nd_writef(player_ref, "Performed %d input servicings.", usage.ru_inblock);
-	nd_writef(player_ref, "Performed %d output servicings.", usage.ru_oublock);
-	nd_writef(player_ref, "Sent %d messages over a socket.", usage.ru_msgsnd);
-	nd_writef(player_ref, "Received %d messages over a socket.", usage.ru_msgrcv);
-	nd_writef(player_ref, "Received %d signals.", usage.ru_nsignals);
-	nd_writef(player_ref, "Page faults NOT requiring physical I/O: %d", usage.ru_minflt);
-	nd_writef(player_ref, "Page faults REQUIRING physical I/O: %d", usage.ru_majflt);
-	nd_writef(player_ref, "Swapped out of main memory %d times.", usage.ru_nswap);
-	nd_writef(player_ref, "Voluntarily context switched %d times.", usage.ru_nvcsw);
-	nd_writef(player_ref, "Involuntarily context switched %d times.", usage.ru_nivcsw);
-	nd_writef(player_ref, "User time used: %d sec.", usage.ru_utime.tv_sec);
-	nd_writef(player_ref, "System time used: %d sec.", usage.ru_stime.tv_sec);
-}

@@ -435,12 +435,12 @@ void plants_add(unsigned where_ref, void *bio, pos_t pos);
 void map_put(pos_t p, unsigned thing, int flags);
 
 static unsigned
-st_room_at(pos_t pos)
+st_room_at(unsigned player_ref, pos_t pos)
 {
 	struct bio *bio;
 	bio = noise_point(pos);
 	OBJ there;
-	unsigned there_ref = object_add(&there, biome_refs[bio->bio_idx], NOTHING, bio);
+	unsigned there_ref = object_add(&there, biome_map[bio->bio_idx], NOTHING, bio);
 	ROO *rthere = &there.sp.room;
 	map_put(pos, there_ref, DB_NOOVERWRITE);
 	exits_infer(there_ref, rthere);
@@ -452,10 +452,7 @@ st_room_at(pos_t pos)
 
 	rthere->floor = bio->bio_idx;
 	lhash_put(obj_hd, there_ref, &there);
-	// TODO call st function
-	/* mobs_add(there_ref, bio->bio_idx, bio->pd.n); */
-        /* stones_add(there_ref, bio, pos); */
-	plants_add(there_ref, bio, pos);
+	st_run(player_ref, "ndst_spawn");
 	return there_ref;
 }
 
@@ -470,17 +467,17 @@ do_bio(int fd, int argc __attribute__((unused)), char *argv[] __attribute__((unu
 	map_where(pos, player.location);
 	bio = noise_point(pos);
 	SKEL biome;
-	lhash_get(skel_hd, &biome, biome_refs[bio->bio_idx]);
+	lhash_get(skel_hd, &biome, biome_map[bio->bio_idx]);
 	nd_writef(player_ref, "tmp %d rn %u bio %s(%d)\n",
 		bio->tmp, bio->rn, biome.name, bio->bio_idx);
 }
 
 static unsigned
-st_room(unsigned location, enum exit e)
+st_room(unsigned player_ref, unsigned location, enum exit e)
 {
 	pos_t pos;
 	st_pos(pos, location, e);
-	return st_room_at(pos);
+	return st_room_at(player_ref, pos);
 }
 
 static unsigned
@@ -520,7 +517,7 @@ e_move(unsigned player_ref, enum exit e) {
 
 	dest_ref = st_there(player.location, e);
 	if (dest_ref == NOTHING)
-		dest_ref = st_room(player.location, e);
+		dest_ref = st_room(player_ref, player.location, e);
 
 	enter(player_ref, dest_ref, e);
 
@@ -584,7 +581,7 @@ carve(unsigned player_ref, enum exit e)
 
 		there_ref = st_there(here_ref, e);
 		if (there_ref == NOTHING)
-			there_ref = st_room(here_ref, e);
+			there_ref = st_room(player_ref, here_ref, e);
 		wall = 1;
 	}
 
@@ -892,7 +889,7 @@ st_teleport(unsigned player_ref, struct cmd_dir cd)
 
 	unsigned there_ref = map_get(pos);
 	if (there_ref == NOTHING)
-		there_ref = st_room_at(pos);
+		there_ref = st_room_at(player_ref, pos);
 
 	/* if (!eplayer->gpt) */
 	nd_writef(player_ref, "Teleporting to 0x%llx.\n", cd.rep);

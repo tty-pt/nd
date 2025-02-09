@@ -244,11 +244,9 @@ map_mki_code(
 
 void
 map_init(void) {
-	char filename[BUFSIZ];
-	snprintf(filename, sizeof(filename), "%s" STD_DB, "");
 	int ret = 0;
 	if ((ret = db_create(&ipdb, env, 0))
-	    || (ret = ipdb->open(ipdb, txnid, filename, "map_dp", DB_HASH, DB_CREATE, 0644))) {
+	    || (ret = ipdb->open(ipdb, txnid, STD_DB, "map_dp", DB_HASH, DB_CREATE | DB_THREAD, 0644))) {
 		ndclog(LOG_ERR, "map_init %s", db_strerror(ret));
 		exit(EXIT_FAILURE);
 		return;
@@ -256,7 +254,7 @@ map_init(void) {
 
 	if ((ret = db_create(&pdb, env, 0))
 	    || (ret = pdb->set_bt_compare(pdb, map_cmp))
-	    || (ret = pdb->open(pdb, txnid, filename, "map_pd", DB_BTREE, DB_CREATE, 0644))
+	    || (ret = pdb->open(pdb, txnid, STD_DB, "map_pd", DB_BTREE, DB_CREATE | DB_THREAD, 0644))
 	    || (ret = ipdb->associate(ipdb, txnid, pdb, map_mki_code, DB_CREATE)))
 	{
 		pdb->close(pdb, 0);

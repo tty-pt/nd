@@ -542,7 +542,7 @@ entity_kill(unsigned player_ref, ENT *eplayer, unsigned target_ref, ENT *etarget
 int
 entity_damage(unsigned player_ref, ENT *eplayer, unsigned target_ref, ENT *etarget, short amt)
 {
-	int hp = etarget->hp;
+	long hp = etarget->hp;
 	hp += amt;
 
 	if (!amt)
@@ -760,15 +760,19 @@ attack(unsigned player_ref, ENT *eplayer)
 		return;
 
 	ENT etarget = ent_get(eplayer->target);
-	char *wts = wts_map[eplayer->wtso];
+	char wts[BUFSIZ];
+	extern unsigned wts_hd;
+	unsigned wts_ref = eplayer->wtso;
 
 	unsigned eq_ref = EQUIP(eplayer, ES_RHAND);
 
 	if (eq_ref) {
 		OBJ eq;
 		lhash_get(obj_hd, &eq, eq_ref);
-		wts = wts_map[EQT(eq.sp.equipment.eqw)];
+		wts_ref = EQT(eq.sp.equipment.eqw);
 	}
+
+	lhash_get(wts_hd, wts, wts_ref);
 
 	if (spells_cast(player_ref, eplayer, eplayer->target) && !kill_dodge(player_ref, wts)) {
 		unsigned at = STAT_ELEMENT(eplayer, MDMG);

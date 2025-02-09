@@ -40,7 +40,7 @@ struct object room_zero = {
 };
 
 unsigned dplayer_hd = -1, skel_hd = -1, drop_hd = -1, adrop_hd = -1, element_hd = -1;
-extern unsigned plant_hd;
+unsigned plant_hd = -1, wts_hd = -1, awts_hd = -1;
 
 DB_TXN *txnid;
 
@@ -60,7 +60,6 @@ void do_examine(int fd, int argc, char *argv[]);
 void do_fight(int fd, int argc, char *argv[]);
 void do_fill(int fd, int argc, char *argv[]);
 void do_get(int fd, int argc, char *argv[]);
-void do_give(int fd, int argc, char *argv[]);
 void do_heal(int fd, int argc, char *argv[]);
 void do_inventory(int fd, int argc, char *argv[]);
 void do_look_at(int fd, int argc, char *argv[]);
@@ -71,7 +70,6 @@ void do_recycle(int fd, int argc, char *argv[]);
 void do_reroll(int fd, int argc, char *argv[]);
 void do_save(int fd, int argc, char *argv[]);
 void do_say(int fd, int argc, char *argv[]);
-void do_score(int fd, int argc, char *argv[]);
 void do_select(int fd, int argc, char *argv[]);
 void do_sell(int fd, int argc, char *argv[]);
 void do_shop(int fd, int argc, char *argv[]);
@@ -82,7 +80,6 @@ void do_teleport(int fd, int argc, char *argv[]);
 void do_toad(int fd, int argc, char *argv[]);
 void do_train(int fd, int argc, char *argv[]);
 void do_unequip(int fd, int argc, char *argv[]);
-void do_usage(int fd, int argc, char *argv[]);
 void do_view(int fd, int argc, char *argv[]);
 void do_wall(int fd, int argc, char *argv[]);
 
@@ -97,12 +94,6 @@ do_man(int fd, int argc __attribute__((unused)), char *argv[]) {
 	char *rargv[] = { "/usr/bin/man", "-s", "10", argv[1], NULL };
 
 	ndc_pty(fd, rargv);
-}
-
-void
-do_diff(int fd, int argc __attribute__((unused)), char *argv[] __attribute__((unused))) {
-	char *command[] = { "git", "-C", "/items/nd", "diff", "origin/master", NULL };
-	ndc_pty(fd, command);
 }
 
 struct cmd_slot cmds[] = {
@@ -149,9 +140,6 @@ struct cmd_slot cmds[] = {
 		.name = "create",
 		.cb = &do_create,
 	}, {
-		.name = "diff",
-		.cb = &do_diff,
-	}, {
 		.name = "heal",
 		.cb = &do_heal,
 	}, {
@@ -169,9 +157,6 @@ struct cmd_slot cmds[] = {
 	}, {
 		.name = "toad",
 		.cb = &do_toad,
-	}, {
-		.name = "usage",
-		.cb = &do_usage,
 	}, {
 		.name = "wall",
 		.cb = &do_wall,
@@ -196,9 +181,6 @@ struct cmd_slot cmds[] = {
 	}, {
 		.name = "get",
 		.cb = &do_get,
-	}, {
-		.name = "give",
-		.cb = &do_give,
 	}, {
 		.name = "inventory",
 		.cb = &do_inventory,
@@ -229,9 +211,6 @@ struct cmd_slot cmds[] = {
 	}, {
 		.name = "save",
 		.cb = &do_save,
-	}, {
-		.name = "score",
-		.cb = &do_score,
 	}, {
 		.name = "sell",
 		.cb = &do_sell,
@@ -290,7 +269,6 @@ show_program_usage(char *prog)
 	exit(1);
 }
 
-void skel_init(void);
 void objects_init(void);
 void entities_init(void);
 void objects_update(double dt);
@@ -306,16 +284,15 @@ void close_all(int i) {
 	// temporary
 	hash_close(dplayer_hd, flags);
 	hash_close(fds_hd, flags);
-	hash_close(skel_hd, flags);
-	hash_close(drop_hd, flags);
 
 	// permanent
 	st_dlclose();
-	hash_close(sl_hd, flags);
 	hash_close(owner_hd, flags);
+	hash_close(sl_hd, flags);
 	map_close(flags);
 	hash_close(ent_hd, flags);
 	hash_close(player_hd, flags);
+
 	hash_close(obj_hd, flags);
 	hash_close(contents_hd, flags);
 	hash_close(obs_hd, flags);
@@ -327,6 +304,8 @@ void close_all(int i) {
 	hash_close(adrop_hd, flags);
 	hash_close(element_hd, flags);
 	hash_close(plant_hd, flags);
+	hash_close(wts_hd, flags);
+	hash_close(awts_hd, flags);
 
 	env->close(env, 0);
 	closelog();
@@ -337,7 +316,7 @@ void close_all(int i) {
 }
 
 void biomes_init(void);
-void plants_init(void);
+void biome_map_init(void);
 
 int
 main(int argc, char **argv)
@@ -390,15 +369,15 @@ main(int argc, char **argv)
 	env->txn_begin(env, NULL, &txnid, 0);
 
 	owner_hd = hash_cinit(STD_DB, "st", 0644, QH_TXN);
-	sl_hd = hash_init();
+	sl_hd = hash_cinit(NULL, "sl", 0644, QH_TXN);
 	map_init();
 	ent_hd = hash_cinit(STD_DB, "entity", 0644, QH_TXN);
 	player_hd = hash_cinit(STD_DB, "player", 0644, QH_TXN);
 
 	obj_hd = lhash_cinit(sizeof(OBJ), STD_DB, "obj", 0644, QH_TXN);
-	contents_hd = ahash_cinit(STD_DB, "contents", 0644, QH_TXN);
-	obs_hd = ahash_cinit(STD_DB, "obs", 0644, QH_TXN);
-	art_hd = hash_cinit(STD_DB, "art", 0644, QH_TXN);
+	contents_hd = ahash_cinit(NULL, "contents", 0644, QH_TXN);
+	obs_hd = ahash_cinit(NULL, "obs", 0644, QH_TXN);
+	art_hd = hash_cinit(NULL, "art", 0644, QH_TXN);
 
 	// skel init
 	skel_hd = lhash_cinit(sizeof(SKEL), STD_DB, "skel", 0644, QH_TXN);
@@ -406,6 +385,8 @@ main(int argc, char **argv)
 	adrop_hd = ahash_cinit(STD_DB, "adrop", 0644, QH_TXN);
 	element_hd = lhash_cinit(sizeof(element_t), STD_DB, "element", 0644, QH_TXN);
 	plant_hd = hash_cinit(STD_DB, "plant", 0644, QH_TXN);
+	wts_hd = lhash_cinit(0, STD_DB, "wts", 0644, QH_TXN);
+	awts_hd = ahash_cinit(STD_DB, "awts", 0644, QH_TXN);
 
 	if (!uhash_exists(obj_hd, 0)) {
 		lhash_new(obj_hd, &room_zero);
@@ -438,8 +419,6 @@ main(int argc, char **argv)
 		lhash_new(element_hd, &earth);
 		lhash_new(element_hd, &physical); // 5
 
-		biomes_init();
-
 		SKEL adam = {
 			.name = "human",
 		};
@@ -459,13 +438,38 @@ main(int argc, char **argv)
 		};
 
 		lhash_new(skel_hd, &heal); // 1
+
+		unsigned element_ref = 5 << 4; // PHYSICAL
+
+		ahash_add(awts_hd, element_ref | 0, lhash_new(wts_hd, "heal"));
+		ahash_add(awts_hd, element_ref | 1, lhash_new(wts_hd, "bleed"));
+		ahash_add(awts_hd, element_ref | 2, lhash_new(wts_hd, "haste"));
+		ahash_add(awts_hd, element_ref | 3, lhash_new(wts_hd, "stun"));
+		ahash_add(awts_hd, element_ref | 4, lhash_new(wts_hd, "leer"));
+		ahash_add(awts_hd, element_ref | 5, lhash_new(wts_hd, "focus"));
+		ahash_add(awts_hd, element_ref | 6, lhash_new(wts_hd, "distract"));
+		ahash_add(awts_hd, element_ref | 7, lhash_new(wts_hd, "evade"));
+		ahash_add(awts_hd, element_ref | 8, lhash_new(wts_hd, "hobble"));
+
+		lhash_new(wts_hd, "punch");
+
+		biomes_init();
+
+		st_run(-1, "ndst_init");
+
+
 	}
+
+	biome_map_init();
+
+	objects_init();
 
 	txnid->commit(txnid, 0);
 	txnid = NULL;
 
+	srand(getpid());
+
 	st_init();
-	objects_init();
 	env->txn_checkpoint(env, 0, 0, 0);
 
 	/* errno = 0; // TODO why? sanity fails to access file */
@@ -674,13 +678,16 @@ auth(unsigned fd)
 void
 ndc_update(unsigned long long dt)
 {
-	double fdt = dt / 1000000.0;
+	double fdt = dt / 100000.0;
 	tick += fdt;
+	env->txn_begin(env, NULL, &txnid, 0);
 	if (tick > 1.0) {
 		tick -= 1.0;
 		objects_update(1.0);
 		st_update(1.0);
 	}
+	txnid->commit(txnid, 0);
+	txnid = NULL;
 }
 
 int kill_v(unsigned player_ref, const char *cmdstr);

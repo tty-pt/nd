@@ -4,6 +4,7 @@
 #define _MATCH_H
 
 #define NOMATCH_MESSAGE "I don't know what you mean.\n"
+#define CANTDO_MESSAGE "You can't do that.\n"
 
 typedef unsigned ematch_at_t(unsigned player_ref, unsigned where_ref, char *name);
 ematch_at_t ematch_at;

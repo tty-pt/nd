@@ -1,7 +1,7 @@
 #include "biome.h"
 #include "params.h"
 
-unsigned biome_refs[BIOME_MAX];
+unsigned biome_map[BIOME_MAX];
 
 SKEL biomes_skel[] = {
 	[BIOME_WATER] = {
@@ -157,7 +157,12 @@ SKEL biomes_skel[] = {
 	},
 };
 
+void biome_map_init(void) {
+	for (unsigned i = 0; i < BIOME_MAX; i++)
+		biome_map[i] = 2 + i;
+}
+
 void biomes_init(void) {
 	for (unsigned i = 0; i < BIOME_MAX; i++)
-		biome_refs[i] = lhash_new(skel_hd, &biomes_skel[i]);
+		lhash_new(skel_hd, &biomes_skel[i]);
 }

@@ -33,6 +33,6 @@ enum biome {
 	BIOME_MAX,
 };
 
-extern unsigned biome_refs[BIOME_MAX];
+extern unsigned biome_map[BIOME_MAX];
 
 #endif

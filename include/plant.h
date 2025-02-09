@@ -14,10 +14,4 @@ struct plant_data {
 	unsigned char n, max;
 };
 
-void
-plants_noise(struct plant_data *, unsigned ty,
-		coord_t tmp, ucoord_t rn, unsigned n);
-
-void plants_shuffle(struct plant_data *, morton_t v);
-
 #endif

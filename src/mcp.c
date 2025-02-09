@@ -229,7 +229,8 @@ mcp_look(unsigned player_ref, unsigned loc_ref)
 
 	fbcp_item(player_ref, loc_ref, 1);
 	switch (loc.type) {
-	case TYPE_ROOM: break;
+	case TYPE_ROOM:
+		break;
 	case TYPE_ENTITY: // falls through
 	default:
 		eplayer.last_observed = loc_ref;

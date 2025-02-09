@@ -103,7 +103,7 @@ biome_art_idx(struct bio *bio) {
 
 struct core_art {
 	unsigned max;
-	char *name;
+	char name[32];
 };
 
 struct core_art core_art[] = {
@@ -221,7 +221,8 @@ object_add(OBJ *nu, unsigned skel_id, unsigned where_ref, void *arg)
 			nu->type = TYPE_PLANT;
 			object_drop(nu_ref, skel_id);
 			nu->owner = ROOT;
-			nu->art_id = 1 + (v & 0xf) % art_max(nu->name);
+			unsigned max = art_max(nu->name);
+			nu->art_id = max ? 1 + (v & 0xf) % max : 0;
 		}
 
 		break;
@@ -240,7 +241,8 @@ object_add(OBJ *nu, unsigned skel_id, unsigned where_ref, void *arg)
 		{
 			noise_t v = * (noise_t *) arg;
 			nu->type = TYPE_MINERAL;
-			nu->art_id = 1 + (v & 0xf) % art_max(nu->name);
+			unsigned max = art_max(nu->name);
+			nu->art_id = max ? 1 + (v & 0xf) % max : 0;
 		}
 
 		break;
@@ -248,7 +250,8 @@ object_add(OBJ *nu, unsigned skel_id, unsigned where_ref, void *arg)
 	case STYPE_OTHER:
 		if (arg) {
 			noise_t v = * (noise_t *) arg;
-			nu->art_id = 1 + (v & 0xf) % art_max(nu->name);
+			unsigned max = art_max(nu->name);
+			nu->art_id = max ? 1 + (v & 0xf) % max : 0;
 		}
 		nu->type = TYPE_THING;
 
@@ -290,8 +293,6 @@ objects_init(void)
 {
 	unsigned ref;
 
-	srand(getpid());
-
 	size_t hash_i = 0;
 	for (; hash_i < sizeof(core_art) / sizeof(struct core_art); hash_i++) {
 		struct core_art *art = &core_art[hash_i];
@@ -306,6 +307,8 @@ objects_init(void)
 			continue;
 
 		ENT ent = ent_get(ref);
+		ent.last_observed = NOTHING;
+		uhash_put(ent_hd, ref, &ent, sizeof(ent));
 		if (ent.flags & EF_PLAYER)
 			player_put(oi.name, ref);
 	}
