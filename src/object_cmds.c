@@ -11,7 +11,19 @@
 #include "uapi/entity.h"
 #include "uapi/match.h"
 
-int ok_name(const char *name);
+static inline int
+ok_name(const char *name)
+{
+	return (name
+			&& *name
+			&& *name != NUMBER_TOKEN
+			&& !strchr(name, ' ')
+			&& !strchr(name, '\r')
+			&& !strchr(name, ESCAPE_CHAR)
+			&& strcmp(name, "me")
+			&& strcmp(name, "home")
+			&& strcmp(name, "here"));
+}
 
 void
 do_clone(int fd, int argc __attribute__((unused)), char *argv[])
@@ -19,7 +31,7 @@ do_clone(int fd, int argc __attribute__((unused)), char *argv[])
 	unsigned player_ref = fd_player(fd), thing_ref;
 	char *name = argv[1];
 
-	if (!(ent_get(player_ref).flags & (EF_WIZARD | EF_BUILDER)) || !*name || !ok_name(name)) {
+	if (!(ent_get(player_ref).flags & EF_WIZARD) || !*name || !ok_name(name)) {
 		nd_writef(player_ref, CANTDO_MESSAGE);
 		return;
 	}
@@ -81,7 +93,7 @@ do_create(int fd, int argc __attribute__((unused)), char *argv[])
 	char *name = argv[1];
 	int cost = 30;
 
-	if (!(pflags & (EF_WIZARD | EF_BUILDER)) || *name == '\0' || !ok_name(name)) {
+	if (!(pflags & EF_WIZARD) || *name == '\0' || !ok_name(name)) {
 		nd_writef(player_ref, "You can't do that.\n");
 		return;
 	}

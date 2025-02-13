@@ -47,8 +47,7 @@ DB_TXN *txnid;
 void do_advitam(int fd, int argc, char *argv[]);
 void do_avatar(int fd, int argc, char *argv[]);
 void do_bio(int fd, int argc, char *argv[]);
-void do_boot(int fd, int argc, char *argv[]);
-void do_buy(int fd, int argc, char *argv[]);
+void do_ban(int fd, int argc, char *argv[]);
 void do_chown(int fd, int argc, char *argv[]);
 void do_clone(int fd, int argc, char *argv[]);
 void do_consume(int fd, int argc, char *argv[]);
@@ -71,8 +70,6 @@ void do_reroll(int fd, int argc, char *argv[]);
 void do_save(int fd, int argc, char *argv[]);
 void do_say(int fd, int argc, char *argv[]);
 void do_select(int fd, int argc, char *argv[]);
-void do_sell(int fd, int argc, char *argv[]);
-void do_shop(int fd, int argc, char *argv[]);
 void do_sit(int fd, int argc, char *argv[]);
 void do_stand(int fd, int argc, char *argv[]);
 void do_status(int fd, int argc, char *argv[]);
@@ -125,8 +122,8 @@ struct cmd_slot cmds[] = {
 		.name = "bio",
 		.cb = &do_bio,
 	}, {
-		.name = "boot",
-		.cb = &do_boot,
+		.name = "ban",
+		.cb = &do_ban,
 	}, {
 		.name = "chown",
 		.cb = &do_chown,
@@ -160,9 +157,6 @@ struct cmd_slot cmds[] = {
 	}, {
 		.name = "wall",
 		.cb = &do_wall,
-	}, {
-		.name = "buy",
-		.cb = &do_buy,
 	}, {
 		.name = "drop",
 		.cb = &do_drop,
@@ -212,9 +206,6 @@ struct cmd_slot cmds[] = {
 		.name = "save",
 		.cb = &do_save,
 	}, {
-		.name = "sell",
-		.cb = &do_sell,
-	}, {
 		.name = "select",
 		.cb = &do_select,
 	}, {
@@ -223,9 +214,6 @@ struct cmd_slot cmds[] = {
 	}, {
 		.name = "streload",
 		.cb = &do_streload,
-	}, {
-		.name = "shop",
-		.cb = &do_shop,
 	}, {
 		.name = "sit",
 		.cb = &do_sit,
@@ -661,8 +649,16 @@ auth(unsigned fd)
 		lhash_put(obj_hd, player_ref, &player);
 		st_start(player_ref);
 
-	} else
+	} else {
+		ENT eplayer = ent_get(player_ref);
+
+		if (eplayer.flags & EF_BAN) {
+			nd_writef(player_ref, "You are banned.\n");
+			return 0;
+		}
+
 		ahash_add(fds_hd, player_ref, fd);
+	}
 
 	ahash_add(dplayer_hd, fd, player_ref);
 	ndc_auth(fd, user);
@@ -731,4 +727,27 @@ void ndc_disconnect(int fd) {
 			player.name, player_ref, fd);
 	uhash_del(dplayer_hd, fd);
 	ahash_remove(fds_hd, player_ref, fd);
+}
+
+char *wts_plural(char *singular) {
+	static char plural[BUFSIZ], *last;
+	char *space = strchr(singular, ' ');
+	size_t len = space ? space - singular : strlen(singular);
+	last = singular + len - 1;
+	strncpy(plural, singular, len + 1);
+
+	switch (*last) {
+		case 'y':
+			*last = 'i';
+		case 's':
+		case 'x':
+		case 'z':
+		case 'h':
+			strcat(plural, "es");
+			break;
+		default:
+			strcat(plural, "s");
+	}
+
+	return plural;
 }

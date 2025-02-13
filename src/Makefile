@@ -22,9 +22,9 @@ LDFLAGS	:= ${ldflags-${uname}} -L/usr/local/lib -Wl,-rpath,/usr/local/lib ${npm-
 exe := ../nd
 obj-y := object.o entity.o spacetime.o mcp.o map.o \
 	biome.o noise.o view.o item.o spell.o drink.o \
-	kill.o shop.o object_cmds.o look.o match.o \
-	move.o utils.o speech.o wiz.o \
-	interface.o wts.o
+	kill.o object_cmds.o look.o match.o \
+	move.o speech.o wiz.o \
+	interface.o
 
 src = ${obj-y:%.o=%.c}
 LD := ${CC}

@@ -50,7 +50,7 @@ enum entity_flags {
 	EF_SITTING = 4,
 	EF_SHOP = 8,
 	EF_WIZARD = 16,
-	EF_BUILDER = 32,
+	EF_BAN = 32,
 };
 
 enum huth {

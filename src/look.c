@@ -13,18 +13,8 @@ print_owner(unsigned player_ref, unsigned thing_ref)
 	OBJ thing, owner;
 
 	lhash_get(obj_hd, &thing, thing_ref);
-	switch (thing.type) {
-	case TYPE_ENTITY:
-		nd_writef(player_ref, "%s is an entity.\n", thing.name);
-		break;
-	case TYPE_ROOM:
-	case TYPE_CONSUMABLE:
-	case TYPE_EQUIPMENT:
-	case TYPE_THING:
-		lhash_get(obj_hd, &owner, thing.owner);
-		nd_writef(player_ref, "Owner: %s\n", owner.name);
-		break;
-	}
+	lhash_get(obj_hd, &owner, thing.owner);
+	nd_writef(player_ref, "Owner: %s\n", owner.name);
 }
 
 void
@@ -141,7 +131,7 @@ do_owned(int fd, int argc __attribute__((unused)), char *argv[])
 	if ((ent_get(player_ref).flags & EF_WIZARD) && *name) {
 		victim_ref = player_get(name);
 		if (victim_ref == NOTHING) {
-			nd_writef(player_ref, "I couldn't find that player.\n");
+			nd_writef(player_ref, NOMATCH_MESSAGE);
 			return;
 		}
 	} else
