@@ -15,6 +15,7 @@
 #include "uapi/entity.h"
 #include "uapi/io.h"
 #include "uapi/map.h"
+#include "uapi/match.h"
 
 enum actions {
         ACT_LOOK = 1,
@@ -455,4 +456,299 @@ object_icon(unsigned what_ref)
                 break;
         }
         return ret;
+}
+
+static inline int
+ok_name(const char *name)
+{
+	return (name
+			&& *name
+			&& *name != NUMBER_TOKEN
+			&& !strchr(name, ' ')
+			&& !strchr(name, '\r')
+			&& !strchr(name, ESCAPE_CHAR)
+			&& strcmp(name, "me")
+			&& strcmp(name, "home")
+			&& strcmp(name, "here"));
+}
+
+void
+do_clone(int fd, int argc __attribute__((unused)), char *argv[])
+{
+	unsigned player_ref = fd_player(fd), thing_ref;
+	char *name = argv[1];
+
+	if (!(ent_get(player_ref).flags & EF_WIZARD) || !*name || !ok_name(name)) {
+		nd_writef(player_ref, CANTDO_MESSAGE);
+		return;
+	}
+	
+	if (
+			(thing_ref = ematch_absolute(name)) == NOTHING
+			&& (thing_ref = ematch_mine(player_ref, name)) == NOTHING
+			&& (thing_ref = ematch_near(player_ref, name)) == NOTHING
+	   )
+	{
+		nd_writef(player_ref, NOMATCH_MESSAGE);
+		return;
+	}
+
+	OBJ thing;
+	lhash_get(obj_hd, &thing, thing_ref);
+
+	if(!controls(player_ref, thing_ref)) {
+		nd_writef(player_ref, CANTDO_MESSAGE);
+		return;
+	}
+
+	OBJ player;
+	lhash_get(obj_hd, &player, player_ref);
+	OBJ clone;
+	unsigned clone_ref = object_new(&clone);
+
+	strcpy(clone.name, thing.name);
+	clone.location = player_ref;
+	clone.owner = player.owner;
+	clone.value = thing.value;
+
+	switch (thing.type) {
+		case TYPE_ROOM:
+			{
+				ROO *rclone = &clone.sp.room;
+				rclone->exits = rclone->doors = 0;
+			}
+			break;
+		case TYPE_ENTITY:
+			{
+				ENT eclone = ent_get(clone_ref);
+				eclone.home = ent_get(thing_ref).home;
+				ent_set(clone_ref, &eclone);
+			}
+			break;
+	}
+	clone.type = thing.type;
+
+	lhash_put(obj_hd, clone_ref, &clone);
+	object_move(clone_ref, player_ref);
+}
+
+void
+do_create(int fd, int argc __attribute__((unused)), char *argv[])
+{
+	unsigned player_ref = fd_player(fd), thing_ref;
+	unsigned pflags = ent_get(player_ref).flags;
+	char *name = argv[1];
+	int cost = 30;
+
+	if (!(pflags & EF_WIZARD) || *name == '\0' || !ok_name(name)) {
+		nd_writef(player_ref, "You can't do that.\n");
+		return;
+	}
+
+	OBJ player;
+	lhash_get(obj_hd, &player, player_ref);
+
+	OBJ thing;
+	thing_ref = object_new(&thing);
+
+	strcpy(thing.name, name);
+	thing.location = player_ref;
+	thing.owner = player.owner;
+	thing.value = cost;
+	thing.type = TYPE_THING;
+
+	lhash_put(obj_hd, thing_ref, &thing);
+	object_move(thing_ref, player_ref);
+}
+void
+do_name(int fd, int argc __attribute__((unused)), char *argv[])
+{
+	unsigned player_ref = fd_player(fd);
+	char *name = argv[1];
+	char *newname = argv[2];
+	unsigned thing_ref = ematch_all(player_ref, name);
+
+	if (thing_ref == NOTHING) {
+		nd_writef(player_ref, NOMATCH_MESSAGE);
+		return;
+	}
+
+	if (!controls(player_ref, thing_ref) || !*newname || !ok_name(newname)) {
+		nd_writef(player_ref, CANTDO_MESSAGE);
+		return;
+	}
+
+	OBJ thing;
+	lhash_get(obj_hd, &thing, thing_ref);
+	strcpy(thing.name, newname);
+	lhash_put(obj_hd, thing_ref, &thing);
+}
+
+void
+do_chown(int fd, int argc __attribute__((unused)), char *argv[])
+{
+	unsigned player_ref = fd_player(fd), owner_ref, thing_ref;
+	int wizard = ent_get(player_ref).flags & EF_WIZARD;
+	char *name = argv[1];
+	char *newowner = argv[2];
+
+	if (!*name || (thing_ref = ematch_all(player_ref, name)) == NOTHING) {
+		nd_writef(player_ref, NOMATCH_MESSAGE);
+		return;
+	}
+
+	OBJ player, thing;
+	lhash_get(obj_hd, &player, player_ref);
+
+	owner_ref = *newowner && strcmp(newowner, "me") ? player_get(newowner) : player.owner;
+	if (owner_ref == NOTHING)
+		goto error;
+
+	lhash_get(obj_hd, &thing, thing_ref);
+
+	if (thing.type == TYPE_ENTITY ||
+			(!wizard && ((thing.type == TYPE_ROOM && player.location != thing_ref)
+				     || (thing.type != TYPE_ROOM && thing.location != player_ref ))))
+		goto error;
+
+	thing.owner = owner_ref;
+	lhash_put(obj_hd, thing_ref, &thing);
+	return;
+
+error:
+	nd_writef(player_ref, CANTDO_MESSAGE);
+}
+
+void
+do_recycle(int fd, int argc __attribute__((unused)), char *argv[])
+{
+	unsigned player_ref = fd_player(fd);
+	char *name = argv[1];
+	unsigned thing_ref;
+	OBJ thing;
+
+	if (
+			(thing_ref = ematch_absolute(name)) == NOTHING
+			&& (thing_ref = ematch_near(player_ref, name)) == NOTHING
+			&& (thing_ref = ematch_mine(player_ref, name)) == NOTHING
+	   )
+	{
+		nd_writef(player_ref, NOMATCH_MESSAGE);
+		return;
+	}
+
+	lhash_get(obj_hd, &thing, thing_ref);
+
+	if (!controls(player_ref, thing_ref) || thing.owner != player_ref) {
+		nd_writef(player_ref, CANTDO_MESSAGE);
+		return;
+	}
+
+	object_move(thing_ref, NOTHING);
+}
+
+void
+do_get(int fd, int argc __attribute__((unused)), char *argv[])
+{
+	unsigned player_ref = fd_player(fd), thing_ref, cont_ref;
+	char *what = argv[1];
+	char *obj = argv[2];
+
+	if (
+			(thing_ref = ematch_near(player_ref, what)) == NOTHING
+			&& (thing_ref = ematch_mine(player_ref, what)) == NOTHING
+	   )
+	{
+		nd_writef(player_ref, NOMATCH_MESSAGE);
+		return;
+	}
+
+	cont_ref = thing_ref;
+	OBJ player, thing, cont;
+	lhash_get(obj_hd, &player, player_ref);
+	lhash_get(obj_hd, &thing, cont_ref);
+	cont = thing;
+
+	if (obj && *obj) {
+		thing_ref = ematch_at(player_ref, cont_ref, obj);
+		if (thing_ref == NOTHING) {
+			nd_writef(player_ref, NOMATCH_MESSAGE);
+			return;
+		}
+		lhash_get(obj_hd, &thing, thing_ref);
+		if (cont.type == TYPE_ENTITY)
+			goto error;
+	}
+
+	if (thing.location == player_ref
+			|| thing_ref == player_ref
+			|| thing_ref == player.location)
+		goto error;
+
+	switch (thing.type) {
+	case TYPE_ENTITY:
+	case TYPE_PLANT: if (player_ref != ROOT)
+				 goto error;
+			 break;
+	case TYPE_SEAT: if (thing.owner != player_ref)
+				goto error;
+			break;
+	case TYPE_ROOM: goto error;
+	default: break;
+	}
+
+	object_move(thing_ref, player_ref);
+	return;
+error:
+	nd_writef(player_ref, CANTDO_MESSAGE);
+}
+
+void
+do_drop(int fd, int argc __attribute__((unused)), char *argv[])
+{
+	unsigned player_ref = fd_player(fd), thing_ref, cont_ref;
+	OBJ player, cont, thing;
+	lhash_get(obj_hd, &player, player_ref);
+	char *name = argv[1];
+	char *obj = argv[2];
+
+	if ((thing_ref = ematch_mine(player_ref, name)) == NOTHING) {
+		nd_writef(player_ref, NOMATCH_MESSAGE);
+		return;
+	}
+
+	cont_ref = player.location;
+	if (
+			obj && *obj
+			&& (cont_ref = ematch_mine(player_ref, obj)) == NOTHING
+			&& (cont_ref = ematch_near(player_ref, obj)) == NOTHING
+	   )
+	{
+		nd_writef(player_ref, NOMATCH_MESSAGE);
+		return;
+	}
+        
+	if (thing_ref == cont_ref)
+		goto error;
+
+	lhash_get(obj_hd, &cont, cont_ref);
+
+	if (cont.type != TYPE_ROOM && cont.type != TYPE_ENTITY && !object_item(cont_ref))
+		goto error;
+
+	object_move(thing_ref, cont_ref);
+	lhash_get(obj_hd, &thing, thing_ref);
+
+	if (object_item(cont_ref))
+		return;
+
+	if (cont.type == TYPE_ENTITY) {
+		nd_writef(cont_ref, "%s hands you %s.\n", player.name, thing.name);
+		return;
+	}
+
+	nd_owritef(player_ref, "%s drops %s.\n", player.name, thing.name);
+	return;
+error:
+	nd_writef(player_ref, CANTDO_MESSAGE);
 }

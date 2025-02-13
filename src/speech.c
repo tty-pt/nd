@@ -58,7 +58,7 @@ do_wall(int fd, int argc, char *argv[])
 	char *message = argscat(argc, argv);
 
 	if (!(ent_get(player_ref).flags & EF_WIZARD)) {
-		nd_writef(player_ref, "But what do you want to do with the wall?\n");
+		nd_writef(player_ref, CANTDO_MESSAGE);
 		return;
 	}
 

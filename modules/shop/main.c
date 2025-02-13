@@ -1,9 +1,9 @@
-#include "uapi/io.h"
+#include <nd/io.h>
 
 #include "mcp.h"
-#include "uapi/entity.h"
-#include "uapi/match.h"
-#include "uapi/object.h"
+#include <nd/entity.h>
+#include <nd/match.h>
+#include <nd/object.h>
 
 static inline unsigned
 vendor_find(unsigned where_ref)
@@ -148,4 +148,10 @@ do_sell(int fd, int argc __attribute__((unused)), char *argv[])
 	lhash_put(obj_hd, npc_ref, &npc);
 
         nd_writef(player_ref, "You sold %s for %dP.\n", item.name, cost);
+}
+
+void init() {
+	ndc_register("shop", do_shop, 0);
+	ndc_register("buy", do_buy, 0);
+	ndc_register("sell", do_sell, 0);
 }

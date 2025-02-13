@@ -28,7 +28,6 @@ do_select(int fd, int argc __attribute__((unused)), char *argv[] __attribute__((
 	ENT eplayer = ent_get(player_ref);
 	eplayer.select = n;
 	ent_set(player_ref, &eplayer);
-	nd_writef(player_ref, "You select %u.\n", n);
 }
 
 void
@@ -52,11 +51,8 @@ do_unequip(int fd, int argc __attribute__((unused)), char *argv[] __attribute__(
 	enum bodypart bp = BODYPART_ID(*name);
 	unsigned eq_ref;
 
-	if ((eq_ref = unequip(player_ref, bp)) == NOTHING)
-		nd_writef(player_ref, "You don't have that equipped.\n");
-	else {
-		OBJ eq;
-		lhash_get(obj_hd, &eq, eq_ref);
-		nd_writef(player_ref, "You unequip %s.\n", eq.name);
+	if ((eq_ref = unequip(player_ref, bp)) == NOTHING) {
+		nd_writef(player_ref, CANTDO_MESSAGE);
+		return;
 	}
 }
