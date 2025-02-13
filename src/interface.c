@@ -347,8 +347,8 @@ main(int argc, char **argv)
 	if (euid && !nd_config.chroot)
 		nd_config.chroot = ".";
 
-	dplayer_hd = hash_init();
-	fds_hd = ahash_init();
+	dplayer_hd = hash_init(NULL);
+	fds_hd = ahash_init(NULL);
 	db_env_create(&env, 0);
 	/* env->set_verbose(env, DB_VERB_DEADLOCK, 1); */
 	/* env->set_verbose(env, DB_VERB_WAITSFOR, 1); */
@@ -368,25 +368,28 @@ main(int argc, char **argv)
 	hash_env_set(env);
 	env->txn_begin(env, NULL, &txnid, 0);
 
-	owner_hd = hash_cinit(STD_DB, "st", 0644, QH_TXN);
-	sl_hd = hash_cinit(NULL, "sl", 0644, QH_TXN);
-	map_init();
-	ent_hd = hash_cinit(STD_DB, "entity", 0644, QH_TXN);
-	player_hd = hash_cinit(STD_DB, "player", 0644, QH_TXN);
+	hash_config.file = STD_DB;
+	hash_config.flags = QH_TXN;
 
-	obj_hd = lhash_cinit(sizeof(OBJ), STD_DB, "obj", 0644, QH_TXN);
-	contents_hd = ahash_cinit(NULL, "contents", 0644, QH_TXN);
-	obs_hd = ahash_cinit(NULL, "obs", 0644, QH_TXN);
-	art_hd = hash_cinit(NULL, "art", 0644, QH_TXN);
+	owner_hd = hash_init("st");
+	sl_hd = hash_init("sl");
+	map_init();
+	ent_hd = hash_init("entity");
+	player_hd = hash_init("player");
+
+	obj_hd = lhash_init(sizeof(OBJ), "obj");
+	contents_hd = ahash_init("contents");
+	obs_hd = ahash_init("obs");
+	art_hd = hash_init("art");
 
 	// skel init
-	skel_hd = lhash_cinit(sizeof(SKEL), STD_DB, "skel", 0644, QH_TXN);
-	drop_hd = lhash_cinit(sizeof(DROP), STD_DB, "drop", 0644, QH_TXN);
-	adrop_hd = ahash_cinit(STD_DB, "adrop", 0644, QH_TXN);
-	element_hd = lhash_cinit(sizeof(element_t), STD_DB, "element", 0644, QH_TXN);
-	plant_hd = hash_cinit(STD_DB, "plant", 0644, QH_TXN);
-	wts_hd = lhash_cinit(0, STD_DB, "wts", 0644, QH_TXN);
-	awts_hd = ahash_cinit(STD_DB, "awts", 0644, QH_TXN);
+	skel_hd = lhash_init(sizeof(SKEL), "skel");
+	drop_hd = lhash_init(sizeof(DROP), "drop");
+	adrop_hd = ahash_init("adrop");
+	element_hd = lhash_init(sizeof(element_t), "element");
+	plant_hd = hash_init("plant");
+	wts_hd = lhash_init(0, "wts");
+	awts_hd = ahash_init("awts");
 
 	if (!uhash_exists(obj_hd, 0)) {
 		lhash_new(obj_hd, &room_zero);
