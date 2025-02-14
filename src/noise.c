@@ -1,32 +1,3 @@
-/* A noise algorithm that wraps well around data type limits.
- *
- * LICENCE: CC BY-NC-SA 4.0
- * For commercial use, contact me at q@qnixsoft.com
- *
- * DEFINITIONS:
- *
- * a point has DIM coordinates
- *
- * a matrix has 2^y (l) edge length.
- * It is an array of noise_t where we want to store the result.
- *
- * A noise feature quad has 2^x (d) edge length
- * and 2^DIM vertices with random values.
- *
- * Other values are the result of a "fade" between those.
- * And they are added to the resulting matrix (for multiple octaves);
- *
- * v is an array that stores a (noise feature) quad's vertices.
- * It has a peculiar order FIXME
- *
- * recursive implementations are here for reference
- * TODO further optimizations
- * TODO does this work in 3D+?
- * TODO improve documentation
- * TODO speed tests
- * TODO think before changing stuff
- * */
-
 #include "noise.h"
 #define NOISE_IMPLEMENTATION
 #include "noise_decl.h"
@@ -59,6 +30,8 @@ static noise_t n_he[CHUNK_M],
 	       n_cl[CHUNK_M],
 	       n_tm[CHUNK_M];
 
+extern unsigned plant_hd;
+
 /* REGARDING DRAWABLE THINGS THAT DEPEND ON NOISE {{{ */
 
 /* WORLD GEN STATIC VARS {{{ */
@@ -80,7 +53,12 @@ water_level(ucoord_t obits)
 }
 
 static inline unsigned
-rain(ucoord_t obits, noise_t w, noise_t he, noise_t cl, noise_t tmp)
+rain(
+		ucoord_t obits __attribute__((unused)),
+		noise_t w __attribute__((unused)),
+		noise_t he __attribute__((unused)),
+		noise_t cl,
+		noise_t tmp __attribute__((unused)) )
 {
 	noise_t x = cl / RAIN_DIV;
 	return x;
@@ -144,10 +122,91 @@ bio_idx(ucoord_t rn, coord_t tmp)
 	return 2 + _bio_idx(tmp_min, tmp_max, 0, rn_max, tmp, rn);
 }
 
+static inline int
+plant_noise(unsigned char *plid, coord_t tmp, ucoord_t rn, noise_t v, unsigned plant_ref)
+{
+	SKEL skel;
+	lhash_get(skel_hd, &skel, plant_ref);
+	SPLA *pl = &skel.sp.plant;
+
+        if (v >= (NOISE_MAX >> pl->y))
+                return 0;
+	/* if (((v >> 6) ^ (v >> 3) ^ v) & 1) */
+	/* 	return 0; */
+
+	if (tmp < pl->tmp_max && tmp > pl->tmp_min
+	    && rn < pl->rn_max && rn > pl->rn_min) {
+		*plid = plant_ref;
+		v = (v >> 1) & PLANT_MASK;
+		if (v == 3)
+			v = 0;
+                return v;
+	}
+
+	return 0;
+}
+
+static inline void
+plants_noise(struct plant_data *pd, noise_t ty, coord_t tmp, ucoord_t rn, unsigned n)
+{
+	noise_t v = ty;
+	register int cpln;
+	unsigned char *idc = pd->id;
+	struct hash_cursor c = hash_iter(plant_hd, NULL, 0);
+	unsigned ign, ref;
+
+	while (hash_next(&ign, &ref, &c)) {
+		if (idc >= pd->id + n) {
+			hash_fin(&c);
+			break;
+		}
+
+		if (!v)
+			v = XXH32((const char *) &ty, sizeof(ty), ref);
+
+		cpln = plant_noise(idc, tmp, rn, v, ref);
+
+		if (cpln) {
+                        pd->n |= cpln << ((idc - pd->id) * 2);
+			idc++;
+		}
+
+		v >>= 8;
+	}
+
+	pd->max = *idc;
+}
+
+static inline void
+plants_shuffle(struct plant_data *pd, morton_t v)
+{
+        unsigned char apln[3] = {
+                PLANT_N(pd->n, 0),
+                PLANT_N(pd->n, 1),
+                PLANT_N(pd->n, 2)
+        };
+	register unsigned char i, aux;
+
+        for (i = 1; i < 3; i++) {
+                if (!(v & i))
+                        continue;
+                aux = pd->id[i - 1];
+                pd->id[i - 1] = pd->id[i];
+                pd->id[i] = aux;
+
+                aux = apln[i - 1];
+                apln[i - 1] = apln[i];
+                apln[i] = aux;
+        }
+
+	pd->n = apln[0]
+		| (apln[1] << 2)
+		| (apln[2] << 4);
+}
+
 static inline void
 noise_full(size_t i, point_t s, ucoord_t obits)
 {
-	struct bio *bio = &chunks_bio_raw[i];
 	static octave_t
 		x1[] = {{ 7, 2 }, { 6, 2 }, { 5, 2 }, { 4, 3 }, { 3, 3 }, { 2, 3 }},
 		/* x2[] = {{ 8, 1 }, { 7, 2 }, { 6, 2 }, { 5, 3 }, { 3, 3 }}, */
@@ -164,21 +223,21 @@ noise_full(size_t i, point_t s, ucoord_t obits)
 
 	for (j = 0; j < CHUNK_M; j++) {
 		/* x_pos s[1] + (j % (1 << CHUNK_Y)); */
-		struct bio *r = &bio[j];
+		struct bio r = chunks_bio_raw[i + j];
 		noise_t _cl = n_cl[j], _tm = n_tm[j];
 		register noise_t _he = n_he[j], w = water_level(obits);
-		r->tmp = temp(obits, _he, _tm, s[Y_COORD] + (j >> CHUNK_Y));
-		r->rn = rain(obits, w, _he, _cl, r->tmp);
-		r->bio_idx = _he < w ? 0 : bio_idx(r->rn, r->tmp);
-		r->pd.max = 0;
+		r.tmp = temp(obits, _he, _tm, s[Y_COORD] + (j >> CHUNK_Y));
+		r.rn = rain(obits, w, _he, _cl, r.tmp);
+		r.bio_idx = _he < w ? 0 : bio_idx(r.rn, r.tmp);
+		r.pd.max = 0;
+		memset(r.pd.id, 0, 3);
+		r.pd.n = 0;
 		if (_he > w) {
-			r->ty = HASH(&_tm, sizeof(noise_t), PLANTS_SEED);
-			plants_noise(&r->pd, r->ty, r->tmp, r->rn, 3);
-			plants_shuffle(&r->pd, ~(r->ty >> 8));
-		} else {
-			memset(r->pd.id, 0, 3);
-			r->pd.n = 0;
+			r.ty = HASH(&_tm, sizeof(noise_t), PLANTS_SEED);
+			plants_noise(&r.pd, r.ty, r.tmp, r.rn, 3);
+			plants_shuffle(&r.pd, ~(r.ty >> 8));
 		}
+		chunks_bio_raw[i + j] = r;
 	}
 }
 

@@ -45,7 +45,7 @@ do_fight(int fd, int argc __attribute__((unused)), char *argv[])
 
 	lhash_get(obj_hd, &loc, player.location);
 	if (player.location == 0 || (loc.flags & RF_HAVEN)) {
-		nd_writef(player_ref, "You may not fight here.\n");
+		nd_writef(player_ref, CANTDO_MESSAGE);
 		return;
 	}
 
@@ -54,7 +54,7 @@ do_fight(int fd, int argc __attribute__((unused)), char *argv[])
 	    || player_ref == target_ref
 	    || target.type != TYPE_ENTITY)
 	{
-		nd_writef(player_ref, "You can't target that.\n");
+		nd_writef(player_ref, CANTDO_MESSAGE);
 		return;
 	}
 
@@ -90,23 +90,13 @@ do_heal(int fd, int argc __attribute__((unused)), char *argv[])
 
 	if (strcmp(name, "me")) {
 		target_ref = ematch_near(player_ref, name);
-
 	} else
 		target_ref = player_ref;
 
-	if (target_ref == NOTHING) {
-                nd_writef(player_ref, "Invalid target\n");
+	if (target_ref == NOTHING || !(ent_get(player_ref).flags & EF_WIZARD)) {
+                nd_writef(player_ref, CANTDO_MESSAGE);
 		return;
 	}
-
-	OBJ player;
-	lhash_get(obj_hd, &player, player_ref);
-
-	if (!(ent_get(player_ref).flags & EF_WIZARD)
-	    || player.type != TYPE_ENTITY) {
-                nd_writef(player_ref, "Invalid target\n");
-                return;
-        }
 
 	ENT etarget = ent_get(target_ref);
 	etarget.hp = HP_MAX(&etarget);
@@ -126,7 +116,7 @@ do_advitam(int fd, int argc __attribute__((unused)), char *argv[])
 	unsigned target_ref = ematch_near(player_ref, name);
 
 	if (!(ent_get(player_ref).flags & EF_WIZARD) || target_ref == NOTHING) {
-		nd_writef(player_ref, "You can't do that.\n");
+		nd_writef(player_ref, CANTDO_MESSAGE);
 		return;
 	}
 
@@ -134,7 +124,7 @@ do_advitam(int fd, int argc __attribute__((unused)), char *argv[])
 	lhash_get(obj_hd, &target, target_ref);
 
 	if (target.owner != player_ref) {
-		nd_writef(player_ref, "You don't own that.\n");
+		nd_writef(player_ref, CANTDO_MESSAGE);
 		return;
 	}
 
@@ -143,7 +133,6 @@ do_advitam(int fd, int argc __attribute__((unused)), char *argv[])
 	ent_set(target_ref, &etarget);
 	target.type = TYPE_ENTITY;
 	lhash_put(obj_hd, target_ref, &target);
-	nd_writef(player_ref, "You infuse %s with life.\n", target.name);
 }
 
 void

@@ -458,7 +458,7 @@ entity_award(unsigned player_ref, ENT *eplayer, unsigned target_ref)
 	_entity_award(player_ref, eplayer, entity_xp(eplayer, target_ref));
 }
 
-extern unsigned corpse_ref;
+#define ADAM_SKEL_REF 0
 
 static inline unsigned
 entity_body(unsigned mob_ref)
@@ -468,7 +468,7 @@ entity_body(unsigned mob_ref)
 	OBJ mob, dead_mob;
 	lhash_get(obj_hd, &mob, mob_ref);
 	snprintf(buf, sizeof(buf), "%s's body.", mob.name);
-	unsigned dead_mob_ref = object_add(&dead_mob, corpse_ref, mob.location, NULL);
+	unsigned dead_mob_ref = object_add(&dead_mob, ADAM_SKEL_REF, mob.location, NULL);
 	unsigned n = 0;
 
 	struct hash_cursor c = fhash_iter(contents_hd, mob_ref);
@@ -542,7 +542,7 @@ entity_kill(unsigned player_ref, ENT *eplayer, unsigned target_ref, ENT *etarget
 int
 entity_damage(unsigned player_ref, ENT *eplayer, unsigned target_ref, ENT *etarget, short amt)
 {
-	int hp = etarget->hp;
+	long hp = etarget->hp;
 	hp += amt;
 
 	if (!amt)
@@ -652,8 +652,7 @@ huth_notify(unsigned player_ref, ENT *eplayer, enum huth type)
 	char const **m = msg + 4 * type;
 
 	if (rn >= 4) {
-		short val = -(HP_MAX(eplayer) >> 3);
-		return entity_damage(NOTHING, NULL, player_ref, eplayer, val);
+		return HP_MAX(eplayer) >> 3;
 	} else if (rn >= 3) {
 		if (v >= 2 * n[1] + n[2]) {
 			nd_writef(player_ref, m[3]);
@@ -717,8 +716,8 @@ randd_dmg(short dmg)
 }
 
 short
-kill_dmg(enum element dmg_type, short dmg,
-	short def, enum element def_type)
+kill_dmg(unsigned dmg_type, short dmg,
+	short def, unsigned def_type)
 {
 	if (dmg > 0) {
 		element_t element;
@@ -761,19 +760,23 @@ attack(unsigned player_ref, ENT *eplayer)
 		return;
 
 	ENT etarget = ent_get(eplayer->target);
-	char *wts = wts_map[eplayer->wtso];
+	char wts[BUFSIZ];
+	extern unsigned wts_hd;
+	unsigned wts_ref = eplayer->wtso;
 
 	unsigned eq_ref = EQUIP(eplayer, ES_RHAND);
 
 	if (eq_ref) {
 		OBJ eq;
 		lhash_get(obj_hd, &eq, eq_ref);
-		wts = wts_map[EQT(eq.sp.equipment.eqw)];
+		wts_ref = EQT(eq.sp.equipment.eqw);
 	}
 
+	lhash_get(wts_hd, wts, wts_ref);
+
 	if (spells_cast(player_ref, eplayer, eplayer->target) && !kill_dodge(player_ref, wts)) {
-		enum element at = STAT_ELEMENT(eplayer, MDMG);
-		enum element dt = STAT_ELEMENT(&etarget, MDEF);
+		unsigned at = STAT_ELEMENT(eplayer, MDMG);
+		unsigned dt = STAT_ELEMENT(&etarget, MDEF);
 		short aval = -kill_dmg(ELM_PHYSICAL, EFFECT(eplayer, DMG).value, EFFECT(&etarget, DEF).value + EFFECT(&etarget, MDEF).value, dt);
 		short bval = -kill_dmg(at, EFFECT(eplayer, MDMG).value, EFFECT(&etarget, MDEF).value, dt);
 		element_t element;
@@ -839,10 +842,12 @@ entity_update(unsigned player_ref, double dt)
 		}
 	}
 
+	int damage = 0;
+
 	if (eplayer.flags & EF_SITTING) {
 		int div = 100;
 		int max, cur;
-		entity_damage(NOTHING, NULL, player_ref, &eplayer, dt * HP_MAX(&eplayer) / div);
+		damage += dt * HP_MAX(&eplayer) / div;
 		max = MP_MAX(&eplayer);
 		cur = eplayer.mp + (max / div);
 		eplayer.mp = cur > max ? max : cur;
@@ -851,15 +856,12 @@ entity_update(unsigned player_ref, double dt)
 	if (player.location == 0)
 		return;
 
-        /* if mob dies, return */
-	if (!(huth_notify(player_ref, &eplayer, HUTH_THIRST)
-		|| huth_notify(player_ref, &eplayer, HUTH_HUNGER)
-                || debufs_process(player_ref, &eplayer)))
+	damage -= huth_notify(player_ref, &eplayer, HUTH_THIRST);
+	damage -= huth_notify(player_ref, &eplayer, HUTH_HUNGER);
+	damage += debufs_process(player_ref, &eplayer);
 
+	if (!entity_damage(NOTHING, NULL, player_ref, &eplayer, damage))
 		kill_update(player_ref, &eplayer, dt);
-
-	if (!obj_exists(player_ref))
-		return;
 
 	ent_set(player_ref, &eplayer);
 	if (eplayer.hp != ohp || eplayer.mp != omp)

@@ -12,15 +12,16 @@
 
 
 static inline char * biome_bg(unsigned i) {
+	static char ret[16];
 	if (NIGHT_IS)
 		return ANSI_RESET;
 
 	SKEL skel;
-	lhash_get(skel_hd, &skel, i);
-	return (char *) skel.sp.biome.bg;
+	lhash_get(skel_hd, &skel, biome_map[i]);
+	memcpy(ret, skel.sp.biome.bg, sizeof(skel.sp.biome.bg));
+	return ret;
 }
 
-// global buffer for map? // FIXME d bio_limit
 static const char * v = "|";
 static const char * l = ANSI_FG_WHITE "+";
 static const char *h_open	= "   ";
@@ -54,8 +55,6 @@ dr_tree(struct plant_data pd, int n, char *b) {
 		*b++ = ' ';
 	return b;
 }
-
-// TODO remove phantom trees
 
 static inline char *
 dr_room(char *buf, view_tile_t *t, const char *bg)
@@ -246,10 +245,6 @@ dr_hs_n(char *b, view_tile_t *t)
 		}
 
 		wp = wall_paint(floor);
-
-		// TODO fix t exits
-		//  if (!(t->exits & E_SOUTH)) should work
-		// see FIXME below
 
 		if (!(t->exits & E_SOUTH) || !(tn->exits & E_NORTH))
 			w = (char *) h_closed;

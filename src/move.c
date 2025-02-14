@@ -32,45 +32,31 @@ do_get(int fd, int argc __attribute__((unused)), char *argv[])
 			return;
 		}
 		lhash_get(obj_hd, &thing, thing_ref);
-		if (cont.type == TYPE_ENTITY) {
-			nd_writef(player_ref, "You can't steal from the living.\n");
-			return;
-		}
+		if (cont.type == TYPE_ENTITY)
+			goto error;
 	}
 
-	if (thing.location == player_ref) {
-		nd_writef(player_ref, "You already have that!\n");
-		return;
-	}
-	if (thing_ref == player_ref || thing_ref == player.location) {
-		nd_writef(player_ref, "You can't pick yourself up by your bootstraps!\n");
-		return;
-	}
+	if (thing.location == player_ref
+			|| thing_ref == player_ref
+			|| thing_ref == player.location)
+		goto error;
+
 	switch (thing.type) {
 	case TYPE_ENTITY:
-	case TYPE_PLANT:
-		if (player_ref == ROOT) {
-			object_move(thing_ref, player_ref);
-			nd_writef(player_ref, "Taken.\n");
-		} else
-			nd_writef(player_ref, "You can't pick that up.\n");
-		break;
-	case TYPE_SEAT:
-		if (thing.owner != player_ref)
-			nd_writef(player_ref, "You can't pick that up.\n");
-		else {
-			object_move(thing_ref, player_ref);
-			nd_writef(player_ref, "Taken.\n");
-		}
-		break;
-	case TYPE_ROOM:
-		nd_writef(player_ref, "You can't take that!\n");
-		break;
-	default:
-		object_move(thing_ref, player_ref);
-		nd_writef(player_ref, "Taken.\n");
-		break;
+	case TYPE_PLANT: if (player_ref != ROOT)
+				 goto error;
+			 break;
+	case TYPE_SEAT: if (thing.owner != player_ref)
+				goto error;
+			break;
+	case TYPE_ROOM: goto error;
+	default: break;
 	}
+
+	object_move(thing_ref, player_ref);
+	return;
+error:
+	nd_writef(player_ref, CANTDO_MESSAGE);
 }
 
 void
@@ -94,37 +80,33 @@ do_drop(int fd, int argc __attribute__((unused)), char *argv[])
 			&& (cont_ref = ematch_near(player_ref, obj)) == NOTHING
 	   )
 	{
-		nd_writef(player_ref, "I don't know what you mean.\n");
+		nd_writef(player_ref, NOMATCH_MESSAGE);
 		return;
 	}
         
-	if (thing_ref == cont_ref) {
-		nd_writef(player_ref, "You can't put something inside of itself.\n");
-		return;
-	}
+	if (thing_ref == cont_ref)
+		goto error;
 
 	lhash_get(obj_hd, &cont, cont_ref);
 
-	if (cont.type != TYPE_ROOM && cont.type != TYPE_ENTITY &&
-		!object_item(cont_ref)) {
-		nd_writef(player_ref, "You can't put anything in that.\n");
-		return;
-	}
+	if (cont.type != TYPE_ROOM && cont.type != TYPE_ENTITY && !object_item(cont_ref))
+		goto error;
 
 	object_move(thing_ref, cont_ref);
 	lhash_get(obj_hd, &thing, thing_ref);
 
-	if (object_item(cont_ref)) {
-		nd_writef(player_ref, "Put away.\n");
+	if (object_item(cont_ref))
 		return;
-	} else if (cont.type == TYPE_ENTITY) {
+
+	if (cont.type == TYPE_ENTITY) {
 		nd_writef(cont_ref, "%s hands you %s.\n", player.name, thing.name);
-		nd_writef(player_ref, "You hand %s to %s.\n", thing.name, cont.name);
 		return;
 	}
 
-	nd_writef(player_ref, "Dropped.\n");
 	nd_owritef(player_ref, "%s drops %s.\n", player.name, thing.name);
+	return;
+error:
+	nd_writef(player_ref, CANTDO_MESSAGE);
 }
 
 void
@@ -147,36 +129,10 @@ do_recycle(int fd, int argc __attribute__((unused)), char *argv[])
 
 	lhash_get(obj_hd, &thing, thing_ref);
 
-	if (!controls(player_ref, thing_ref)) {
-		nd_writef(player_ref, "You can not do that.\n");
-	} else {
-		OBJ player;
-		lhash_get(obj_hd, &player, player_ref);
-		switch (thing.type) {
-		case TYPE_ROOM:
-			if (thing.owner != player.owner) {
-				nd_writef(player_ref, "Permission denied.\n");
-				return;
-			}
-			break;
-		case TYPE_PLANT:
-		case TYPE_CONSUMABLE:
-		case TYPE_EQUIPMENT:
-		case TYPE_THING:
-		case TYPE_SEAT:
-			if (thing.owner != player.owner) {
-				nd_writef(player_ref, "Permission denied.\n");
-				return;
-			}
-			break;
-		case TYPE_ENTITY:
-			if (ent_get(thing_ref).flags & EF_PLAYER) {
-				nd_writef(player_ref, "You can't recycle a player!\n");
-				return;
-			}
-			break;
-		}
-		nd_writef(player_ref, "Thank you for recycling %.512s (#%d).\n", thing.name, thing_ref);
-		object_move(thing_ref, NOTHING);
+	if (!controls(player_ref, thing_ref) || thing.owner != player_ref) {
+		nd_writef(player_ref, CANTDO_MESSAGE);
+		return;
 	}
+
+	object_move(thing_ref, NOTHING);
 }

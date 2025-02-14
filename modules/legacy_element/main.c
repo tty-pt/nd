@@ -1,8 +1,6 @@
-#include "uapi/skel.h"
-#include "plant.h"
-#include "params.h"
-
-unsigned skel_hd, drop_hd, adrop_hd, element_hd;
+#include "./../include/uapi/skel.h"
+#include "./../include/plant.h"
+#include "./../include/params.h"
 
 element_t element_map[] = {
 	[ELM_PHYSICAL] = {
@@ -11,9 +9,9 @@ element_t element_map[] = {
 	},
 	[ELM_FIRE] = {
 		.color = ANSI_FG_RED,
-		.weakness = ELM_ICE,
+		.weakness = ELM_WATER,
 	},
-	[ELM_ICE] = {
+	[ELM_WATER] = {
 		.color = ANSI_FG_BLUE,
 		.weakness = ELM_FIRE,
 	},
@@ -39,24 +37,7 @@ element_t element_map[] = {
 	},
 };
 
-static inline void elements_init(void) {
-	element_hd = lhash_init(sizeof(element_t));
+void init(void) {
 	for (unsigned i = 0; i < ELM_MAX; i++)
 		lhash_new(element_hd, &element_map[i]);
-}
-
-void biomes_init(void);
-void plants_init(void);
-void spells_init(void);
-void mobs_init(void);
-
-void skel_init(void) {
-	skel_hd = lhash_init(sizeof(SKEL));
-	drop_hd = lhash_init(sizeof(DROP));
-	adrop_hd = ahash_init();
-	elements_init();
-	biomes_init();
-	plants_init();
-	spells_init();
-	mobs_init();
 }

@@ -1,9 +1,9 @@
 #include <xxhash.h>
 
 #include "noise.h"
-#include "params.h"
+#include "../../include/params.h"
 
-enum plant {
+enum base_plant {
 	PLANT_PINUS_SILVESTRIS,
 	PLANT_PSEUDOTSUGA_MENZIESII,
 	PLANT_BETULA_PENDULA,
@@ -19,7 +19,6 @@ enum plant {
 
 SKEL carrot = {
         .name = "carrot",
-        .description = "",
         .type = STYPE_CONSUMABLE,
         .sp = { .consumable = { .food = 3 } },
 };
@@ -30,7 +29,6 @@ DROP carrot_drop = {
 
 SKEL stick = {
         .name = "stick",
-        .description = "",
         .type = STYPE_OTHER,
 };
 
@@ -42,7 +40,6 @@ DROP stick_drop = {
 
 SKEL tomato = {
         .name = "tomato",
-        .description = "",
         .type = STYPE_CONSUMABLE,
         .sp = { .consumable = { .food = 4 } },
 };
@@ -55,7 +52,6 @@ DROP tomato_drop = {
 SKEL plants_map[] = {{
 	// taiga
 	.name = "pinus sylvestris",
-	.description = "",
 	.type = STYPE_PLANT,
 	.sp = { .plant = {
 		.pre = ANSI_BOLD ANSI_FG_GREEN,
@@ -71,7 +67,6 @@ SKEL plants_map[] = {{
 }, {
 	// temperate rainforest
 	.name = "pseudotsuga menziesii",
-	.description = "",
 	.type = STYPE_PLANT,
 	.sp = { .plant = {
 		ANSI_BOLD ANSI_FG_GREEN, 't', 'T', ANSI_RESET_BOLD,
@@ -81,7 +76,6 @@ SKEL plants_map[] = {{
 }, {
 	// woodland / grassland / shrubland
 	.name = "betula pendula",
-	.description = "",
 	.type = STYPE_PLANT,
 	.sp = { .plant = {
 		ANSI_FG_YELLOW, 'x', 'X', "",
@@ -90,7 +84,6 @@ SKEL plants_map[] = {{
 	} },
 }, {
 	.name = "linum usitatissimum",
-	.description = "",
 	.type = STYPE_PLANT,
 	.sp = { .plant = {
 		ANSI_FG_YELLOW, 'x', 'X', "",
@@ -100,7 +93,6 @@ SKEL plants_map[] = {{
 }, {
 	// woodland / grassland?
 	.name = "betula pubescens",
-	.description = "", 
 	.type = STYPE_PLANT,
 	.sp = { .plant = {
 		ANSI_FG_WHITE, 'x', 'X', "",
@@ -110,7 +102,6 @@ SKEL plants_map[] = {{
 }, {
 	// temperate forest
 	.name = "abies alba",
-	.description = "",
 	.type = STYPE_PLANT,
 	.sp = { .plant = {
 		ANSI_BOLD ANSI_FG_GREEN, 'a', 'A', ANSI_RESET_BOLD,
@@ -120,7 +111,6 @@ SKEL plants_map[] = {{
 }, {
 	// desert
 	.name = "arthrocereus rondonianus",
-	.description = "",
 	.type = STYPE_PLANT,
 	.sp = { .plant = {
 		ANSI_BOLD ANSI_FG_GREEN, 'i', 'I', "",
@@ -130,7 +120,6 @@ SKEL plants_map[] = {{
 }, {
 	// savannah
 	.name = "acacia senegal",
-	.description = "",
 	.type = STYPE_PLANT,
 	.sp = { .plant = {
 		ANSI_BOLD ANSI_FG_GREEN, 't', 'T', "",
@@ -139,7 +128,6 @@ SKEL plants_map[] = {{
 	} },
 }, {
 	.name = "daucus carota",
-	.description = "",
 	.type = STYPE_PLANT,
 	.sp = { .plant = {
 		ANSI_FG_WHITE, 'x', 'X', "",
@@ -148,7 +136,6 @@ SKEL plants_map[] = {{
 	} },
 }, {
 	.name = "solanum lycopersicum",
-	.description = "",
 	.type = STYPE_PLANT,
 	.sp = { .plant = {
 		ANSI_FG_RED, 'x', 'X', "", 
@@ -158,83 +145,6 @@ SKEL plants_map[] = {{
 }};
 
 unsigned plant_refs[PLANT_MAX];
-
-static inline int
-plant_noise(unsigned char *plid, coord_t tmp, ucoord_t rn, noise_t v, unsigned plant_ref)
-{
-	SKEL skel;
-	lhash_get(skel_hd, &skel, plant_ref);
-	SPLA *pl = &skel.sp.plant;
-
-        if (v >= (NOISE_MAX >> pl->y))
-                return 0;
-	/* if (((v >> 6) ^ (v >> 3) ^ v) & 1) */
-	/* 	return 0; */
-
-	if (tmp < pl->tmp_max && tmp > pl->tmp_min
-	    && rn < pl->rn_max && rn > pl->rn_min) {
-		*plid = plant_ref;
-		v = (v >> 1) & PLANT_MASK;
-		if (v == 3)
-			v = 0;
-                return v;
-	}
-
-	return 0;
-}
-
-void
-plants_noise(struct plant_data *pd, noise_t ty, coord_t tmp, ucoord_t rn, unsigned n)
-{
-	noise_t v = ty;
-	register int i, cpln;
-	unsigned char *idc = pd->id;
-
-	memset(pd->id, 0, n);
-	pd->n = 0;
-
-	for (i = pd->max;
-	     i < PLANT_MAX && idc < pd->id + n;
-	     i++, v >>= 8) {
-		if (!v)
-			v = XXH32((const char *) &ty, sizeof(ty), i);
-
-		cpln = plant_noise(idc, tmp, rn, v, plant_refs[i]);
-		if (cpln) {
-                        pd->n |= cpln << ((idc - pd->id) * 2);
-			idc++;
-		}
-	}
-
-	pd->max = *idc;
-}
-
-void
-plants_shuffle(struct plant_data *pd, morton_t v)
-{
-        unsigned char apln[3] = {
-                PLANT_N(pd->n, 0),
-                PLANT_N(pd->n, 1),
-                PLANT_N(pd->n, 2)
-        };
-	register unsigned char i, aux;
-
-        for (i = 1; i < 3; i++) {
-                if (!(v & i))
-                        continue;
-                aux = pd->id[i - 1];
-                pd->id[i - 1] = pd->id[i];
-                pd->id[i] = aux;
-
-                aux = apln[i - 1];
-                apln[i - 1] = apln[i];
-                apln[i] = aux;
-        }
-
-	pd->n = apln[0]
-		| (apln[1] << 2)
-		| (apln[2] << 4);
-}
 
 static inline void
 _plants_add(unsigned where_ref, struct bio *bio, pos_t pos)
@@ -258,7 +168,7 @@ _plants_add(unsigned where_ref, struct bio *bio, pos_t pos)
 }
 
 void
-plants_add(unsigned where_ref, void *arg, pos_t pos)
+spawn(unsigned where_ref, void *arg, pos_t pos)
 {
 	struct bio *bio = arg;
 	/* &bio->pd, bio->ty, */
@@ -274,7 +184,7 @@ plants_add(unsigned where_ref, void *arg, pos_t pos)
                 /* _plants_add(where, &epd, tmp); */
 }
 
-void plants_init(void) {
+void init(void) {
 	unsigned carrot_ref = lhash_new(skel_hd, &carrot);
 	carrot_drop.skel = carrot_ref;
 	unsigned carrot_drop_ref = lhash_new(drop_hd, &carrot_drop);

@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <sys/stat.h>
 
 #include <ndc.h>
 
@@ -15,6 +16,7 @@
 #include "uapi/object.h"
 #include "view.h"
 #include "nddb.h"
+#include "params.h"
 
 #include "papi/nd.h"
 
@@ -22,11 +24,30 @@ enum opts {
 	OPT_DETACH = 1,
 };
 
+struct object room_zero = {
+	.location = NOTHING,
+	.owner = 1,
+	.art_id = 0,
+	.type = TYPE_ROOM,
+	.value = 9999999,
+	.flags = 0,
+	.sp.room = {
+		.flags = RF_HAVEN,
+		.doors = 0,
+		.exits = 0,
+		.floor = 0,
+	},
+};
+
+unsigned dplayer_hd = -1, skel_hd = -1, drop_hd = -1, adrop_hd = -1, element_hd = -1;
+unsigned plant_hd = -1, wts_hd = -1, awts_hd = -1;
+
+DB_TXN *txnid;
+
 void do_advitam(int fd, int argc, char *argv[]);
 void do_avatar(int fd, int argc, char *argv[]);
 void do_bio(int fd, int argc, char *argv[]);
-void do_boot(int fd, int argc, char *argv[]);
-void do_buy(int fd, int argc, char *argv[]);
+void do_ban(int fd, int argc, char *argv[]);
 void do_chown(int fd, int argc, char *argv[]);
 void do_clone(int fd, int argc, char *argv[]);
 void do_consume(int fd, int argc, char *argv[]);
@@ -38,7 +59,6 @@ void do_examine(int fd, int argc, char *argv[]);
 void do_fight(int fd, int argc, char *argv[]);
 void do_fill(int fd, int argc, char *argv[]);
 void do_get(int fd, int argc, char *argv[]);
-void do_give(int fd, int argc, char *argv[]);
 void do_heal(int fd, int argc, char *argv[]);
 void do_inventory(int fd, int argc, char *argv[]);
 void do_look_at(int fd, int argc, char *argv[]);
@@ -49,10 +69,7 @@ void do_recycle(int fd, int argc, char *argv[]);
 void do_reroll(int fd, int argc, char *argv[]);
 void do_save(int fd, int argc, char *argv[]);
 void do_say(int fd, int argc, char *argv[]);
-void do_score(int fd, int argc, char *argv[]);
 void do_select(int fd, int argc, char *argv[]);
-void do_sell(int fd, int argc, char *argv[]);
-void do_shop(int fd, int argc, char *argv[]);
 void do_sit(int fd, int argc, char *argv[]);
 void do_stand(int fd, int argc, char *argv[]);
 void do_status(int fd, int argc, char *argv[]);
@@ -60,13 +77,8 @@ void do_teleport(int fd, int argc, char *argv[]);
 void do_toad(int fd, int argc, char *argv[]);
 void do_train(int fd, int argc, char *argv[]);
 void do_unequip(int fd, int argc, char *argv[]);
-void do_usage(int fd, int argc, char *argv[]);
 void do_view(int fd, int argc, char *argv[]);
 void do_wall(int fd, int argc, char *argv[]);
-
-unsigned dplayer_hd = -1;
-
-DB_TXN *txnid;
 
 unsigned fd_player(unsigned fd) {
 	unsigned ret;
@@ -79,12 +91,6 @@ do_man(int fd, int argc __attribute__((unused)), char *argv[]) {
 	char *rargv[] = { "/usr/bin/man", "-s", "10", argv[1], NULL };
 
 	ndc_pty(fd, rargv);
-}
-
-void
-do_diff(int fd, int argc __attribute__((unused)), char *argv[] __attribute__((unused))) {
-	char *command[] = { "git", "-C", "/items/nd", "diff", "origin/master", NULL };
-	ndc_pty(fd, command);
 }
 
 struct cmd_slot cmds[] = {
@@ -116,8 +122,8 @@ struct cmd_slot cmds[] = {
 		.name = "bio",
 		.cb = &do_bio,
 	}, {
-		.name = "boot",
-		.cb = &do_boot,
+		.name = "ban",
+		.cb = &do_ban,
 	}, {
 		.name = "chown",
 		.cb = &do_chown,
@@ -130,9 +136,6 @@ struct cmd_slot cmds[] = {
 	}, {
 		.name = "create",
 		.cb = &do_create,
-	}, {
-		.name = "diff",
-		.cb = &do_diff,
 	}, {
 		.name = "heal",
 		.cb = &do_heal,
@@ -152,14 +155,8 @@ struct cmd_slot cmds[] = {
 		.name = "toad",
 		.cb = &do_toad,
 	}, {
-		.name = "usage",
-		.cb = &do_usage,
-	}, {
 		.name = "wall",
 		.cb = &do_wall,
-	}, {
-		.name = "buy",
-		.cb = &do_buy,
 	}, {
 		.name = "drop",
 		.cb = &do_drop,
@@ -178,9 +175,6 @@ struct cmd_slot cmds[] = {
 	}, {
 		.name = "get",
 		.cb = &do_get,
-	}, {
-		.name = "give",
-		.cb = &do_give,
 	}, {
 		.name = "inventory",
 		.cb = &do_inventory,
@@ -212,12 +206,6 @@ struct cmd_slot cmds[] = {
 		.name = "save",
 		.cb = &do_save,
 	}, {
-		.name = "score",
-		.cb = &do_score,
-	}, {
-		.name = "sell",
-		.cb = &do_sell,
-	}, {
 		.name = "select",
 		.cb = &do_select,
 	}, {
@@ -226,9 +214,6 @@ struct cmd_slot cmds[] = {
 	}, {
 		.name = "streload",
 		.cb = &do_streload,
-	}, {
-		.name = "shop",
-		.cb = &do_shop,
 	}, {
 		.name = "sit",
 		.cb = &do_sit,
@@ -272,7 +257,6 @@ show_program_usage(char *prog)
 	exit(1);
 }
 
-void skel_init(void);
 void objects_init(void);
 void entities_init(void);
 void objects_update(double dt);
@@ -288,20 +272,29 @@ void close_all(int i) {
 	// temporary
 	hash_close(dplayer_hd, flags);
 	hash_close(fds_hd, flags);
-	hash_close(skel_hd, flags);
-	hash_close(drop_hd, flags);
 
 	// permanent
 	st_dlclose();
-	hash_close(sl_hd, flags);
 	hash_close(owner_hd, flags);
+	hash_close(sl_hd, flags);
 	map_close(flags);
 	hash_close(ent_hd, flags);
 	hash_close(player_hd, flags);
+
 	hash_close(obj_hd, flags);
 	hash_close(contents_hd, flags);
 	hash_close(obs_hd, flags);
 	hash_close(art_hd, flags);
+
+	// skel (permanent)
+	hash_close(skel_hd, flags);
+	hash_close(drop_hd, flags);
+	hash_close(adrop_hd, flags);
+	hash_close(element_hd, flags);
+	hash_close(plant_hd, flags);
+	hash_close(wts_hd, flags);
+	hash_close(awts_hd, flags);
+
 	env->close(env, 0);
 	closelog();
 	sync();
@@ -309,6 +302,9 @@ void close_all(int i) {
 	if (i)
 		exit(i);
 }
+
+void biomes_init(void);
+void biome_map_init(void);
 
 int
 main(int argc, char **argv)
@@ -339,9 +335,8 @@ main(int argc, char **argv)
 	if (euid && !nd_config.chroot)
 		nd_config.chroot = ".";
 
-	dplayer_hd = hash_init();
-	fds_hd = ahash_init();
-	skel_init();
+	dplayer_hd = hash_init(NULL);
+	fds_hd = ahash_init(NULL);
 	db_env_create(&env, 0);
 	/* env->set_verbose(env, DB_VERB_DEADLOCK, 1); */
 	/* env->set_verbose(env, DB_VERB_WAITSFOR, 1); */
@@ -351,26 +346,121 @@ main(int argc, char **argv)
 	/* env->set_timeout(env, 5000000, DB_SET_LOCK_TIMEOUT); */
 	env->set_tx_max(env, 5 * 60);
 	signal(SIGSEGV, close_all);
+
+	struct stat st;
+	if (stat("/var/nd/env", &st) != 0)
+		mkdir("/var/nd/env", 0755);
+
 	env->open(env, "/var/nd/env", DB_CREATE | DB_RECOVER | DB_INIT_MPOOL | DB_INIT_TXN | DB_INIT_LOCK | DB_INIT_LOG | DB_THREAD, 0);
 
 	hash_env_set(env);
 	env->txn_begin(env, NULL, &txnid, 0);
 
-	owner_hd = hash_cinit(STD_DB, "st", 0644, QH_TXN);
-	sl_hd = hash_init();
+	hash_config.file = STD_DB;
+	hash_config.flags = QH_TXN;
+
+	owner_hd = hash_init("st");
+	sl_hd = hash_init("sl");
 	map_init();
-	ent_hd = hash_cinit(STD_DB, "entity", 0644, QH_TXN);
-	players_init();
-	obj_hd = lhash_cinit(sizeof(OBJ), STD_DB, "obj", 0644, QH_TXN);
-	contents_hd = ahash_init();
-	obs_hd = ahash_init();
-	art_hd = hash_init();
+	ent_hd = hash_init("entity");
+	player_hd = hash_init("player");
+
+	obj_hd = lhash_init(sizeof(OBJ), "obj");
+	contents_hd = ahash_init("contents");
+	obs_hd = ahash_init("obs");
+	art_hd = hash_init("art");
+
+	// skel init
+	skel_hd = lhash_init(sizeof(SKEL), "skel");
+	drop_hd = lhash_init(sizeof(DROP), "drop");
+	adrop_hd = ahash_init("adrop");
+	element_hd = lhash_init(sizeof(element_t), "element");
+	plant_hd = hash_init("plant");
+	wts_hd = lhash_init(0, "wts");
+	awts_hd = ahash_init("awts");
+
+	if (!uhash_exists(obj_hd, 0)) {
+		lhash_new(obj_hd, &room_zero);
+
+
+		element_t spirit = {
+			.color = ANSI_FG_MAGENTA,
+			.weakness = ELM_SPIRIT,
+		}, fire = {
+			.color = ANSI_FG_RED,
+			.weakness = ELM_WATER,
+		}, water = {
+			.color = ANSI_FG_BLUE,
+			.weakness = ELM_FIRE,
+		}, air = {
+			.color = ANSI_FG_WHITE,
+			.weakness = ELM_EARTH,
+		}, earth = {
+			.color = ANSI_FG_YELLOW,
+			.weakness = ELM_AIR,
+		}, physical = {
+			.color = ANSI_FG_GREEN,
+			.weakness = ELM_SPIRIT,
+		};
+
+		lhash_new(element_hd, &spirit);
+		lhash_new(element_hd, &fire);
+		lhash_new(element_hd, &water);
+		lhash_new(element_hd, &air);
+		lhash_new(element_hd, &earth);
+		lhash_new(element_hd, &physical); // 5
+
+		SKEL adam = {
+			.name = "human",
+		};
+
+		lhash_new(skel_hd, &adam); // 0
+
+		SKEL heal = {
+			.name = "Heal",
+			.type = STYPE_SPELL,
+			.sp = {
+				.spell = {
+					.element = ELM_PHYSICAL,
+					.ms = 3, .ra = 1, .y = 2,
+					.flags = AF_HP,
+				}
+			},
+		};
+
+		lhash_new(skel_hd, &heal); // 1
+
+		unsigned element_ref = 5 << 4; // PHYSICAL
+
+		ahash_add(awts_hd, element_ref | 0, lhash_new(wts_hd, "heal"));
+		ahash_add(awts_hd, element_ref | 1, lhash_new(wts_hd, "bleed"));
+		ahash_add(awts_hd, element_ref | 2, lhash_new(wts_hd, "haste"));
+		ahash_add(awts_hd, element_ref | 3, lhash_new(wts_hd, "stun"));
+		ahash_add(awts_hd, element_ref | 4, lhash_new(wts_hd, "leer"));
+		ahash_add(awts_hd, element_ref | 5, lhash_new(wts_hd, "focus"));
+		ahash_add(awts_hd, element_ref | 6, lhash_new(wts_hd, "distract"));
+		ahash_add(awts_hd, element_ref | 7, lhash_new(wts_hd, "evade"));
+		ahash_add(awts_hd, element_ref | 8, lhash_new(wts_hd, "hobble"));
+
+		lhash_new(wts_hd, "punch");
+
+		biomes_init();
+
+		st_run(-1, "ndst_init");
+
+
+	}
+
+	biome_map_init();
+
+	objects_init();
 
 	txnid->commit(txnid, 0);
 	txnid = NULL;
 
+	srand(getpid());
+
 	st_init();
-	objects_init();
 	env->txn_checkpoint(env, 0, 0, 0);
 
 	/* errno = 0; // TODO why? sanity fails to access file */
@@ -493,7 +583,7 @@ do_avatar(int fd, int argc __attribute__((unused)), char *argv[] __attribute__((
 	mcp_content_in(player.location, player_ref);
 }
 
-void reroll(unsigned player_ref, ENT *eplayer);
+void reroll(ENT *eplayer);
 
 char *ndc_auth_check(int fd) {
 	static char user[BUFSIZ];
@@ -552,23 +642,31 @@ auth(unsigned fd)
 
 		birth(&eplayer);
 		avatar(&player);
-		reroll(player_ref, &eplayer);
+		reroll(&eplayer);
 		eplayer.hp = HP_MAX(&eplayer);
 		eplayer.mp = MP_MAX(&eplayer);
 		ent_set(player_ref, &eplayer);
 		lhash_put(obj_hd, player_ref, &player);
 		st_start(player_ref);
 
-        } else
+	} else {
+		ENT eplayer = ent_get(player_ref);
+
+		if (eplayer.flags & EF_BAN) {
+			nd_writef(player_ref, "You are banned.\n");
+			return 0;
+		}
+
 		ahash_add(fds_hd, player_ref, fd);
+	}
 
 	ahash_add(dplayer_hd, fd, player_ref);
 	ndc_auth(fd, user);
-        mcp_stats(player_ref);
-        mcp_auth_success(player_ref);
-        mcp_equipment(player_ref);
+	mcp_stats(player_ref);
+	mcp_auth_success(player_ref);
+	mcp_equipment(player_ref);
 	look_around(player_ref);
-        mcp_bars(player_ref);
+	mcp_bars(player_ref);
 	do_view(fd, 0, NULL);
 	st_run(player_ref, "ndst_auth");
 	txnid->commit(txnid, 0);
@@ -579,13 +677,16 @@ auth(unsigned fd)
 void
 ndc_update(unsigned long long dt)
 {
-	double fdt = dt / 1000000.0;
+	double fdt = dt / 100000.0;
 	tick += fdt;
+	env->txn_begin(env, NULL, &txnid, 0);
 	if (tick > 1.0) {
 		tick -= 1.0;
 		objects_update(1.0);
 		st_update(1.0);
 	}
+	txnid->commit(txnid, 0);
+	txnid = NULL;
 }
 
 int kill_v(unsigned player_ref, const char *cmdstr);
@@ -626,4 +727,27 @@ void ndc_disconnect(int fd) {
 			player.name, player_ref, fd);
 	uhash_del(dplayer_hd, fd);
 	ahash_remove(fds_hd, player_ref, fd);
+}
+
+char *wts_plural(char *singular) {
+	static char plural[BUFSIZ], *last;
+	char *space = strchr(singular, ' ');
+	size_t len = space ? space - singular : strlen(singular);
+	last = singular + len - 1;
+	strncpy(plural, singular, len + 1);
+
+	switch (*last) {
+		case 'y':
+			*last = 'i';
+		case 's':
+		case 'x':
+		case 'z':
+		case 'h':
+			strcat(plural, "es");
+			break;
+		default:
+			strcat(plural, "s");
+	}
+
+	return plural;
 }

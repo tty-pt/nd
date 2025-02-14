@@ -13,18 +13,8 @@ print_owner(unsigned player_ref, unsigned thing_ref)
 	OBJ thing, owner;
 
 	lhash_get(obj_hd, &thing, thing_ref);
-	switch (thing.type) {
-	case TYPE_ENTITY:
-		nd_writef(player_ref, "%s is an entity.\n", thing.name);
-		break;
-	case TYPE_ROOM:
-	case TYPE_CONSUMABLE:
-	case TYPE_EQUIPMENT:
-	case TYPE_THING:
-		lhash_get(obj_hd, &owner, thing.owner);
-		nd_writef(player_ref, "Owner: %s\n", owner.name);
-		break;
-	}
+	lhash_get(obj_hd, &owner, thing.owner);
+	nd_writef(player_ref, "Owner: %s\n", owner.name);
 }
 
 void
@@ -114,23 +104,15 @@ do_examine(int fd, int argc __attribute__((unused)), char *argv[])
 
 
 void
-do_score(int fd, int argc __attribute__((unused)), char *argv[] __attribute__((unused)))
+do_inventory(int fd, int argc __attribute__((unused)), char *argv[] __attribute__((unused)))
 {
 	unsigned player_ref = fd_player(fd);
 	OBJ player;
-	lhash_get(obj_hd, &player, player_ref);
-
-	nd_writef(player_ref, "You have %d %s.\n", player.value,
-			wts_cond("shekel", player.value));
-}
-
-void
-do_inventory(int fd, int argc, char *argv[])
-{
-	unsigned player_ref = fd_player(fd);
 
         mcp_look(player_ref, player_ref);
-	do_score(fd, argc, argv);
+	lhash_get(obj_hd, &player, player_ref);
+	nd_writef(player_ref, "You have %d %s.\n", player.value,
+			wts_cond("shekel", player.value));
 }
 
 static void
@@ -149,7 +131,7 @@ do_owned(int fd, int argc __attribute__((unused)), char *argv[])
 	if ((ent_get(player_ref).flags & EF_WIZARD) && *name) {
 		victim_ref = player_get(name);
 		if (victim_ref == NOTHING) {
-			nd_writef(player_ref, "I couldn't find that player.\n");
+			nd_writef(player_ref, NOMATCH_MESSAGE);
 			return;
 		}
 	} else
