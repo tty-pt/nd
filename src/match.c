@@ -64,7 +64,6 @@ ematch_all(unsigned player_ref, char *name)
 }
 
 
-/* TODO move to match.h as static inline */
 unsigned
 ematch_player(char *name)
 {
