@@ -20,9 +20,6 @@
 
 #define DIM 2
 #define WDIM X_COORD
-#define POOP register int I; for (I = 0; I < DIM; I++)
-#define POOP3D register int I; for (I = 0; I < 3; I++)
-#define POOP4D register int I; for (I = 0; I < 4; I++)
 
 #define OBITS(code) (code >> 48)
 
@@ -37,8 +34,6 @@ typedef ucoord_t upoint_t[DIM];
 typedef coord_t point3D_t[3];
 typedef ucoord_t upoint3D_t[3];
 typedef ucoord_t upoint4D_t[4];
-
-typedef upoint4D_t upos_t;
 
 typedef int64_t smorton_t;
 

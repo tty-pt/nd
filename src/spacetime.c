@@ -121,20 +121,46 @@ unsign(coord_t n)
 	return r;
 }
 
+
+/* spread3(x):
+ *   Take x ∈ [0..0xFFFF] and produce a 64-bit word where
+ *   its bit-i goes to bit-(3*i) in the result.
+ *
+ * Part of a Morton-3D encode:  code = spread3(x)
+ *                                  | spread3(y)<<1
+ *                                  | spread3(z)<<2
+ */
+static inline uint64_t spread3(uint32_t x)
+{
+    uint64_t v = x & 0xFFFFu;  /* keep only low 16 bits */
+    v = (v | (v << 32)) & 0x1F00000000FFFFULL; /* make room for high triples */
+    v = (v | (v << 16)) & 0x1F0000FF0000FFULL; /* down to 8-bit chunks */
+    v = (v | (v << 8)) & 0x100F00F00F00F00FULL; /* down to 4-bit groups */
+    v = (v | (v << 4)) & 0x10C30C30C30C30C3ULL; /* down to 2-bit groups */
+    v = (v | (v << 2)) & 0x1249249249249249ULL; /* final 3 bit interleave */
+    return v;
+}
+
+static inline uint64_t morton3_pack_u16(
+		uint16_t x,
+		uint16_t y,
+		uint16_t z,
+		uint16_t world)
+{
+    return spread3(x)
+         | (spread3(y) << 1)
+         | (spread3(z) << 2)
+         | ((uint64_t)world << 48);
+}
+
 morton_t
 pos_morton(pos_t p)
 {
 	upoint3D_t up;
-	morton_t res = ((morton_t) p[3]) << 48;
-	int i;
-
-	POOP3D up[I] = unsign(p[I]);
-
-	for (i = 0; i < 16; i ++) {
-		POOP3D res |= ((morton_t) ((up[I] >> i) & 1)) << (I + (3 * i));
-	}
-
-	return res;
+	up[0] = unsign(p[0]);
+	up[1] = unsign(p[1]);
+	up[2] = unsign(p[2]);
+	return morton3_pack_u16(up[0], up[1], up[2], 0) | ((morton_t) p[3] << 48);
 }
 
 static inline coord_t
@@ -143,17 +169,42 @@ sign(ucoord_t n)
 	return (smorton_t) n - COORD_MAX;
 }
 
+/* compact_axis(): collect one out of every 3 bits from 'code',
+ * starting at 'shift' (0 = x, 1 = y, 2 = z).  Returns low-order
+ * 21 bits containing that coordinate.                         */
+static inline uint32_t compact_axis(uint64_t code, unsigned shift)
+{
+    code >>= shift; /* align the desired series to LSB */
+    /* first keep only 1---1---1 pattern → mask 0x1249249249249… */
+    code &= 0x1249249249249249ULL;
+
+    /* Now collapse gaps:  3→2 → 2→1 → 1→0 */
+    code = (code ^ (code >> 2))  & 0x10C30C30C30C30C3ULL;
+    code = (code ^ (code >> 4))  & 0x100F00F00F00F00FULL;
+    code = (code ^ (code >> 8))  & 0x1F0000FF0000FFULL;
+    code = (code ^ (code >> 16)) & 0x1F00000000FFFFULL;
+    code = (code ^ (code >> 32)) & 0x00000000001FFFFFULL;
+
+    return (uint32_t) code; /* low 21 bits hold the axis value */
+}
+
+static inline void decode3(uint64_t code,
+                           uint32_t *x, uint32_t *y, uint32_t *z)
+{
+    *x = compact_axis(code, 0);   /* bits 0,3,6,…   */
+    *y = compact_axis(code, 1);   /* bits 1,4,7,…   */
+    *z = compact_axis(code, 2);   /* bits 2,5,8,…   */
+}
+
 void
 morton_pos(pos_t p, morton_t code)
 {
-	morton_t up[3] = { 0, 0, 0 };
-	int i;
-
-	for (i = 0; i < 16; i ++) {
-		POOP3D up[I] |= ((code >> (I + 3 * i)) & 1) << i;
-	}
-
-	POOP3D p[I] = sign(up[I]);
+	static const morton_t mask_off = 0x0000FFFFFFFFFFFFULL;
+	uint32_t uup[3] = { 0, 0, 0 };
+	decode3(code & mask_off, &uup[0], &uup[1], &uup[2]);
+	p[0] = sign(uup[0]);
+	p[1] = sign(uup[1]);
+	p[2] = sign(uup[2]);
 	p[3] = OBITS(code);
 }
 
@@ -216,7 +267,7 @@ e_ground(unsigned room, enum exit e)
 void
 pos_move(pos_t d, pos_t o, enum exit e) {
 	exit_t *ex = &exit_map[e];
-	POOP4D d[I] = o[I];
+	memcpy(d, o, sizeof(coord_t) * 4);
 	d[ex->dim] += ex->dis;
 }
 

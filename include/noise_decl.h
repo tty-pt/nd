@@ -193,6 +193,10 @@ start:			ce_p[ndim] = c + ced;
 			ced <<= cy;
 			c += (ced << x) - ced; /* reset and inc */
 			qsc--; ndim++;
+
+			if (ndim == dim) /* popped root – we're done */
+				break;
+
 			*qsc += 1 << x;
 		} while (c >= ce_p[ndim]);
 	} while (ndim < dim);

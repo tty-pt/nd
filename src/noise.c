@@ -305,10 +305,11 @@ noise_chunks(point_t pos)
 
 	noise_get_s(r.s, vprs, COORDMASK_LSHIFT(CHUNK_Y), 2);
 
-	POOP {
-		n[I] = ((VIEW_SIZE + vprs[I] - r.s[I]) >> CHUNK_Y) + 1;
-		r.l[I] = n[I] << CHUNK_Y;
-	}
+	n[0] = ((VIEW_SIZE + vprs[0] - r.s[0]) >> CHUNK_Y) + 1;
+	r.l[0] = n[0] << CHUNK_Y;
+
+	n[1] = ((VIEW_SIZE + vprs[1] - r.s[1]) >> CHUNK_Y) + 1;
+	r.l[1] = n[1] << CHUNK_Y;
 
 	if (pos[3] == chunks_obits
             && r.s[0] >= chunks_r.s[0]

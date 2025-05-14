@@ -42,7 +42,12 @@ inrange(morton_t dr, pos_t min, pos_t max)
 	// TODO use ffs
 	morton_pos(drp, dr);
 
-	POOP4D if (drp[I] < min[I] || drp[I] >= max[I])
+	if (
+			drp[0] < min[0] || drp[0] >= max[0]
+			|| drp[1] < min[1] || drp[1] >= max[1]
+			|| drp[2] < min[2] || drp[2] >= max[2]
+			|| drp[3] < min[3] || drp[3] >= max[3]
+	   )
 		return 0;
 
 	return 1;
