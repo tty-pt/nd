@@ -40,6 +40,8 @@
 #define ANSI_BG_MAGENTA	"\033[45m"
 #define ANSI_BG_WHITE	"\033[47m"
 
+#define ENABLE_TRANSACTIONS 0
+
 extern char *ansi_bg[];
 extern char *ansi_fg[];
 
