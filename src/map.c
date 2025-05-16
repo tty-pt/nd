@@ -253,7 +253,7 @@ map_init(void) {
 	DB_TXN *txn = qdb_begin();
 
 	if ((ret = db_create(&ipdb, qdb_config.env, 0))
-	    || (ret = ipdb->open(ipdb, txn, STD_DB, "map_dp", DB_HASH, DB_CREATE | DB_THREAD, 0644))) {
+	    || (ret = ipdb->open(ipdb, txn, STD_DB, "map_dp", DB_HASH, DB_CREATE, 0644))) {
 		qdb_abort();
 		ndclog(LOG_ERR, "map_init %s\n", db_strerror(ret));
 		exit(EXIT_FAILURE);
@@ -262,7 +262,7 @@ map_init(void) {
 
 	if ((ret = db_create(&pdb, qdb_config.env, 0))
 	    || (ret = pdb->set_bt_compare(pdb, map_cmp))
-	    || (ret = pdb->open(pdb, txn, STD_DB, "map_pd", DB_BTREE, DB_CREATE | DB_THREAD, 0644))
+	    || (ret = pdb->open(pdb, txn, STD_DB, "map_pd", DB_BTREE, DB_CREATE, 0644))
 	    || (ret = ipdb->associate(ipdb, txn, pdb, map_mki_code, DB_CREATE)))
 	{
 		pdb->close(pdb, 0);

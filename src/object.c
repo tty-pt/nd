@@ -345,13 +345,13 @@ objects_update(double dt)
 void
 object_move(unsigned what_ref, unsigned where_ref)
 {
+	unsigned last_loc;
 	OBJ what;
 	qdb_get(obj_hd, &what, &what_ref);
 
-        if (what.location != NOTHING) {
-                mcp_content_out(what.location, what_ref);
+	last_loc = what.location;
+        if (last_loc != NOTHING)
 		qdb_del(contents_hd, &what.location, &what_ref);
-        }
 
 	qdb_cur_t c = qdb_iter(obs_hd, &what_ref);
 	unsigned first_ref;
@@ -381,8 +381,10 @@ object_move(unsigned what_ref, unsigned where_ref)
 		return;
 	}
 
+	mcp_content_in(where_ref, what_ref);
 	what.location = where_ref;
 	qdb_put(obj_hd, &what_ref, &what);
+	mcp_content_out(last_loc, what_ref);
 
 	if (what.type == TYPE_ENTITY) {
 		ENT ewhat = ent_get(what_ref);
@@ -395,7 +397,6 @@ object_move(unsigned what_ref, unsigned where_ref)
 	}
 
 	qdb_put(contents_hd, &where_ref, &what_ref);
-	mcp_content_in(where_ref, what_ref);
 }
 
 struct icon

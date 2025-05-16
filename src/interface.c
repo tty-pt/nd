@@ -21,6 +21,12 @@
 
 #include "papi/nd.h"
 
+struct ioc {
+	char buf[BUFSIZ];
+	size_t len;
+	unsigned n;
+} ioc[FD_SETSIZE];
+
 enum opts {
 	OPT_DETACH = 1,
 };
@@ -50,7 +56,7 @@ SKEL void_biome = {
 
 unsigned dplayer_hd = -1, skel_hd = -1, drop_hd = -1,
 	 adrop_hd = -1, element_hd = -1, plant_hd = -1,
-	 wts_hd = -1, awts_hd = -1, biome_hd = -1, mod_hd = -1;
+	 wts_hd = -1, awts_hd = -1, biome_hd = -1, mod_hd = -1, mod_id_hd = -1;
 extern unsigned stone_skel_id;
 struct nd nd;
 
@@ -272,7 +278,7 @@ DB_ENV *env;
 void mod_close(void) {
 	char buf[BUFSIZ];
 	void *sl;
-	qdb_cur_t c = qdb_iter(mod_hd, NULL);
+	qdb_cur_t c = qdb_iter(mod_id_hd, NULL);
 
 	while (qdb_next(buf, &sl, &c))
 		dlclose(sl);
@@ -311,8 +317,11 @@ void close_all(int i) {
 	qdb_close(biome_hd, flags);
 
 	qdb_close(mod_hd, flags);
+	qdb_close(mod_id_hd, flags);
 
+#if ENABLE_TRANSACTIONS
 	env->close(env, 0);
+#endif
 	closelog();
 	sync();
 
@@ -347,7 +356,8 @@ void _mod_load(char *fname) {
 	char *symbol = existed ? "mod_open" : "mod_install";
 
 	ndclog(LOG_INFO, "%s: '%s'\n", symbol, fname);
-	qdb_put(mod_hd, fname, &sl);
+	unsigned id = qdb_put(mod_id_hd, NULL, &sl);
+	qdb_put(mod_hd, fname, &id);
 	_mod_run(sl, symbol, NULL);
 }
 
@@ -363,7 +373,7 @@ void mod_load(char *fname) {
 void mod_load_all(void) {
 	char buf[BUFSIZ];
 	void *ptr;
-	qdb_cur_t c = qdb_iter(mod_hd, NULL);
+	qdb_cur_t c = qdb_iter(mod_id_hd, NULL);
 	while (qdb_next(buf, &ptr, &c)) 
 		_mod_load(buf);
 }
@@ -371,7 +381,7 @@ void mod_load_all(void) {
 void mod_run(char *symbol, void *arg) {
 	char buf[BUFSIZ];
 	void *ptr = NULL;
-	qdb_cur_t c = qdb_iter(mod_hd, NULL);
+	qdb_cur_t c = qdb_iter(mod_id_hd, NULL);
 	while (qdb_next(buf, &ptr, &c))
 		_mod_run(ptr, symbol, arg);
 }
@@ -528,10 +538,13 @@ main(int argc, char **argv)
 	signal(SIGSEGV, close_all);
 
 	qdb_config.file = STD_DB;
+
+#if ENABLE_TRANSACTIONS
 	qdb_config.flags = QH_TXN;
 
 	env = qdb_env_create();
 	qdb_env_open(env, "/var/nd/env", QH_TXN);
+#endif
 
 	qdb_begin();
 	owner_hd = qdb_open("st", "st", "u", 0);
@@ -557,7 +570,8 @@ main(int argc, char **argv)
 	
 	shared_init();
 
-	mod_hd = qdb_open("module", "s", "p", 0);
+	mod_id_hd = qdb_open("module_id", "u", "p", QH_AINDEX);
+	mod_hd = qdb_open("module", "s", "u", 0);
 
 	unsigned zero = 0, existed = 1;
 	if (!qdb_exists(obj_hd, &zero)) {
@@ -657,6 +671,22 @@ nd_write(unsigned player_ref, char *str, size_t len) {
 		ndc_write(fd, str, len);
 }
 
+void
+ndc_flush(int fd, int argc __attribute__((unused)), char *argv[] __attribute__((unused)))
+{
+	char buf[BUFSIZ + 32], *b = buf;
+
+	if (!ioc[fd].len)
+		return;
+
+	if (ioc[fd].n > 1)
+		b += snprintf(buf, sizeof(buf), "(%ux) ", ioc[fd].n);
+
+	b += snprintf(b, sizeof(buf) - (b - buf), "%s", ioc[fd].buf);
+	ndc_write(fd, buf, b - buf + 1);
+	ioc[fd].len = 0;
+	memset(ioc[fd].buf, 0, sizeof(ioc[fd].buf));
+}
 
 void
 nd_dwritef(unsigned player_ref, const char *fmt, va_list args) {
@@ -665,8 +695,15 @@ nd_dwritef(unsigned player_ref, const char *fmt, va_list args) {
 	qdb_cur_t c = qdb_iter(fds_hd, &player_ref);
 	unsigned fd;
 
-	while (qdb_next(&player_ref, &fd, &c))
-		ndc_write(fd, buf, len);
+	while (qdb_next(&player_ref, &fd, &c)) {
+		if (memcmp(buf, ioc[fd].buf, len)) {
+			ndc_flush(fd, 0, NULL);
+			memcpy(ioc[fd].buf, buf, len);
+			ioc[fd].n = 1;
+			ioc[fd].len = len;
+		} else
+			ioc[fd].n++;
+	}
 }
 
 void
@@ -881,6 +918,7 @@ void ndc_vim(int fd, int argc __attribute__((unused)), char *argv[]) {
 
 void ndc_command(int fd, int argc __attribute__((unused)), char *argv[] __attribute__((unused))) {
 	me = fd_player(fd);
+	ioc[fd].n = 0;
 }
 
 int ndc_connect(int fd) {
