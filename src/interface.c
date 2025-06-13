@@ -379,10 +379,10 @@ void mod_load_all(void) {
 }
 
 void mod_run(char *symbol, void *arg) {
-	char buf[BUFSIZ];
+	unsigned mod_id;
 	void *ptr = NULL;
 	qdb_cur_t c = qdb_iter(mod_id_hd, NULL);
-	while (qdb_next(buf, &ptr, &c))
+	while (qdb_next(&mod_id, &ptr, &c))
 		_mod_run(ptr, symbol, arg);
 }
 

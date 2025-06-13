@@ -11,7 +11,7 @@ node_modules != npm root
 npm-lib := @tty-pt/qdb @tty-pt/ndc
 prefix := ${srcdir} \
 	  /usr/local \
-	  ${npm-lib:%=-I${node_modules}/%}
+	  ${npm-lib:%=${node_modules}/%}
 CFLAGS := -g -O0 -Wall -Wpedantic -Wextra \
 	  -Wno-initializer-overrides ${cflags-${uname}} \
 	  ${config} ${prefix:%=-I%/include} \
