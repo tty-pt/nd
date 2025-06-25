@@ -1,5 +1,4 @@
-#include <uapi/nd.h>
-#include "./bbiome.h"
+#include <nd/nd.h>
 
 SKEL biomes_skel[] = {
 	[BIOME_WATER] = {

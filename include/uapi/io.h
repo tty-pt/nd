@@ -131,4 +131,7 @@ typedef void nd_cb_t(int fd, int argc, char *argv[]);
 typedef void nd_register_t(char *, nd_cb_t *, unsigned);
 nd_register_t nd_register;
 
+typedef void nd_mod_load_t(char *fname);
+nd_mod_load_t nd_mod_load;
+
 #endif

@@ -1,4 +1,4 @@
-#include "./../include/papi/nd.h"
+#include <nd/nd.h>
 
 void mod_install(void *arg __attribute__((unused))) {
 	nd_put(HD_WTS, NULL, "peck");
