@@ -1,4 +1,4 @@
-#include <uapi/nd.h>
+#include <nd/nd.h>
 
 enum legacy_spell_type {
 	SPELL_HEAL,

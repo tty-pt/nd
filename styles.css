@@ -20,10 +20,7 @@ body {
         overflow: hidden;
         position: relative;
 	font-size: 10pt;
-	z-index: -4;
 }
-
-#main { z-index: -4; }
 
 a {
         background-repeat: no-repeat;
@@ -172,29 +169,7 @@ button:disabled > i, button:disabled > svg {color: rgba(0, 0, 0, 0.5);fill: rgba
 	background-repeat: no-repeat;
 }
 
-button {
-	padding: 8px;
-	background-color: #2c2c2c !important;
-	box-sizing: content-box;
-	box-shadow: 2px 2px 3px rgba(0, 0, 0, 0.3), -2px 2px 3px rgba(0, 0, 0, 0.3), -2px -2px 3px rgba(0, 0, 0, 0.3), 2px -2px 3px rgba(0, 0, 0, 0.3);
-	border: none;
-	cursor: pointer;
-	color: #c1c3da;
-	background-position: 50% 50%;
-	background-repeat: no-repeat;
-}
-
-button.round {
-	text-align: center;
-	border-radius: 50%;
-	vertical-align: middle;
-}
-
 .transparent { background-color: transparent !important }
-button.transparent {
-	box-shadow: none;
-	cursor: default;
-}
 
 .hidden {
 	visibility: hidden;
@@ -204,8 +179,6 @@ div[style*="top: -50000px"] {
 	visibility: hidden;
 }
 
-#bg { z-index: -3; background-repeat: no-repeat; background-size: cover; }
-#holder { z-index: -2; }
 #holder.terminal-mode { padding: 0px !important; }
 
 @media only screen and (max-width: 600px) {
@@ -216,8 +189,8 @@ div[style*="top: -50000px"] {
 }
 
 #left-panel { left: 8px; right: 32px; top: 8px; bottom: 8px; }
-#right-panel { right: 8px; top: 8px; bottom: 8px; z-index: -1; }
-#holder:not(.terminal-mode) > #right-panel { z-index: 0; }
+#right-panel { right: 8px; top: 8px; bottom: 8px; }
+#holder.terminal-mode > #left-panel { z-index: 1; }
 
 .fik {
 	align-items: end;
@@ -225,4 +198,15 @@ div[style*="top: -50000px"] {
 
 .xterm-viewport {
 	background-color: rgba(0, 0, 0, 0.5) !important;
+}
+
+#directions {
+	background-color: darkgray;
+	background-size: 200%;
+	background-blend-mode: hard-light;
+	justify-content: end;
+}
+
+#directions button:not(.transparent) {
+	background-color: lightgray;
 }

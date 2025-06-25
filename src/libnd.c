@@ -277,3 +277,7 @@ unsigned ematch_near(unsigned player_ref, char *str) {
 unsigned ematch_all(unsigned player_ref, char *str) {
 	return nd.ematch_all(player_ref, str);
 }
+
+void nd_mod_load(char *fname) {
+	nd.nd_mod_load(fname);
+}

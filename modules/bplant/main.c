@@ -1,4 +1,4 @@
-#include <uapi/nd.h>
+#include <nd/nd.h>
 
 enum base_plant {
 	PLANT_PINUS_SILVESTRIS,

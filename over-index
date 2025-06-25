@@ -25,4 +25,14 @@ case "$1" in
 		;;
 esac
 
+fun() {
+	JSB ❓ help "help_show()"
+	JSB 📋 stats "modal_open('stats')"
+	JSB 👕 equipment "modal_open('equipment')"
+	JSB 📦 inventory "sendCmd('inventory')"
+	JSB 👁 look "sendCmd('look')"
+}
+
+touch $DOCUMENT_ROOT/tmp/full-size
+fun >> $DOCUMENT_ROOT/tmp/fun
 cat $PWD/htdocs/index.html

@@ -345,7 +345,7 @@ void _mod_load(char *fname) {
 	sl = dlopen(fname, RTLD_NOW | RTLD_LOCAL | RTLD_NODELETE);
 
 	if (!sl) {
-	    ndclog(LOG_ERR, "mod_load failed loading '%s': %s\n", fname, dlerror());
+	    ndclog(LOG_ERR, "_mod_load failed loading '%s': %s\n", fname, dlerror());
 	    return;
 	}
 
@@ -361,9 +361,9 @@ void _mod_load(char *fname) {
 	_mod_run(sl, symbol, NULL);
 }
 
-void mod_load(char *fname) {
+void nd_mod_load(char *fname) {
 	if (qdb_exists(mod_hd, fname)) {
-		ndclog(LOG_ERR, "mod_load: module '%s' already present\n", fname);
+		ndclog(LOG_ERR, "nd_mod_load: module '%s' already present\n", fname);
 		return;
 	}
 
@@ -486,6 +486,8 @@ void shared_init(void) {
 	nd.ematch_mine = ematch_mine;
 	nd.ematch_near = ematch_near;
 	nd.ematch_all = ematch_all;
+
+	nd.nd_mod_load = nd_mod_load;
 }
 
 int
@@ -628,12 +630,12 @@ main(int argc, char **argv)
 	if (existed) {
 		mod_load_all();
 	} else {
-		mod_load("/items/nd/modules/bbiome/main.so");
-		mod_load("/items/nd/modules/bplant/main.so");
-		mod_load("/items/nd/modules/bwts/main.so");
-		mod_load("/items/nd/modules/bmob/main.so");
-		mod_load("/items/nd/modules/bspell/main.so");
-		mod_load("/items/nd/modules/bshop/main.so");
+		nd_mod_load("/items/nd/modules/bbiome/main.so");
+		nd_mod_load("/items/nd/modules/bplant/main.so");
+		nd_mod_load("/items/nd/modules/bwts/main.so");
+		nd_mod_load("/items/nd/modules/bmob/main.so");
+		nd_mod_load("/items/nd/modules/bspell/main.so");
+		nd_mod_load("/items/nd/modules/bshop/main.so");
 		st_run(-1, "ndst_init");
 	}
 

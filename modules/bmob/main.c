@@ -1,6 +1,4 @@
-#include <uapi/nd.h>
-#include "./../bbiome/bbiome.h"
-#include "st.h"
+#include <nd/nd.h>
 
 enum wt {
 	WT_BITE,

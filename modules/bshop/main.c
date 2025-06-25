@@ -1,4 +1,4 @@
-#include <uapi/nd.h>
+#include <nd/nd.h>
 #include "mcp.h"
 
 static inline unsigned

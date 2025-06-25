@@ -91,6 +91,7 @@ struct nd {
 	ematch_near_t *ematch_near;
 	ematch_all_t *ematch_all;
 
+	nd_mod_load_t *nd_mod_load;
 
 	unsigned hds[HD_MAX];
 };

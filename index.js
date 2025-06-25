@@ -106,8 +106,8 @@ const ACTION = {
   EAT: "🥄 ",
   DIE: "☠️",
   INVENTORY: "🎒",
-  K: "K",
-  J: "J",
+  K: "↗",
+  J: "↘",
   WALK: "🗺️",
 };
 
@@ -141,14 +141,8 @@ const ACTION_MAP = {
   [ACTION.EAT]: { label: "eat" },
   [ACTION.DIE]: { label: "die" },
   [ACTION.INVENTORY]: { label: "inventory" },
-  [ACTION.K]: {
-    label: "K",
-    icon: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAASUlEQVQ4jWNgoBU4ePjWf2RMsSFUcwFRLkNXgG4ANjbRzsZrAC7N+LxDlM0EXUOKs3GKE+tsYgwmLEkzA0hNvlgNIKSJ9gaQigF3uf+dQNoz9QAAAABJRU5ErkJggg==",
-  },
-  [ACTION.J]: {
-    label: "J",
-    icon: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAATElEQVQ4jWNgoDU4ePjWf4o0wzDVNCOL4zQYnwJkMawGEDIdqwEwBqnORjGAWGdjFSfF2QQNwOYdUg0mLEkzA4hKJIQMIKSJ9gaQigFrg/+dXV9AmAAAAABJRU5ErkJggg==",
-  },
+  [ACTION.K]: { label: "K" },
+  [ACTION.J]: { label: "J" },
   [ACTION.WALK]: { label: "walk" },
 };
 // }}}
@@ -382,7 +376,10 @@ const BCP_MAP = {
   [BCP.OUT]: { label: "out" },
 };
 
-const bg = document.getElementById("bg");
+const title = document.getElementById("title");
+title.parentNode.removeChild(title);
+
+const bg = document.getElementById("main");
 
 ndc.setOnMessage(function onMessage(ev) {
   const arr = new Uint8Array(ev.data);
@@ -466,7 +463,7 @@ ndc.setOnMessage(function onMessage(ev) {
         if (base.type === 0) {
           hereEmit(base.dbref);
           targetEmit(null);
-          bg.style = `background-image: url('${pkg.publicPath}/art/${base.art}')`;
+          bg.style = `background: linear-gradient(rgb(170, 170, 170), rgb(170, 170, 170)), linear-gradient(135deg, #ff0077, #00c8ff), url('${pkg.publicPath}/art/${base.art}') center/cover no-repeat; background-blend-mode: hard-light, multiply;`;
         } else
           targetEmit(base.dbref);
 
@@ -551,7 +548,7 @@ class Button extends SubscribedElement {
     const textSize = mayDash(this.getAttribute('text-size') ?? "17");
     const size = mayDash(this.getAttribute('size') ?? "8");
     const sizeCls = this.getAttribute("size") ?  "s" + size : "";
-    const padSize = mayDash(this.getAttribute('pad') ?? "8");
+    const padSize = mayDash(this.getAttribute('pad') ?? "4");
     const square = this.getAttribute('square');
     const icon = this.textContent.trim();
     const src = this.getAttribute('src') ?? ACTION_MAP[icon]?.icon;
@@ -678,7 +675,7 @@ class Item extends SubscribedElement {
     super.render();
     if (!this.item)
       return;
-    const background = this.parent.active === this.getAttribute("ref") ? "c0" : "";
+    const background = this.parent.active === this.getAttribute("ref") ? "ctb" : "";
     const text = this.item.pname + (this.item.shop ? " " + this.item.price + "P" : "");
     this.innerHTML = `
     <a class="f h fic round-pad p display rel ${background}" onclick="">
@@ -861,40 +858,21 @@ ndc.term.element.addEventListener("focusout", () => {
 
 const menu = document.getElementById("menu");
 menu.innerHTML += `
-<label id="index" class="btn round p8 ts17 menu">
-	⋯
-	<input type="checkbox" />
-	<div class="abs h ar8 p ts ttc">
-		<div class="f h fie fr">
-			<nd-button onclick="help_show()">❓</nd-button>
-			<nd-button onclick="modal_open('stats')">📋</nd-button>
-			<nd-button onclick="modal_open('equipment')">👕</nd-button>
-			<nd-button onclick="sendCmd('inventory')">📦</nd-button>
-			<nd-button onclick="sendCmd('look')">👁</nd-button>
-		</div>
+<div id="directions" class="f fg v8 tar tnow fab fik" style="background-image: url(./art/rocky.jpeg)">
+	<div class="f h8">
+		<nd-button hid></nd-button>
+		<nd-button onclick="sendCmd('k')">&uarr;</nd-button>
+		<nd-button onclick="sendCmd('K')">&nearr;</nd-button>
 	</div>
-</label>
-<label id="index" class="btn round p8 ts17 menu">
-	🗺️
-	<input type="checkbox" />
-	<div class="abs v ar8 p ts ttc">
-		<div id="directions" class="f v8 tar tnow fab fik">
-			<div class="f h8">
-				<nd-button hid></nd-button>
-				<nd-button onclick="sendCmd('k')">&uarr;</nd-button>
-				<nd-button onclick="sendCmd('K')">K</nd-button>
-			</div>
-			<div class="f h8">
-				<nd-button onclick="sendCmd('h')">&larr;</nd-button>
-				<nd-button hid></nd-button>
-				<nd-button onclick="sendCmd('l')">&rarr;</nd-button>
-			</div>
-			<div class="f h8">
-				<nd-button hid></nd-button>
-				<nd-button onclick="sendCmd('j')">&darr;</nd-button>
-				<nd-button onclick="sendCmd('J')">J</nd-button>
-			</div>
-		</div>
+	<div class="f h8">
+		<nd-button onclick="sendCmd('h')">&larr;</nd-button>
+		<nd-button hid></nd-button>
+		<nd-button onclick="sendCmd('l')">&rarr;</nd-button>
 	</div>
-</label>
+	<div class="f h8">
+		<nd-button hid></nd-button>
+		<nd-button onclick="sendCmd('j')">&darr;</nd-button>
+		<nd-button onclick="sendCmd('J')">&searr;</nd-button>
+	</div>
+</div>
 `
