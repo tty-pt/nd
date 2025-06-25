@@ -185,7 +185,7 @@ fbcp_stats(unsigned player_ref)
 	memcpy(p += sizeof(short), &eplayer.e[AF_DMG].value, sizeof(short));
 	memcpy(p += sizeof(short), &eplayer.e[AF_DEF].value, sizeof(short));
 	p += sizeof(short);
-	nd_write(player_ref, bcp_buf, p - bcp_buf);
+	nd_wwrite(player_ref, bcp_buf, p - bcp_buf);
 }
 
 static void
@@ -205,7 +205,7 @@ fbcp_bars(unsigned player_ref)
 	aux = MP_MAX(&eplayer);
 	memcpy(p += sizeof(eplayer.mp), &aux, sizeof(aux));
 	p += sizeof(aux);
-	nd_write(player_ref, bcp_buf, p - bcp_buf);
+	nd_wwrite(player_ref, bcp_buf, p - bcp_buf);
 }
 
 void

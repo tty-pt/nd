@@ -609,6 +609,10 @@ main(int argc, char **argv)
 
 		SKEL adam = {
 			.name = "human",
+			.type = STYPE_ENTITY,
+			.sp.entity = {
+				.y = 255,
+			},
 		};
 
 		qdb_put(skel_hd, NULL, &adam); // 0
@@ -665,15 +669,6 @@ main(int argc, char **argv)
 }
 
 void
-nd_write(unsigned player_ref, char *str, size_t len) {
-	qdb_cur_t c = qdb_iter(fds_hd, &player_ref);
-	unsigned fd;
-
-	while (qdb_next(&player_ref, &fd, &c))
-		ndc_write(fd, str, len);
-}
-
-void
 ndc_flush(int fd, int argc __attribute__((unused)), char *argv[] __attribute__((unused)))
 {
 	char buf[BUFSIZ + 32], *b = buf;
@@ -691,21 +686,35 @@ ndc_flush(int fd, int argc __attribute__((unused)), char *argv[] __attribute__((
 }
 
 void
-nd_dwritef(unsigned player_ref, const char *fmt, va_list args) {
-	static char buf[BUFSIZ];
-	ssize_t len = vsnprintf(buf, sizeof(buf), fmt, args);
+nd_flush(unsigned player_ref) {
+	qdb_cur_t c = qdb_iter(fds_hd, &player_ref);
+	unsigned fd;
+
+	while (qdb_next(&player_ref, &fd, &c))
+		ndc_flush(fd, 0, NULL);
+}
+
+void
+nd_write(unsigned player_ref, char *str, size_t len) {
 	qdb_cur_t c = qdb_iter(fds_hd, &player_ref);
 	unsigned fd;
 
 	while (qdb_next(&player_ref, &fd, &c)) {
-		if (memcmp(buf, ioc[fd].buf, len)) {
+		if (memcmp(str, ioc[fd].buf, len)) {
 			ndc_flush(fd, 0, NULL);
-			memcpy(ioc[fd].buf, buf, len);
+			memcpy(ioc[fd].buf, str, len);
 			ioc[fd].n = 1;
 			ioc[fd].len = len;
 		} else
 			ioc[fd].n++;
 	}
+}
+
+void
+nd_dwritef(unsigned player_ref, const char *fmt, va_list args) {
+	static char buf[BUFSIZ];
+	ssize_t len = vsnprintf(buf, sizeof(buf), fmt, args);
+	nd_write(player_ref, buf, len);
 }
 
 void
@@ -882,6 +891,7 @@ auth(unsigned fd)
 	do_view(fd, 0, NULL);
 	st_run(player_ref, "ndst_auth");
 	qdb_commit();
+	ndc_writef(fd, "OK!\n");
 	return player_ref;
 }
 
