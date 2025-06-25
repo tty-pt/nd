@@ -34,7 +34,7 @@ fds_next_t fds_next;
 /* fds_has_t fds_has; */
 
 typedef void nd_close_t(unsigned player);
-nd_close_t nd_close;
+nd_close_t nd_close, nd_flush;
 
 typedef void nd_write_t(unsigned player_ref, char *str, size_t len);
 nd_write_t nd_write;

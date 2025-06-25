@@ -1,14 +1,12 @@
 import { Sub, SubscribedElement } from "@tty-pt/sub";
 import { createPopper } from "@popperjs/core";
 import ndc from "@tty-pt/ndc";
-import "@xterm/xterm/css/xterm.css";
-import "@tty-pt/ndc/ndc.css";
-import "./vim.css";
-import "./styles.css";
-import pkg from "./package.json";
+// import "@xterm/xterm/css/xterm.css";
+// import "@tty-pt/ndc/ndc.css";
 
 const ws = ndc.connect();
 ndc.open(document.getElementById("term"));
+ndc.term.write("Connecting... ");
 
 globalThis.sendCmd = text => {
   ws.send(text + "\n");
@@ -463,7 +461,7 @@ ndc.setOnMessage(function onMessage(ev) {
         if (base.type === 0) {
           hereEmit(base.dbref);
           targetEmit(null);
-          bg.style = `background: linear-gradient(rgb(170, 170, 170), rgb(170, 170, 170)), linear-gradient(135deg, #ff0077, #00c8ff), url('${pkg.publicPath}/art/${base.art}') center/cover no-repeat; background-blend-mode: hard-light, multiply;`;
+          bg.style = `background: url('/nd/art/${base.art}') center/cover no-repeat;`;
         } else
           targetEmit(base.dbref);
 
@@ -527,11 +525,10 @@ class Bar extends SubscribedElement {
     const cls = this.getAttribute("x");
     const width = this.value / this.max;
 
-    this.innerHTML = `<div class="rel">`
+    this.innerHTML = ``
       + `<div style="width: ${width * 100}%" class="sv ${cls}"></div>`
       + `<div class="abs a ${cls} tr5"></div>`
-      + `<div class="ts9 shad abs tac a cf15">${this.value}/${this.max}</div>`
-      + `</div>`;
+      + `<div class="ts9 shad abs tac a cf15">${this.value}/${this.max}</div>`;
   }
 }
 
@@ -545,23 +542,35 @@ class Button extends SubscribedElement {
 
   render() {
     super.render();
-    const textSize = mayDash(this.getAttribute('text-size') ?? "17");
-    const size = mayDash(this.getAttribute('size') ?? "8");
-    const sizeCls = this.getAttribute("size") ?  "s" + size : "";
-    const padSize = mayDash(this.getAttribute('pad') ?? "4");
-    const square = this.getAttribute('square');
     const icon = this.textContent.trim();
     const src = this.getAttribute('src') ?? ACTION_MAP[icon]?.icon;
-    const fit = this.getAttribute('fit') === null ? null : "f";
-    const shape = square ? "" : "round";
     const content = src ? "" : icon;
-    const customCls = this.getAttribute("x");
-    const hid = this.getAttribute("hid") !== null;
-    const cls = `btn bs${fit ?? size} p${padSize} ${sizeCls} ts${textSize} `
-      + `${shape} ${customCls} ${hid ? "transparent" : ""}`;
 
-    this.innerHTML = `<button style="background-image: url('${src}')" `
-      + `class="${cls}" tabindex="${hid ? -1 : ""}">${content}</button>`;
+    const size = this.getAttribute('size');
+
+    this.className = "btn " + this.getAttribute("x")
+	  + " p" + mayDash(this.getAttribute('pad') ?? "8")
+	  + " ts" + mayDash(this.getAttribute('text-size') ?? "17")
+	  + " bs" + (
+		  this.getAttribute("fit") === null
+		  ? mayDash(size ?? "8") : "f"
+	  );
+
+    if (size)
+	  this.className += ' s' + mayDash(size);
+
+    if (!this.getAttribute('square'))
+	  this.className += " round";
+
+  if (src)
+	  this.style = `background-image: url('${src}')`;
+
+    if (this.getAttribute("hid") !== null) {
+	this.tabIndex = -1;
+        this.className += ' transparent';
+    }
+
+    this.innerHTML = content;
   }
 }
 
@@ -580,7 +589,7 @@ class Avatar extends Button {
   }
 
   setImageClass(obj) {
-    const src = pkg.publicPath + "/art/" + (obj?.art ?? obj?.avatar ?? "unknown.jpg");
+    const src = "/nd/art/" + (obj?.art ?? obj?.avatar ?? "unknown.jpg");
     this.setAttribute("src", src);
     this.setAttribute("x", "cf" + (obj.icon.fg + 8));
     this.textContent = String.fromCharCode(obj.icon.ch);
@@ -619,10 +628,9 @@ class Stat extends SubscribedElement {
     const value = 0;
 
     this.innerHTML = `
-    <div class="f h8">
       <div class="tbbold">${name}</div>
       <div>${this.value}</div>
-    </div>`;
+    `;
   }
 }
 
@@ -642,7 +650,7 @@ class LookAt extends SubscribedElement {
     this.innerHTML = target
       ? `
     <div id="target-title-and-art" class="rel v0 size-super fic">
-      <div style="background-image: url('${pkg.publicPath}/art/${target.art}')" class="abs a background-unique bsf"></div>
+      <div style="background-image: url('/nd/art/${target.art}')" class="abs a background-unique bsf"></div>
       <div id="target-title" class="abs a deep-shadow tac tm pxs">
         ${target.pname}
       </div>
@@ -673,15 +681,15 @@ class Item extends SubscribedElement {
 
   render() {
     super.render();
+    const text = this.item.pname + (this.item.shop ? " " + this.item.price + "P" : "");
     if (!this.item)
       return;
     const background = this.parent.active === this.getAttribute("ref") ? "ctb" : "";
-    const text = this.item.pname + (this.item.shop ? " " + this.item.price + "P" : "");
+    this.className = background;
     this.innerHTML = `
-    <a class="f h fic round-pad p display rel ${background}" onclick="">
       <nd-avatar size="64" ref="${this.item.dbref}"></nd-avatar>
       <span>${text}</span>
-    </a>`;
+    `;
   }
 }
 
@@ -738,6 +746,11 @@ class Contents extends SubscribedElement {
     this.subscribe(sub, "db", "db");
     this.subscribe(sub, "here", "here");
     this.subscribe(sub, "target", "target");
+
+    this.addEventListener("scroll", () => {
+      this.setActive(undefined);
+    });
+
     this.render();
   }
 
@@ -750,7 +763,7 @@ class Contents extends SubscribedElement {
       last.render();
     }
     if (ref) {
-      this.actions.classList.remove("hidden");
+      this.actions.classList.remove("dn");
       this.activeEl = this.querySelector(`nd-item[ref='${ref}']`);
       this.popper = createPopper(
         this.activeEl,
@@ -760,7 +773,7 @@ class Contents extends SubscribedElement {
       this.actions.setActive(ref);
       this.activeEl.render();
     } else
-      this.actions.classList.add("hidden");
+      this.actions.classList.add("dn");
   }
 
   render() {
@@ -771,8 +784,8 @@ class Contents extends SubscribedElement {
       return `<nd-item ref="${ref}" ${activeAttr}></nd-item>`;
     }).join("\n");
     this.innerHTML = `
-    <div class="v0 fg overflow icec">${contentsEl}</div>
-    <nd-content-actions class="hidden"></nd-content-actions>
+    ${contentsEl}
+    <nd-content-actions class="dn"></nd-content-actions>
     `;
     this.actions = this.querySelector("nd-content-actions");
     this.active = null;
@@ -855,24 +868,3 @@ ndc.term.element.addEventListener("focusin", () => {
 ndc.term.element.addEventListener("focusout", () => {
 	holder.classList.remove("terminal-mode");
 });
-
-const menu = document.getElementById("menu");
-menu.innerHTML += `
-<div id="directions" class="f fg v8 tar tnow fab fik" style="background-image: url(./art/rocky.jpeg)">
-	<div class="f h8">
-		<nd-button hid></nd-button>
-		<nd-button onclick="sendCmd('k')">&uarr;</nd-button>
-		<nd-button onclick="sendCmd('K')">&nearr;</nd-button>
-	</div>
-	<div class="f h8">
-		<nd-button onclick="sendCmd('h')">&larr;</nd-button>
-		<nd-button hid></nd-button>
-		<nd-button onclick="sendCmd('l')">&rarr;</nd-button>
-	</div>
-	<div class="f h8">
-		<nd-button hid></nd-button>
-		<nd-button onclick="sendCmd('j')">&darr;</nd-button>
-		<nd-button onclick="sendCmd('J')">&searr;</nd-button>
-	</div>
-</div>
-`

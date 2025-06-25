@@ -31,8 +31,32 @@ fun() {
 	JSB 👕 equipment "modal_open('equipment')"
 	JSB 📦 inventory "sendCmd('inventory')"
 	JSB 👁 look "sendCmd('look')"
+	cat <<!
+<div id="directions">
+	<div>
+		<nd-button hid></nd-button>
+		<nd-button onclick="sendCmd('k')">&uarr;</nd-button>
+		<nd-button onclick="sendCmd('K')">&nearr;</nd-button>
+	</div>
+	<div>
+		<nd-button onclick="sendCmd('h')">&larr;</nd-button>
+		<nd-button hid></nd-button>
+		<nd-button onclick="sendCmd('l')">&rarr;</nd-button>
+	</div>
+	<div>
+		<nd-button hid></nd-button>
+		<nd-button onclick="sendCmd('j')">&darr;</nd-button>
+		<nd-button onclick="sendCmd('J')">&searr;</nd-button>
+	</div>
+</div>
+!
 }
 
 touch $DOCUMENT_ROOT/tmp/full-size
 fun >> $DOCUMENT_ROOT/tmp/fun
 cat $PWD/htdocs/index.html
+cat <<!
+<style>
+`cat styles.css node_modules/@tty-pt/ndc/ndc.css node_modules/@xterm/xterm/css/xterm.css`
+</style>
+!

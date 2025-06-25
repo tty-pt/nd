@@ -378,6 +378,7 @@ object_move(unsigned what_ref, unsigned where_ref)
 			map_delete(what_ref);
 		}
 		qdb_del(obj_hd, &what_ref, NULL);
+		mcp_content_out(last_loc, what_ref);
 		return;
 	}
 

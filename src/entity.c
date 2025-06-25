@@ -911,6 +911,8 @@ entity_update(unsigned player_ref, double dt)
 	ent_set(player_ref, &eplayer);
 	if (eplayer.hp != ohp || eplayer.mp != omp)
 		mcp_bars(player_ref);
+
+	nd_flush(player_ref);
 }
 
 void
