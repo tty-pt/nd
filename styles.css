@@ -14,6 +14,7 @@
 .shad { text-shadow: 1px 1px 2px black, 2px -1px 3px black; }
 
 .modal { z-index: 3; top: 0; }
+nd-content-actions { z-index: 2; }
 
 .icec img { image-rendering: crisp-edges; }
 
@@ -102,7 +103,7 @@ body {
 	margin: 0;
 	image-rendering: pixelated;
         height: 100vh;
-        overflow: hidden;
+        overflow: auto;
         position: relative;
 	font-size: 10pt;
 }
@@ -128,20 +129,55 @@ input {
         background: #4c504c;
 }
 
-pre { margin: 0; margin-top: -1em; }
+pre { margin: 0; }
+
+#right-panel {
+	overflow: auto;
+	overflow-block: visible;
+	overflow-x: visible;
+	width: 300px;
+}
+
+nd-avatar {
+	width: 64px;
+	height: 64px;
+	flex-shrink: 0;
+}
 
 @media only screen and (max-width: 760px) { #term { font-size: 10px; } }
-@media only screen and (max-height: 400px) { #map { font-size: 9px; } }
-@media only screen and (max-width: 500px) { #map { font-size: 9px; } }
+@media only screen and (max-height: 400px) {
+	#map { font-size: 9px; }
+	#term {
+		max-height: 200px;
+	}
+}
+@media only screen and (max-width: 500px) {
+	#map { font-size: 9px; }
+	#right-panel { width: 100%; }
+	nd-avatar {
+		width: 42px;
+		height: 42px;
+	}
+}
+
+.terminal-mode #term {
+	min-height: 60vh !important;
+}
+
+@media (orientation: portrait) {
+	#holder {
+		flex-direction: column-reverse;
+	}
+}
 
 nd-contents {
 	overflow: auto;
-	flex-grow: 1;
+	flex: 1 1 150px;
 }
 
 nd-stat { display: flex; gap: 8px; }
 nd-item {
-	display: flex;
+	display: flex !important;
 	gap: 16px;
 	align-items: center;
 	border-radius: 8px;
@@ -215,17 +251,12 @@ div[style*="top: -50000px"] {
 	visibility: hidden;
 }
 
-#holder.terminal-mode { padding: 0px !important; }
-
-@media only screen and (max-width: 600px) {
-.terminal-mode > #right-panel {
-	position: absolute;
-	right: 8px; top: 8px; bottom: 8px;
-}
-}
+#main, #holder { padding: 0px; }
+#main > * { padding: 0px !important; }
+#term, #right-panel { padding: 8px; }
+#term { min-height: 200px; flex: 1 1 200px; }
 
 #right-panel {
-	min-width: 150px;
 	backdrop-filter: blur(4px);
 	-webkit-backdrop-filter: blur(4px); /* necessário para Safari */
 }
@@ -247,7 +278,7 @@ div[style*="top: -50000px"] {
 	background-blend-mode: hard-light;
 	background-image: url(/nd/art/s-rocky.jpeg);
 	justify-content: end;
-	display: flex;
+	display: flex !important;
 	flex-grow: 1;
 	flex-direction: column;
 	align-items: end;

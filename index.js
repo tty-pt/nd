@@ -550,11 +550,13 @@ class Button extends SubscribedElement {
 
     this.className = "btn " + this.getAttribute("x")
 	  + " p" + mayDash(this.getAttribute('pad') ?? "8")
-	  + " ts" + mayDash(this.getAttribute('text-size') ?? "17")
 	  + " bs" + (
 		  this.getAttribute("fit") === null
 		  ? mayDash(size ?? "8") : "f"
 	  );
+
+    if (!src)
+	  this.className += " ts" + mayDash(this.getAttribute('text-size') ?? "17");
 
     if (size)
 	  this.className += ' s' + mayDash(size);
@@ -687,7 +689,7 @@ class Item extends SubscribedElement {
     const background = this.parent.active === this.getAttribute("ref") ? "ctb" : "";
     this.className = background;
     this.innerHTML = `
-      <nd-avatar size="64" ref="${this.item.dbref}"></nd-avatar>
+      <nd-avatar ref="${this.item.dbref}"></nd-avatar>
       <span>${text}</span>
     `;
   }
@@ -739,6 +741,24 @@ class ContentActions extends SubscribedElement {
 
 customElements.define('nd-content-actions', ContentActions);
 
+const popperOpts = {
+  placement: "left",
+  modifiers: [
+    {
+      name: 'flip',
+      options: {
+        fallbackPlacements: ['bottom'], // alternativa se não couber à esquerda
+      },
+    },
+    {
+      name: 'preventOverflow',
+      options: {
+        boundary: 'clippingParents',
+      },
+    },
+  ],
+};
+
 class Contents extends SubscribedElement {
   active = "";
 
@@ -768,7 +788,7 @@ class Contents extends SubscribedElement {
       this.popper = createPopper(
         this.activeEl,
         this.actions,
-        { placement: "left" }
+        popperOpts
       );
       this.actions.setActive(ref);
       this.activeEl.render();
