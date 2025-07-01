@@ -1,8 +1,10 @@
 nd-chroot_mkdir_OpenBSD += dev
 chroot_mkdir += ${nd-chroot_mkdir_${uname}} etc etc/vim usr/lib usr/include/nd var/env
-ttys := 0 1 2 3 4 5 6 7 8 9
-ptys := ${ttys:%=ptyp%}
-ttys := ${ttys:%=ttyp%}
+chars := 0 1 2 3 4 5 6 7 8 9\
+	a b c d e f g h i j k l m n o p q r s t u v w x y z\
+	A B C D E F G H I J K L M N O P Q R S T U V W X Y Z
+ptys := ${chars:%=ptyp%}
+ttys := ${chars:%=ttyp%}
 nods-OpenBSD := ptm ${ptys} ${ttys} tty
 nods-OpenBSD := ${nods-OpenBSD:%=dev/%}
 nods-Linux := dev/ptmx dev/pts dev/urandom dev/null dev/zero
@@ -68,11 +70,16 @@ dev/urandom dev/zero dev/null:
 dev/ptm:
 	${sudo} mknod $@ c 81 0
 
-$(ptys:%=dev/%):
-	${sudo} mknod $@ c 6 ${@:dev/ptyp%=%}
+/tmp/nd-pty.db:
+	@echo ${chars} | tr ' ' '\n' | while read name; do qdb -p $$name $@; done
 
-$(ttys:%=dev/%):
-	${sudo} mknod $@ c 5 ${@:dev/ttyp%=%}
+$(ptys:%=dev/%): /tmp/nd-pty.db
+	@minor=$$(${qdb} -g ${@:dev/ptyp%=%} /tmp/nd-pty.db) ; \
+		mknod $@ c 6 $$minor || true
+
+$(ttys:%=dev/%): /tmp/nd-pty.db
+	@minor=$$(${qdb} -g ${@:dev/ttyp%=%} /tmp/nd-pty.db) ; \
+		mknod $@ c 5 $$minor || true
 
 $(mkdir):
 	mkdir -p $@
