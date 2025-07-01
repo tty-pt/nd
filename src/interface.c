@@ -889,22 +889,27 @@ auth(unsigned fd)
 	look_around(player_ref);
 	mcp_bars(player_ref);
 	do_view(fd, 0, NULL);
+	if (day_n)
+		mcp_tod(player_ref, 1);
+	else
+		mcp_tod(player_ref, 0);
+
 	st_run(player_ref, "ndst_auth");
 	qdb_commit();
-	ndc_writef(fd, "OK!\n");
 	return player_ref;
 }
 
 void
 ndc_update(unsigned long long dt)
 {
+	double mul = 2.0;
 	double fdt = dt / 1000000.0;
 	tick += fdt;
 	qdb_begin();
 	if (tick > 1.0) {
 		tick -= 1.0;
-		objects_update(1.0);
-		st_update(1.0);
+		objects_update(1.0 * mul);
+		st_update(1.0 * mul);
 	}
 	qdb_commit();
 }

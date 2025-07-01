@@ -135,7 +135,7 @@ pre { margin: 0; }
 	overflow: auto;
 	overflow-block: visible;
 	overflow-x: visible;
-	width: 300px;
+	flex: 0 1 360px;
 }
 
 nd-avatar {
@@ -143,6 +143,8 @@ nd-avatar {
 	height: 64px;
 	flex-shrink: 0;
 }
+
+#map { font-size: 18px; }
 
 @media only screen and (max-width: 760px) { #term { font-size: 10px; } }
 @media only screen and (max-height: 400px) {
@@ -173,6 +175,7 @@ nd-avatar {
 nd-contents {
 	overflow: auto;
 	flex: 1 1 150px;
+	width: 100%;
 }
 
 nd-stat { display: flex; gap: 8px; }
@@ -297,6 +300,11 @@ div[style*="top: -50000px"] {
 #main {
 	background-blend-mode: screen;
 	background-color: color-mix(in srgb, var(--cb), transparent 80%) !important;
+}
+
+#main.night {
+	background-blend-mode: multiply;
+	background-color: color-mix(in srgb, rgb(20, 10, 100), transparent 40%) !important;
 }
 
 @media (prefers-color-scheme: dark) {

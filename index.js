@@ -361,6 +361,7 @@ const BCP = {
   AUTH_FAILURE: 9,
   AUTH_SUCCESS: 10,
   OUT: 11,
+  TOD: 12,
 };
 
 const BCP_MAP = {
@@ -372,6 +373,7 @@ const BCP_MAP = {
   [BCP.AUTH_FAILURE]: { label: "auth_failure" },
   [BCP.AUTH_SUCCESS]: { label: "auth_success" },
   [BCP.OUT]: { label: "out" },
+  [BCP.TOD]: { label: "tod" },
 };
 
 const title = document.getElementById("title");
@@ -383,7 +385,6 @@ ndc.setOnMessage(function onMessage(ev) {
   const arr = new Uint8Array(ev.data);
   if (String.fromCharCode(arr[0]) == "#" && String.fromCharCode(arr[1]) == "b") {
     const iden = arr[2];
-    // console.log('BCP', BCP_MAP[iden]);
     switch (iden) {
     case BCP.BARS: {
       let aux;
@@ -478,6 +479,17 @@ ndc.setOnMessage(function onMessage(ev) {
     case BCP.AUTH_SUCCESS:
       authEmit(read_32(arr, 3), undefined);
       return;
+    case BCP.TOD: {
+      const res = read_u32(arr, 3);
+      if (res) {
+        bg.classList.add("night");
+        bg.classList.remove("day");
+      } else {
+        bg.classList.remove("night");
+        bg.classList.add("day");
+      }
+      return;
+    }
     case BCP.OUT: {
       let aux;
 
