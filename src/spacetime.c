@@ -18,6 +18,7 @@
 #include "params.h"
 #include "player.h"
 #include "view.h"
+#include "mcp.h"
 #include "papi/nd.h"
 
 #define PRECOVERY
@@ -334,6 +335,7 @@ st_update(double dt)
 	while (qdb_next(&iobj_ref, &iobj, &c))
 		if (iobj.type == TYPE_ENTITY) {
 			view(iobj_ref);
+			mcp_tod(iobj_ref, day_n);
 			nd_writef(iobj_ref, msg);
 		}
 }
