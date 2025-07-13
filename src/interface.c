@@ -634,12 +634,7 @@ main(int argc, char **argv)
 	if (existed) {
 		mod_load_all();
 	} else {
-		nd_mod_load("/items/nd/modules/bbiome/main.so");
-		nd_mod_load("/items/nd/modules/bplant/main.so");
-		nd_mod_load("/items/nd/modules/bwts/main.so");
-		nd_mod_load("/items/nd/modules/bmob/main.so");
-		nd_mod_load("/items/nd/modules/bspell/main.so");
-		nd_mod_load("/items/nd/modules/bshop/main.so");
+		st_put(1, 0, 64);
 		st_run(-1, "ndst_init");
 	}
 

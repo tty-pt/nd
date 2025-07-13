@@ -12,6 +12,7 @@ npm-lib := @tty-pt/qdb @tty-pt/ndc
 prefix := ${srcdir} \
 	  /usr/local \
 	  ${npm-lib:%=${node_modules}/%}
+modpath := /usr/share/nd
 CFLAGS := -g -O0 -Wall -Wpedantic -Wextra \
 	  -Wno-initializer-overrides ${cflags-${uname}} \
 	  ${config} ${prefix:%=-I%/include} \
@@ -21,7 +22,8 @@ LDLIBS := -lxxhash -lpcre -lm -lc -lqdb -ldb -lndc -lcrypto -lssl ${ldlibs-${una
 ldflags-Darwin += -L/usr/local/opt/berkeley-db@4/lib
 
 LDFLAGS := ${ldflags-${uname}} ${prefix:%=-L%/lib} \
-	   ${prefix:%=-Wl,-rpath,%/lib}
+	   ${prefix:%=-Wl,-rpath,%/lib} \
+	   ${modpath:%=-Wl,-rpath,%}
 
 exe := ../nd
 obj-y := object.o entity.o spacetime.o mcp.o map.o \

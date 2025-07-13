@@ -1139,21 +1139,15 @@ void
 st_put(unsigned owner_ref, uint64_t key, unsigned shift) {
 	char buf[BUFSIZ];
 	struct st_key st_key = st_key_new(key, shift);
-	size_t len = snprintf(buf, sizeof(buf), "var/nd/st/%u/", shift);
+	size_t len = snprintf(buf, sizeof(buf), "/var/nd/st/%u/", shift);
 	mkdir(buf, 0750);
 	snprintf(buf + len, sizeof(buf) - len, "%llu", key >> shift);
 	mkdir(buf, 0750);
-	OBJ owner;
-	qdb_get(obj_hd, &owner, &owner_ref);
-	struct passwd *pw = getpwnam(owner.name);
-	chown(buf, pw->pw_uid, pw->pw_gid);
 	st_open(st_key, owner_ref);
 }
 
 void
 st_init(void) {
-	/* st_put(1, 0, 64); */
-
 	qdb_cur_t c = qdb_iter(owner_hd, NULL);
 	struct st_key st_key;
 	int owner;
