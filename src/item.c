@@ -1,6 +1,7 @@
 #include "uapi/io.h"
 
 #include <stdlib.h>
+#include <qdb.h>
 
 #include "uapi/entity.h"
 #include "uapi/match.h"

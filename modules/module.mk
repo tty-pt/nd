@@ -1,6 +1,9 @@
 prefix := ../.. /var/www/usr /usr/local
 CFLAGS := ${prefix:%=-I%/include}
 LDFLAGS := -lnd -L../../src ${prefix:%=-L%/lib}
+MODDIR := /var/www/usr/share/nd
+pwd != pwd
+bname != basename ${pwd}
 .SUFFIXES: .so .d .c
 
 .c.so:
@@ -10,4 +13,10 @@ LDFLAGS := -lnd -L../../src ${prefix:%=-L%/lib}
 	@echo MKDEP $@
 	@${CC} -MM -o $@ ${CFLAGS} -I../../include $<
 
+install:
+	@install -d ${MODDIR}
+	@install -m 755 main.so ${MODDIR}/${bname}.so
+
 all: main.so
+
+.PHONY: all install

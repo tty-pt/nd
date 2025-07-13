@@ -1,6 +1,7 @@
 #include "uapi/io.h"
 #include "uapi/entity.h"
 #include "uapi/match.h"
+#include <qdb.h>
 
 #define DRINK_VALUE (1 << 14)
 #define FOOD_VALUE(x) (1 << (16 - x->food))

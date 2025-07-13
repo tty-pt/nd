@@ -1,7 +1,6 @@
 #ifndef UAPI_OBJECT_H
 #define UAPI_OBJECT_H
 
-#include <qdb.h>
 #include "./azoth.h"
 
 #define ROOT ((unsigned) 1)
@@ -227,16 +226,7 @@ object_add_t object_add;
 typedef void object_drop_t(unsigned where_ref, unsigned skel_id);
 object_drop_t object_drop;
 
-static inline int
-object_item(unsigned obj_ref)
-{
-	OBJ obj;
-	qdb_get(obj_hd, &obj, &obj_ref);
-	return obj.type == TYPE_THING
-		|| obj.type == TYPE_CONSUMABLE
-		|| obj.type == TYPE_EQUIPMENT;
-}
-
+int object_item(unsigned obj_ref);
 typedef struct icon object_icon_t(unsigned thing_ref);
 object_icon_t object_icon;
 

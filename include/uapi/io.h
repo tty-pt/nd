@@ -3,7 +3,6 @@
 
 #include <stdarg.h>
 #include <stddef.h>
-#include <qdb.h>
 #include "azoth.h"
 
 enum hd {
@@ -23,12 +22,6 @@ enum hd {
 
 typedef unsigned fd_player_t(unsigned fd);
 fd_player_t fd_player;
-
-typedef qdb_cur_t fds_iter_t(unsigned player);
-fds_iter_t fds_iter;
-
-typedef int fds_next_t(qdb_cur_t *c);
-fds_next_t fds_next;
 
 /* typedef int fds_has_t(unsigned player); */
 /* fds_has_t fds_has; */

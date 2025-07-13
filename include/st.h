@@ -4,6 +4,7 @@
 #include <limits.h>
 #include <stdint.h>
 #include <time.h>
+#include <qdb.h>
 #include "uapi/object.h"
 #include "uapi/st.h"
 
@@ -113,5 +114,7 @@ static inline void sthd_put(unsigned hd, uint64_t key, unsigned shift, void *val
 	struct st_key st_key = st_key_new(key, shift);
 	qdb_put(hd, &st_key, value);
 }
+
+void st_put(unsigned owner_ref, uint64_t key, unsigned shift);
 
 #endif

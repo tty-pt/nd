@@ -63,6 +63,7 @@ man
 /usr/include/stdarg.h
 /usr/include/stddef.h
 /usr/include/stdio.h
+/usr/include/stdint.h
 /usr/include/math.h
 /usr/include/sys/limits.h
 /usr/include/machine/limits.h

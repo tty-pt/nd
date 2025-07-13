@@ -757,3 +757,13 @@ do_drop(int fd, int argc __attribute__((unused)), char *argv[])
 error:
 	nd_writef(player_ref, CANTDO_MESSAGE);
 }
+
+int
+object_item(unsigned obj_ref)
+{
+	OBJ obj;
+	qdb_get(obj_hd, &obj, &obj_ref);
+	return obj.type == TYPE_THING
+		|| obj.type == TYPE_CONSUMABLE
+		|| obj.type == TYPE_EQUIPMENT;
+}

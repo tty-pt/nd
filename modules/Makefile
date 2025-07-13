@@ -4,7 +4,7 @@ all: ${mod:%=%/main.so}
 $(mod:%=%/main.so): ${mod} ../src/libnd.a
 
 $(mod):
-	${MAKE} -C $@
+	${MAKE} -C $@ install
 
 deps: ${mod:%=%/main.d}
 
