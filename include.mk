@@ -14,6 +14,7 @@ mounts := ${mounts-${uname}}
 mkdir := var/nd/st var/nd/env
 uapi != ls items/nd/include/uapi
 egdb != which egdb || echo gdb
+qdb ?= node_modules/@tty-pt/qdb/bin/qdb
 urandom-major-OpenBSD := 0
 urandom-minor-OpenBSD := 45
 urandom-major-Linux := 1
