@@ -846,7 +846,7 @@ auth(unsigned fd)
 		ENT eplayer;
 		memset(&eplayer, 0, sizeof(eplayer));
 		player_ref = object_new(&player);
-		strcpy(player.name, user);
+		strlcpy(player.name, user, sizeof(player.name));
 		player.location = 0;
 		player.type = TYPE_ENTITY;
 		player.owner = player_ref;
@@ -964,10 +964,10 @@ char *wts_plural(char *singular) {
 		case 'x':
 		case 'z':
 		case 'h':
-			strcat(plural, "es");
+			strlcat(plural, "es", BUFSIZ);
 			break;
 		default:
-			strcat(plural, "s");
+			strlcat(plural, "s", BUFSIZ);
 	}
 
 	return plural;

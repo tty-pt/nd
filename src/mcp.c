@@ -225,23 +225,6 @@ fbcp_view_buf(unsigned player_ref, char *view_buf)
 extern unsigned fds_hd;
 
 static void
-fbcp_all(size_t len, unsigned char iden, void *msg)
-{
-	qdb_cur_t c = qdb_iter(fds_hd, NULL);
-	unsigned fd, tmp_ref;
-	char buf[len + sizeof(iden)];
-	memcpy(buf, &iden, sizeof(iden));
-	memcpy(buf + sizeof(iden), msg, len);
-
-	while (qdb_next(&tmp_ref, &fd, &c)) {
-		if ((ndc_flags(fd) & DF_WEBSOCKET)) {
-		fprintf(stderr, "fbcp_all %u %u\n", tmp_ref, fd);
-			ndc_write(fd, buf, sizeof(buf));
-		}
-	}
-}
-
-static void
 fbcp_room(unsigned room_ref, char *msg, size_t len)
 {
 	qdb_cur_t c = qdb_iter(contents_hd, &room_ref);

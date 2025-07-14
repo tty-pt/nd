@@ -168,7 +168,7 @@ object_add(OBJ *nu, unsigned skel_id, unsigned where_ref, void *arg)
 	SKEL skel;
 	qdb_get(skel_hd, &skel, &skel_id);
 	unsigned nu_ref = object_new(nu);
-	strcpy(nu->name, skel.name);
+	strlcpy(nu->name, skel.name, sizeof(nu->name));
 	nu->location = where_ref;
 	nu->owner = ROOT;
 	nu->type = TYPE_THING;
@@ -321,7 +321,7 @@ object_copy(OBJ *nu, unsigned old_ref)
 	OBJ old;
 	qdb_get(obj_hd, &old, &old_ref);
 	unsigned ref = object_new(nu);
-	strcpy(nu->name, old.name);
+	strlcpy(nu->name, old.name, sizeof(nu->name));
 	nu->location = NOTHING;
 	nu->owner = old.owner;
         return ref;
@@ -511,7 +511,7 @@ do_clone(int fd, int argc __attribute__((unused)), char *argv[])
 	OBJ clone;
 	unsigned clone_ref = object_new(&clone);
 
-	strcpy(clone.name, thing.name);
+	strlcpy(clone.name, thing.name, sizeof(clone.name));
 	clone.location = player_ref;
 	clone.owner = player.owner;
 	clone.value = thing.value;
@@ -556,7 +556,7 @@ do_create(int fd, int argc __attribute__((unused)), char *argv[])
 	OBJ thing;
 	thing_ref = object_new(&thing);
 
-	strcpy(thing.name, name);
+	strlcpy(thing.name, name, sizeof(thing.name));
 	thing.location = player_ref;
 	thing.owner = player.owner;
 	thing.value = cost;
@@ -585,7 +585,7 @@ do_name(int fd, int argc __attribute__((unused)), char *argv[])
 
 	OBJ thing;
 	qdb_get(obj_hd, &thing, &thing_ref);
-	strcpy(thing.name, newname);
+	strlcpy(thing.name, newname, sizeof(thing.name));
 	qdb_put(obj_hd, &thing_ref, &thing);
 }
 

@@ -6,7 +6,6 @@ import ndc from "@tty-pt/ndc";
 
 const ws = ndc.connect();
 ndc.open(document.getElementById("term"));
-ndc.term.write("Connecting... ");
 
 globalThis.sendCmd = text => {
   ws.send(text + "\n");

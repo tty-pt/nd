@@ -531,7 +531,7 @@ entity_body(unsigned mob_ref)
 	}
 
 	if (n > 0) {
-		strcpy(dead_mob.name, buf);
+		strlcpy(dead_mob.name, buf, sizeof(dead_mob.name));
 		qdb_put(obj_hd, &dead_mob_ref, &dead_mob);
 		nd_owritef(mob_ref, "%s's body drops to the ground.\n", mob.name);
 		return dead_mob_ref;
