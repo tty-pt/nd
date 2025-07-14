@@ -16,7 +16,7 @@ enum base_plant {
 
 SKEL carrot = {
         .name = "carrot",
-        .type = STYPE_CONSUMABLE,
+        .type = TYPE_CONSUMABLE,
         .sp = { .consumable = { .food = 3 } },
 };
 
@@ -26,7 +26,7 @@ DROP carrot_drop = {
 
 SKEL stick = {
         .name = "stick",
-        .type = STYPE_OTHER,
+        .type = TYPE_THING,
 };
 
 DROP stick_drop = {
@@ -37,7 +37,7 @@ DROP stick_drop = {
 
 SKEL tomato = {
         .name = "tomato",
-        .type = STYPE_CONSUMABLE,
+        .type = TYPE_CONSUMABLE,
         .sp = { .consumable = { .food = 4 } },
 };
 
@@ -49,7 +49,7 @@ DROP tomato_drop = {
 SKEL plants_map[] = {{
 	// taiga
 	.name = "pinus sylvestris",
-	.type = STYPE_PLANT,
+	.type = TYPE_PLANT,
 	.sp = { .plant = {
 		.pi = { .fg = GREEN, .flags = BOLD, },
 		'x', 'X', 30, 70, 50, 1024, 4,
@@ -57,7 +57,7 @@ SKEL plants_map[] = {{
 }, {
 	// temperate rainforest
 	.name = "pseudotsuga menziesii",
-	.type = STYPE_PLANT,
+	.type = TYPE_PLANT,
 	.sp = { .plant = {
 		.pi = { .fg = GREEN, .flags = BOLD, },
 		't', 'T', 32, 100, 180, 350, 1,
@@ -65,14 +65,14 @@ SKEL plants_map[] = {{
 }, {
 	// woodland / grassland / shrubland
 	.name = "betula pendula",
-	.type = STYPE_PLANT,
+	.type = TYPE_PLANT,
 	.sp = { .plant = {
 		.pi = { .fg = YELLOW, },
 		'x', 'X', 30, 86, 0, 341, 4,
 	} },
 }, {
 	.name = "linum usitatissimum",
-	.type = STYPE_PLANT,
+	.type = TYPE_PLANT,
 	.sp = { .plant = {
 		.pi = { .fg = YELLOW },
 		'x', 'X', 30, 86, 20, 341, 30,
@@ -80,7 +80,7 @@ SKEL plants_map[] = {{
 }, {
 	// woodland / grassland?
 	.name = "betula pubescens",
-	.type = STYPE_PLANT,
+	.type = TYPE_PLANT,
 	.sp = { .plant = {
 		.pi = { .fg = WHITE, },
 		'x', 'X', 50, 146, 500, 900, 4,
@@ -88,7 +88,7 @@ SKEL plants_map[] = {{
 }, {
 	// temperate forest
 	.name = "abies alba",
-	.type = STYPE_PLANT,
+	.type = TYPE_PLANT,
 	.sp = { .plant = {
 		.pi = { .fg = GREEN, .flags = BOLD, },
 		'a', 'A', -40, 86, 100, 200, 4,
@@ -96,7 +96,7 @@ SKEL plants_map[] = {{
 }, {
 	// desert
 	.name = "arthrocereus rondonianus",
-	.type = STYPE_PLANT,
+	.type = TYPE_PLANT,
 	.sp = { .plant = {
 		.pi = { .fg = GREEN, .flags = BOLD, },
 		'i', 'I', 110, 190, 10, 180, 4,
@@ -104,21 +104,21 @@ SKEL plants_map[] = {{
 }, {
 	// savannah
 	.name = "acacia senegal",
-	.type = STYPE_PLANT,
+	.type = TYPE_PLANT,
 	.sp = { .plant = {
 		.pi = { .fg = GREEN, .flags = BOLD, },
 		't', 'T', 40, 150, 20, 345, 4,
 	} },
 }, {
 	.name = "daucus carota",
-	.type = STYPE_PLANT,
+	.type = TYPE_PLANT,
 	.sp = { .plant = {
 		.pi = { .fg = WHITE, },
 		'x', 'X', 38, 96, 100, 200, 4,
 	} },
 }, {
 	.name = "solanum lycopersicum",
-	.type = STYPE_PLANT,
+	.type = TYPE_PLANT,
 	.sp = { .plant = {
 		.pi = { .fg = RED },
 		'x', 'X', 50, 98, 100, 200, 4,

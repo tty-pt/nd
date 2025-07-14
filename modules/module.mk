@@ -13,7 +13,7 @@ bname != basename ${pwd}
 	@echo MKDEP $@
 	@${CC} -MM -o $@ ${CFLAGS} -I../../include $<
 
-install:
+install: main.so
 	@install -d ${MODDIR}
 	@install -m 755 main.so ${MODDIR}/${bname}.so
 

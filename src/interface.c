@@ -48,7 +48,7 @@ struct object room_zero = {
 
 SKEL void_biome = {
 	.name = "void",
-	.type = STYPE_BIOME,
+	.type = TYPE_ROOM,
 	.sp = { .biome = {
 		.bg = BLACK,
 	} },
@@ -609,7 +609,7 @@ main(int argc, char **argv)
 
 		SKEL adam = {
 			.name = "human",
-			.type = STYPE_ENTITY,
+			.type = TYPE_ENTITY,
 			.sp.entity = {
 				.y = 255,
 			},

@@ -176,9 +176,10 @@ object_add(OBJ *nu, unsigned skel_id, unsigned where_ref, void *arg)
 		qdb_put(contents_hd, &nu->location, &nu_ref);
 
 	switch (skel.type) {
-	case STYPE_SPELL:
+	case TYPE_SEAT:
+	case TYPE_SPELL:
 		break;
-	case STYPE_EQUIPMENT:
+	case TYPE_EQUIPMENT:
 		{
 			EQU *enu = &nu->sp.equipment;
 			nu->type = TYPE_EQUIPMENT;
@@ -189,7 +190,7 @@ object_add(OBJ *nu, unsigned skel_id, unsigned where_ref, void *arg)
 		}
 
 		break;
-	case STYPE_CONSUMABLE:
+	case TYPE_CONSUMABLE:
 		{
 			CON *cnu = &nu->sp.consumable;
 			nu->type = TYPE_CONSUMABLE;
@@ -198,7 +199,7 @@ object_add(OBJ *nu, unsigned skel_id, unsigned where_ref, void *arg)
 		}
 
 		break;
-	case STYPE_ENTITY:
+	case TYPE_ENTITY:
 		{
 			ENT ent;
 			memset(&ent, 0, sizeof(ent));
@@ -216,7 +217,7 @@ object_add(OBJ *nu, unsigned skel_id, unsigned where_ref, void *arg)
 		}
 
 		break;
-	case STYPE_PLANT:
+	case TYPE_PLANT:
 		{
 			uint32_t v = * (uint32_t *) arg;
 			nu->type = TYPE_PLANT;
@@ -227,7 +228,7 @@ object_add(OBJ *nu, unsigned skel_id, unsigned where_ref, void *arg)
 		}
 
 		break;
-        case STYPE_BIOME:
+        case TYPE_ROOM:
 		{
 			struct bio *bio = arg;
 			ROO *rnu = &nu->sp.room;
@@ -238,7 +239,7 @@ object_add(OBJ *nu, unsigned skel_id, unsigned where_ref, void *arg)
 		}
 
 		break;
-	case STYPE_MINERAL:
+	case TYPE_MINERAL:
 		{
 			uint32_t v = * (uint32_t *) arg;
 			nu->type = TYPE_MINERAL;
@@ -248,7 +249,7 @@ object_add(OBJ *nu, unsigned skel_id, unsigned where_ref, void *arg)
 
 		break;
 
-	case STYPE_OTHER:
+	case TYPE_THING:
 		if (arg) {
 			uint32_t v = * (uint32_t *) arg;
 			unsigned max = art_max(nu->name);
@@ -260,7 +261,7 @@ object_add(OBJ *nu, unsigned skel_id, unsigned where_ref, void *arg)
 	}
 
 	qdb_put(obj_hd, &nu_ref, nu);
-	if (skel.type != STYPE_BIOME)
+	if (skel.type != TYPE_ROOM)
 		mcp_content_in(where_ref, nu_ref);
 
 	return nu_ref;

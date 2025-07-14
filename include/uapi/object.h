@@ -4,21 +4,10 @@
 #include "./azoth.h"
 
 #define ROOT ((unsigned) 1)
-#define NOTHING QDB_NOTFOUND
+#define NOTHING ((unsigned) -1)
 
 enum object_flags {
 	OF_INF = 1,
-};
-
-enum type {
-	TYPE_ROOM,
-	TYPE_THING,
-	TYPE_PLANT,
-	TYPE_ENTITY,
-	TYPE_EQUIPMENT,
-	TYPE_CONSUMABLE,
-	TYPE_SEAT,
-	TYPE_MINERAL,
 };
 
 enum room_flags {

@@ -13,17 +13,6 @@ enum base_element {
 	ELM_PHYSICAL = 32,
 };
 
-enum object_skeleton_type {
-        STYPE_OTHER,
-        STYPE_CONSUMABLE,
-        STYPE_EQUIPMENT,
-        STYPE_ENTITY,
-	STYPE_PLANT,
-	STYPE_BIOME,
-	STYPE_MINERAL,
-	STYPE_SPELL,
-};
-
 enum biome {
 	BIOME_WATER = 0,
 	BIOME_PERMANENT_ICE = 1,
@@ -76,10 +65,22 @@ typedef struct spell_skeleton {
 	char *name, *description;
 } SSPE;
 
+enum type {
+	TYPE_ROOM,
+	TYPE_THING,
+	TYPE_PLANT,
+	TYPE_ENTITY,
+	TYPE_EQUIPMENT,
+	TYPE_CONSUMABLE,
+	TYPE_SEAT,
+	TYPE_MINERAL,
+	TYPE_SPELL,
+};
+
 typedef struct object_skel {
 	char const name[32];
 
-        enum object_skeleton_type type;
+        enum type type;
 
         union {
 		struct {

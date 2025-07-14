@@ -1,4 +1,5 @@
 #include <nd/nd.h>
+#include <stdlib.h>
 
 enum wt {
 	WT_BITE,
@@ -32,7 +33,7 @@ enum legacy_mob_type {
 SKEL mob_skel[] = {
 	[MOB_GOLDFISH] = {
 		.name = "goldfish",
-		.type = STYPE_ENTITY,
+		.type = TYPE_ENTITY,
 		.sp = {
 			.entity = {
 				.wt = WT_BITE,
@@ -44,7 +45,7 @@ SKEL mob_skel[] = {
 	},
 	[MOB_SALMON] = {
 		.name = "salmon",
-		.type = STYPE_ENTITY,
+		.type = TYPE_ENTITY,
 		.sp = {
 			.entity = {
 				.wt = WT_BITE,
@@ -56,7 +57,7 @@ SKEL mob_skel[] = {
 	},
 	[MOB_TUNA] = {
 		.name = "tuna",
-		.type = STYPE_ENTITY,
+		.type = TYPE_ENTITY,
 		.sp = {
 			.entity = {
 				.wt = WT_BITE,
@@ -68,7 +69,7 @@ SKEL mob_skel[] = {
 	},
 	[MOB_KOIFISH] = {
 		.name = "koifish",
-		.type = STYPE_ENTITY,
+		.type = TYPE_ENTITY,
 		.sp = {
 			.entity = {
 				.wt = WT_BITE,
@@ -80,7 +81,7 @@ SKEL mob_skel[] = {
 	},
 	[MOB_DOLPHIN] = {
 		.name = "dolphin",
-		.type = STYPE_ENTITY,
+		.type = TYPE_ENTITY,
 		.sp = {
 			.entity = {
 				.wt = WT_BITE,
@@ -92,7 +93,7 @@ SKEL mob_skel[] = {
 	},
 	[MOB_SHARK] = {
 		.name = "shark",
-		.type = STYPE_ENTITY,
+		.type = TYPE_ENTITY,
 		.sp = {
 			.entity = {
 				.wt = WT_BITE,
@@ -107,7 +108,7 @@ SKEL mob_skel[] = {
 	},
 	[MOB_MOONFISH] = {
 		.name = "moonfish",
-		.type = STYPE_ENTITY,
+		.type = TYPE_ENTITY,
 		.sp = {
 			.entity = {
 				.wt = WT_BITE,
@@ -120,7 +121,7 @@ SKEL mob_skel[] = {
 	},
 	[MOB_RAINBOWFISH] = {
 		.name = "rainbowfish",
-		.type = STYPE_ENTITY,
+		.type = TYPE_ENTITY,
 		.sp = {
 			.entity = {
 				.wt = WT_BITE,
@@ -133,7 +134,7 @@ SKEL mob_skel[] = {
 	},
 	[MOB_ICEBIRD] = {
 		.name = "icebird",
-		.type = STYPE_ENTITY,
+		.type = TYPE_ENTITY,
 		.sp = {
 			.entity = {
 				.wt = WT_PECK,
@@ -152,7 +153,7 @@ SKEL mob_skel[] = {
 	},
 	[MOB_PARROT] = {
 		.name = "parrot",
-		.type = STYPE_ENTITY,
+		.type = TYPE_ENTITY,
 		.sp = {
 			.entity = {
 				.wt = WT_PECK,
@@ -165,7 +166,7 @@ SKEL mob_skel[] = {
 	},
 	[MOB_SWALLOW] = {
 		.name = "swallow",
-		.type = STYPE_ENTITY,
+		.type = TYPE_ENTITY,
 		.sp = { .entity = {
 			.wt = WT_PECK,
 			.element = ELM_AIR,
@@ -181,7 +182,7 @@ SKEL mob_skel[] = {
 	},
 	[MOB_WOODPECKER] = {
 		.name = "woodpecker",
-		.type = STYPE_ENTITY,
+		.type = TYPE_ENTITY,
 		.sp = { .entity = {
 			.wt = WT_PECK,
 			.element = ELM_AIR,
@@ -197,7 +198,7 @@ SKEL mob_skel[] = {
 	},
 	[MOB_SPARROW] = {
 		.name = "sparrow",
-		.type = STYPE_ENTITY,
+		.type = TYPE_ENTITY,
 		.sp = { .entity = {
 			.wt = WT_PECK, .element = ELM_AIR,
 			.y = 3,
@@ -212,7 +213,7 @@ SKEL mob_skel[] = {
 	},
 	[MOB_OWL] = {
 		.name = "owl",
-		.type = STYPE_ENTITY,
+		.type = TYPE_ENTITY,
 		.sp = { .entity = {
 			.wt = WT_PECK, .element = ELM_AIR,
 			.y = 7,

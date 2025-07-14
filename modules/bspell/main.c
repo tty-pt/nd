@@ -18,7 +18,7 @@ enum legacy_spell_type {
 SKEL legacy_spell_map[] = {
 	[SPELL_HEAL] = {
 		.name = "Heal",
-		.type = STYPE_SPELL,
+		.type = TYPE_SPELL,
 		.sp = {
 			.spell = {
 				.element = ELM_PHYSICAL,
@@ -29,7 +29,7 @@ SKEL legacy_spell_map[] = {
 	},
 	[SPELL_FOCUS] = {
 		.name = "Focus",
-		.type = STYPE_SPELL,
+		.type = TYPE_SPELL,
 		.sp = {
 			.spell = {
 				.element = ELM_PHYSICAL,
@@ -41,7 +41,7 @@ SKEL legacy_spell_map[] = {
 
 	[SPELL_FIRE_FOCUS] = {
 		.name = "Fire Focus",
-		.type = STYPE_SPELL,
+		.type = TYPE_SPELL,
 		.sp = {
 			.spell = {
 				.element = ELM_FIRE,
@@ -53,7 +53,7 @@ SKEL legacy_spell_map[] = {
 
 	[SPELL_CUT] = {
 		.name = "Cut",
-		.type = STYPE_SPELL,
+		.type = TYPE_SPELL,
 		.sp = {
 			.spell = {
 				.element = ELM_PHYSICAL,
@@ -65,7 +65,7 @@ SKEL legacy_spell_map[] = {
 
 	[SPELL_FIREBALL] = {
 		.name = "Fireball",
-		.type = STYPE_SPELL,
+		.type = TYPE_SPELL,
 		.sp = {
 			.spell = {
 				.element = ELM_FIRE,
@@ -77,7 +77,7 @@ SKEL legacy_spell_map[] = {
 
 	[SPELL_WEAKEN] = {
 		.name = "Weaken",
-		.type = STYPE_SPELL,
+		.type = TYPE_SPELL,
 		.sp = { .spell = {
 			.element = ELM_PHYSICAL,
 			.ms = 15, .ra = 3, .y = 1,
@@ -87,7 +87,7 @@ SKEL legacy_spell_map[] = {
 
 	[SPELL_DISTRACT] = {
 		.name = "Distract",
-		.type = STYPE_SPELL,
+		.type = TYPE_SPELL,
 		.sp = { .spell = {
 			.element = ELM_PHYSICAL,
 			.ms = 15, .ra = 3, .y = 1,
@@ -97,7 +97,7 @@ SKEL legacy_spell_map[] = {
 
 	[SPELL_FREEZE] = {
 		.name = "Freeze",
-		.type = STYPE_SPELL,
+		.type = TYPE_SPELL,
 		.sp = { .spell = {
 			.element = ELM_WATER,
 			.ms = 10, .ra = 2, .y = 4,
@@ -107,7 +107,7 @@ SKEL legacy_spell_map[] = {
 
 	[SPELL_LAVA_SHIELD] = {
 		.name = "Lava Shield",
-		.type = STYPE_SPELL,
+		.type = TYPE_SPELL,
 		.sp = { .spell = {
 			.element = ELM_FIRE,
 			.ms = 15, .ra = 3, .y = 1,
@@ -117,7 +117,7 @@ SKEL legacy_spell_map[] = {
 
 	[SPELL_WIND_VEIL] = {
 		.name = "Wind Veil",
-		.type = STYPE_SPELL,
+		.type = TYPE_SPELL,
 		.sp = { .spell = {
 			.flags = AF_DODGE,
 		} },
@@ -125,7 +125,7 @@ SKEL legacy_spell_map[] = {
 
 	[SPELL_STONE_SKIN] = {
 		.name = "Stone Skil",
-		.type = STYPE_SPELL,
+		.type = TYPE_SPELL,
 		.sp = { .spell = {
 			.flags = AF_DEF,
 		} },
