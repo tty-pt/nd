@@ -1,12 +1,14 @@
-prefix := ../.. /var/www/usr /usr/local
+prefix := /var/www/usr /usr/local /usr
 CFLAGS := ${prefix:%=-I%/include}
-LDFLAGS := -lnd -L../../src ${prefix:%=-L%/lib}
+LDFLAGS := -lnd ${prefix:%=-L%/lib}
 MODDIR := /var/www/usr/share/nd
 pwd != pwd
 bname != basename ${pwd}
+inc != ls /var/www/usr/include/nd
+inc := ${inc:%=/var/www/usr/include/nd/%}
 .SUFFIXES: .so .d .c
 
-.c.so:
+.c.so: /var/www/usr/lib/libnd.a ${inc}
 	${CC} -shared -g -o $@ -fPIC ${@:%.so=%.c} ${CFLAGS} ${LDFLAGS}
 
 .c.d:

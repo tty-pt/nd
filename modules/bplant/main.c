@@ -1,4 +1,6 @@
 #include <nd/nd.h>
+#include <string.h>
+#include "../bdrink/include/drink.h"
 
 enum base_plant {
 	PLANT_PINUS_SILVESTRIS,
@@ -16,9 +18,10 @@ enum base_plant {
 
 SKEL carrot = {
         .name = "carrot",
-        .type = TYPE_CONSUMABLE,
-        .sp = { .consumable = { .food = 3 } },
+        .type = 0, // type later
 };
+
+CON carrot_con = { .food = 3 };
 
 DROP carrot_drop = {
         .y = 0,
@@ -37,9 +40,10 @@ DROP stick_drop = {
 
 SKEL tomato = {
         .name = "tomato",
-        .type = TYPE_CONSUMABLE,
-        .sp = { .consumable = { .food = 4 } },
+        .type = 0, // type later
 };
+
+CON tomato_con = { .food = 4 };
 
 DROP tomato_drop = {
         .y = 3,
@@ -166,6 +170,13 @@ mod_spawn(void *arg)
 
 void mod_install(void *arg __attribute__ ((unused))) {
 	unsigned plant_refs[PLANT_MAX];
+
+	memcpy(&carrot.sp.raw, &carrot_con, sizeof(carrot_con));
+	memcpy(&tomato.sp.raw, &tomato_con, sizeof(tomato_con));
+
+	unsigned consumable_type;
+	nd_get(HD_RTYPE, &consumable_type, "drink");
+	tomato.type = carrot.type = consumable_type;
 
 	carrot_drop.skel = nd_put(HD_SKEL, NULL, &carrot);
 	unsigned carrot_drop_ref = nd_put(HD_DROP, NULL, &carrot_drop);

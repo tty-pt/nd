@@ -1,5 +1,7 @@
 #include <nd/nd.h>
-#include "mcp.h"
+#include "./../../include/mcp.h"
+
+unsigned act_shop;
 
 static inline unsigned
 vendor_find(unsigned where_ref)
@@ -146,7 +148,18 @@ do_sell(int fd, int argc __attribute__((unused)), char *argv[])
 	nd_writef(player_ref, "You sold %s for %dP.\n", item.name, cost);
 }
 
+struct icon sic_icon(struct icon i, unsigned ref, OBJ obj) {
+	if (!(obj.type == TYPE_ENTITY && (ent_get(ref).flags & EF_SHOP)))
+		return i;
+
+	i.actions |= act_shop;
+	i.pi.fg = GREEN;
+	i.ch = '$';
+	return i;
+}
+
 void mod_install(void *arg __attribute__((unused))) {
+	act_shop = action_register("shop", "💰");
 	nd_register("shop", do_shop, 0);
 	nd_register("buy", do_buy, 0);
 	nd_register("sell", do_sell, 0);

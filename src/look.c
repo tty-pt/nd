@@ -5,6 +5,7 @@
 #include "uapi/entity.h"
 #include "uapi/match.h"
 #include "uapi/wts.h"
+#include "uapi/type.h"
 
 void
 do_examine(int fd, int argc __attribute__((unused)), char *argv[])
@@ -87,6 +88,8 @@ do_examine(int fd, int argc __attribute__((unused)), char *argv[])
 		/* do nothing */
 		break;
 	}
+
+	SIC_CALL(NULL, sic_examine, thing_ref, thing);
 }
 
 

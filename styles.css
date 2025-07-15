@@ -135,6 +135,7 @@ pre { margin: 0; }
 	overflow: auto;
 	overflow-block: visible;
 	overflow-x: visible;
+	flex: 1 1 20vw;
 }
 
 nd-avatar {
@@ -143,7 +144,7 @@ nd-avatar {
 	flex-shrink: 0;
 }
 
-nd-map { font-size: 2vh; }
+nd-map { font-size: 1.3vw; }
 #cb { flex-direction: column; gap: 8px; }
 
 @media only screen and (max-width: 500px), (orientation: portrait) {
@@ -257,8 +258,8 @@ div[style*="top: -50000px"] {
 
 #main, #holder { padding: 0px; }
 #main > * { padding: 0px !important; }
-#term, #right-panel { padding: 8px; }
-#term { min-height: 150px; flex: 1 1 150px; }
+#holder { padding: 8px; gap: 8px; }
+#term { flex: 1 1 65vw; }
 
 #right-panel {
 	backdrop-filter: blur(4px);

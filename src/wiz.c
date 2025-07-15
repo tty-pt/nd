@@ -53,19 +53,16 @@ do_teleport(int fd, int argc __attribute__((unused)), char *argv[]) {
 		nd_writef(victim_ref, "You feel a wrenching sensation...\n");
 		enter(victim_ref, destination_ref, E_NULL);
 		return;
-	case TYPE_CONSUMABLE:
-	case TYPE_EQUIPMENT:
-	case TYPE_THING:
-		if ((destination.type != TYPE_ROOM
-			&& destination.type != TYPE_ENTITY
-			&& !object_item(destination_ref)) || !(
+	case TYPE_ROOM:
+		goto error;
+	default:
+		if ((!object_item(destination_ref)) || !(
 			controls(player_ref, destination_ref) &&
 			(controls(player_ref, victim_ref) || controls(player_ref, victim.location)) )
 		   )
 			goto error;
 		object_move(victim_ref, destination_ref);
 		return;
-	default: break;
 	}
 error:
 	nd_writef(player_ref, CANTDO_MESSAGE);

@@ -7,6 +7,7 @@
 #include "./match.h"
 #include "./object.h"
 #include "./skel.h"
+#include "./type.h"
 #include "./st.h"
 #include "./wts.h"
 

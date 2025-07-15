@@ -71,7 +71,6 @@ enum type {
 	TYPE_PLANT,
 	TYPE_ENTITY,
 	TYPE_EQUIPMENT,
-	TYPE_CONSUMABLE,
 	TYPE_SEAT,
 	TYPE_MINERAL,
 	TYPE_SPELL,
@@ -95,10 +94,8 @@ typedef struct object_skel {
                 struct {
 			const enum color bg;
                 } biome;
-                struct {
-                        short unsigned unused;
-                } mineral;
 		SSPE spell;
+		unsigned raw[4];
         } sp;
 } SKEL;
 

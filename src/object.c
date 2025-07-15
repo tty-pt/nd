@@ -16,18 +16,12 @@
 #include "uapi/io.h"
 #include "uapi/map.h"
 #include "uapi/match.h"
+#include "uapi/type.h"
+#include "papi/nd.h"
 
-enum actions {
-        ACT_LOOK = 1,
-        ACT_KILL = 2,
-        ACT_SHOP = 4,
-        ACT_CONSUME = 8,
-        ACT_OPEN = 16,
-        ACT_CHOP = 32,
-        ACT_FILL = 64,
-        ACT_GET = 128,
-        ACT_TALK = 256,
-};
+unsigned act_look, act_fight, act_shop,
+	 act_open, act_chop,
+	 act_get, act_talk;
 
 char std_db[BUFSIZ];
 char std_db_ok[BUFSIZ];
@@ -190,15 +184,6 @@ object_add(OBJ *nu, unsigned skel_id, unsigned where_ref, void *arg)
 		}
 
 		break;
-	case TYPE_CONSUMABLE:
-		{
-			CON *cnu = &nu->sp.consumable;
-			nu->type = TYPE_CONSUMABLE;
-			cnu->food = skel.sp.consumable.food;
-			cnu->drink = skel.sp.consumable.drink;
-		}
-
-		break;
 	case TYPE_ENTITY:
 		{
 			ENT ent;
@@ -258,9 +243,12 @@ object_add(OBJ *nu, unsigned skel_id, unsigned where_ref, void *arg)
 		nu->type = TYPE_THING;
 
 		break;
-	}
+        }
+
+	SIC_CALL(nu, sic_add, nu_ref, *nu, skel_id, skel, where_ref);
 
 	qdb_put(obj_hd, &nu_ref, nu);
+
 	if (skel.type != TYPE_ROOM)
 		mcp_content_in(where_ref, nu_ref);
 
@@ -336,11 +324,14 @@ objects_update(double dt)
 	OBJ obj;
 	unsigned obj_ref;
 	qdb_cur_t c = qdb_iter(obj_hd, NULL);
-	while (qdb_next(&obj_ref, &obj, &c))
+	while (qdb_next(&obj_ref, &obj, &c)) {
 		if (!*obj.name)
 			continue;
 		else if (obj.type == TYPE_ENTITY)
 			entity_update(obj_ref, dt);
+
+		SIC_CALL(NULL, sic_update, obj_ref, obj, dt);
+	}
 }
 
 void
@@ -380,6 +371,8 @@ object_move(unsigned what_ref, unsigned where_ref)
 		}
 		qdb_del(obj_hd, &what_ref, NULL);
 		mcp_content_out(last_loc, what_ref);
+
+		SIC_CALL(NULL, sic_del, what_ref, what);
 		return;
 	}
 
@@ -387,6 +380,7 @@ object_move(unsigned what_ref, unsigned where_ref)
 	what.location = where_ref;
 	qdb_put(obj_hd, &what_ref, &what);
 	mcp_content_out(last_loc, what_ref);
+	mcp_content_in(where_ref, what_ref);
 
 	if (what.type == TYPE_ENTITY) {
 		ENT ewhat = ent_get(what_ref);
@@ -401,6 +395,16 @@ object_move(unsigned what_ref, unsigned where_ref)
 	qdb_put(contents_hd, &where_ref, &what_ref);
 }
 
+void
+base_actions_register(void) {
+	act_look = action_register("look", "👁");
+	act_fight = action_register("fight", "⚔️");
+	act_open = action_register("open", "📦");
+	act_chop = action_register("chop", "🪓");
+	act_get = action_register("get", "🖐️");
+	act_talk = action_register("talk", "👄");
+}
+
 struct icon
 object_icon(unsigned what_ref)
 {
@@ -408,7 +412,7 @@ object_icon(unsigned what_ref)
 	qdb_get(obj_hd, &what, &what_ref);
 
         struct icon ret = {
-                .actions = ACT_LOOK,
+                .actions = act_look,
                 .ch = '?',
                 .pi = { .fg = WHITE, .flags = BOLD, },
         };
@@ -419,31 +423,11 @@ object_icon(unsigned what_ref)
                 ret.pi.fg = YELLOW;
                 break;
         case TYPE_ENTITY:
-		ret.actions |= ACT_KILL;
+		ret.actions |= act_fight;
 		ret.pi.flags = BOLD;
-		if (ent_get(what_ref).flags & EF_SHOP) {
-			ret.actions |= ACT_SHOP;
-			ret.pi.fg = GREEN;
-			ret.ch = '$';
-		} else {
-			ret.ch = '!';
-			ret.pi.fg = YELLOW;
-		}
+		ret.ch = '!';
+		ret.pi.fg = YELLOW;
                 break;
-	case TYPE_CONSUMABLE:
-		{
-			CON *cwhat = &what.sp.consumable;
-			if (cwhat->drink) {
-				ret.actions |= ACT_FILL;
-				ret.pi.fg = BLUE;
-				ret.ch = '~';
-			} else {
-				ret.pi.fg = RED;
-				ret.ch = 'o';
-			}
-			ret.actions |= ACT_CONSUME;
-		}
-		break;
 	case TYPE_PLANT:
 		{
 			PLA *pwhat = &what.sp.plant;
@@ -452,16 +436,18 @@ object_icon(unsigned what_ref)
 			qdb_get(skel_hd, &skel, &aux);
 			SPLA *pl = &skel.sp.plant;
 
-			ret.actions |= ACT_CHOP;
+			ret.actions |= act_chop;
 			ret.pi = pl->pi;
 			ret.ch = pwhat->size > PLANT_HALF ? pl->big : pl->small;
 		}
 		break;
-	default:
-                ret.actions |= ACT_GET;
+	default: {
+                ret.actions |= act_get;
                 break;
-        }
-        return ret;
+        }}
+
+	SIC_CALL(&ret, sic_icon, ret, what_ref, what);
+	return ret;
 }
 
 static inline int
@@ -532,8 +518,10 @@ do_clone(int fd, int argc __attribute__((unused)), char *argv[])
 			}
 			break;
 	}
+
 	clone.type = thing.type;
 
+	SIC_CALL(&clone, sic_clone, thing_ref, thing, clone_ref, clone);
 	qdb_put(obj_hd, &clone_ref, &clone);
 	object_move(clone_ref, player_ref);
 }
@@ -764,7 +752,5 @@ object_item(unsigned obj_ref)
 {
 	OBJ obj;
 	qdb_get(obj_hd, &obj, &obj_ref);
-	return obj.type == TYPE_THING
-		|| obj.type == TYPE_CONSUMABLE
-		|| obj.type == TYPE_EQUIPMENT;
+	return !(obj.type == TYPE_ROOM || obj.type == TYPE_ENTITY || obj.type == TYPE_PLANT);
 }

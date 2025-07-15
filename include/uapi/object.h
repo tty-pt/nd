@@ -144,13 +144,6 @@ typedef struct {
 } EQU;
 
 typedef struct {
-	unsigned food;
-	unsigned drink;
-	unsigned quantity;
-	unsigned capacity;
-} CON;
-
-typedef struct {
 	unsigned plid;
 	unsigned size;
 } PLA;
@@ -168,10 +161,10 @@ union specific {
 	ROO room;
 	char entity;
 	EQU equipment;
-	CON consumable;
 	PLA plant;
 	SEA seat;
 	MIN mineral;
+	unsigned raw[4];
 };
 
 typedef struct object {

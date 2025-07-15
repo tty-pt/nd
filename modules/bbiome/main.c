@@ -3,7 +3,7 @@
 SKEL biomes_skel[] = {
 	[BIOME_WATER] = {
                 .name = "water",
-                .type = STYPE_BIOME,
+                .type = TYPE_ROOM,
                 .sp = { .biome = {
                         .bg = BLUE,
                 } },
@@ -11,7 +11,7 @@ SKEL biomes_skel[] = {
 
 	[BIOME_PERMANENT_ICE] = {
 		.name = "permanent ice",
-                .type = STYPE_BIOME,
+                .type = TYPE_ROOM,
                 .sp = { .biome = {
                         .bg = WHITE,
                 } },
@@ -19,7 +19,7 @@ SKEL biomes_skel[] = {
 
 	[BIOME_TUNDRA] = {
 		.name = "tundra",
-                .type = STYPE_BIOME,
+                .type = TYPE_ROOM,
                 .sp = { .biome = {
                         .bg = CYAN,
                 } },
@@ -27,7 +27,7 @@ SKEL biomes_skel[] = {
 
 	[BIOME_TUNDRA2] = {
 		.name = "tundra2",
-                .type = STYPE_BIOME,
+                .type = TYPE_ROOM,
                 .sp = { .biome = {
                         .bg = CYAN,
                 } },
@@ -35,7 +35,7 @@ SKEL biomes_skel[] = {
 
 	[BIOME_TUNDRA3] = {
 		.name = "tundra3",
-                .type = STYPE_BIOME,
+                .type = TYPE_ROOM,
                 .sp = { .biome = {
                         .bg = CYAN,
                 } },
@@ -43,7 +43,7 @@ SKEL biomes_skel[] = {
 
 	[BIOME_TUNDRA4] = {
 		.name = "tundra4",
-                .type = STYPE_BIOME,
+                .type = TYPE_ROOM,
                 .sp = { .biome = {
                         .bg = CYAN,
                 } },
@@ -51,7 +51,7 @@ SKEL biomes_skel[] = {
 
 	[BIOME_COLD_DESERT] = {
 		.name = "cold desert",
-                .type = STYPE_BIOME,
+                .type = TYPE_ROOM,
                 .sp = { .biome = {
                         .bg = CYAN,
                 } },
@@ -59,7 +59,7 @@ SKEL biomes_skel[] = {
 
 	[BIOME_SHRUBLAND] = {
 		.name = "shrubland",
-                .type = STYPE_BIOME,
+                .type = TYPE_ROOM,
                 .sp = { .biome = {
                         .bg = GREEN,
                 } },
@@ -67,7 +67,7 @@ SKEL biomes_skel[] = {
 
 	[BIOME_CONIFEROUS_FOREST] = {
 		.name = "coniferous forest",
-                .type = STYPE_BIOME,
+                .type = TYPE_ROOM,
                 .sp = { .biome = {
                         .bg = GREEN,
                 } },
@@ -75,7 +75,7 @@ SKEL biomes_skel[] = {
 
 	[BIOME_BOREAL_FOREST] = {
 		.name = "boreal forest",
-                .type = STYPE_BIOME,
+                .type = TYPE_ROOM,
                 .sp = { .biome = {
                         .bg = GREEN,
                 } },
@@ -83,7 +83,7 @@ SKEL biomes_skel[] = {
 
 	[BIOME_TEMPERATE_GRASSLAND] = {
 		.name = "temperate grassland",
-                .type = STYPE_BIOME,
+                .type = TYPE_ROOM,
                 .sp = { .biome = {
                         .bg = GREEN,
                 } },
@@ -91,7 +91,7 @@ SKEL biomes_skel[] = {
 
 	[BIOME_WOODLAND] = {
 		.name = "woodland",
-                .type = STYPE_BIOME,
+                .type = TYPE_ROOM,
                 .sp = { .biome = {
                         .bg = GREEN,
                 } },
@@ -99,7 +99,7 @@ SKEL biomes_skel[] = {
 
 	[BIOME_TEMPERATE_SEASONAL_FOREST] = {
 		.name = "temperate seasonal forest",
-                .type = STYPE_BIOME,
+                .type = TYPE_ROOM,
                 .sp = { .biome = {
                         .bg = GREEN,
                 } },
@@ -107,7 +107,7 @@ SKEL biomes_skel[] = {
 
 	[BIOME_TEMPERATE_RAINFOREST] = {
 		.name = "temperate rainforest",
-                .type = STYPE_BIOME,
+                .type = TYPE_ROOM,
                 .sp = { .biome = {
                         .bg = GREEN,
                 } },
@@ -115,7 +115,7 @@ SKEL biomes_skel[] = {
 
 	[BIOME_DESERT] = {
 		.name = "desert",
-                .type = STYPE_BIOME,
+                .type = TYPE_ROOM,
                 .sp = { .biome = {
                         .bg = YELLOW,
                 } },
@@ -123,7 +123,7 @@ SKEL biomes_skel[] = {
 
 	[BIOME_SAVANNAH] = {
 		.name = "savannah",
-                .type = STYPE_BIOME,
+                .type = TYPE_ROOM,
                 .sp = { .biome = {
                         .bg = YELLOW,
                 } },
@@ -131,7 +131,7 @@ SKEL biomes_skel[] = {
 
 	[BIOME_TROPICAL_SEASONAL_FOREST] = {
 		.name = "tropical seasonal forest",
-                .type = STYPE_BIOME,
+                .type = TYPE_ROOM,
                 .sp = { .biome = {
                         .bg = GREEN,
                 } },
@@ -139,7 +139,7 @@ SKEL biomes_skel[] = {
 
 	[BIOME_TROPICAL_RAINFOREST] = {
 		.name = "tropical rainforest",
-                .type = STYPE_BIOME,
+                .type = TYPE_ROOM,
                 .sp = { .biome = {
                         .bg = BLACK,
                 } },
@@ -147,7 +147,7 @@ SKEL biomes_skel[] = {
 
 	[BIOME_VOLCANIC] = {
 		.name = "volcanic",
-                .type = STYPE_BIOME,
+                .type = TYPE_ROOM,
                 .sp = { .biome = {
                         .bg = BLACK,
                 } },

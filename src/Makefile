@@ -16,7 +16,9 @@ modpath := /usr/share/nd
 CFLAGS := -g -O0 -Wall -Wpedantic -Wextra \
 	  -Wno-initializer-overrides ${cflags-${uname}} \
 	  ${config} ${prefix:%=-I%/include} \
-	  -D_GNU_SOURCE -std=c99 -Wno-gnu-designator
+	  -D_GNU_SOURCE
+CFLAGS += -std=c99 -Wno-gnu-designator
+
 ldlibs-Linux := -lbsd -lrt
 LDLIBS := -lxxhash -lpcre -lm -lc -lqdb -ldb -lndc -lcrypto -lssl ${ldlibs-${uname}}
 ldflags-Darwin += -L/usr/local/opt/berkeley-db@4/lib
@@ -27,7 +29,7 @@ LDFLAGS := ${ldflags-${uname}} ${prefix:%=-L%/lib} \
 
 exe := ../nd
 obj-y := object.o entity.o spacetime.o mcp.o map.o \
-	noise.o view.o item.o spell.o drink.o \
+	noise.o view.o item.o spell.o \
 	look.o match.o speech.o wiz.o interface.o
 
 src = ${obj-y:%.o=%.c}

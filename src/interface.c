@@ -15,6 +15,7 @@
 #include "st.h"
 #include "uapi/entity.h"
 #include "uapi/object.h"
+#include "uapi/type.h"
 #include "view.h"
 #include "nddb.h"
 #include "params.h"
@@ -26,6 +27,10 @@ struct ioc {
 	size_t len;
 	unsigned n;
 } ioc[FD_SETSIZE];
+
+typedef struct {
+	char *label, *icon;
+} action_info;
 
 enum opts {
 	OPT_DETACH = 1,
@@ -54,9 +59,12 @@ SKEL void_biome = {
 	} },
 };
 
-unsigned dplayer_hd = -1, skel_hd = -1, drop_hd = -1,
-	 adrop_hd = -1, element_hd = -1, plant_hd = -1,
-	 wts_hd = -1, awts_hd = -1, biome_hd = -1, mod_hd = -1, mod_id_hd = -1;
+unsigned dplayer_hd, skel_hd, drop_hd,
+	 adrop_hd, element_hd, plant_hd,
+	 wts_hd, awts_hd, biome_hd, mod_hd,
+	 mod_id_hd, type_hd, action_hd, vtf_hd,
+	 situc_hd, sica_hd;
+
 extern unsigned stone_skel_id;
 struct nd nd;
 
@@ -66,13 +74,11 @@ void do_bio(int fd, int argc, char *argv[]);
 void do_ban(int fd, int argc, char *argv[]);
 void do_chown(int fd, int argc, char *argv[]);
 void do_clone(int fd, int argc, char *argv[]);
-void do_consume(int fd, int argc, char *argv[]);
 void do_create(int fd, int argc, char *argv[]);
 void do_drop(int fd, int argc, char *argv[]);
 void do_equip(int fd, int argc, char *argv[]);
 void do_examine(int fd, int argc, char *argv[]);
 void do_fight(int fd, int argc, char *argv[]);
-void do_fill(int fd, int argc, char *argv[]);
 void do_get(int fd, int argc, char *argv[]);
 void do_heal(int fd, int argc, char *argv[]);
 void do_inventory(int fd, int argc, char *argv[]);
@@ -170,17 +176,11 @@ struct cmd_slot cmds[] = {
 		.name = "drop",
 		.cb = &do_drop,
 	}, {
-		.name = "consume",
-		.cb = &do_consume,
-	}, {
 		.name = "examine",
 		.cb = &do_examine,
 	}, {
 		.name = "equip",
 		.cb = &do_equip,
-	}, {
-		.name = "fill",
-		.cb = &do_fill,
 	}, {
 		.name = "get",
 		.cb = &do_get,
@@ -329,13 +329,13 @@ void close_all(int i) {
 		exit(i);
 }
 
-typedef void (*mod_cb_t)(void *);
+typedef void (*mod_cb_t)(void);
 
-int _mod_run(void *sl, char *symbol, void *arg) {
+int _mod_run(void *sl, char *symbol) {
 	mod_cb_t cb = (mod_cb_t) dlsym(sl, symbol);
 	if (!cb)
 		return 1;
-	cb(arg);
+	cb();
 	return 0;
 }
 
@@ -351,14 +351,17 @@ void _mod_load(char *fname) {
 
 	unsigned existed = qdb_exists(mod_hd, fname);
 	struct nd *ind = dlsym(sl, "nd");
-	*ind = nd;
+	if (ind)
+		*ind = nd;
 
+	// libnd versions and updating rules
+	// and module so files and stuff like that
 	char *symbol = existed ? "mod_open" : "mod_install";
 
 	ndclog(LOG_INFO, "%s: '%s'\n", symbol, fname);
 	unsigned id = qdb_put(mod_id_hd, NULL, &sl);
 	qdb_put(mod_hd, fname, &id);
-	_mod_run(sl, symbol, NULL);
+	_mod_run(sl, symbol);
 }
 
 void nd_mod_load(char *fname) {
@@ -378,12 +381,39 @@ void mod_load_all(void) {
 		_mod_load(buf);
 }
 
-void mod_run(char *symbol, void *arg) {
+void sic_call(void *retp, char *symbol, void *arg) {
 	unsigned mod_id;
 	void *ptr = NULL;
 	qdb_cur_t c = qdb_iter(mod_id_hd, NULL);
-	while (qdb_next(&mod_id, &ptr, &c))
-		_mod_run(ptr, symbol, arg);
+	sic_adapter_t adapter;
+
+	if (qdb_get(sica_hd, &adapter, symbol)) {
+		fprintf(stderr, "No adapter registered for this symbol\n");
+		return;
+	}
+
+	memcpy(nd.ret, arg, adapter.arg_size);
+	while (qdb_next(&mod_id, &ptr, &c)) {
+		struct nd *ndr = (struct nd *) dlsym(ptr, "nd");
+		if (!ndr)
+			continue;
+		memcpy(ndr->ret, nd.ret, adapter.arg_size);
+		void *cb = dlsym(ptr, symbol);
+		if (cb)
+			adapter.call(cb);
+		memcpy(nd.ret, ndr->ret, adapter.ret_size);
+	}
+
+	if (retp)
+		memcpy(retp, nd.ret, adapter.ret_size);
+}
+
+void sic_args(void *args, size_t len) {
+	memcpy(nd.ret, args, len);
+}
+
+void sic_ret(void *ret, size_t len) {
+	memcpy(ret, nd.ret, len);
 }
 
 unsigned shared_put(unsigned hd, void *key, void *data) {
@@ -398,6 +428,46 @@ void nd_register(char *str, nd_cb_t *cb, unsigned flags) {
 	ndc_register(str, cb, flags);
 }
 
+unsigned action_register(char *label, char *icon) {
+	action_info ai = { .label = label, .icon = icon };
+	return 1 << (qdb_put(action_hd, NULL, &ai));
+}
+
+unsigned vtf_register(char emp, enum color fg, unsigned flags) {
+	vtf_t vtf = {
+		.pi = { .fg = fg, .flags = flags },
+		.emp = emp,
+	};
+
+	unsigned id = 1 << (qdb_put(vtf_hd, NULL, &vtf));
+	vtf_max = id;
+	return id;;
+}
+
+void *sic_iter(unsigned si_id, unsigned type) {
+	static qdb_cur_t c;
+	unsigned key[2] = { si_id, type };
+	c = qdb_iter(situc_hd, key);
+	return &c;
+}
+
+int sic_next(void **cb, void *c) {
+	unsigned key[2];
+	return qdb_next(key, cb, c);
+}
+
+void sic_put(unsigned si_id, unsigned type, void *cb) {
+	unsigned key[2] = { si_id, type };
+	qdb_put(situc_hd, key, &cb);
+}
+
+void sic_areg(char *name) {
+	char buf[BUFSIZ];
+	snprintf(buf, BUFSIZ, "%s_adapter", name);
+	sic_adapter_t *adapter = dlsym(NULL, buf);
+	qdb_put(sica_hd, name, adapter);
+}
+
 void shared_init(void) {
 	nd.hds[HD_FD] = fds_hd;
 	nd.hds[HD_SKEL] = skel_hd;
@@ -410,6 +480,8 @@ void shared_init(void) {
 	nd.hds[HD_OBJ] = obj_hd;
 	nd.hds[HD_OBS] = obs_hd;
 	nd.hds[HD_CONTENTS] = contents_hd;
+	nd.hds[HD_TYPE] = type_hd;
+	nd.hds[HD_RTYPE] = type_hd + 1;
 
 	/* nd.fds_has = fds_has; */
 	nd.nd_close = nd_close;
@@ -488,7 +560,13 @@ void shared_init(void) {
 	nd.ematch_all = ematch_all;
 
 	nd.nd_mod_load = nd_mod_load;
+
+	nd.action_register = action_register;
+	nd.vtf_register = vtf_register;
 }
+
+void base_actions_register(void);
+void base_vtf_init(void);
 
 int
 main(int argc, char **argv)
@@ -520,6 +598,9 @@ main(int argc, char **argv)
 	qdb_reg("element", sizeof(element_t));
 	qdb_reg("biome_map", sizeof(unsigned) * BIOME_MAX);
 	qdb_reg("st", sizeof(struct st_key));
+	qdb_reg("ai", sizeof(action_info));
+	qdb_reg("vtf", sizeof(vtf_t));
+	qdb_reg("sica", sizeof(sic_adapter_t));
 
 	ndc_pre_init(&nd_config);
 	ndclog(LOG_INFO, "nd booting.\n");
@@ -552,6 +633,12 @@ main(int argc, char **argv)
 	owner_hd = qdb_open("st", "st", "u", 0);
 	sl_hd = qdb_open("sl", "st", "p", 0);
 
+	action_hd = qdb_open("action", "u", "ai", QH_TMP | QH_AINDEX);
+	type_hd = qdb_open("ndt", "u", "s", QH_TMP | QH_AINDEX | QH_THRICE);
+	vtf_hd = qdb_open("vtf", "u", "vtf", QH_TMP | QH_AINDEX);
+	situc_hd = qdb_open("situc", "ul", "p", QH_TMP);
+	sica_hd = qdb_open("sica", "s", "sica", QH_TMP);
+
 	ent_hd = qdb_open("entity", "u", "ent", 0);
 	player_hd = qdb_open("player", "s", "u", 0);
 	obj_hd = qdb_open("obj", "u", "obj", QH_AINDEX);
@@ -574,6 +661,28 @@ main(int argc, char **argv)
 
 	mod_id_hd = qdb_open("module_id", "u", "p", QH_AINDEX);
 	mod_hd = qdb_open("module", "s", "u", 0);
+
+	sic_areg("sic_examine");
+	sic_areg("sic_fbcp");
+	sic_areg("sic_view_flags");
+	sic_areg("sic_add");
+	sic_areg("sic_update");
+	sic_areg("sic_del");
+	sic_areg("sic_icon");
+	sic_areg("sic_clone");
+
+	qdb_put(type_hd, NULL, "room");
+	qdb_put(type_hd, NULL, "thing");
+	qdb_put(type_hd, NULL, "plant");
+	qdb_put(type_hd, NULL, "entity");
+	qdb_put(type_hd, NULL, "equipment");
+	qdb_put(type_hd, NULL, "consumable");
+	qdb_put(type_hd, NULL, "seat");
+	qdb_put(type_hd, NULL, "mineral");
+	qdb_put(type_hd, NULL, "spell");
+
+	base_actions_register();
+	base_vtf_init();
 
 	unsigned zero = 0, existed = 1;
 	if (!qdb_exists(obj_hd, &zero)) {

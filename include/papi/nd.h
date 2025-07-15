@@ -93,7 +93,13 @@ struct nd {
 
 	nd_mod_load_t *nd_mod_load;
 
+	action_register_t *action_register;
+	vtf_register_t *vtf_register;
+	sic_call_t *sic_call;
+	sic_areg_t *sic_areg;
+
 	unsigned hds[HD_MAX];
+	char ret[5096];
 };
 
 extern struct nd nd;

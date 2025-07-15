@@ -7,6 +7,7 @@
 
 #include "uapi/io.h"
 #include "uapi/entity.h"
+#include "uapi/type.h"
 
 #define SUPERBIGSIZ 80000 * 8192
 
@@ -97,22 +98,24 @@ _fbcp_item(char *bcp_buf, unsigned obj_ref, unsigned char dynflags)
 	memcpy(p += sizeof(ico.pi.flags), &ico.ch, sizeof(ico.ch));
 	aux2 = object_art(obj_ref);
 	memcpy(p += sizeof(ico.ch), aux2, aux1 = strlen(aux2) + 1);
+	p += aux1;
 	switch (obj.type) {
 	case TYPE_ROOM: {
 		ROO *roo = &obj.sp.room;
-		memcpy(p += aux1, &roo->exits, sizeof(roo->exits));
+		memcpy(p, &roo->exits, sizeof(roo->exits));
 		p += sizeof(roo->exits);
 		break;
 	}
 	case TYPE_ENTITY: {
 		unsigned flags = ent_get(obj_ref).flags;
-		memcpy(p += aux1, &flags, sizeof(flags));
+		memcpy(p, &flags, sizeof(flags));
 		p += sizeof(flags);
 		break;
 	}
-	default: {
-		p += aux1;
-	}}
+	}
+
+	SIC_CALL(&p, sic_fbcp, p, obj_ref, obj);
+
 	return p - bcp_buf;
 }
 

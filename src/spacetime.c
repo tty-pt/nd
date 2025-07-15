@@ -488,8 +488,6 @@ void plants_add(unsigned where_ref, void *bio, pos_t pos);
 /* void mobs_add(unsigned where_ref, enum biome, long long pdn); */
 void map_put(pos_t p, unsigned thing, int flags);
 
-void mod_run(char *symbol, void *arg);
-
 static unsigned
 st_room_at(unsigned player_ref, pos_t pos)
 {
@@ -509,13 +507,13 @@ st_room_at(unsigned player_ref, pos_t pos)
 
 	rthere->floor = bio->bio_idx;
 	qdb_put(obj_hd, &there_ref, &there);
-	struct spawn_arg sa = {
-		.where_ref = there_ref,
-		.arg = bio,
-		.pos = pos
-	};
-	mod_run("mod_spawn", &sa);
-	st_run(player_ref, "ndst_spawn");
+	/* struct spawn_arg sa = { */
+	/* 	.where_ref = there_ref, */
+	/* 	.arg = bio, */
+	/* 	.pos = pos */
+	/* }; */
+	/* SIC_CALL(int, sic_spawn, there_ref, bio, pos); */
+	/* st_run(player_ref, "ndst_spawn"); */
 	return there_ref;
 }
 

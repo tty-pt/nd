@@ -9,8 +9,11 @@
 #include "uapi/entity.h"
 #include "uapi/io.h"
 #include "uapi/map.h"
+#include "uapi/type.h"
 
 static unsigned *biome_map;
+
+unsigned vtf_entity, vtf_shop, vtf_max;
 
 char *ansi_bg[] = {
 	[BLACK] = ANSI_BG_BLACK,
@@ -50,20 +53,10 @@ static const char * l = ANSI_FG_WHITE "+";
 static const char *h_open	= "   ";
 static const char *h_closed	= "---";
 
-vtf_t vtf_map[] = {
-	[VTF_SHOP] = {
-		.pre = ANSI_BOLD ANSI_FG_GREEN,
-		.emp = '$',
-	},
-	[VTF_ENTITY] = {
-		.pre = ANSI_BOLD ANSI_FG_YELLOW,
-		.emp = '!',
-	},
-	[VTF_POND] = {
-		.pre = ANSI_BOLD ANSI_FG_BLUE,
-		.emp = '~',
-	},
-};
+void base_vtf_init(void) {
+	vtf_shop = vtf_register('$', GREEN, BOLD);
+	vtf_entity = vtf_register('!', YELLOW, BOLD);
+}
 
 static inline char *
 dr_tree(struct plant_data pd, int n, char *b) {
@@ -89,8 +82,8 @@ static inline char *
 dr_room(char *buf, view_tile_t *t, const char *bg)
 {
 	register char *b = buf;
-	vtf_t *vtf = NULL;
-	int i;
+	vtf_t vtf;
+	unsigned i;
 
 	if (t->exits & E_DOWN)
 		b = stpcpy(b, ANSI_FG_WHITE "<");
@@ -98,20 +91,29 @@ dr_room(char *buf, view_tile_t *t, const char *bg)
 		b = dr_tree(t->pd, 0, b);
 
 
-	for (i = 0; i < VTF_MAX; i++) {
-		if (!(t->flags & (1 << i)))
+	int got = 0;
+	for (i = 0; i < vtf_max; i++) {
+		unsigned ref = (1 << i);
+
+		if (!(t->flags & ref))
 			continue;
 
-		vtf = &vtf_map[1 << i];
-		break;
+		if (!qdb_get(vtf_hd, &vtf, &i)) {
+			got = 1;
+			break;
+		}
 	}
 
 	b = stpcpy(b, ANSI_RESET);
 	b = stpcpy(b, bg);
 
-	if (vtf) {
-		b = stpcpy(b, vtf->pre);
-		*b++ = vtf->emp;
+	if (got) {
+		if (vtf.pi.flags & BOLD)
+			b = stpcpy(b, ANSI_BOLD);
+		b = stpcpy(b, ansi_fg[vtf.pi.fg]);
+		*b++ = vtf.emp;
+		if (vtf.pi.flags & BOLD)
+			b = stpcpy(b, ANSI_RESET_BOLD);
 	} else
 		b = dr_tree(t->pd, 1, b);
 
@@ -354,17 +356,15 @@ view_build_flags(unsigned loc_ref) {
 		qdb_get(obj_hd, &tmp, &tmp_ref);
 		switch (tmp.type) {
 		case TYPE_ENTITY:
-			flags |= VTF_ENTITY;
+			flags |= vtf_entity;
 
 			if (ent_get(tmp_ref).flags & EF_SHOP)
-				flags |= VTF_SHOP;
+				flags |= vtf_shop;
 
-			break;
-
-		case TYPE_CONSUMABLE:
-			flags |= VTF_POND;
 			break;
 		}
+
+		SIC_CALL(&flags, sic_view_flags, flags, tmp_ref, tmp);
 	}
 
 	return flags;

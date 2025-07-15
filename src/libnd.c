@@ -1,4 +1,5 @@
 #include "papi/nd.h"
+#include <string.h>
 
 struct nd nd;
 
@@ -280,4 +281,32 @@ unsigned ematch_all(unsigned player_ref, char *str) {
 
 void nd_mod_load(char *fname) {
 	nd.nd_mod_load(fname);
+}
+
+unsigned action_register(char *label, char *icon) {
+	return nd.action_register(label, icon);
+}
+
+unsigned vtf_register(char emp, enum color fg, unsigned flags) {
+	return nd.vtf_register(emp, fg, flags);
+}
+
+/* void sic_put(unsigned si_id, unsigned type, void *cb) { */
+/* 	nd.sic_put(si_id, type, cb); */
+/* } */
+
+void sic_args(void *args, size_t len) {
+	memcpy(args, &nd.ret, len);
+}
+
+void sic_ret(void *ret, size_t len) {
+	memcpy(nd.ret, ret, len);
+}
+
+void sic_areg(char *name) {
+	nd.sic_areg(name);
+}
+
+void sic_call(void *retp, char *symbol, void *args) {
+	nd.sic_call(retp, symbol, args);
 }
