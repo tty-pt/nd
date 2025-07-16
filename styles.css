@@ -135,38 +135,45 @@ pre { margin: 0; }
 	overflow: auto;
 	overflow-block: visible;
 	overflow-x: visible;
-	flex: 1 1 360px;
 }
 
 nd-avatar {
-	width: 64px;
-	height: 64px;
+	width: 10vh;
+	height: 10vh;
 	flex-shrink: 0;
 }
 
-#map { font-size: 18px; }
+nd-map { font-size: 2vh; }
+#cb { flex-direction: column; gap: 8px; }
 
-@media only screen and (max-width: 760px) { #term { font-size: 10px; } }
-@media only screen and (max-height: 400px) { #map { font-size: 9px; } }
-@media only screen and (max-width: 500px) {
-	#map { font-size: 9px; }
-	#right-panel { width: 100%; }
-	nd-avatar {
-		width: 42px;
-		height: 42px;
-	}
+@media only screen and (max-width: 500px), (orientation: portrait) {
+	#holder, nd-notarget { flex-direction: column !important; }
+	#term { min-height: 100px; flex: 1 1 100px; }
+	nd-map { font-size: 9px; }
+	#right-panel { width: 100%; flex-shrink: 1; }
+	nd-contents { height: 50vh; }
+	#holder:not(.targetted):not(.terminal-mode) #directions { display: flex !important; }
+	.terminal-mode nd-contents { height: 35vh; }
+	.terminal-mode #target-title-and-art { width: 20vh; height: 20vh; }
+	.terminal-mode nd-avatar { width: 18px; height: 18px; }
+	.terminal-mode nd-map { font-size: 5px; }
+	.terminal-mode nd-item { padding: 4px; }
+	#cb { flex-direction: row-reverse; }
+	nd-avatar { width: 42px; height: 42px; }
 }
 
-.terminal-mode #term {
-	min-height: 60vh !important;
+#target-title-and-art {
+	width: 30vh;
+	height: 30vh;
 }
 
-@media (orientation: portrait) { #holder { flex-direction: column-reverse; } }
+#holder.touch nd-notarget { flex-direction: row-reverse; }
 
 nd-contents {
 	overflow: auto;
-	flex: 1 1 150px;
 	width: 100%;
+	align-self: stretch;
+	flex: 1 1 0;
 }
 
 nd-stat { display: flex; gap: 8px; }
@@ -175,7 +182,7 @@ nd-item {
 	gap: 16px;
 	align-items: center;
 	border-radius: 8px;
-	padding: 16px;
+	padding: 2vh;
 	position: relative;
 	cursor: pointer;
 	text-shadow: 1px 1px 2px black, 2px -1px 3px black;
@@ -184,7 +191,7 @@ nd-item {
 .overflow {overflow: auto;}
 .display {display: inline-block;}
 
-#map {font-family: monospace;white-space: pre;}
+nd-map {font-family: monospace;white-space: pre;}
 .deep-shadow {text-shadow: 2px 2px 3px black, -2px 2px 3px black, -2px -2px 3px black, 2px -2px 3px black;}
 
 .modal { top: 0; left: 0; right: 0; bottom: 0; }
@@ -216,11 +223,14 @@ nd-item {
 
 nd-bar {
 	position: relative;
+	display: block;
 	width: 100%;
 	outline: solid 0.5px white;
+	height: 10px;
+	font-size: 10px;
+	flex-grow: 1;
+	min-width: 120px;
 }
-
-.size-super {width: 256px;height: 256px;}
 
 svg.active, i.active, .icon-selected {color: #1976d2;fill: #1976d2;}
 button:disabled > i, button:disabled > svg {color: rgba(0, 0, 0, 0.5);fill: rgba(0, 0, 0, 0.5);}
@@ -266,18 +276,25 @@ div[style*="top: -50000px"] {
 	background-color: rgba(0, 0, 0, 0.5) !important;
 }
 
+nd-notarget {
+	align-self: stretch;
+	justify-content: space-around;
+}
+
+nd-button {
+	text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.7);
+	text-shadow: -1px -2px 5px rgba(0, 0, 0, 0.5);
+}
+
 #directions {
-	background-color: darkgray;
-	background-size: 200%;
-	background-blend-mode: hard-light;
-	background-image: url(/nd/art/s-rocky.jpeg);
 	justify-content: end;
-	display: flex !important;
-	flex-grow: 1;
+	display: none;
 	flex-direction: column;
 	align-items: end;
 	gap: 8px;
 }
+
+#holder.touch #directions { display: flex; }
 
 #directions > * { display: flex; gap: 8px; }
 
@@ -303,9 +320,6 @@ div[style*="top: -50000px"] {
 		background-blend-mode: multiply;
 		background-color: darkgray !important;
 	}
-
-	#directions {
-		background-blend-mode: multiply;
-		background-color: darkgray !important;
-	}
 }
+
+#g-actions { align-self: end; }

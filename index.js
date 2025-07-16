@@ -537,7 +537,7 @@ class Bar extends SubscribedElement {
     const width = this.value / this.max;
 
     this.innerHTML = ``
-      + `<div style="width: ${width * 100}%" class="sv ${cls}"></div>`
+      + `<div style="width: ${width * 100}%" class="svf ${cls}"></div>`
       + `<div class="abs a ${cls} tr5"></div>`
       + `<div class="ts9 shad abs tac a cf15">${this.value}/${this.max}</div>`;
   }
@@ -649,9 +649,44 @@ class Stat extends SubscribedElement {
 
 customElements.define('nd-stat', Stat);
 
-class LookAt extends SubscribedElement {
+class Map extends SubscribedElement {
   connectedCallback() {
     this.subscribe(sub, "content", "view");
+    this.render();
+  }
+
+  render() {
+    super.render();
+    this.innerHTML = this.content;
+  }
+}
+
+customElements.define('nd-map', Map);
+
+class NoTarget extends SubscribedElement {
+  connectedCallback() {
+    this.subscribe(sub, "target", "target");
+    this.render();
+  }
+
+  render() {
+    super.render();
+    if (this.target)
+	  this.style.display = 'none';
+    else
+	  this.style.display = 'flex';
+  }
+}
+
+customElements.define('nd-notarget', NoTarget);
+
+const holder = document.getElementById("holder");
+
+if ('ontouchstart' in window)
+	holder.classList.add('touch');
+
+class LookAt extends SubscribedElement {
+  connectedCallback() {
     this.subscribe(sub, "db", "db");
     this.subscribe(sub, "target", "target");
     this.render();
@@ -659,16 +694,24 @@ class LookAt extends SubscribedElement {
 
   render() {
     super.render();
+
+    if (!this.target) {
+	  this.style.display = 'none';
+          holder.classList.remove("targetting");
+	  return;
+    }
+
+    holder.classList.add("targeting");
     const target = this.target ? this.db[this.target] : null;
-    this.innerHTML = target
-      ? `
-    <div id="target-title-and-art" class="rel v0 size-super fic">
+
+    this.style.display = 'flex';
+    this.innerHTML = `
+    <div id="target-title-and-art" class="rel v0 fic">
       <div style="background-image: url('/nd/art/${target.art}')" class="abs a background-unique bsf"></div>
       <div id="target-title" class="abs a deep-shadow tac tm pxs">
         ${target.pname}
       </div>
-    </div>`
-      : `<div class="fac"><pre id="map">${this.content}</pre></div>`;
+    </div>`;
   }
 }
 
@@ -889,8 +932,6 @@ globalThis.modal_open = id => {
 globalThis.modal_close = () => {
   modalParent.classList.add("dn");
 };
-
-const holder = document.getElementById("holder");
 
 ndc.term.element.addEventListener("focusin", () => {
 	holder.classList.add("terminal-mode");

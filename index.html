@@ -3,11 +3,43 @@
 
 	<textarea id="hid" aria-hidden="true"></textarea>
 
-	<div id="right-panel" class="f v8 fg fic sh33">
-		<nd-look-at></nd-look-at>
-		<nd-contents id="contents" class="v0 fg overflow icec"></nd-contents>
-		<nd-bar type="hp" x="c1"></nd-bar>
-		<nd-bar type="mp" x="c4"></nd-bar>
+	<div id="right-panel" class="f v8 h8">
+		<div id="cb" class="f v8 h8 fg fic shf">
+			<nd-notarget class="f v fic">
+				<label id="directions" onclick="event.stopPropagation()">
+					<div>
+						<nd-button hid></nd-button>
+						<nd-button onclick="sendCmd('k');">&uarr;</nd-button>
+						<nd-button onclick="sendCmd('K');">&nearr;</nd-button>
+					</div>
+					<div>
+						<nd-button onclick="sendCmd('h');">&larr;</nd-button>
+						<nd-button hid></nd-button>
+						<nd-button onclick="sendCmd('l');">&rarr;</nd-button>
+					</div>
+					<div>
+						<nd-button hid></nd-button>
+						<nd-button onclick="sendCmd('j');">&darr;</nd-button>
+						<nd-button onclick="sendCmd('J');">&searr;</nd-button>
+					</div>
+				</label>
+				<nd-map></nd-map>
+			</nd-notarget>
+			<nd-look-at></nd-look-at>
+			<nd-contents id="contents" class="v0 f fg overflow icec"></nd-contents>
+		</div>
+		<div class="f h8 fic">
+			<div class="fg v8">
+				<nd-bar type="hp" x="c1"></nd-bar>
+				<nd-bar type="mp" x="c4"></nd-bar>
+			</div>
+			<div id="g-actions" class="f h8">
+				<nd-button onclick="modal_open('stats')">📋</nd-button>
+				<nd-button onclick="modal_open('equipment')">👕</nd-button>
+				<nd-button onclick="sendCmd('inventory')">📦</nd-button>
+				<nd-button onclick="sendCmd('look')">👁</nd-button>
+			</div>
+		</div>
 	</div>
 </div>
 <div class="modal abs svf f v0 fic c fcc oh dn" onclick="modal_close()">

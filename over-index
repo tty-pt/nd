@@ -27,29 +27,6 @@ esac
 
 fun() {
 	JSB ❓ help "help_show()"
-	JSB 📋 stats "modal_open('stats')"
-	JSB 👕 equipment "modal_open('equipment')"
-	JSB 📦 inventory "sendCmd('inventory')"
-	JSB 👁 look "sendCmd('look')"
-	cat <<!
-<label id="directions" onclick="event.stopPropagation()">
-	<div>
-		<nd-button hid></nd-button>
-		<nd-button onclick="sendCmd('k');">&uarr;</nd-button>
-		<nd-button onclick="sendCmd('K');">&nearr;</nd-button>
-	</div>
-	<div>
-		<nd-button onclick="sendCmd('h');">&larr;</nd-button>
-		<nd-button hid></nd-button>
-		<nd-button onclick="sendCmd('l');">&rarr;</nd-button>
-	</div>
-	<div>
-		<nd-button hid></nd-button>
-		<nd-button onclick="sendCmd('j');">&darr;</nd-button>
-		<nd-button onclick="sendCmd('J');">&searr;</nd-button>
-	</div>
-</label>
-!
 }
 
 touch $DOCUMENT_ROOT/tmp/full-size
