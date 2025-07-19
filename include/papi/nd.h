@@ -91,12 +91,14 @@ struct nd {
 	ematch_near_t *ematch_near;
 	ematch_all_t *ematch_all;
 
-	nd_mod_load_t *nd_mod_load;
+	mod_load_t *mod_load;
 
 	action_register_t *action_register;
 	vtf_register_t *vtf_register;
 	sic_call_t *sic_call;
 	sic_areg_t *sic_areg;
+
+	noise_point_t *noise_point;
 
 	unsigned hds[HD_MAX];
 	char ret[5096];

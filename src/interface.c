@@ -65,7 +65,6 @@ unsigned dplayer_hd, skel_hd, drop_hd,
 	 mod_id_hd, type_hd, action_hd, vtf_hd,
 	 situc_hd, sica_hd;
 
-extern unsigned stone_skel_id;
 struct nd nd;
 
 void do_advitam(int fd, int argc, char *argv[]);
@@ -364,9 +363,9 @@ void _mod_load(char *fname) {
 	_mod_run(sl, symbol);
 }
 
-void nd_mod_load(char *fname) {
+void mod_load(char *fname) {
 	if (qdb_exists(mod_hd, fname)) {
-		ndclog(LOG_ERR, "nd_mod_load: module '%s' already present\n", fname);
+		ndclog(LOG_ERR, "mod_load: module '%s' already present\n", fname);
 		return;
 	}
 
@@ -388,32 +387,19 @@ void sic_call(void *retp, char *symbol, void *arg) {
 	sic_adapter_t adapter;
 
 	if (qdb_get(sica_hd, &adapter, symbol)) {
-		fprintf(stderr, "No adapter registered for this symbol\n");
+		fprintf(stderr, "No adapter registered for symbol '%s'\n", symbol);
 		return;
 	}
 
-	memcpy(nd.ret, arg, adapter.arg_size);
 	while (qdb_next(&mod_id, &ptr, &c)) {
 		struct nd *ndr = (struct nd *) dlsym(ptr, "nd");
 		if (!ndr)
 			continue;
-		memcpy(ndr->ret, nd.ret, adapter.arg_size);
+
 		void *cb = dlsym(ptr, symbol);
 		if (cb)
-			adapter.call(cb);
-		memcpy(nd.ret, ndr->ret, adapter.ret_size);
+			adapter.call(retp, cb, arg);
 	}
-
-	if (retp)
-		memcpy(retp, nd.ret, adapter.ret_size);
-}
-
-void sic_args(void *args, size_t len) {
-	memcpy(nd.ret, args, len);
-}
-
-void sic_ret(void *ret, size_t len) {
-	memcpy(ret, nd.ret, len);
 }
 
 unsigned shared_put(unsigned hd, void *key, void *data) {
@@ -461,10 +447,21 @@ void sic_put(unsigned si_id, unsigned type, void *cb) {
 	qdb_put(situc_hd, key, &cb);
 }
 
-void sic_areg(char *name) {
-	char buf[BUFSIZ];
-	snprintf(buf, BUFSIZ, "%s_adapter", name);
-	sic_adapter_t *adapter = dlsym(NULL, buf);
+SIC_DEF(int, sic_examine, unsigned, player_ref, unsigned, ref)
+SIC_DEF(int, sic_fbcp, char *, p, unsigned, ref)
+SIC_DEF(int, sic_add, unsigned, ref, unsigned, skel_id, unsigned, where_id, uint64_t, v)
+SIC_DEF(unsigned short, sic_view_flags, unsigned short, flags, unsigned, ref)
+SIC_DEF(struct icon, sic_icon, struct icon, i, unsigned, ref)
+SIC_DEF(int, sic_del, unsigned, ref)
+SIC_DEF(int, sic_clone, unsigned, orig_ref, unsigned, nu_ref)
+SIC_DEF(int, sic_update, unsigned, ref, double, dt)
+
+SIC_DEF(int, sic_auth, unsigned, player_ref)
+SIC_DEF(int, sic_leave, unsigned, player_ref, unsigned, loc_ref)
+SIC_DEF(int, sic_enter, unsigned, player_ref, unsigned, loc_ref)
+SIC_DEF(int, sic_spawn, unsigned, player_ref, unsigned, loc_ref, struct bio, bio, uint64_t, v)
+
+void sic_areg(char *name, sic_adapter_t *adapter) {
 	qdb_put(sica_hd, name, adapter);
 }
 
@@ -559,10 +556,13 @@ void shared_init(void) {
 	nd.ematch_near = ematch_near;
 	nd.ematch_all = ematch_all;
 
-	nd.nd_mod_load = nd_mod_load;
+	nd.mod_load = mod_load;
 
 	nd.action_register = action_register;
 	nd.vtf_register = vtf_register;
+	nd.sic_areg = sic_areg;
+
+	nd.noise_point = noise_point;
 }
 
 void base_actions_register(void);
@@ -662,24 +662,26 @@ main(int argc, char **argv)
 	mod_id_hd = qdb_open("module_id", "u", "p", QH_AINDEX);
 	mod_hd = qdb_open("module", "s", "u", 0);
 
-	sic_areg("sic_examine");
-	sic_areg("sic_fbcp");
-	sic_areg("sic_view_flags");
-	sic_areg("sic_add");
-	sic_areg("sic_update");
-	sic_areg("sic_del");
-	sic_areg("sic_icon");
-	sic_areg("sic_clone");
+	SIC_AREG(sic_examine);
+	SIC_AREG(sic_fbcp);
+	SIC_AREG(sic_view_flags);
+	SIC_AREG(sic_add);
+	SIC_AREG(sic_update);
+	SIC_AREG(sic_del);
+	SIC_AREG(sic_icon);
+	SIC_AREG(sic_clone);
+
+	SIC_AREG(sic_spawn);
+	SIC_AREG(sic_enter);
+	SIC_AREG(sic_leave);
+	SIC_AREG(sic_auth);
 
 	qdb_put(type_hd, NULL, "room");
 	qdb_put(type_hd, NULL, "thing");
 	qdb_put(type_hd, NULL, "plant");
 	qdb_put(type_hd, NULL, "entity");
 	qdb_put(type_hd, NULL, "equipment");
-	qdb_put(type_hd, NULL, "consumable");
 	qdb_put(type_hd, NULL, "seat");
-	qdb_put(type_hd, NULL, "mineral");
-	qdb_put(type_hd, NULL, "spell");
 
 	base_actions_register();
 	base_vtf_init();
@@ -744,7 +746,7 @@ main(int argc, char **argv)
 		mod_load_all();
 	} else {
 		st_put(1, 0, 64);
-		st_run(-1, "ndst_init");
+		st_run(-1, "mod_init");
 	}
 
 	qdb_commit();
@@ -998,8 +1000,8 @@ auth(unsigned fd)
 	else
 		mcp_tod(player_ref, 0);
 
-	st_run(player_ref, "ndst_auth");
 	qdb_commit();
+	SIC_CALL(NULL, sic_auth, player_ref);
 	return player_ref;
 }
 

@@ -114,7 +114,7 @@ _fbcp_item(char *bcp_buf, unsigned obj_ref, unsigned char dynflags)
 	}
 	}
 
-	SIC_CALL(&p, sic_fbcp, p, obj_ref, obj);
+	SIC_CALL(&p, sic_fbcp, p, obj_ref);
 
 	return p - bcp_buf;
 }

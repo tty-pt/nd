@@ -1,5 +1,6 @@
 #include "papi/nd.h"
 #include <string.h>
+#include <stdio.h>
 
 struct nd nd;
 
@@ -113,8 +114,8 @@ void object_move(unsigned what_ref, unsigned where_ref) {
 	nd.object_move(what_ref, where_ref);
 }
 
-unsigned object_add(OBJ *nu, unsigned skel_id, unsigned where, void *arg) {
-	return nd.object_add(nu, skel_id, where, arg);
+unsigned object_add(OBJ *nu, unsigned skel_id, unsigned where, uint64_t v) {
+	return nd.object_add(nu, skel_id, where, v);
 }
 
 void object_drop(unsigned where_ref, unsigned skel_id) {
@@ -279,8 +280,8 @@ unsigned ematch_all(unsigned player_ref, char *str) {
 	return nd.ematch_all(player_ref, str);
 }
 
-void nd_mod_load(char *fname) {
-	nd.nd_mod_load(fname);
+void mod_load(char *fname) {
+	nd.mod_load(fname);
 }
 
 unsigned action_register(char *label, char *icon) {
@@ -291,22 +292,18 @@ unsigned vtf_register(char emp, enum color fg, unsigned flags) {
 	return nd.vtf_register(emp, fg, flags);
 }
 
-/* void sic_put(unsigned si_id, unsigned type, void *cb) { */
-/* 	nd.sic_put(si_id, type, cb); */
-/* } */
-
-void sic_args(void *args, size_t len) {
-	memcpy(args, &nd.ret, len);
-}
-
-void sic_ret(void *ret, size_t len) {
-	memcpy(nd.ret, ret, len);
-}
-
-void sic_areg(char *name) {
-	nd.sic_areg(name);
+void sic_areg(char *name, sic_adapter_t *adapter) {
+	nd.sic_areg(name, adapter);
 }
 
 void sic_call(void *retp, char *symbol, void *args) {
 	nd.sic_call(retp, symbol, args);
+}
+
+struct bio noise_point(pos_t pos) {
+	return nd.noise_point(pos);
+}
+
+unsigned art_max(char *name) {
+	return nd.art_max(name);
 }

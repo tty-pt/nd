@@ -157,7 +157,7 @@ art_idx(OBJ *obj) {
 void stats_init(ENT *enu, SENT *sk);
 
 unsigned
-object_add(OBJ *nu, unsigned skel_id, unsigned where_ref, void *arg)
+object_add(OBJ *nu, unsigned skel_id, unsigned where_ref, uint64_t v)
 {
 	SKEL skel;
 	qdb_get(skel_hd, &skel, &skel_id);
@@ -165,18 +165,14 @@ object_add(OBJ *nu, unsigned skel_id, unsigned where_ref, void *arg)
 	strlcpy(nu->name, skel.name, sizeof(nu->name));
 	nu->location = where_ref;
 	nu->owner = ROOT;
-	nu->type = TYPE_THING;
+	nu->type = skel.type;
 	if (where_ref != NOTHING)
 		qdb_put(contents_hd, &nu->location, &nu_ref);
 
 	switch (skel.type) {
-	case TYPE_SEAT:
-	case TYPE_SPELL:
-		break;
 	case TYPE_EQUIPMENT:
 		{
 			EQU *enu = &nu->sp.equipment;
-			nu->type = TYPE_EQUIPMENT;
 			enu->eqw = skel.sp.equipment.eqw;
 			enu->msv = skel.sp.equipment.msv;
 			enu->rare = rarity_get();
@@ -188,7 +184,6 @@ object_add(OBJ *nu, unsigned skel_id, unsigned where_ref, void *arg)
 		{
 			ENT ent;
 			memset(&ent, 0, sizeof(ent));
-			nu->type = TYPE_ENTITY;
 			stats_init(&ent, &skel.sp.entity);
 			ent.flags = skel.sp.entity.flags;
 			ent.wtso = skel.sp.entity.wt;
@@ -204,8 +199,6 @@ object_add(OBJ *nu, unsigned skel_id, unsigned where_ref, void *arg)
 		break;
 	case TYPE_PLANT:
 		{
-			uint32_t v = * (uint32_t *) arg;
-			nu->type = TYPE_PLANT;
 			object_drop(nu_ref, skel_id);
 			nu->owner = ROOT;
 			unsigned max = art_max(nu->name);
@@ -215,43 +208,32 @@ object_add(OBJ *nu, unsigned skel_id, unsigned where_ref, void *arg)
 		break;
         case TYPE_ROOM:
 		{
-			struct bio *bio = arg;
+			struct bio *bio = (struct bio *) v;
 			ROO *rnu = &nu->sp.room;
-			nu->type = TYPE_ROOM;
 			rnu->exits = rnu->doors = 0;
 			rnu->flags = RF_TEMP;
 			nu->art_id = biome_art_idx(bio);
 		}
 
 		break;
-	case TYPE_MINERAL:
-		{
-			uint32_t v = * (uint32_t *) arg;
-			nu->type = TYPE_MINERAL;
-			unsigned max = art_max(nu->name);
-			nu->art_id = max ? 1 + (v & 0xf) % max : 0;
-		}
 
+	case TYPE_THING: {
+		unsigned max = art_max(nu->name);
+		nu->art_id = max ? 1 + (v & 0xf) % max : 0;
 		break;
-
-	case TYPE_THING:
-		if (arg) {
-			uint32_t v = * (uint32_t *) arg;
-			unsigned max = art_max(nu->name);
-			nu->art_id = max ? 1 + (v & 0xf) % max : 0;
-		}
-		nu->type = TYPE_THING;
-
-		break;
-        }
-
-	SIC_CALL(nu, sic_add, nu_ref, *nu, skel_id, skel, where_ref);
+	}
+	default:
+		 break;
+	}
 
 	qdb_put(obj_hd, &nu_ref, nu);
+	SIC_CALL(NULL, sic_add, nu_ref, skel_id, where_ref, v);
 
 	if (skel.type != TYPE_ROOM)
 		mcp_content_in(where_ref, nu_ref);
 
+	// needed for retrieval (FIXME)
+	qdb_get(obj_hd, nu, &nu_ref);
 	return nu_ref;
 }
 
@@ -261,6 +243,7 @@ object_art(unsigned thing_ref)
 	OBJ thing;
 	qdb_get(obj_hd, &thing, &thing_ref);
 	static char art[BUFSIZ];
+	char typestr[BUFSIZ];
 	char *type = NULL;
 
 	switch (thing.type) {
@@ -269,9 +252,10 @@ object_art(unsigned thing_ref)
 		snprintf(art, sizeof(art), "%s/%s/%u.jpeg", type, thing.art_id && ent_get(thing_ref).flags & EF_PLAYER ? "avatar" : thing.name, thing.art_id);
 		return art;
 	case TYPE_ROOM: type = "biome"; break;
-	case TYPE_PLANT: type = "plant"; break;
-	case TYPE_MINERAL: type = "mineral"; break;
-	default: type = "other"; break;
+	case TYPE_THING: type = "other"; break;
+	default:
+			 qdb_get(type_hd + 1, typestr, &thing.type);
+			 type = typestr; break;
 	}
 
 	snprintf(art, sizeof(art), "%s/%s/%u.jpeg", type, thing.name, thing.art_id);
@@ -330,7 +314,7 @@ objects_update(double dt)
 		else if (obj.type == TYPE_ENTITY)
 			entity_update(obj_ref, dt);
 
-		SIC_CALL(NULL, sic_update, obj_ref, obj, dt);
+		SIC_CALL(NULL, sic_update, obj_ref, dt);
 	}
 }
 
@@ -372,11 +356,10 @@ object_move(unsigned what_ref, unsigned where_ref)
 		qdb_del(obj_hd, &what_ref, NULL);
 		mcp_content_out(last_loc, what_ref);
 
-		SIC_CALL(NULL, sic_del, what_ref, what);
+		SIC_CALL(NULL, sic_del, what_ref);
 		return;
 	}
 
-	mcp_content_in(where_ref, what_ref);
 	what.location = where_ref;
 	qdb_put(obj_hd, &what_ref, &what);
 	mcp_content_out(last_loc, what_ref);
@@ -446,7 +429,7 @@ object_icon(unsigned what_ref)
                 break;
         }}
 
-	SIC_CALL(&ret, sic_icon, ret, what_ref, what);
+	SIC_CALL(&ret, sic_icon, ret, what_ref);
 	return ret;
 }
 
@@ -521,8 +504,8 @@ do_clone(int fd, int argc __attribute__((unused)), char *argv[])
 
 	clone.type = thing.type;
 
-	SIC_CALL(&clone, sic_clone, thing_ref, thing, clone_ref, clone);
 	qdb_put(obj_hd, &clone_ref, &clone);
+	SIC_CALL(NULL, sic_clone, thing_ref, clone_ref);
 	object_move(clone_ref, player_ref);
 }
 

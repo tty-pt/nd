@@ -2,13 +2,15 @@
 #define UAPI_TYPES_H
 
 #include <stddef.h>
+#include <string.h>
 #include "./object.h"
 #include "./skel.h"
+#include "./st.h"
 
 typedef struct {
 	size_t arg_size;
 	size_t ret_size;
-	void (*call)(void *);
+	void (*call)(void *, void *, void *);
 } sic_adapter_t;
 
 #define CAT(a, ...) PRIMITIVE_CAT(a, __VA_ARGS__)
@@ -95,16 +97,16 @@ typedef struct {
         PAIR_GEN(__VA_ARGS__) \
     }; \
     typedef ftype fname##_t(FUNC_ARGS(__VA_ARGS__)); \
-    fname##_t fname __attribute__((weak)); \
-    void fname##_call(ftype); \
-    typedef ftype fname##_type; \
-    static void fname##_adapter_call(void *fname) { \
+    fname##_t fname __attribute__((weak));
+
+#define SIC_DEF(ftype, fname, ...) \
+    void fname##_adapter_call(void *res, void *fname, void *arg) { \
         struct fname##_args args; \
-	sic_args((void *) &args, sizeof(args)); \
+	memcpy(&args, arg, sizeof(args)); \
         ftype result = ((fname##_t *) fname)(CALL_NARGS(__VA_ARGS__)); \
-        sic_ret(&result, sizeof(result)); \
+	if (res) memcpy(res, &result, sizeof(ftype)); \
     } \
-    static sic_adapter_t fname##_adapter __attribute__((visibility("default"))) = { \
+    sic_adapter_t fname##_adapter  __attribute__((visibility("default"))) = { \
 	    .arg_size = sizeof(struct fname##_args), \
 	    .ret_size = sizeof(ftype), \
 	    .call = &fname##_adapter_call, \
@@ -119,23 +121,28 @@ typedef struct {
 	sic_call(retp, XSTR(fname), &args); \
 }
 
-void sic_args(void *args, size_t len);
-void sic_ret(void *ret, size_t len);
+#define SIC_AREG(fname) \
+	sic_areg(XSTR(fname), &fname##_adapter)
 
-typedef void sic_areg_t(char *name);
+typedef void sic_areg_t(char *name, sic_adapter_t *adapter);
 sic_areg_t sic_areg;
 
 typedef void sic_call_t(void *retp, char *symbol, void *args);
 sic_call_t sic_call;
 
-SIC_DECL(int, sic_examine, unsigned, ref, OBJ, obj)
-SIC_DECL(int, sic_fbcp, char *, p, unsigned, ref, OBJ, obj)
-SIC_DECL(OBJ, sic_add, unsigned, ref, OBJ, obj, unsigned, skel_id, SKEL, skel, unsigned, where_id)
-SIC_DECL(unsigned short, sic_view_flags, unsigned short, flags, unsigned, ref, OBJ, obj)
-SIC_DECL(struct icon, sic_icon, struct icon, i, unsigned, ref, OBJ, obj)
-SIC_DECL(int, sic_del, unsigned, ref, OBJ, obj)
-SIC_DECL(int, sic_clone, unsigned, orig_ref, OBJ, orig, unsigned, nu_ref, OBJ, nu)
-SIC_DECL(int, sic_update, unsigned, ref, OBJ, obj, double, dt)
+SIC_DECL(int, sic_examine, unsigned, player_ref, unsigned, ref)
+SIC_DECL(int, sic_fbcp, char *, p, unsigned, ref)
+SIC_DECL(int, sic_add, unsigned, ref, unsigned, skel_id, unsigned, where_id, uint64_t, v)
+SIC_DECL(unsigned short, sic_view_flags, unsigned short, flags, unsigned, ref)
+SIC_DECL(struct icon, sic_icon, struct icon, i, unsigned, ref)
+SIC_DECL(int, sic_del, unsigned, ref)
+SIC_DECL(int, sic_clone, unsigned, orig_ref, unsigned, nu_ref)
+SIC_DECL(int, sic_update, unsigned, ref, double, dt)
+
+SIC_DECL(int, sic_auth, unsigned, player_ref)
+SIC_DECL(int, sic_leave, unsigned, player_ref, unsigned, loc_ref)
+SIC_DECL(int, sic_enter, unsigned, player_ref, unsigned, loc_ref)
+SIC_DECL(int, sic_spawn, unsigned, player_ref, unsigned, loc_ref, struct bio, bio, uint64_t, v)
 
 extern unsigned type_hd, action_hd, vtf_hd, vtf_max;
 

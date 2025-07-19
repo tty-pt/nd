@@ -72,8 +72,6 @@ enum type {
 	TYPE_ENTITY,
 	TYPE_EQUIPMENT,
 	TYPE_SEAT,
-	TYPE_MINERAL,
-	TYPE_SPELL,
 };
 
 typedef struct object_skel {

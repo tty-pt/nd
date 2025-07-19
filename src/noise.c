@@ -357,9 +357,9 @@ noise_view(struct bio to[VIEW_M], pos_t pos)
 		memcpy(to, &empty, sizeof(empty));
 }
 
-struct bio *
+struct bio
 noise_point(pos_t p)
 {
 	noise_chunks(p);
-	return &bio[view_idx(p)];
+	return bio[view_idx(p)];
 }

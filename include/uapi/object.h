@@ -2,6 +2,7 @@
 #define UAPI_OBJECT_H
 
 #include "./azoth.h"
+#include <stdint.h>
 
 #define ROOT ((unsigned) 1)
 #define NOTHING ((unsigned) -1)
@@ -202,7 +203,7 @@ object_copy_t object_copy;
 typedef void object_move_t(unsigned what_ref, unsigned where_ref);
 object_move_t object_move;
 
-typedef unsigned object_add_t(OBJ *nu, unsigned skel_id, unsigned where, void *arg);
+typedef unsigned object_add_t(OBJ *nu, unsigned skel_id, unsigned where, uint64_t v);
 object_add_t object_add;
 
 typedef void object_drop_t(unsigned where_ref, unsigned skel_id);

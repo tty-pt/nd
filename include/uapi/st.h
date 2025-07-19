@@ -44,6 +44,9 @@ st_teleport_t st_teleport;
 typedef void st_run_t(unsigned player_ref, char *symbol);
 st_run_t st_run;
 
+typedef struct bio noise_point_t(pos_t p);
+noise_point_t noise_point;
+
 struct spawn_arg {
 	unsigned where_ref;
 	void *arg;

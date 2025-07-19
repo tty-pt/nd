@@ -30,7 +30,7 @@
 
 #define ROOM_COST 80
 
-unsigned owner_hd = -1, sl_hd = -1, stone_skel_id;
+unsigned owner_hd = -1, sl_hd = -1;
 
 typedef void op_a_t(unsigned player_ref, enum exit e);
 typedef int op_b_t(unsigned player_ref, struct cmd_dir cd);
@@ -231,7 +231,7 @@ object_drop(unsigned where_ref, unsigned skel_id)
 
                         if (!yield) {
 				OBJ obj;
-				unsigned obj_ref = object_add(&obj, drop.skel, where_ref, &v2);
+				unsigned obj_ref = object_add(&obj, drop.skel, where_ref, v2);
 				qdb_put(obj_hd, &obj_ref, &obj);
                                 continue;
                         }
@@ -241,7 +241,7 @@ object_drop(unsigned where_ref, unsigned skel_id)
                         for (i = 0; i < yield; i++) {
 				v2 = XXH32((const char *) pos, sizeof(pos_t), 4 + i);
 				OBJ obj;
-                                unsigned obj_ref = object_add(&obj, drop.skel, where_ref, &v2);
+                                unsigned obj_ref = object_add(&obj, drop.skel, where_ref, v2);
 				qdb_put(obj_hd, &obj_ref, &obj);
 			}
                 }
@@ -459,43 +459,15 @@ exits_infer(unsigned here_ref, ROO *rhere)
 	}
 }
 
-// TODO make more add functions similar and easy to insert here
-
-/*
-static inline void
-stones_add(unsigned where_ref, struct bio *bio, pos_t p) {
-	uint32_t v = XXH32((const char *) p, sizeof(pos_t), 0);
-	unsigned char n = v & 0x3, i;
-
-	if (bio->bio_idx == BIOME_WATER)
-		return;
-
-        if (!(n && (v & 0x18) && (v & 0x20)))
-                return;
-
-	uint32_t v2 = XXH32((const char *) p, sizeof(pos_t), 0);
-
-        for (i = 0; i < n; i++, v2 >>= 4) {
-		OBJ stone;
-                unsigned stone_ref = object_add(&stone, stone_skel_id, where_ref, &v2);
-		qdb_put(obj_hd, &stone_ref, &stone);
-	}
-}
-*/
-
-struct bio * noise_point(pos_t p);
-void plants_add(unsigned where_ref, void *bio, pos_t pos);
-/* void mobs_add(unsigned where_ref, enum biome, long long pdn); */
 void map_put(pos_t p, unsigned thing, int flags);
 
 static unsigned
 st_room_at(unsigned player_ref, pos_t pos)
 {
-	struct bio *bio;
-	bio = noise_point(pos);
+	struct bio bio = noise_point(pos);
 	OBJ there;
 	biome_map = biome_map_get(* (uint64_t *) pos);
-	unsigned there_ref = object_add(&there, biome_map[bio->bio_idx], NOTHING, bio);
+	unsigned there_ref = object_add(&there, biome_map[bio.bio_idx], NOTHING, (uint64_t) &bio);
 	ROO *rthere = &there.sp.room;
 	map_put(pos, there_ref, DB_NOOVERWRITE);
 	exits_infer(there_ref, rthere);
@@ -505,22 +477,17 @@ st_room_at(unsigned player_ref, pos_t pos)
 		return there_ref;
 	}
 
-	rthere->floor = bio->bio_idx;
+	rthere->floor = bio.bio_idx;
 	qdb_put(obj_hd, &there_ref, &there);
-	/* struct spawn_arg sa = { */
-	/* 	.where_ref = there_ref, */
-	/* 	.arg = bio, */
-	/* 	.pos = pos */
-	/* }; */
-	/* SIC_CALL(int, sic_spawn, there_ref, bio, pos); */
-	/* st_run(player_ref, "ndst_spawn"); */
+	uint32_t v = XXH32((const char *) pos, sizeof(pos_t), 1);
+	SIC_CALL(NULL, sic_spawn, player_ref, there_ref, bio, v);
 	return there_ref;
 }
 
 void
 do_bio(int fd, int argc __attribute__((unused)), char *argv[] __attribute__((unused))) {
 	unsigned player_ref = fd_player(fd);
-	struct bio *bio;
+	struct bio bio;
 	pos_t pos;
 	OBJ player;
 
@@ -528,9 +495,9 @@ do_bio(int fd, int argc __attribute__((unused)), char *argv[] __attribute__((unu
 	map_where(pos, player.location);
 	bio = noise_point(pos);
 	SKEL biome;
-	qdb_get(skel_hd, &biome, &biome_map[bio->bio_idx]);
+	qdb_get(skel_hd, &biome, &biome_map[bio.bio_idx]);
 	nd_writef(player_ref, "tmp %d rn %u bio %s(%d)\n",
-		bio->tmp, bio->rn, biome.name, bio->bio_idx);
+		bio.tmp, bio.rn, biome.name, bio.bio_idx);
 }
 
 static unsigned
