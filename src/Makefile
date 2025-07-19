@@ -25,7 +25,7 @@ ldflags-Darwin += -L/usr/local/opt/berkeley-db@4/lib
 
 LDFLAGS := ${ldflags-${uname}} ${prefix:%=-L%/lib} \
 	   ${prefix:%=-Wl,-rpath,%/lib} \
-	   ${modpath:%=-Wl,-rpath,%}
+	   ${modpath:%=-Wl,-rpath,%/lib}
 
 exe := ../nd
 obj-y := object.o entity.o spacetime.o mcp.o map.o \

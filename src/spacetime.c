@@ -507,13 +507,7 @@ st_room_at(unsigned player_ref, pos_t pos)
 
 	rthere->floor = bio->bio_idx;
 	qdb_put(obj_hd, &there_ref, &there);
-	/* struct spawn_arg sa = { */
-	/* 	.where_ref = there_ref, */
-	/* 	.arg = bio, */
-	/* 	.pos = pos */
-	/* }; */
-	/* SIC_CALL(int, sic_spawn, there_ref, bio, pos); */
-	/* st_run(player_ref, "ndst_spawn"); */
+	SIC_CALL(NULL, sic_spawn, player_ref, there_ref, *bio, * (morton_t *) pos);
 	return there_ref;
 }
 

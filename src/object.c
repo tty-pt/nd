@@ -245,9 +245,8 @@ object_add(OBJ *nu, unsigned skel_id, unsigned where_ref, void *arg)
 		break;
         }
 
-	SIC_CALL(nu, sic_add, nu_ref, *nu, skel_id, skel, where_ref);
-
 	qdb_put(obj_hd, &nu_ref, nu);
+	SIC_CALL(NULL, sic_add, nu_ref, skel_id, where_ref);
 
 	if (skel.type != TYPE_ROOM)
 		mcp_content_in(where_ref, nu_ref);
@@ -330,7 +329,7 @@ objects_update(double dt)
 		else if (obj.type == TYPE_ENTITY)
 			entity_update(obj_ref, dt);
 
-		SIC_CALL(NULL, sic_update, obj_ref, obj, dt);
+		SIC_CALL(NULL, sic_update, obj_ref, dt);
 	}
 }
 
@@ -372,11 +371,10 @@ object_move(unsigned what_ref, unsigned where_ref)
 		qdb_del(obj_hd, &what_ref, NULL);
 		mcp_content_out(last_loc, what_ref);
 
-		SIC_CALL(NULL, sic_del, what_ref, what);
+		SIC_CALL(NULL, sic_del, what_ref);
 		return;
 	}
 
-	mcp_content_in(where_ref, what_ref);
 	what.location = where_ref;
 	qdb_put(obj_hd, &what_ref, &what);
 	mcp_content_out(last_loc, what_ref);
@@ -446,7 +444,7 @@ object_icon(unsigned what_ref)
                 break;
         }}
 
-	SIC_CALL(&ret, sic_icon, ret, what_ref, what);
+	SIC_CALL(&ret, sic_icon, ret, what_ref);
 	return ret;
 }
 
@@ -521,8 +519,8 @@ do_clone(int fd, int argc __attribute__((unused)), char *argv[])
 
 	clone.type = thing.type;
 
-	SIC_CALL(&clone, sic_clone, thing_ref, thing, clone_ref, clone);
 	qdb_put(obj_hd, &clone_ref, &clone);
+	SIC_CALL(NULL, sic_clone, thing_ref, clone_ref);
 	object_move(clone_ref, player_ref);
 }
 

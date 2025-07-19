@@ -68,8 +68,10 @@ const viewEmit = sub.makeEmit(
 const dbEmit = sub.makeEmit((obj, current) => {
   const loc = current.db[obj.loc];
 
-  if (!loc)
+  if (!loc) {
+    console.warn("dbEmit without loc already present", obj);
     return current;
+  }
 
   return ({
     ...current,
@@ -309,6 +311,10 @@ function tty_proc(input) {
     esc_state: 0,
     output: "",
   };
+
+  if (!input)
+	return tty.output;
+
   let in_i;
 
   for (in_i = 0; in_i < input.length; in_i++)
@@ -384,6 +390,7 @@ ndc.setOnMessage(function onMessage(ev) {
   const arr = new Uint8Array(ev.data);
   if (String.fromCharCode(arr[0]) == "#" && String.fromCharCode(arr[1]) == "b") {
     const iden = arr[2];
+    // console.log(iden, BCP_MAP[iden]);
     switch (iden) {
     case BCP.BARS: {
       let aux;
@@ -455,6 +462,7 @@ ndc.setOnMessage(function onMessage(ev) {
         break;
       }
 
+      // console.log("ITEM", base);
       dbEmit(base);
       if (base.dynflags === 1) {
         // dbEmit(base.dbref, base);
@@ -499,9 +507,11 @@ ndc.setOnMessage(function onMessage(ev) {
 
       const obj = sub.value.db[dbref];
       const oldLoc = sub.value.db[obj.loc];
-      let newContents = { ...oldLoc.contents };
-      delete newContents[dbref];
-      dbEmit({ ...oldLoc, contents: newContents });
+      if (oldLoc) {
+	      let newContents = { ...oldLoc.contents };
+	      delete newContents[dbref];
+	      dbEmit({ ...oldLoc, contents: newContents });
+      }
 
       return;
     }}
@@ -702,7 +712,10 @@ class LookAt extends SubscribedElement {
     }
 
     holder.classList.add("targeting");
-    const target = this.target ? this.db[this.target] : null;
+    const target = this.db[this.target];
+
+    if (!target)
+	  return;
 
     this.style.display = 'flex';
     this.innerHTML = `

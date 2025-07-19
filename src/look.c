@@ -89,7 +89,7 @@ do_examine(int fd, int argc __attribute__((unused)), char *argv[])
 		break;
 	}
 
-	SIC_CALL(NULL, sic_examine, thing_ref, thing);
+	SIC_CALL(NULL, sic_examine, player_ref, thing_ref);
 }
 
 

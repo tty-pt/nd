@@ -143,7 +143,7 @@ enter(unsigned player_ref, unsigned loc_ref, enum exit e)
 		ent_set(player_ref, &eplayer);
 	}
 
-	st_run(player_ref, "ndst_leave");
+	SIC_CALL(NULL, sic_leave, player_ref, old_loc_ref);
 	if (e == E_NULL)
 		nd_owritef(player_ref, "%s teleports out.\n", player.name);
 	else {
@@ -156,7 +156,7 @@ enter(unsigned player_ref, unsigned loc_ref, enum exit e)
 		nd_owritef(player_ref, "%s teleports in.\n", player.name);
 	else
 		nd_owritef(player_ref, "%s comes in from the %s.\n", player.name, e_name(e_simm(e)));
-	st_run(player_ref, "ndst_enter");
+	SIC_CALL(NULL, sic_enter, player_ref, loc_ref);
 	entities_aggro(player_ref);
 }
 

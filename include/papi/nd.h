@@ -91,7 +91,7 @@ struct nd {
 	ematch_near_t *ematch_near;
 	ematch_all_t *ematch_all;
 
-	nd_mod_load_t *nd_mod_load;
+	mod_load_t *mod_load;
 
 	action_register_t *action_register;
 	vtf_register_t *vtf_register;
