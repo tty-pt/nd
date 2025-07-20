@@ -369,10 +369,6 @@ object_move(unsigned what_ref, unsigned where_ref)
 		ENT ewhat = ent_get(what_ref);
 		if (ewhat.last_observed != NOTHING)
 			qdb_del(obs_hd, &ewhat.last_observed, &what_ref);
-		if ((ewhat.flags & EF_SITTING)) {
-			stand(what_ref, &ewhat);
-			ent_set(what_ref, &ewhat);
-		}
 	}
 
 	qdb_put(contents_hd, &where_ref, &what_ref);
@@ -667,9 +663,6 @@ do_get(int fd, int argc __attribute__((unused)), char *argv[])
 	case TYPE_PLANT: if (player_ref != ROOT)
 				 goto error;
 			 break;
-	case TYPE_SEAT: if (thing.owner != player_ref)
-				goto error;
-			break;
 	case TYPE_ROOM: goto error;
 	default: break;
 	}

@@ -143,6 +143,9 @@ SIC_DECL(int, sic_auth, unsigned, player_ref)
 SIC_DECL(int, sic_leave, unsigned, player_ref, unsigned, loc_ref)
 SIC_DECL(int, sic_enter, unsigned, player_ref, unsigned, loc_ref)
 SIC_DECL(int, sic_spawn, unsigned, player_ref, unsigned, loc_ref, struct bio, bio, uint64_t, v)
+SIC_DECL(ENT, sic_fight_start, unsigned, player_ref, ENT, eplayer)
+SIC_DECL(ENT, sic_mob_recovered, unsigned, player_ref, ENT, eplayer)
+SIC_DECL(ENT, sic_mob_recovering, unsigned, player_ref, ENT, eplayer)
 
 extern unsigned type_hd, action_hd, vtf_hd, vtf_max;
 

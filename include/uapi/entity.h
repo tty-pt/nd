@@ -72,15 +72,6 @@ ent_reset_t ent_reset;
 typedef void birth_t(ENT *eplayer);
 birth_t birth;
 
-typedef void sit_t(unsigned player_ref, ENT *eplayer, char *what);
-sit_t sit;
-
-typedef int stand_silent_t(unsigned player_ref, ENT *eplayer);
-stand_silent_t stand_silent;
-
-typedef void stand_t(unsigned player_ref, ENT *eplayer);
-stand_t stand;
-
 typedef int controls_t(unsigned who_ref, unsigned what_ref);
 controls_t controls;
 

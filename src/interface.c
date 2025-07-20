@@ -90,8 +90,6 @@ void do_reroll(int fd, int argc, char *argv[]);
 void do_save(int fd, int argc, char *argv[]);
 void do_say(int fd, int argc, char *argv[]);
 void do_select(int fd, int argc, char *argv[]);
-void do_sit(int fd, int argc, char *argv[]);
-void do_stand(int fd, int argc, char *argv[]);
 void do_status(int fd, int argc, char *argv[]);
 void do_teleport(int fd, int argc, char *argv[]);
 void do_toad(int fd, int argc, char *argv[]);
@@ -222,12 +220,6 @@ struct cmd_slot cmds[] = {
 	}, {
 		.name = "streload",
 		.cb = &do_streload,
-	}, {
-		.name = "sit",
-		.cb = &do_sit,
-	}, {
-		.name = "stand",
-		.cb = &do_stand,
 	}, {
 		.name = "status",
 		.cb = &do_status,
@@ -460,6 +452,9 @@ SIC_DEF(int, sic_auth, unsigned, player_ref)
 SIC_DEF(int, sic_leave, unsigned, player_ref, unsigned, loc_ref)
 SIC_DEF(int, sic_enter, unsigned, player_ref, unsigned, loc_ref)
 SIC_DEF(int, sic_spawn, unsigned, player_ref, unsigned, loc_ref, struct bio, bio, uint64_t, v)
+SIC_DEF(ENT, sic_fight_start, unsigned, player_ref, ENT, eplayer)
+SIC_DEF(ENT, sic_mob_recovered, unsigned, player_ref, ENT, eplayer)
+SIC_DEF(ENT, sic_mob_recovering, unsigned, player_ref, ENT, eplayer)
 
 void sic_areg(char *name, sic_adapter_t *adapter) {
 	qdb_put(sica_hd, name, adapter);
@@ -523,9 +518,6 @@ void shared_init(void) {
 	nd.ent_del = ent_del;
 	nd.ent_reset = ent_reset;
 	nd.birth = birth;
-	nd.sit = sit;
-	nd.stand_silent = stand_silent;
-	nd.stand = stand;
 	nd.controls = controls;
 	nd.payfor = payfor;
 	nd.look_around = look_around;

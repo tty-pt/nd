@@ -71,7 +71,6 @@ enum type {
 	TYPE_PLANT,
 	TYPE_ENTITY,
 	TYPE_EQUIPMENT,
-	TYPE_SEAT,
 };
 
 typedef struct object_skel {
@@ -80,10 +79,6 @@ typedef struct object_skel {
         enum type type;
 
         union {
-		struct {
-			unsigned food;
-			unsigned drink;
-		} consumable;
                 struct {
                         unsigned short eqw, msv;
                 } equipment;

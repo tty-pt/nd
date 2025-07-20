@@ -152,9 +152,10 @@ enter(unsigned player_ref, unsigned loc_ref, enum exit e)
 	}
 	object_move(player_ref, loc_ref);
 	room_clean(old_loc_ref);
-	if (e == E_NULL)
+	if (e == E_NULL) {
+		nd_writef(player_ref, "Teleported\n");
 		nd_owritef(player_ref, "%s teleports in.\n", player.name);
-	else
+	} else
 		nd_owritef(player_ref, "%s comes in from the %s.\n", player.name, e_name(e_simm(e)));
 	SIC_CALL(NULL, sic_enter, player_ref, loc_ref);
 	entities_aggro(player_ref);
@@ -230,74 +231,6 @@ unparse(unsigned loc_ref)
 
 	buf[buf_l] = '\0';
 	return buf;
-}
-
-void
-sit(unsigned player_ref, ENT *eplayer, char *name)
-{
-	if (eplayer->flags & EF_SITTING) {
-		nd_writef(player_ref, "You are already sitting.\n");
-		return;
-	}
-
-	if (!*name) {
-		notify_wts(player_ref, "sit", "sits", " on the ground");
-		eplayer->flags |= EF_SITTING;
-		eplayer->sat = NOTHING;
-		return;
-	}
-
-	unsigned seat_ref = ematch_near(player_ref, name);
-	if (seat_ref == NOTHING) {
-		nd_writef(player_ref, "Invalid target.\n");
-		return;
-	}
-
-	OBJ seat;
-	qdb_get(obj_hd, &seat, &seat_ref);
-
-	if (seat.type != TYPE_SEAT) {
-		nd_writef(player_ref, "You can't sit on that.\n");
-		return;
-	}
-
-	SEA *sseat = &seat.sp.seat;
-
-	if (sseat->quantity >= sseat->capacity) {
-		nd_writef(player_ref, "No seats available.\n");
-		return;
-	}
-
-	sseat->quantity += 1;
-	eplayer->flags |= EF_SITTING;
-	eplayer->sat = seat_ref;
-	notify_wts(player_ref, "sit", "sits", " on %s", seat.name);
-}
-
-int
-stand_silent(unsigned player_ref, ENT *eplayer)
-{
-	if (!(eplayer->flags & EF_SITTING))
-		return 1;
-
-	if (eplayer->sat != NOTHING) {
-		OBJ chair;
-		qdb_get(obj_hd, &chair, &eplayer->sat);
-		SEA *schair = &chair.sp.seat;
-		schair->quantity--;
-		qdb_put(obj_hd, &eplayer->sat, &chair);
-		eplayer->sat = NOTHING;
-	}
-
-	eplayer->flags ^= EF_SITTING;
-	notify_wts(player_ref, "stand", "stands", " up");
-	return 0;
-}
-
-void
-stand(unsigned player_ref, ENT *eplayer) {
-	if (stand_silent(player_ref, eplayer))
-		nd_writef(player_ref, "You are already standing.\n");
 }
 
 void
@@ -848,7 +781,7 @@ kill_update(unsigned player_ref, ENT *eplayer, double dt __attribute__((unused))
 		ent_set(target_ref, &etarget);
 	}
 
-	stand_silent(player_ref, eplayer);
+	SIC_CALL(eplayer, sic_fight_start, player_ref, *eplayer);
 
 	unsigned short ohp = etarget.hp;
 	unsigned short omp = eplayer->mp;
@@ -857,6 +790,7 @@ kill_update(unsigned player_ref, ENT *eplayer, double dt __attribute__((unused))
 		mcp_bars(player_ref);
 	if (etarget.hp != ohp)
 		mcp_bars(target_ref);
+	ent_set(player_ref, eplayer);
 }
 
 int debufs_process(unsigned player_ref, ENT *eplayer);
@@ -872,20 +806,15 @@ entity_update(unsigned player_ref, double dt)
 
 	if (!(eplayer.flags & EF_PLAYER)) {
 		if (eplayer.hp == HP_MAX(&eplayer)) {
-			if ((eplayer.flags & EF_SITTING)) {
-				stand(player_ref, &eplayer);
-			}
+			SIC_CALL(&eplayer, sic_mob_recovered, player_ref, eplayer);
 
 			if (player.location == 0) {
 				respawn(player_ref);
 				qdb_get(obj_hd, &player, &player_ref);
 				eplayer = ent_get(player_ref);
 			}
-		} else {
-			if (eplayer.target == NOTHING && !(eplayer.flags & EF_SITTING)) {
-				sit(player_ref, &eplayer, "");
-			}
-		}
+		} else
+			SIC_CALL(&eplayer, sic_mob_recovering, player_ref, eplayer);
 	}
 
 	int damage = 0;
@@ -1169,22 +1098,4 @@ kill_v(unsigned player_ref, char const *opcs)
 		return end - opcs;
 	} else
 		return 0;
-}
-
-void
-do_sit(int fd, int argc __attribute__((unused)), char *argv[])
-{
-	unsigned player_ref = fd_player(fd);
-	ENT eplayer = ent_get(player_ref);
-        sit(player_ref, &eplayer, argv[1]);
-	ent_set(player_ref, &eplayer);
-}
-
-void
-do_stand(int fd, int argc __attribute__((unused)), char *argv[] __attribute__((unused)))
-{
-	unsigned player_ref = fd_player(fd);
-	ENT eplayer = ent_get(player_ref);
-        stand(player_ref, &eplayer);
-	ent_set(player_ref, &eplayer);
 }

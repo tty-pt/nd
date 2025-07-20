@@ -150,20 +150,13 @@ typedef struct {
 } PLA;
 
 typedef struct {
-	unsigned quantity;
-	unsigned capacity;
-} SEA;
-
-typedef struct {
 	short unsigned unused;
 } MIN;
 
 union specific {
 	ROO room;
-	char entity;
 	EQU equipment;
 	PLA plant;
-	SEA seat;
 	MIN mineral;
 	unsigned raw[4];
 };

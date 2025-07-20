@@ -530,9 +530,6 @@ e_move(unsigned player_ref, enum exit e) {
 		return NOTHING;
 	}
 
-	stand_silent(player_ref, &eplayer);
-	ent_set(player_ref, &eplayer);
-
 	if (rloc->doors & e) {
 		if (e == E_UP || e == E_DOWN) {
 			dwts = "hatch";
@@ -921,7 +918,6 @@ st_teleport(unsigned player_ref, struct cmd_dir cd)
 		there_ref = st_room_at(player_ref, pos);
 
 	/* if (!eplayer->gpt) */
-	nd_writef(player_ref, "Teleporting to 0x%llx.\n", cd.rep);
 	enter(player_ref, there_ref, E_NULL);
 	return ret;
 }

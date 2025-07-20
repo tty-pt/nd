@@ -57,9 +57,6 @@ struct nd {
 	ent_del_t *ent_del;
 	ent_reset_t *ent_reset;
 	birth_t *birth;
-	sit_t *sit;
-	stand_silent_t *stand_silent;
-	stand_t *stand;
 	controls_t *controls;
 	payfor_t *payfor;
 	look_around_t *look_around;

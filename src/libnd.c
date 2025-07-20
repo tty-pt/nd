@@ -148,18 +148,6 @@ void birth(ENT *eplayer) {
 	nd.birth(eplayer);
 }
 
-void sit(unsigned player_ref, ENT *eplayer, char *what) {
-	nd.sit(player_ref, eplayer, what);
-}
-
-int stand_silent(unsigned player_ref, ENT *eplayer) {
-	return nd.stand_silent(player_ref, eplayer);
-}
-
-void stand(unsigned player_ref, ENT *eplayer) {
-	nd.stand(player_ref, eplayer);
-}
-
 int controls(unsigned who_ref, unsigned what_ref) {
 	return nd.controls(who_ref, what_ref);
 }

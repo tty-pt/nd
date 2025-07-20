@@ -61,12 +61,6 @@ do_examine(int fd, int argc __attribute__((unused)), char *argv[])
 			nd_writef(player_ref, "plant plid %u size %u.\n", pthing->plid, pthing->size);
 		}
 		break;
-	case TYPE_SEAT:
-		{
-			SEA *sthing = &thing.sp.seat;
-			nd_writef(player_ref, "seat quantity %u capacity %u.\n", sthing->quantity, sthing->capacity);
-		}
-		break;
 	case TYPE_THING:
 		/* print location if player can link to it */
 		if (thing.location != NOTHING && controls(player_ref, thing.location))

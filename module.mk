@@ -11,7 +11,7 @@ CC := ndcc
 .SUFFIXES: .so .d .c
 
 .c.so: ${DESTDIR}/usr/lib/libnd.a ${inc}
-	${CC} -shared -g -o $@ -fPIC ${@:%.so=%.c} ${CFLAGS} ${LDFLAGS}
+	${CC} -name ${bname} -shared -g -o $@ -fPIC ${@:%.so=%.c} ${CFLAGS} ${LDFLAGS}
 
 .c.d:
 	@echo MKDEP $@
