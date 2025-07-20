@@ -19,6 +19,7 @@ enum hd {
 	HD_CONTENTS,
 	HD_TYPE,
 	HD_RTYPE,
+	HD_BCP,
 	HD_MAX,
 };
 

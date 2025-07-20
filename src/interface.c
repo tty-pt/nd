@@ -63,7 +63,7 @@ unsigned dplayer_hd, skel_hd, drop_hd,
 	 adrop_hd, element_hd, plant_hd,
 	 wts_hd, awts_hd, biome_hd, mod_hd,
 	 mod_id_hd, type_hd, action_hd, vtf_hd,
-	 situc_hd, sica_hd;
+	 situc_hd, sica_hd, bcp_hd;
 
 struct nd nd;
 
@@ -75,7 +75,6 @@ void do_chown(int fd, int argc, char *argv[]);
 void do_clone(int fd, int argc, char *argv[]);
 void do_create(int fd, int argc, char *argv[]);
 void do_drop(int fd, int argc, char *argv[]);
-void do_equip(int fd, int argc, char *argv[]);
 void do_examine(int fd, int argc, char *argv[]);
 void do_fight(int fd, int argc, char *argv[]);
 void do_get(int fd, int argc, char *argv[]);
@@ -94,7 +93,6 @@ void do_status(int fd, int argc, char *argv[]);
 void do_teleport(int fd, int argc, char *argv[]);
 void do_toad(int fd, int argc, char *argv[]);
 void do_train(int fd, int argc, char *argv[]);
-void do_unequip(int fd, int argc, char *argv[]);
 void do_view(int fd, int argc, char *argv[]);
 void do_wall(int fd, int argc, char *argv[]);
 
@@ -176,9 +174,6 @@ struct cmd_slot cmds[] = {
 		.name = "examine",
 		.cb = &do_examine,
 	}, {
-		.name = "equip",
-		.cb = &do_equip,
-	}, {
 		.name = "get",
 		.cb = &do_get,
 	}, {
@@ -226,9 +221,6 @@ struct cmd_slot cmds[] = {
 	}, {
 		.name = "train",
 		.cb = &do_train,
-	}, {
-		.name = "unequip",
-		.cb = &do_unequip,
 	}, {
 		.name = NULL,
 		.cb = NULL,
@@ -455,6 +447,8 @@ SIC_DEF(int, sic_spawn, unsigned, player_ref, unsigned, loc_ref, struct bio, bio
 SIC_DEF(ENT, sic_fight_start, unsigned, player_ref, ENT, eplayer)
 SIC_DEF(ENT, sic_mob_recovered, unsigned, player_ref, ENT, eplayer)
 SIC_DEF(ENT, sic_mob_recovering, unsigned, player_ref, ENT, eplayer)
+SIC_DEF(ENT, sic_birth, ENT, eplayer)
+SIC_DEF(ENT, sic_attack, unsigned, player_ref, ENT, eplayer)
 
 void sic_areg(char *name, sic_adapter_t *adapter) {
 	qdb_put(sica_hd, name, adapter);
@@ -474,6 +468,7 @@ void shared_init(void) {
 	nd.hds[HD_CONTENTS] = contents_hd;
 	nd.hds[HD_TYPE] = type_hd;
 	nd.hds[HD_RTYPE] = type_hd + 1;
+	nd.hds[HD_BCP] = bcp_hd;
 
 	/* nd.fds_has = fds_has; */
 	nd.nd_close = nd_close;
@@ -521,9 +516,6 @@ void shared_init(void) {
 	nd.controls = controls;
 	nd.payfor = payfor;
 	nd.look_around = look_around;
-	nd.equip_affect = equip_affect;
-	nd.equip = equip;
-	nd.unequip = unequip;
 	nd.mask_element = mask_element;
 	nd.entity_damage = entity_damage;
 	nd.enter = enter;
@@ -555,6 +547,12 @@ void shared_init(void) {
 	nd.sic_areg = sic_areg;
 
 	nd.noise_point = noise_point;
+
+	nd.fbcp_item = fbcp_item;
+	nd.fbcp = fbcp;
+	nd.mcp_content_in = mcp_content_in;
+	nd.mcp_content_out = mcp_content_out;
+	nd.mcp_stats = mcp_stats;
 }
 
 void base_actions_register(void);
@@ -630,6 +628,7 @@ main(int argc, char **argv)
 	vtf_hd = qdb_open("vtf", "u", "vtf", QH_TMP | QH_AINDEX);
 	situc_hd = qdb_open("situc", "ul", "p", QH_TMP);
 	sica_hd = qdb_open("sica", "s", "sica", QH_TMP);
+	bcp_hd = qdb_open("bcp", "u", "sica", QH_TMP | QH_AINDEX);
 
 	ent_hd = qdb_open("entity", "u", "ent", 0);
 	player_hd = qdb_open("player", "s", "u", 0);
@@ -663,17 +662,33 @@ main(int argc, char **argv)
 	SIC_AREG(sic_icon);
 	SIC_AREG(sic_clone);
 
-	SIC_AREG(sic_spawn);
-	SIC_AREG(sic_enter);
-	SIC_AREG(sic_leave);
 	SIC_AREG(sic_auth);
+	SIC_AREG(sic_leave);
+	SIC_AREG(sic_enter);
+	SIC_AREG(sic_spawn);
+	SIC_AREG(sic_fight_start);
+	SIC_AREG(sic_mob_recovered);
+	SIC_AREG(sic_mob_recovering);
+	SIC_AREG(sic_birth);
+	SIC_AREG(sic_attack);
 
 	qdb_put(type_hd, NULL, "room");
 	qdb_put(type_hd, NULL, "thing");
 	qdb_put(type_hd, NULL, "plant");
 	qdb_put(type_hd, NULL, "entity");
-	qdb_put(type_hd, NULL, "equipment");
-	qdb_put(type_hd, NULL, "seat");
+
+	qdb_put(bcp_hd, NULL, "attr");
+	qdb_put(bcp_hd, NULL, "bars");
+	qdb_put(bcp_hd, NULL, "stats");
+	qdb_put(bcp_hd, NULL, "item");
+	qdb_put(bcp_hd, NULL, "view");
+	qdb_put(bcp_hd, NULL, "view_buffer");
+	qdb_put(bcp_hd, NULL, "room");
+	qdb_put(bcp_hd, NULL, "entity");
+	qdb_put(bcp_hd, NULL, "auth_failure");
+	qdb_put(bcp_hd, NULL, "auth_success");
+	qdb_put(bcp_hd, NULL, "out");
+	qdb_put(bcp_hd, NULL, "tod");
 
 	base_actions_register();
 	base_vtf_init();
@@ -983,7 +998,6 @@ auth(unsigned fd)
 	ndc_auth(fd, user);
 	mcp_stats(player_ref);
 	mcp_auth_success(player_ref);
-	mcp_equipment(player_ref);
 	look_around(player_ref);
 	mcp_bars(player_ref);
 	do_view(fd, 0, NULL);

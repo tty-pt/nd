@@ -17,9 +17,6 @@
 #include "papi/nd.h"
 
 #define MODIFIER(ent, a) ((ent->attr[a] - 10) >> 1) // / 2
-#define EQT(x)		(x>>6)
-#define EQL(x)		(x & 15)
-#define WTS_WEAPON(equ) phys_wts[EQT(equ->eqw)]
 
 unsigned huth_y[2] = {
 	DAYTICK_Y + 2,
@@ -28,15 +25,6 @@ unsigned huth_y[2] = {
 
 unsigned ent_hd = -1;
 unsigned me = -1;
-
-static const char *rarity_str[] = {
-	ANSI_BOLD ANSI_FG_BLACK "Poor" ANSI_RESET,
-	"",
-	ANSI_BOLD "Uncommon" ANSI_RESET,
-	ANSI_BOLD ANSI_FG_CYAN "Rare" ANSI_RESET,
-	ANSI_BOLD ANSI_FG_GREEN "Epic" ANSI_RESET,
-	ANSI_BOLD ANSI_FG_MAGENTA "Mythical" ANSI_RESET
-};
 
 unsigned me_get(void) {
 	return me;
@@ -78,19 +66,7 @@ void birth(ENT *eplayer)
 	EFFECT(eplayer, DMG).value = DMG_BASE(eplayer);
 	EFFECT(eplayer, DODGE).value = DODGE_BASE(eplayer);
 
-	int i;
-
-	for (i = 0; i < ES_MAX; i++) {
-		unsigned eq = EQUIP(eplayer, i);
-
-		if (eq <= 0)
-			continue;
-
-		OBJ oeq;
-		qdb_get(obj_hd, &oeq, &eq);
-		EQU *eeq = &oeq.sp.equipment;
-		equip_affect(eplayer, eeq);
-	}
+	SIC_CALL(eplayer, sic_birth, *eplayer);
 
 	spells_birth(eplayer);
 }
@@ -143,7 +119,6 @@ enter(unsigned player_ref, unsigned loc_ref, enum exit e)
 		ent_set(player_ref, &eplayer);
 	}
 
-	SIC_CALL(NULL, sic_leave, player_ref, old_loc_ref);
 	if (e == E_NULL)
 		nd_owritef(player_ref, "%s teleports out.\n", player.name);
 	else {
@@ -157,7 +132,6 @@ enter(unsigned player_ref, unsigned loc_ref, enum exit e)
 		nd_owritef(player_ref, "%s teleports in.\n", player.name);
 	} else
 		nd_owritef(player_ref, "%s comes in from the %s.\n", player.name, e_name(e_simm(e)));
-	SIC_CALL(NULL, sic_enter, player_ref, loc_ref);
 	entities_aggro(player_ref);
 }
 
@@ -215,17 +189,6 @@ unparse(unsigned loc_ref)
 
 	OBJ loc;
 	qdb_get(obj_hd, &loc, &loc_ref);
-
-	if (loc.type == TYPE_EQUIPMENT) {
-		EQU *eloc = &loc.sp.equipment;
-
-		if (eloc->eqw) {
-			unsigned n = eloc->rare;
-
-			if (n != 1)
-				BUFF("(%s) ", rarity_str[n]);
-		}
-	}
 
 	BUFF("%s(#%u)", loc.name, loc_ref);
 
@@ -286,121 +249,6 @@ look_around(unsigned player_ref)
 	look_at(player_ref, player.location);
 }
 
-int
-equip_affect(ENT *ewho, EQU *equ)
-{
-	register unsigned msv = equ->msv,
-		 eqw = equ->eqw,
-		 eql = EQL(eqw),
-		 eqt = EQT(eqw);
-
-	unsigned aux = 0;
-
-	switch (eql) {
-	case ES_RHAND:
-		if (ewho->attr[ATTR_STR] < msv)
-			return 1;
-		EFFECT(ewho, DMG).value += DMG_WEAPON(equ);
-		/* ewho->wts = WTS_WEAPON(equ); */
-		break;
-
-	case ES_HEAD:
-	case ES_PANTS:
-		aux = 1;
-	case ES_CHEST:
-
-		switch (eqt) {
-		case ARMOR_LIGHT:
-			if (ewho->attr[ATTR_DEX] < msv)
-				return 1;
-			aux += 2;
-			break;
-		case ARMOR_MEDIUM:
-			msv /= 2;
-			if (ewho->attr[ATTR_STR] < msv
-			    || ewho->attr[ATTR_DEX] < msv)
-				return 1;
-			aux += 1;
-			break;
-		case ARMOR_HEAVY:
-			if (ewho->attr[ATTR_STR] < msv)
-				return 1;
-		}
-		aux = DEF_ARMOR(equ, aux);
-		EFFECT(ewho, DEF).value += aux;
-		int pd = EFFECT(ewho, DODGE).value - DODGE_ARMOR(aux);
-		EFFECT(ewho, DODGE).value = pd > 0 ? pd : 0;
-	}
-
-	return 0;
-}
-
-int
-equip(unsigned who_ref, unsigned eq_ref)
-{
-	OBJ eq;
-	qdb_get(obj_hd, &eq, &eq_ref);
-	ENT ewho = ent_get(who_ref);
-	EQU *eeq = &eq.sp.equipment;
-	unsigned eql = EQL(eeq->eqw);
-
-	if (!eql || EQUIP(&ewho, eql) > 0
-	    || equip_affect(&ewho, eeq))
-		return 1;
-
-	EQUIP(&ewho, eql) = eq_ref;
-	eeq->flags |= EQF_EQUIPPED;
-
-	nd_writef(who_ref, "You equip %s.\n", eq.name);
-	ent_set(who_ref, &ewho);
-	mcp_stats(who_ref);
-	mcp_content_out(who_ref, eq_ref);
-	mcp_equipment(who_ref);
-	return 0;
-}
-
-unsigned
-unequip(unsigned player_ref, unsigned eql)
-{
-	ENT eplayer = ent_get(player_ref);
-	unsigned eq_ref = EQUIP(&eplayer, eql);
-	unsigned eqt, aux;
-
-	if (eq_ref == NOTHING)
-		return NOTHING;
-
-	OBJ eq;
-	qdb_get(obj_hd, &eq, &eq_ref);
-	EQU *eeq = &eq.sp.equipment;
-	eqt = EQT(eeq->eqw);
-	aux = 0;
-
-	switch (eql) {
-	case ES_RHAND:
-		EFFECT(&eplayer, DMG).value -= DMG_WEAPON(eeq);
-		break;
-	case ES_PANTS:
-	case ES_HEAD:
-		aux = 1;
-	case ES_CHEST:
-		switch (eqt) {
-		case ARMOR_LIGHT: aux += 2; break;
-		case ARMOR_MEDIUM: aux += 1; break;
-		}
-		aux = DEF_ARMOR(eeq, aux);
-		EFFECT(&eplayer, DEF).value -= aux;
-		EFFECT(&eplayer, DODGE).value += DODGE_ARMOR(aux);
-	}
-
-	EQUIP(&eplayer, eql) = NOTHING;
-	eeq->flags &= ~EQF_EQUIPPED;
-	ent_set(player_ref, &eplayer);
-	mcp_content_in(player_ref, eq_ref);
-	mcp_stats(player_ref);
-	mcp_equipment(player_ref);
-	return eq_ref;
-}
-
 static inline unsigned
 entity_xp(ENT *eplayer, unsigned target_ref)
 {
@@ -453,12 +301,6 @@ entity_body(unsigned mob_ref)
 
 	qdb_cur_t c = qdb_iter(contents_hd, &mob_ref);
 	while (qdb_next(&mob_ref, &tmp_ref, &c)) {
-		OBJ tmp;
-		qdb_get(obj_hd, &tmp, &tmp_ref);
-		if (tmp.type == TYPE_EQUIPMENT) {
-			EQU *etmp = &tmp.sp.equipment;
-			unequip(mob_ref, EQL(etmp->eqw));
-		}
 		object_move(tmp_ref, dead_mob_ref);
 		n++;
 	}
@@ -742,17 +584,10 @@ attack(unsigned player_ref, ENT *eplayer)
 	ENT etarget = ent_get(eplayer->target);
 	char wts[BUFSIZ];
 	extern unsigned wts_hd;
-	unsigned wts_ref = eplayer->wtso;
+	eplayer->wtst = eplayer->wtso;
+	SIC_CALL(NULL, sic_attack, player_ref, *eplayer);
 
-	unsigned eq_ref = EQUIP(eplayer, ES_RHAND);
-
-	if (eq_ref) {
-		OBJ eq;
-		qdb_get(obj_hd, &eq, &eq_ref);
-		wts_ref = EQT(eq.sp.equipment.eqw);
-	}
-
-	qdb_get(wts_hd, wts, &wts_ref);
+	qdb_get(wts_hd, wts, &eplayer->wtst);
 
 	if (spells_cast(player_ref, eplayer, eplayer->target) && !kill_dodge(player_ref, wts)) {
 		unsigned at = STAT_ELEMENT(eplayer, MDMG);

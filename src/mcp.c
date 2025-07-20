@@ -12,19 +12,18 @@
 #define SUPERBIGSIZ 80000 * 8192
 
 enum bcp_type {
-	BCP_ATTR = 0,
-	BCP_BARS = 1,
-	BCP_EQUIPMENT = 2,
-	BCP_STATS = 3,
-	BCP_ITEM = 4,
-	BCP_VIEW = 5,
-	BCP_VIEW_BUFFER = 6,
-	BCP_ROOM = 7,
-	BCP_ENTITY = 8,
-	BCP_AUTH_FAILURE = 9,
-	BCP_AUTH_SUCCESS = 10,
-	BCP_OUT = 11,
-	BCP_TOD = 12,
+	BCP_ATTR,
+	BCP_BARS,
+	BCP_STATS,
+	BCP_ITEM,
+	BCP_VIEW,
+	BCP_VIEW_BUFFER,
+	BCP_ROOM,
+	BCP_ENTITY,
+	BCP_AUTH_FAILURE,
+	BCP_AUTH_SUCCESS,
+	BCP_OUT,
+	BCP_TOD,
 };
 
 int
@@ -62,7 +61,7 @@ msgarg_escape(char* buf, int bufsize, const char* in)
 	return len;
 }
 
-static void
+void
 fbcp(unsigned player_ref, size_t len, unsigned char iden, void *data)
 {
 	char bcp_buf[2 + sizeof(iden) + len];
@@ -309,36 +308,3 @@ mcp_tod(unsigned player_ref, unsigned tod) {
 	fbcp(player_ref, sizeof(tod), BCP_TOD, &tod);
 }
 
-void
-mcp_equipment(unsigned player_ref)
-{
-	ENT eplayer = ent_get(player_ref);
-	unsigned aux;
-
-	fbcp(player_ref, sizeof(eplayer.equipment), BCP_EQUIPMENT, eplayer.equipment);
-	
-	aux = eplayer.equipment[ES_HEAD];
-	if (aux && aux != NOTHING)
-		fbcp_item(player_ref, aux, 0);
-	aux = eplayer.equipment[ES_NECK];
-	if (aux && aux != NOTHING)
-		fbcp_item(player_ref, aux, 0);
-	aux = eplayer.equipment[ES_CHEST];
-	if (aux && aux != NOTHING)
-		fbcp_item(player_ref, aux, 0);
-	aux = eplayer.equipment[ES_BACK];
-	if (aux && aux != NOTHING)
-		fbcp_item(player_ref, aux, 0);
-	aux = eplayer.equipment[ES_RHAND];
-	if (aux && aux != NOTHING)
-		fbcp_item(player_ref, aux, 0);
-	aux = eplayer.equipment[ES_LFINGER];
-	if (aux && aux != NOTHING)
-		fbcp_item(player_ref, aux, 0);
-	aux = eplayer.equipment[ES_RFINGER];
-	if (aux && aux != NOTHING)
-		fbcp_item(player_ref, aux, 0);
-	aux = eplayer.equipment[ES_PANTS];
-	if (aux && aux != NOTHING)
-		fbcp_item(player_ref, aux, 0);
-}

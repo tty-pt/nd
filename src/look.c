@@ -49,12 +49,6 @@ do_examine(int fd, int argc __attribute__((unused)), char *argv[])
 			nd_writef(player_ref, "Exits: %hhx Doors: %hhx\n", rthing->exits, rthing->doors);
 		}
 		break;
-	case TYPE_EQUIPMENT:
-		{
-			EQU *ething = &thing.sp.equipment;
-			nd_writef(player_ref, "equipment eqw %u msv %u.\n", ething->eqw, ething->msv);
-		}
-		break;
 	case TYPE_PLANT:
 		{
 			PLA *pthing = &thing.sp.plant;

@@ -359,19 +359,18 @@ function read_string(arr, start, ret = {}) {
 
 const BCP = {
   BARS: 1,
-  EQUIPMENT: 2,
-  STATS: 3,
-  ITEM: 4,
-  VIEW_BUFFER: 6,
-  AUTH_FAILURE: 9,
-  AUTH_SUCCESS: 10,
-  OUT: 11,
-  TOD: 12,
+  STATS: 2,
+  ITEM: 3,
+  VIEW_BUFFER: 5,
+  AUTH_FAILURE: 8,
+  AUTH_SUCCESS: 9,
+  OUT: 10,
+  TOD: 11,
+  EQUIPMENT: 12,
 };
 
 const BCP_MAP = {
   [BCP.BARS]: { label: "bars" },
-  [BCP.EQUIPMENT]: { label: "equipment" },
   [BCP.STATS]: { label: "stats" },
   [BCP.ITEM]: { label: "item" },
   [BCP.VIEW_BUFFER]: { label: "view_buffer" },
@@ -379,6 +378,7 @@ const BCP_MAP = {
   [BCP.AUTH_SUCCESS]: { label: "auth_success" },
   [BCP.OUT]: { label: "out" },
   [BCP.TOD]: { label: "tod" },
+  [BCP.EQUIPMENT]: { label: "equipment" },
 };
 
 const title = document.getElementById("title");
@@ -390,7 +390,7 @@ ndc.setOnMessage(function onMessage(ev) {
   const arr = new Uint8Array(ev.data);
   if (String.fromCharCode(arr[0]) == "#" && String.fromCharCode(arr[1]) == "b") {
     const iden = arr[2];
-    // console.log(iden, BCP_MAP[iden]);
+    console.log(iden, BCP_MAP[iden]);
     switch (iden) {
     case BCP.BARS: {
       let aux;
@@ -462,7 +462,7 @@ ndc.setOnMessage(function onMessage(ev) {
         break;
       }
 
-      // console.log("ITEM", base);
+      console.log("ITEM", base);
       dbEmit(base);
       if (base.dynflags === 1) {
         // dbEmit(base.dbref, base);

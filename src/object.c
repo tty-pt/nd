@@ -40,22 +40,6 @@ object_new(OBJ *newobj)
 	return qdb_put(obj_hd, NULL, newobj);
 }
 
-static inline int
-rarity_get(void) {
-	register int r = random();
-	if (r > RAND_MAX >> 1)
-		return 0; // POOR
-	if (r > RAND_MAX >> 2)
-		return 1; // COMMON
-	if (r > RAND_MAX >> 6)
-		return 2; // UNCOMMON
-	if (r > RAND_MAX >> 10)
-		return 3; // RARE
-	if (r > RAND_MAX >> 14)
-		return 4; // EPIC
-	return 5; // MYTHICAL
-}
-
 ucoord_t biome_rain_floor[16] = {
 	0, 0, 0, 0,
 	128, 128, 128, 128,
@@ -170,16 +154,6 @@ object_add(OBJ *nu, unsigned skel_id, unsigned where_ref, uint64_t v)
 		qdb_put(contents_hd, &nu->location, &nu_ref);
 
 	switch (skel.type) {
-	case TYPE_EQUIPMENT:
-		{
-			EQU *enu = &nu->sp.equipment;
-			enu->eqw = skel.sp.equipment.eqw;
-			enu->msv = skel.sp.equipment.msv;
-			enu->rare = rarity_get();
-			equip(where_ref, nu_ref);
-		}
-
-		break;
 	case TYPE_ENTITY:
 		{
 			ENT ent;
@@ -338,6 +312,8 @@ object_move(unsigned what_ref, unsigned where_ref)
 		ent_set(first_ref, &efirst);
 	}
 
+	SIC_CALL(NULL, sic_leave, what_ref, last_loc);
+
 	/* test for special cases */
 	if (where_ref == NOTHING) {
 		unsigned first_ref;
@@ -362,8 +338,8 @@ object_move(unsigned what_ref, unsigned where_ref)
 
 	what.location = where_ref;
 	qdb_put(obj_hd, &what_ref, &what);
-	mcp_content_out(last_loc, what_ref);
 	mcp_content_in(where_ref, what_ref);
+	mcp_content_out(last_loc, what_ref);
 
 	if (what.type == TYPE_ENTITY) {
 		ENT ewhat = ent_get(what_ref);
@@ -372,6 +348,7 @@ object_move(unsigned what_ref, unsigned where_ref)
 	}
 
 	qdb_put(contents_hd, &where_ref, &what_ref);
+	SIC_CALL(NULL, sic_enter, what_ref, where_ref);
 }
 
 void
@@ -379,7 +356,6 @@ base_actions_register(void) {
 	act_look = action_register("look", "👁");
 	act_fight = action_register("fight", "⚔️");
 	act_open = action_register("open", "📦");
-	act_chop = action_register("chop", "🪓");
 	act_get = action_register("get", "🖐️");
 	act_talk = action_register("talk", "👄");
 }

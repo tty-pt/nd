@@ -60,9 +60,6 @@ struct nd {
 	controls_t *controls;
 	payfor_t *payfor;
 	look_around_t *look_around;
-	equip_affect_t *equip_affect;
-	equip_t *equip;
-	unequip_t *unequip;
 	mask_element_t *mask_element;
 	entity_damage_t *entity_damage;
 	enter_t *enter;
@@ -96,6 +93,12 @@ struct nd {
 	sic_areg_t *sic_areg;
 
 	noise_point_t *noise_point;
+
+	fbcp_item_t *fbcp_item;
+	fbcp_t *fbcp;
+	mcp_content_in_t *mcp_content_in;
+	mcp_content_out_t *mcp_content_out;
+	mcp_stats_t *mcp_stats;
 
 	unsigned hds[HD_MAX];
 	char ret[5096];

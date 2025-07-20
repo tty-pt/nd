@@ -160,18 +160,6 @@ void look_around(unsigned player_ref) {
 	nd.look_around(player_ref);
 }
 
-int equip_affect(ENT *ewho, EQU *equ) {
-	return nd.equip_affect(ewho, equ);
-}
-
-int equip(unsigned player_ref, unsigned eq_ref) {
-	return nd.equip(player_ref, eq_ref);
-}
-
-unsigned unequip(unsigned player_ref, unsigned eql) {
-	return nd.unequip(player_ref, eql);
-}
-
 unsigned mask_element(ENT *ref, register unsigned char a) {
 	return nd.mask_element(ref, a);
 }
@@ -294,4 +282,24 @@ struct bio noise_point(pos_t pos) {
 
 unsigned art_max(char *name) {
 	return nd.art_max(name);
+}
+
+void fbcp(unsigned player_ref, size_t len, unsigned char iden, void *data) {
+	nd.fbcp(player_ref, len, iden, data);
+}
+
+void fbcp_item(unsigned player_ref, unsigned obj_ref, unsigned char dynflags) {
+	nd.fbcp_item(player_ref, obj_ref, dynflags);
+}
+
+void mcp_content_out(unsigned loc_ref, unsigned thing_ref) {
+	nd.mcp_content_out(loc_ref, thing_ref);
+}
+
+void mcp_content_in(unsigned loc_ref, unsigned thing_ref) {
+	nd.mcp_content_in(loc_ref, thing_ref);
+}
+
+void mcp_stats(unsigned player_ref) {
+	nd.mcp_stats(player_ref);
 }

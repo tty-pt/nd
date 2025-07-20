@@ -114,7 +114,7 @@ typedef struct entity {
 	struct effect e[7];
 	unsigned target, sat;
 	unsigned flags;
-	unsigned short hp, mp, wtso;
+	unsigned short hp, mp, wtso, wtst;
 	unsigned short huth[2];
 	unsigned char debuf_mask, combo, klock;
 	unsigned lvl, spend, cxp;
@@ -127,23 +127,6 @@ typedef struct entity {
 	unsigned char huth_n[2];
 } ENT;
 
-enum equipment_flags {
-	EQF_EQUIPPED = 1,
-};
-
-enum armor_type {
-	ARMOR_LIGHT,
-	ARMOR_MEDIUM,
-	ARMOR_HEAVY,
-};
-
-typedef struct {
-	unsigned eqw;
-	unsigned msv;
-	unsigned rare;
-	unsigned flags;
-} EQU;
-
 typedef struct {
 	unsigned plid;
 	unsigned size;
@@ -155,7 +138,6 @@ typedef struct {
 
 union specific {
 	ROO room;
-	EQU equipment;
 	PLA plant;
 	MIN mineral;
 	unsigned raw[4];

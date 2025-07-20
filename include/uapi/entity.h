@@ -41,19 +41,6 @@
 #define DMG_WEAPON(equ) IE(equ, DMG_G)
 #define DODGE_ARMOR(def) def / 4
 
-/* FIXME also refered to by eql */
-enum bodypart {
-	BP_NULL,
-	BP_HEAD,
-	BP_NECK,
-	BP_CHEST,
-	BP_BACK,
-	BP_WEAPON,
-	BP_LFINGER,
-	BP_RFINGER,
-	BP_LEGS,
-};
-
 typedef unsigned me_get_t(void);
 me_get_t me_get;
 
@@ -80,15 +67,6 @@ payfor_t payfor;
 
 typedef void look_around_t(unsigned player_ref);
 look_around_t look_around;
-
-typedef int equip_affect_t(ENT *ewho, EQU *equ);
-equip_affect_t equip_affect;
-
-typedef int equip_t(unsigned player_ref, unsigned eq_ref);
-equip_t equip;
-
-typedef unsigned unequip_t(unsigned player_ref, unsigned eql);
-unequip_t unequip;
 
 typedef unsigned mask_element_t(ENT *ref, register unsigned char a);
 mask_element_t mask_element;

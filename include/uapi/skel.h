@@ -70,7 +70,6 @@ enum type {
 	TYPE_THING,
 	TYPE_PLANT,
 	TYPE_ENTITY,
-	TYPE_EQUIPMENT,
 };
 
 typedef struct object_skel {
@@ -79,9 +78,6 @@ typedef struct object_skel {
         enum type type;
 
         union {
-                struct {
-                        unsigned short eqw, msv;
-                } equipment;
                 SENT entity;
 		SPLA plant;
                 struct {
