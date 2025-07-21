@@ -433,7 +433,7 @@ void sic_put(unsigned si_id, unsigned type, void *cb) {
 
 SIC_DEF(int, sic_examine, unsigned, player_ref, unsigned, ref)
 SIC_DEF(int, sic_fbcp, char *, p, unsigned, ref)
-SIC_DEF(int, sic_add, unsigned, ref, unsigned, skel_id, unsigned, where_id, uint64_t, v)
+SIC_DEF(int, sic_add, unsigned, ref, uint64_t, v)
 SIC_DEF(unsigned short, sic_view_flags, unsigned short, flags, unsigned, ref)
 SIC_DEF(struct icon, sic_icon, struct icon, i, unsigned, ref)
 SIC_DEF(int, sic_del, unsigned, ref)
@@ -449,6 +449,7 @@ SIC_DEF(ENT, sic_mob_recovered, unsigned, player_ref, ENT, eplayer)
 SIC_DEF(ENT, sic_mob_recovering, unsigned, player_ref, ENT, eplayer)
 SIC_DEF(ENT, sic_birth, ENT, eplayer)
 SIC_DEF(ENT, sic_attack, unsigned, player_ref, ENT, eplayer)
+SIC_DEF(int, sic_get, unsigned, player_ref, unsigned, ref)
 
 void sic_areg(char *name, sic_adapter_t *adapter) {
 	qdb_put(sica_hd, name, adapter);
@@ -671,6 +672,7 @@ main(int argc, char **argv)
 	SIC_AREG(sic_mob_recovering);
 	SIC_AREG(sic_birth);
 	SIC_AREG(sic_attack);
+	SIC_AREG(sic_get);
 
 	qdb_put(type_hd, NULL, "room");
 	qdb_put(type_hd, NULL, "thing");

@@ -132,7 +132,7 @@ sic_call_t sic_call;
 
 SIC_DECL(int, sic_examine, unsigned, player_ref, unsigned, ref)
 SIC_DECL(int, sic_fbcp, char *, p, unsigned, ref)
-SIC_DECL(int, sic_add, unsigned, ref, unsigned, skel_id, unsigned, where_id, uint64_t, v)
+SIC_DECL(int, sic_add, unsigned, ref, uint64_t, v)
 SIC_DECL(unsigned short, sic_view_flags, unsigned short, flags, unsigned, ref)
 SIC_DECL(struct icon, sic_icon, struct icon, i, unsigned, ref)
 SIC_DECL(int, sic_del, unsigned, ref)
@@ -148,6 +148,7 @@ SIC_DECL(ENT, sic_mob_recovered, unsigned, player_ref, ENT, eplayer)
 SIC_DECL(ENT, sic_mob_recovering, unsigned, player_ref, ENT, eplayer)
 SIC_DECL(ENT, sic_birth, ENT, eplayer)
 SIC_DECL(ENT, sic_attack, unsigned, player_ref, ENT, eplayer)
+SIC_DECL(int, sic_get, unsigned, player_ref, unsigned, ref)
 
 extern unsigned type_hd, action_hd, vtf_hd, vtf_max;
 

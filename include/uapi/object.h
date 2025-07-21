@@ -146,6 +146,7 @@ union specific {
 typedef struct object {
 	unsigned location, owner;
 
+	unsigned skid;
 	unsigned art_id;
 	unsigned char type;
 	unsigned value;
@@ -154,7 +155,6 @@ typedef struct object {
 	union specific sp;
 
 	char name[32];
-	// int skel;
 } OBJ;
 
 struct icon {

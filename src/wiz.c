@@ -47,7 +47,6 @@ do_teleport(int fd, int argc __attribute__((unused)), char *argv[]) {
 		if (!controls(player_ref, victim_ref) ||
 				!controls(player_ref, destination_ref) ||
 				!controls(player_ref, victim.location) ||
-				(object_item(destination_ref) && !controls(player_ref, destination.location)) ||
 				destination.type != TYPE_ROOM)
 			goto error;
 		nd_writef(victim_ref, "You feel a wrenching sensation...\n");
@@ -56,7 +55,7 @@ do_teleport(int fd, int argc __attribute__((unused)), char *argv[]) {
 	case TYPE_ROOM:
 		goto error;
 	default:
-		if ((!object_item(destination_ref)) || !(
+		if (!(
 			controls(player_ref, destination_ref) &&
 			(controls(player_ref, victim_ref) || controls(player_ref, victim.location)) )
 		   )

@@ -87,42 +87,8 @@ struct core_art {
 
 struct core_art core_art[] = {
 	// ENTITIES
-	{ 1, "dolphin" },
-	{ 6, "eagle" },
-	{ 5, "firebird" },
-	{ 2, "goldfish" },
-	{ 1, "icebird" },
-	{ 3, "koifish" },
-	{ 9, "owl" },
-	{ 8, "parrot" },
-	{ 6, "rainbowfish" },
-	{ 6, "salmon" },
-	{ 7, "shark" },
-	{ 15, "sparrow" },
-	{ 16, "starling" },
-	{ 9, "swallow" },
-	{ 13, "tuna" },
-	{ 2, "vulture" },
 	{ 6, "wolf" },
-	{ 7, "woodpecker" },
 	{ 300, "avatar" },
-
-	// PLANTS
-	{ 10, "abies alba" },
-	{ 12, "acacia senegal" },
-	{ 14, "betula pendula" },
-	{ 6, "daucus carota" },
-	{ 19, "pinus sylvestris" },
-	{ 21, "pseudotsuga menziesii" },
-	{ 9, "arthrocereus rondonianus" },
-	{ 11, "solanum lycopersicum" },
-	{ 7, "linum usitatissimum" },
-
-	// MINERALS
-	{ 17, "stone" },
-
-	// OTHER
-	{ 14, "stick" },
 };
 
 unsigned art_hd = -1;
@@ -147,6 +113,7 @@ object_add(OBJ *nu, unsigned skel_id, unsigned where_ref, uint64_t v)
 	qdb_get(skel_hd, &skel, &skel_id);
 	unsigned nu_ref = object_new(nu);
 	strlcpy(nu->name, skel.name, sizeof(nu->name));
+	nu->skid = skel_id;
 	nu->location = where_ref;
 	nu->owner = ROOT;
 	nu->type = skel.type;
@@ -201,7 +168,7 @@ object_add(OBJ *nu, unsigned skel_id, unsigned where_ref, uint64_t v)
 	}
 
 	qdb_put(obj_hd, &nu_ref, nu);
-	SIC_CALL(NULL, sic_add, nu_ref, skel_id, where_ref, v);
+	SIC_CALL(NULL, sic_add, nu_ref, v);
 
 	if (skel.type != TYPE_ROOM)
 		mcp_content_in(where_ref, nu_ref);
@@ -635,13 +602,16 @@ do_get(int fd, int argc __attribute__((unused)), char *argv[])
 		goto error;
 
 	switch (thing.type) {
-	case TYPE_ENTITY:
-	case TYPE_PLANT: if (player_ref != ROOT)
-				 goto error;
-			 break;
+	case TYPE_ENTITY: if (player_ref == ROOT)
+				  break;
 	case TYPE_ROOM: goto error;
 	default: break;
 	}
+
+	int ret;
+	SIC_CALL(&ret, sic_get, player_ref, thing_ref);
+	if (ret)
+		goto error;
 
 	object_move(thing_ref, player_ref);
 	return;
@@ -685,9 +655,6 @@ do_drop(int fd, int argc __attribute__((unused)), char *argv[])
 	object_move(thing_ref, cont_ref);
 	qdb_get(obj_hd, &thing, &thing_ref);
 
-	if (object_item(cont_ref))
-		return;
-
 	if (cont.type == TYPE_ENTITY) {
 		nd_writef(cont_ref, "%s hands you %s.\n", player.name, thing.name);
 		return;
@@ -697,12 +664,4 @@ do_drop(int fd, int argc __attribute__((unused)), char *argv[])
 	return;
 error:
 	nd_writef(player_ref, CANTDO_MESSAGE);
-}
-
-int
-object_item(unsigned obj_ref)
-{
-	OBJ obj;
-	qdb_get(obj_hd, &obj, &obj_ref);
-	return !(obj.type == TYPE_ROOM || obj.type == TYPE_ENTITY || obj.type == TYPE_PLANT);
 }

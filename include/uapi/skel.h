@@ -74,8 +74,8 @@ enum type {
 
 typedef struct object_skel {
 	char const name[32];
-
         enum type type;
+	unsigned max_art;
 
         union {
                 SENT entity;
@@ -84,7 +84,7 @@ typedef struct object_skel {
 			const enum color bg;
                 } biome;
 		SSPE spell;
-		unsigned raw[4];
+		unsigned raw[8];
         } sp;
 } SKEL;
 
