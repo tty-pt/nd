@@ -128,17 +128,11 @@ typedef struct entity {
 } ENT;
 
 typedef struct {
-	unsigned plid;
-	unsigned size;
-} PLA;
-
-typedef struct {
 	short unsigned unused;
 } MIN;
 
 union specific {
 	ROO room;
-	PLA plant;
 	MIN mineral;
 	unsigned raw[4];
 };
@@ -184,7 +178,6 @@ object_add_t object_add;
 typedef void object_drop_t(unsigned where_ref, unsigned skel_id);
 object_drop_t object_drop;
 
-int object_item(unsigned obj_ref);
 typedef struct icon object_icon_t(unsigned thing_ref);
 object_icon_t object_icon;
 

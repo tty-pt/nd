@@ -676,7 +676,6 @@ main(int argc, char **argv)
 
 	qdb_put(type_hd, NULL, "room");
 	qdb_put(type_hd, NULL, "thing");
-	qdb_put(type_hd, NULL, "plant");
 	qdb_put(type_hd, NULL, "entity");
 
 	qdb_put(bcp_hd, NULL, "attr");

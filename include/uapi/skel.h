@@ -68,7 +68,6 @@ typedef struct spell_skeleton {
 enum type {
 	TYPE_ROOM,
 	TYPE_THING,
-	TYPE_PLANT,
 	TYPE_ENTITY,
 };
 

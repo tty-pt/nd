@@ -626,9 +626,6 @@ do_drop(int fd, int argc __attribute__((unused)), char *argv[])
 
 	qdb_get(obj_hd, &cont, &cont_ref);
 
-	if (cont.type != TYPE_ROOM && cont.type != TYPE_ENTITY && !object_item(cont_ref))
-		goto error;
-
 	object_move(thing_ref, cont_ref);
 	qdb_get(obj_hd, &thing, &thing_ref);
 
