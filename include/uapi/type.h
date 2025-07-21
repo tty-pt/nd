@@ -150,6 +150,8 @@ SIC_DECL(ENT, sic_birth, ENT, eplayer)
 SIC_DECL(ENT, sic_attack, unsigned, player_ref, ENT, eplayer)
 SIC_DECL(int, sic_get, unsigned, player_ref, unsigned, ref)
 
+SIC_DECL(int, sic_noise_point, uint32_t, he, uint32_t, tm, uint32_t, w, struct bio, bio, int i)
+
 extern unsigned type_hd, action_hd, vtf_hd, vtf_max;
 
 typedef unsigned action_register_t(char *label, char *icon);

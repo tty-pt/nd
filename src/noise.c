@@ -1,8 +1,10 @@
 #include "noise.h"
 #define NOISE_IMPLEMENTATION
 #include "noise_decl.h"
+#include "uapi/type.h"
 #include <string.h>
 #include "xxhash.h"
+#include "st.h"
 
 #define HASH XXH32
 
@@ -122,91 +124,6 @@ bio_idx(ucoord_t rn, coord_t tmp)
 	return 2 + _bio_idx(tmp_min, tmp_max, 0, rn_max, tmp, rn);
 }
 
-static inline unsigned char
-plant_noise(unsigned *plid, coord_t tmp, ucoord_t rn, uint32_t v, unsigned plant_ref)
-{
-	SKEL skel;
-	qdb_get(skel_hd, &skel, &plant_ref);
-	SPLA *pl = &skel.sp.plant;
-
-        if (v >= (NOISE_MAX >> pl->y))
-                return 0;
-	/* if (((v >> 6) ^ (v >> 3) ^ v) & 1) */
-	/* 	return 0; */
-
-	if (tmp < pl->tmp_max && tmp > pl->tmp_min
-	    && rn < pl->rn_max && rn > pl->rn_min) {
-		*plid = plant_ref;
-		v = (v >> 1) & PLANT_MASK;
-		if (v == 3)
-			v = 0;
-                return v;
-	}
-
-	return 0;
-}
-
-static inline void
-plants_noise(struct plant_data *pd, uint32_t ty, coord_t tmp, ucoord_t rn, unsigned n)
-{
-	uint32_t v = ty;
-	register int cpln;
-	unsigned *idc = pd->id;
-	qdb_cur_t c = qdb_iter(plant_hd, NULL);
-	unsigned ign, ref;
-	unsigned pdn = 0;
-
-	while (qdb_next(&ign, &ref, &c)) {
-		if (idc >= &pd->id[n]) {
-			qdb_fin(&c);
-			break;
-		}
-
-		if (!v)
-			v = XXH32((const char *) &ty, sizeof(ty), ref);
-
-		cpln = plant_noise(idc, tmp, rn, v, ref);
-
-		if (cpln) {
-			pdn = (pdn << 2) | (cpln & 3);
-			idc++;
-		}
-
-		v >>= 8;
-	}
-	pd->max = *idc;
-	pd->n = pdn;
-}
-
-static void
-plants_shuffle(struct plant_data *pd, morton_t v)
-{
-        unsigned char apln[3] = {
-                pd->n & 3,
-                (pd->n >> 2) & 3,
-                (pd->n >> 4) & 3,
-        };
-	register unsigned char i;
-	unsigned aux, pdn = 0;
-
-        for (i = 1; i <= 3; i++) {
-		pdn = pdn << 2;
-
-                if (v & i)
-                        continue;
-
-                aux = pd->id[i - 1];
-                pd->id[i - 1] = pd->id[i];
-                pd->id[i] = aux;
-
-                aux = apln[i - 1];
-                apln[i - 1] = apln[i];
-                apln[i] = aux;
-        }
-
-	pd->n = apln[0] | (apln[1] << 2) | (apln[2] << 4);
-}
-
 static inline void
 noise_full(size_t i, point_t s, ucoord_t obits)
 {
@@ -232,15 +149,7 @@ noise_full(size_t i, point_t s, ucoord_t obits)
 		r.tmp = temp(obits, _he, _tm, s[Y_COORD] + (j >> CHUNK_Y));
 		r.rn = rain(obits, w, _he, _cl, r.tmp);
 		r.bio_idx = _he < w ? 0 : bio_idx(r.rn, r.tmp);
-		r.pd.max = 0;
-		if (_he > w) {
-			r.ty = HASH(&_tm, sizeof(uint32_t), PLANTS_SEED);
-			plants_noise(&r.pd, r.ty, r.tmp, r.rn, 3);
-			plants_shuffle(&r.pd, ~(r.ty >> 8));
-		} else {
-			memset(r.pd.id, 0, 3);
-			r.pd.n = 0;
-		}
+		SIC_CALL(NULL, sic_noise_point, _he, _tm, w, r, i + j);
 		chunks_bio_raw[i + j] = r;
 	}
 }

@@ -51,14 +51,6 @@ typedef struct entity_skel {
 	unsigned biomes;
 } SENT;
 
-typedef struct plant_skel {
-	struct print_info pi;
-	char const small, big;
-	int16_t tmp_min, tmp_max;
-	uint16_t rn_min, rn_max;
-	unsigned y;
-} SPLA;
-
 typedef struct spell_skeleton {
 	unsigned element;
 	unsigned char ms, ra, y, flags;
@@ -78,7 +70,6 @@ typedef struct object_skel {
 
         union {
                 SENT entity;
-		SPLA plant;
                 struct {
 			const enum color bg;
                 } biome;

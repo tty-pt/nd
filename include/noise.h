@@ -3,6 +3,5 @@
 
 #include "noise_decl.h"
 #include "biome.h"
-#include "plant.h"
 
 #endif

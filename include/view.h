@@ -2,7 +2,7 @@
 #define VIEW_H
 
 #include "biome.h"
-#include "plant.h"
+#include "st.h"
 
 #define ROOM_MAX 32
 

@@ -25,16 +25,10 @@ struct cmd_dir {
 	morton_t rep;
 };
 
-struct plant_data {
-	unsigned id[3];
-	unsigned char n, max;
-};
-
 struct bio {
 	coord_t tmp;
 	ucoord_t rn;
 	uint32_t ty;
-	struct plant_data pd;
 	unsigned bio_idx;
 };
 

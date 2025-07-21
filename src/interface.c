@@ -451,6 +451,8 @@ SIC_DEF(ENT, sic_birth, ENT, eplayer)
 SIC_DEF(ENT, sic_attack, unsigned, player_ref, ENT, eplayer)
 SIC_DEF(int, sic_get, unsigned, player_ref, unsigned, ref)
 
+SIC_DEF(int, sic_noise_point, uint32_t, he, uint32_t, tm, uint32_t, w, struct bio, bio, int, i)
+
 void sic_areg(char *name, sic_adapter_t *adapter) {
 	qdb_put(sica_hd, name, adapter);
 }
@@ -673,6 +675,8 @@ main(int argc, char **argv)
 	SIC_AREG(sic_birth);
 	SIC_AREG(sic_attack);
 	SIC_AREG(sic_get);
+
+	SIC_AREG(sic_noise_point);
 
 	qdb_put(type_hd, NULL, "room");
 	qdb_put(type_hd, NULL, "thing");
