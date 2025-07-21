@@ -1,0 +1,12 @@
+.TH GET 10 "July 2024" "1.0" "Neverdark Manual"
+.SH NAME
+fight \- Start combat with an entity
+.SH SYNOPSIS
+\fBfight\fP target
+.SH DESCRIPTION
+.PP
+Start combat with \fItarget\fP.
+.SH SEE ALSO
+.BR walk,look,combo,cast,train,equip (10)
+.SH AUTHOR
+quirinpa <quirinpa@tty.pt>

@@ -1,0 +1,15 @@
+.TH CAST 10 "July 2024" "1.0" "Neverdark Manual"
+.SH NAME
+cast \- Cast a spell
+.SH SYNOPSIS
+.B cast
+.I slot
+.SH DESCRIPTION
+.PP
+\fBcast\fP casts the spell in the specified spot.
+.PP
+You can also run this command in character mode: \fBc\fInumber
+.SH SEE ALSO
+.BR spells,walk,fight,combo (10)
+.SH AUTHOR
+quirinpa <quirinpa@tty.pt>

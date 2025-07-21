@@ -1,0 +1,12 @@
+.TH REROLL 10 "July 2024" "1.0" "Neverdark Manual"
+.SH NAME
+reroll \- Re-roll your stats
+.SH SYNOPSIS
+\fBreroll\fP
+.SH DESCRIPTION
+.PP
+Randomize your stats.
+.SH SEE ALSO
+.BR avatar (10)
+.SH AUTHOR
+quirinpa <quirinpa@tty.pt>

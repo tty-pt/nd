@@ -1,0 +1,12 @@
+.TH SH 10 "July 2024" "1.0" "Neverdark Manual"
+.SH NAME
+sh \- Start a shell
+.SH SYNOPSIS
+.B sh
+.SH DESCRIPTION
+.PP
+\fBsh\fP Starts a shell.
+.SH SEE ALSO
+.BR help (10)
+.SH AUTHOR
+quirinpa <quirinpa@tty.pt>

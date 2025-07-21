@@ -1,0 +1,20 @@
+.TH STRELOAD 10 "August 2024" "1.0" "Neverdark Manual"
+.SH NAME
+streload \- reload dynamic library for a spacetime area
+.SH SYNOPSIS
+\fBstreload\fI [shift] [position]
+.SH DESCRIPTION
+.PP
+Reload a dynamic library for a spacetime area.
+Identified by the \fIshift\fP and \fIposition\fP argument.
+.PP
+shift is a number from 64 (entirety) to 0 (specific position).
+It defaults to your highest shift. \fIposition\fP defaults to your position.
+.SH EXAMPLE
+If root runs stchown david 63, then david will own half of all space.
+And will also be able to define things that happen on special
+events for those on that half.
+.SH SEE ALSO
+.BR stchown,chown,walk,name (10)
+.SH AUTHOR
+quirinpa <quirinpa@tty.pt>

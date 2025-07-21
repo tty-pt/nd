@@ -1,0 +1,16 @@
+.TH TRAIN 10 "July 2024" "1.0" "Neverdark Manual"
+.SH NAME
+train \- Train a stat
+.SH SYNOPSIS
+.B train
+.I stat
+.I [number]
+.SH DESCRIPTION
+.PP
+\fBtrain\fP trains a stat \fBnumber\fP times. The stat can be one of the following:
+.PP
+strength, constitution, dexterity, intelligence or wizdom
+.SH SEE ALSO
+.BR fight,equip (10)
+.SH AUTHOR
+quirinpa <quirinpa@tty.pt>

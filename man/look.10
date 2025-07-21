@@ -1,0 +1,12 @@
+.TH LOOK 10 "July 2024" "1.0" "Neverdark Manual"
+.SH NAME
+look \- Look at something
+.SH SYNOPSIS
+\fBlook\fP [target]
+.SH DESCRIPTION
+.PP
+Look at a target. Without arguments, you look around.
+.SH SEE ALSO
+.BR examine,walk (10)
+.SH AUTHOR
+quirinpa <quirinpa@tty.pt>

@@ -1,0 +1,13 @@
+.TH CLONE 10 "July 2024" "1.0" "Neverdark Manual"
+.SH NAME
+clone \- clone an object
+.SH SYNOPSIS
+\fBcclone\fI target
+.SH DESCRIPTION
+.PP
+Create a copy of \fItarget\fP.
+.SH SEE ALSO
+.BR get,chown,create,advitam,name (10)
+.SH AUTHOR
+quirinpa <quirinpa@tty.pt>
+

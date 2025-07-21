@@ -1,0 +1,11 @@
+#!/bin/sh
+mod_inc="`ls /usr/share/nd/include`"
+mod_name="$2"
+shift 2
+cc -include /usr/include/nd/nd.h \
+	`test ! -f include/uapi/$mod_name.h || \
+		echo -include ./include/uapi/$mod_name.h` \
+	`ls /usr/share/nd/include | while read inc; do
+		echo -include /usr/share/nd/include/$inc
+	done` \
+	-I/usr/share/nd/include $@

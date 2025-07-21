@@ -1,0 +1,31 @@
+.TH BEGIN 10 "July 2024" "1.0" "Neverdark Manual"
+.SH NAME
+Beginner's first step
+.SH DESCRIPTION
+.PP
+This is the first step you need to understand the commands of the game.
+From here, you can learn everyting you need to know to play it.
+.PP
+In the \fBSEE ALSO\fP section you can see a lot of different words.
+To get help on a subject, you can run "help SUBJECT", for example:
+.PP
+help walk
+.PP
+Will teach you to navigate the world using commands.
+.PP
+In this starting point, I leave you a list of the most important commands.
+From here, be sure to check each \fBSEE ALSO\fP section, and you will be able
+to do many different things.
+.PP
+The objectinve of this game is so that it is useful for you personally!
+Not just something you waste time playing.
+So you have access to a unix subsystem in which you can program behaviors
+and edit contents. I also hope that it has some philosophical benefits.
+.PP
+Please, be nice with other players, and have fun!
+.PP
+With the terminal focused, press "q" to quit the help tool.
+.SH SEE ALSO
+.BR help,walk,get,equip,status,shop,create,reroll,look,say,sit,fight,cast,sh (10)
+.SH AUTHOR
+quirinpa <quirinpa@tty.pt>

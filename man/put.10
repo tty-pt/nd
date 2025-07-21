@@ -1,0 +1,13 @@
+.TH PUT 10 "July 2024" "1.0" "Neverdark Manual"
+.SH NAME
+put \- Put something somewhere
+.SH SYNOPSIS
+\fBput\fP thing container
+.SH DESCRIPTION
+.PP
+Put thing into container.
+.SH SEE ALSO
+.BR walk,look,get,drop (10)
+.SH AUTHOR
+quirinpa <quirinpa@tty.pt>
+

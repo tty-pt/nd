@@ -1,0 +1,15 @@
+
+.TH SET-POSITION 10 "July 2024" "1.0" "Neverdark Manual"
+.SH NAME
+set-position \- Sets your current position
+.SH SYNOPSIS
+\fBX\fInumber
+.SH DESCRIPTION
+.PP
+This command is only available in character mode. It allows you to
+set your geographical position.
+.PP
+.SH SEE ALSO
+.BR walk,position (10)
+.SH AUTHOR
+quirinpa <quirinpa@tty.pt>

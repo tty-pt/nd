@@ -1,0 +1,12 @@
+.TH CHOWN 10 "July 2024" "1.0" "Neverdark Manual"
+.SH NAME
+chown \- change ownership of an object
+.SH SYNOPSIS
+\fBchown\fI target player
+.SH DESCRIPTION
+.PP
+Change ownership of \fItarget\fP object to \fIplayer\fP.
+.SH SEE ALSO
+.BR create,clone,advitam,recycle,name (10)
+.SH AUTHOR
+quirinpa <quirinpa@tty.pt>

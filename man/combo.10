@@ -1,0 +1,23 @@
+.TH COMBO 10 "July 2024" "1.0" "Neverdark Manual"
+.SH NAME
+combo \- Set combat combo
+.SH SYNOPSIS
+.B combo
+.I number
+.SH DESCRIPTION
+.PP
+\fBcombo\fP will set the combat combo to use next thing.
+.PP
+You can also run this command in character mode: \fInumber
+.PP
+Each living thing has a list of 8 (0-7) spells it can use during combat,
+and also a mask that indicates which of those spells will be attempted
+during the next turns. This is called the combo.
+.PP
+For example, if you have Fireball in spell slot 0, and you type in "1",
+Fireball will be cast next turn, as long as you have enough mana. If you
+have "Fire Focus" in slot 2 and you type in "5", you select both spells.
+.SH SEE ALSO
+.BR fight,walk (10)
+.SH AUTHOR
+quirinpa <quirinpa@tty.pt>

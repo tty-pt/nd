@@ -1,0 +1,12 @@
+.TH STAND 10 "July 2024" "1.0" "Neverdark Manual"
+.SH NAME
+stand \- Stand up
+.SH SYNOPSIS
+\fBstand\fI
+.SH DESCRIPTION
+.PP
+Stand up.
+.SH SEE ALSO
+.BR sti,walk,fight (10)
+.SH AUTHOR
+quirinpa <quirinpa@tty.pt>

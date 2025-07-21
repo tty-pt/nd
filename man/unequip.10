@@ -1,0 +1,15 @@
+.TH UNEQUIP 10 "July 2024" "1.0" "Neverdark Manual"
+.SH NAME
+unequip \- Unequip an item
+.SH SYNOPSIS
+.B unequip
+.I slot
+.SH DESCRIPTION
+.PP
+\fBunequip\fP unequips an item from a specified slot. The slot can be one of the following:
+.PP
+head, neck, chest, back, weapon, left_finger, right_finger, or greaves
+.SH SEE ALSO
+.BR equip (10)
+.SH AUTHOR
+quirinpa <quirinpa@tty.pt>

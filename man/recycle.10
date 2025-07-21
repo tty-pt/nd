@@ -1,0 +1,12 @@
+.TH RECYCLE 10 "July 2024" "1.0" "Neverdark Manual"
+.SH NAME
+recycle \- recycle target object
+.SH SYNOPSIS
+\fBrecycle\fI target
+.SH DESCRIPTION
+.PP
+Recycle \fItarget\fP.
+.SH SEE ALSO
+.BR create,chown,advitam,name,clone (10)
+.SH AUTHOR
+quirinpa <quirinpa@tty.pt>

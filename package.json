@@ -1,0 +1,58 @@
+{
+  "name": "nd",
+  "version": "0.0.1",
+  "description": "This is TinyMUCK 2.2fb6.00 (FuzzBall 6.00), a programmable, player expandable, multi-user adventure game.  Please see the CHANGES file for a list of changes from the previous version.",
+  "browser": "htdocs/index.js",
+  "entry": "index.js",
+  "template": "index.html",
+  "publicPath": "/nd/",
+  "external": {
+    "@popperjs/core": "global Popper",
+    "lodash": "global lodash",
+    "@tty-pt/ndc": "global ttyNdc",
+    "@tty-pt/sub": "global ttySub",
+    "@xterm/xterm": "global Terminal",
+    "@xterm/addon-fit": "global FitAddon",
+    "@xterm/addon-web-links": "global WebLinksAddon"
+  },
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "scripts test",
+    "start": "scripts start",
+    "build": "scripts build",
+    "watch": "scripts watch",
+    "lint": "scripts lint"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tty-pt/neverdark.git"
+  },
+  "author": "quirinpa",
+  "license": "BSD-2-Clause",
+  "bugs": {
+    "url": "https://github.com/tty-pt/neverdark/issues"
+  },
+  "homepage": "https://github.com/tty-pt/neverdark#readme",
+  "devDependencies": {
+    "@tty-pt/scripts": "^0.6.9",
+    "webpack": "^5.97.1"
+  },
+  "dependencies": {
+    "@popperjs/core": "^2.11.8",
+    "@tty-pt/ndc": "^0.10.2",
+    "@tty-pt/qdb": "^0.0.18",
+    "@tty-pt/sub": "^2.3.2",
+    "@xterm/addon-fit": "^0.10.0",
+    "@xterm/addon-web-links": "^0.11.0",
+    "@xterm/xterm": "^5.5.0",
+    "lodash": "^4.17.21"
+  },
+  "keywords": [
+    "neverdark"
+  ],
+  "serve": [
+    "art"
+  ]
+}

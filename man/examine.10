@@ -1,0 +1,13 @@
+.TH EXAMINE 10 "July 2024" "1.0" "Neverdark Manual"
+.SH NAME
+examine \- Examine something
+.SH SYNOPSIS
+\fBexamine\fP [target]
+.SH DESCRIPTION
+.PP
+Examine a target.
+.SH SEE ALSO
+.BR look,get (10)
+.SH AUTHOR
+quirinpa <quirinpa@tty.pt>
+

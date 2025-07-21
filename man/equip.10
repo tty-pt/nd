@@ -1,0 +1,13 @@
+.TH EQUIP 10 "July 2024" "1.0" "Neverdark Manual"
+.SH NAME
+equip \- Equip an item
+.SH SYNOPSIS
+.B status
+name
+.SH DESCRIPTION
+.PP
+\fBequip\fP equip an item
+.SH SEE ALSO
+.BR unequip (10)
+.SH AUTHOR
+quirinpa <quirinpa@tty.pt>

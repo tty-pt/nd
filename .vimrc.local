@@ -1,0 +1,214 @@
+" FROM dotenv.vim
+
+let s:env_cache = {}
+let s:interpolation = '\\\=\${.\{-\}}\|\\\=\$\w\+'
+
+function! s:read_env(file, ...) abort
+  let file = fnamemodify(a:file, ':p')
+  let ftime = getftime(file)
+  if ftime < 0
+    return {}
+  endif
+  let [cachetime, lines] = get(s:env_cache, file, [-2, []])
+  if ftime != cachetime
+    let lines = []
+    for line in readfile(file)
+      let matches = matchlist(line, '\v\C^%(export\s+)=([[:alnum:]_.]+)%(\s*\=\s*|:\s{-})(''%(\\''|[^''])*''|"%(\\"|[^"])*"|[^#]+)=%( *#.*)?$')
+      if !empty(matches)
+        call add(lines, matches[1:2])
+      endif
+    endfor
+    let s:env_cache[file] = [ftime, lines]
+  endif
+  let env = a:0 ? a:1 : {}
+  for [key, value] in lines
+    if !has_key(env, key)
+      if value =~# '^\s*".*"\s*$'
+        let value = substitute(value, '\n', "\n", 'g')
+        let value = substitute(value, '\\\ze[^$]', '', 'g')
+      endif
+      let value = substitute(value, '^\s*\([''"]\)\=\(.\{-\}\)\1\s*$', '\2', '')
+      let value = substitute(value, s:interpolation, '\=s:lookup(submatch(0), env)', 'g')
+      let env[key] = value
+    endif
+  endfor
+  return env
+endfunction
+
+" FROM here on it is mine
+
+let s:config = s:read_env(".config")
+
+packadd qgdb
+
+let s:muckb = 0
+let s:muckw = 0
+let s:muckO = 0
+
+if s:config.CONFIG_ROOT == "y"
+	let g:gdb_sudo = 1
+else
+	let g:gdb_sudo = 0
+endif
+
+func s:Continue()
+	if s:muckb == 0 && s:muckO == 1
+		call s:Connect()
+	endif
+endfunc
+
+func s:nothing()
+endfunc
+
+func Quit()
+	if s:muckb != 0 && bufexists(s:muckb)
+		exe s:muckb . 'bwipe!'
+	endif
+	let s:muckw = 0
+	let s:muckb = 0
+endfunc
+
+func s:GdbOut(msg)
+	if a:msg =~ '^Done\.$'
+		let s:muckO = 1
+		call s:Connect()
+	" elseif msg =~ '^\[Inferior .* exited normally\]$'
+	" 	call s:End()
+	endif
+endfunc
+
+let g:Continue = function("s:Continue")
+let g:Stop = function('s:nothing')
+let g:Run = function("s:nothing")
+let g:GdbQuit = function("Quit")
+let g:GdbOut = function('s:GdbOut')
+
+func MuckBuffer()
+	if s:muckw != 0
+		call win_gotoid(s:muckw)
+		let mid = win_getid()
+		if mid == s:muckw && bufexists(s:muckb)
+			exe s:muckb . 'b'
+			return
+		endif
+	endif
+
+	DebugFocus
+	belowr split
+endfunc
+
+call inputsave()
+let s:sessionId = inputsecret("Session ID: ")
+call inputrestore()
+
+func s:Connect()
+	let id = win_getid()
+	call MuckBuffer()
+	if g:os == "OpenBSD"
+		let muckt = term_start('openssl s_client -connect localhost:4201 -crlf', {
+					\ "term_kill": "int",
+					\ "curwin": 1,
+					\ })
+	else
+		let muckt = term_start('telnet localhost 4201', {
+					\ "term_kill": "int",
+					\ "curwin": 1,
+					\ })
+	endif
+	call term_sendkeys(muckt, "auth " . s:sessionId . "\<cr>")
+	let s:muckw = win_getid()
+	let s:muckb = bufnr('%')
+	call win_gotoid(id)
+endfunc
+
+func s:SigTerm()
+	if s:muckO == 1
+		Stop
+		Gdb signal SIGTERM
+		let s:muckO = 0
+		Continue
+		return 0
+	else
+		return 1
+	endif
+endfunc
+
+func s:SigInt()
+	Stop
+	Gdb signal SIGINT
+	Continue
+endfunc
+
+func ConnectIgnore()
+	if s:muckb == 0 || !bufexists(s:muckb)
+		call s:Connect()
+	endif
+endfunc
+
+func FullQuit()
+	call s:SigTerm()
+	GdbQuit
+endfunc
+
+func MuckRun()
+	Gdb handle SIGPIPE noprint nostop
+	Gdb set confirm off
+	Run
+endfunc
+
+func Kill()
+	if s:SigTerm()
+		GdbQuit
+		call MuckRun()
+	endif
+endfunc
+
+func Restart()
+	if !g:GdbStopped()
+		call s:SigTerm()
+	else
+		Continue
+	endif
+	call MuckRun()
+endfunc
+
+func Reset()
+	!./reset.sh
+	Gdb run
+	call MuckRun()
+endfunc
+
+if !has('macunix')
+	autocmd! QuickfixCmdPost make call Restart()
+
+	File ./nd
+	" Args \-C ./game
+	GdbStart
+	if g:gdb_sudo == 1
+		DebugFocus
+	else
+		call MuckRun()
+	endif
+endif
+
+nmap 'd :StartRun<cr>
+nmap 'c :call ConnectIgnore()<cr>
+nmap 'b :Break<cr>
+nmap 'C :Clear<cr>
+nmap 'k :call Kill()<cr>
+nmap 'kk :call FullQuit()<cr>
+nmap 'q :call Quit()<cr>
+tno 'k <c-w>:call Kill()<cr>
+tno 'kk <c-w>:call FullQuit()<cr>
+tno 'q <c-w>:call Quit()<cr>
+tno 'r <c-w>:call MuckRun()<cr>
+map 'reset :call Reset()<cr>
+
+" jsc
+set efm +=%E%f:%l:\ ERROR\ \-\ %m,%-Z%p^
+set efm +=%W%f:%l:\ WARNING\ \-\ %m,%-Z%p^
+
+set path=$PWD/src,$PWD/include
+set grepprg=ag\ --nogroup\ --nocolor
+nnoremap gr :grep <cword> src/*.c include/*.h<cr>
+autocmd BufNewFile,BufRead *.hjs setf javascript.preproc

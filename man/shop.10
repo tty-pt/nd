@@ -1,0 +1,12 @@
+.TH SHOP 10 "July 2024" "1.0" "Neverdark Manual"
+.SH NAME
+shop \- See what vendor has for sale
+.SH SYNOPSIS
+\fBshop\fI
+.SH DESCRIPTION
+.PP
+See what nearest vendor has for sale.
+.SH SEE ALSO
+.BR buy,sell,get,walk (10)
+.SH AUTHOR
+quirinpa <quirinpa@tty.pt>

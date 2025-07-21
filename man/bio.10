@@ -1,0 +1,12 @@
+.TH BIO 10 "July 2024" "1.0" "Neverdark Manual"
+.SH NAME
+bio \- Gets terrain information
+.SH SYNOPSIS
+.B bio
+.SH DESCRIPTION
+.PP
+\fBbio\fP gets terrain information about the current position.
+.SH SEE ALSO
+.BR walk (10)
+.SH AUTHOR
+quirinpa <quirinpa@tty.pt>

@@ -1,0 +1,13 @@
+.TH HEAL 10 "July 2024" "1.0" "Neverdark Manual"
+.SH NAME
+heal \- heal an entity
+.SH SYNOPSIS
+\fBcheal\fI target
+.SH DESCRIPTION
+.PP
+Heal and restore mp of \fItarget\fP.
+.SH SEE ALSO
+.BR advitam,cast,fight (10)
+.SH AUTHOR
+quirinpa <quirinpa@tty.pt>
+

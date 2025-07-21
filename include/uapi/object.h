@@ -1,0 +1,190 @@
+#ifndef UAPI_OBJECT_H
+#define UAPI_OBJECT_H
+
+#include "./azoth.h"
+#include <stdint.h>
+
+#define ROOT ((unsigned) 1)
+#define NOTHING ((unsigned) -1)
+
+enum object_flags {
+	OF_INF = 1,
+};
+
+enum room_flags {
+	RF_TEMP = 1,
+	RF_HAVEN = 2,
+};
+
+enum exit {
+	E_NULL = 0,
+	E_WEST = 1,
+	E_NORTH = 2,
+	E_UP = 4,
+	E_EAST = 8,
+	E_SOUTH = 16,
+	E_DOWN = 32,
+	E_ALL = 63,
+};
+
+typedef struct {
+	unsigned flags;
+	unsigned char exits;
+	unsigned char doors;
+	unsigned char floor;
+} ROO;
+
+enum entity_flags {
+	EF_PLAYER = 1,
+	EF_AGGRO = 2,
+	EF_SITTING = 4,
+	EF_SHOP = 8,
+	EF_WIZARD = 16,
+	EF_BAN = 32,
+};
+
+enum huth {
+	HUTH_THIRST = 0,
+	HUTH_HUNGER = 1,
+};
+
+enum attribute {
+	ATTR_STR,
+	ATTR_CON,
+	ATTR_DEX,
+	ATTR_INT,
+	ATTR_WIZ,
+	ATTR_CHA,
+	ATTR_MAX
+};
+
+enum equipment_slot {
+	ES_HEAD,
+	ES_NECK,
+	ES_CHEST,
+	ES_BACK,
+	ES_RHAND,
+	ES_LFINGER,
+	ES_RFINGER,
+	ES_PANTS,
+	ES_MAX
+};
+
+struct debuf {
+	int skel;
+	unsigned duration;
+	short val;
+};
+
+struct spell {
+	unsigned skel;
+	unsigned cost; 
+	unsigned short val;
+};
+
+// insert spells skels here
+
+enum spell_affects {
+	// these are changed by bufs
+	AF_HP,
+	AF_MOV,
+	AF_MDMG,
+	AF_MDEF,
+	AF_DODGE,
+
+	// these aren't.
+	AF_DMG,
+	AF_DEF,
+
+	// these are flags, not types of buf
+	AF_NEG = 0x10,
+	AF_BUF = 0x20,
+};
+
+struct effect {
+	short value;
+	unsigned char mask;
+};
+
+typedef struct entity {
+	unsigned home;
+        /* const char *dialog; <- make this external to the struct (use object id) */
+	struct debuf debufs[8];
+	struct spell spells[8];
+	struct effect e[7];
+	unsigned target, sat;
+	unsigned flags;
+	unsigned short hp, mp, wtso, wtst;
+	unsigned short huth[2];
+	unsigned char debuf_mask, combo, klock;
+	unsigned lvl, spend, cxp;
+	unsigned attr[ATTR_MAX];
+	unsigned equipment[ES_MAX];
+
+	/* tmp data? */
+	unsigned last_observed;
+	unsigned char select;
+	unsigned char huth_n[2];
+} ENT;
+
+typedef struct {
+	short unsigned unused;
+} MIN;
+
+union specific {
+	ROO room;
+	MIN mineral;
+	unsigned raw[4];
+};
+
+typedef struct object {
+	unsigned location, owner;
+
+	unsigned skid;
+	unsigned art_id;
+	unsigned char type;
+	unsigned value;
+	unsigned flags;
+
+	union specific sp;
+
+	char name[32];
+} OBJ;
+
+struct icon {
+	int actions;
+	struct print_info pi;
+	char ch;
+};
+
+/* FIXME: not for plugins */
+extern unsigned obj_hd, contents_hd, obs_hd, art_hd;
+
+typedef int obj_exists_t(unsigned ref);
+obj_exists_t obj_exists;
+
+typedef unsigned object_new_t(OBJ *obj);
+object_new_t object_new;
+
+typedef unsigned object_copy_t(OBJ *nu, unsigned old_ref);
+object_copy_t object_copy;
+
+typedef void object_move_t(unsigned what_ref, unsigned where_ref);
+object_move_t object_move;
+
+typedef unsigned object_add_t(OBJ *nu, unsigned skel_id, unsigned where, uint64_t v);
+object_add_t object_add;
+
+typedef void object_drop_t(unsigned where_ref, unsigned skel_id);
+object_drop_t object_drop;
+
+typedef struct icon object_icon_t(unsigned thing_ref);
+object_icon_t object_icon;
+
+typedef char *object_art_t(unsigned ref);
+object_art_t object_art;
+
+typedef const char *unparse_t(unsigned loc_ref);
+unparse_t unparse;
+
+#endif

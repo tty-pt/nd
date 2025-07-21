@@ -1,0 +1,13 @@
+.TH POSITION 10 "July 2024" "1.0" "Neverdark Manual"
+.SH NAME
+position \- Shows you your current position
+.SH SYNOPSIS
+\fBx\fI
+.SH DESCRIPTION
+.PP
+This command is only available in character mode. It allows you to
+See what (geographical) position in the game you are in.
+.SH SEE ALSO
+.BR walk,set-position (10)
+.SH AUTHOR
+quirinpa <quirinpa@tty.pt>

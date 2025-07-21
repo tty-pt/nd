@@ -1,0 +1,14 @@
+.TH GIVE 10 "July 2024" "1.0" "Neverdark Manual"
+.SH NAME
+give \- Give money to a player
+.SH SYNOPSIS
+\fBgive\fP player amount
+.SH DESCRIPTION
+.PP
+Give player \fBamount\fP of money.
+.SH SEE ALSO
+.BR walk,look,get,put,drop (10)
+.SH AUTHOR
+quirinpa <quirinpa@tty.pt>
+
+
