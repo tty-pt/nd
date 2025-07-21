@@ -138,15 +138,6 @@ object_add(OBJ *nu, unsigned skel_id, unsigned where_ref, uint64_t v)
 		}
 
 		break;
-	case TYPE_PLANT:
-		{
-			object_drop(nu_ref, skel_id);
-			nu->owner = ROOT;
-			unsigned max = art_max(nu->name);
-			nu->art_id = max ? 1 + (v & 0xf) % max : 0;
-		}
-
-		break;
         case TYPE_ROOM:
 		{
 			struct bio *bio = (struct bio *) v;
@@ -338,7 +329,6 @@ object_icon(unsigned what_ref)
                 .ch = '?',
                 .pi = { .fg = WHITE, .flags = BOLD, },
         };
-        unsigned aux;
         switch (what.type) {
         case TYPE_ROOM:
                 ret.ch = '-';
@@ -350,19 +340,6 @@ object_icon(unsigned what_ref)
 		ret.ch = '!';
 		ret.pi.fg = YELLOW;
                 break;
-	case TYPE_PLANT:
-		{
-			PLA *pwhat = &what.sp.plant;
-			aux = pwhat->plid;
-			SKEL skel;
-			qdb_get(skel_hd, &skel, &aux);
-			SPLA *pl = &skel.sp.plant;
-
-			ret.actions |= act_chop;
-			ret.pi = pl->pi;
-			ret.ch = pwhat->size > PLANT_HALF ? pl->big : pl->small;
-		}
-		break;
 	default: {
                 ret.actions |= act_get;
                 break;
