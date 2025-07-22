@@ -144,8 +144,8 @@ void ent_reset(ENT *ent) {
 	nd.ent_reset(ent);
 }
 
-void birth(ENT *eplayer) {
-	nd.birth(eplayer);
+void birth(unsigned ent_ref, ENT *ent) {
+	nd.birth(ent_ref, ent);
 }
 
 int controls(unsigned who_ref, unsigned what_ref) {
@@ -160,10 +160,6 @@ void look_around(unsigned player_ref) {
 	nd.look_around(player_ref);
 }
 
-unsigned mask_element(ENT *ref, register unsigned char a) {
-	return nd.mask_element(ref, a);
-}
-
 int entity_damage(unsigned player_ref, ENT *eplayer, unsigned target_ref, ENT *etarget, short amt) {
 	return nd.entity_damage(player_ref, eplayer, target_ref, etarget, amt);
 }
@@ -172,20 +168,12 @@ void enter(unsigned player_ref, unsigned loc_ref, enum exit e) {
 	nd.enter(player_ref, loc_ref, e);
 }
 
-int kill_dodge(unsigned player_ref, char *wts) {
-	return nd.kill_dodge(player_ref, wts);
+int dodge(unsigned player_ref, char *wts) {
+	return nd.dodge(player_ref, wts);
 }
 
-short kill_dmg(unsigned dmg_type, short dmg, short def, unsigned def_type) {
-	return nd.kill_dmg(dmg_type, dmg, def, def_type);
-}
-
-int spell_cast(unsigned player_ref, ENT *eplayer, unsigned target_ref, unsigned slot) {
-	return nd.spell_cast(player_ref, eplayer, target_ref, slot);
-}
-
-void debufs_end(ENT *player) {
-	nd.debufs_end(player);
+short ent_dmg(unsigned dmg_type, short dmg, short def, unsigned def_type) {
+	return nd.ent_dmg(dmg_type, dmg, def, def_type);
 }
 
 void look_at(unsigned player_ref, unsigned thing_ref) {
@@ -298,4 +286,14 @@ void mcp_content_in(unsigned loc_ref, unsigned thing_ref) {
 
 void mcp_stats(unsigned player_ref) {
 	nd.mcp_stats(player_ref);
+}
+
+void mcp_bar(unsigned char iden, unsigned player_ref,
+		unsigned short val, unsigned short max)
+{
+	nd.mcp_bar(iden, player_ref, val, max);
+}
+
+void mcp_hp_bar(unsigned player_ref) {
+	nd.mcp_hp_bar(player_ref);
 }

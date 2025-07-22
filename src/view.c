@@ -38,8 +38,8 @@ void base_vtf_init(void) {
 
 static inline char *
 empty_tile(char *b, view_tile_t *t, unsigned side) {
-	sic_small_str_t ss;
-	SIC_CALL(&ss, sic_empty_tile, *t, side);
+	sic_str_t ss = { .str = "" };
+	SIC_CALL(&ss, sic_empty_tile, *t, side, ss);
 	b += sprintf(b, "%s", ss.str);
 	return b;
 }

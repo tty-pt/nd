@@ -18,4 +18,10 @@ mcp_content_in_t mcp_content_in;
 typedef void mcp_stats_t(unsigned player_ref);
 mcp_stats_t mcp_stats;
 
+typedef void mcp_bar_t(unsigned char iden, unsigned player_ref, unsigned short val, unsigned short max);
+mcp_bar_t mcp_bar;
+
+typedef void mcp_hp_bar_t(unsigned player_ref);
+mcp_hp_bar_t mcp_hp_bar;
+
 #endif
