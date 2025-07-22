@@ -8,9 +8,6 @@
 #define EQUIP(ent, y) (ent)->equipment[y]
 #define EFFECT(ent, w) (ent)->e[AF_ ## w]
 
-#define STAT_ELEMENT(ent, type) \
-	mask_element(ent, EFFECT(ent, type).mask)
-
 #define G(x) xsqrtx(x)
 
 #define HP_G(v) 10 * G(v)
@@ -20,7 +17,6 @@
 #define MP_MAX(ent) ((unsigned short) MP_G((ent)->attr[ATTR_WIZ]))
 
 #define SPELL_G(v) G(v)
-#define SPELL_DMG(p, sp) SPELL_G((p)->attr[ATTR_INT]) + HS(sp)
 
 #define DMG_G(v) G(v)
 #define DODGE_G(v) G(v)
@@ -56,7 +52,7 @@ ent_del_t ent_del;
 typedef void ent_reset_t(ENT *ent);
 ent_reset_t ent_reset;
 
-typedef void birth_t(ENT *eplayer);
+typedef void birth_t(unsigned player_ref, ENT *eplayer);
 birth_t birth;
 
 typedef int controls_t(unsigned who_ref, unsigned what_ref);
@@ -68,22 +64,19 @@ payfor_t payfor;
 typedef void look_around_t(unsigned player_ref);
 look_around_t look_around;
 
-typedef unsigned mask_element_t(ENT *ref, register unsigned char a);
-mask_element_t mask_element;
-
 typedef int entity_damage_t(unsigned player_ref, ENT *eplayer, unsigned target_ref, ENT *etarget, short amt);
 entity_damage_t entity_damage;
 
 typedef void enter_t(unsigned player_ref, unsigned loc_ref, enum exit e);
 enter_t enter;
 
-typedef int kill_dodge_t(unsigned player_ref, char *wts);
-kill_dodge_t kill_dodge;
+typedef int dodge_t(unsigned player_ref, char *wts);
+dodge_t dodge;
 
-typedef short kill_dmg_t(unsigned dmg_type,
+typedef short ent_dmg_t(unsigned dmg_type,
 		short dmg, short def,
 		unsigned def_type);
-kill_dmg_t kill_dmg;
+ent_dmg_t ent_dmg;
 
 typedef void look_at_t(unsigned player_ref, unsigned loc_ref);
 look_at_t look_at;
@@ -95,12 +88,6 @@ xsqrtx(unsigned x)
 }
 
 /* spell */
-
-typedef int spell_cast_t(unsigned player_ref, ENT *eplayer, unsigned target_ref, unsigned slot);
-spell_cast_t spell_cast;
-
-typedef void debufs_end_t(ENT *player);
-debufs_end_t debufs_end;
 
 extern unsigned me;
 extern unsigned ent_hd;

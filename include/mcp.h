@@ -10,7 +10,6 @@ void mcp_art(int descr, const char *art);
 void mcp_look(unsigned player_ref, unsigned target_ref);
 void mcp_auth_fail(int descr, int reason);
 void mcp_auth_success(unsigned player_ref);
-void mcp_bars(unsigned player_ref);
 void mcp_tod(unsigned player_ref, unsigned tod);
 /*
 void mcp_dialog_start(OBJ *player, OBJ *npc, const char *dialog);

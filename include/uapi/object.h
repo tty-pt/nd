@@ -109,14 +109,12 @@ struct effect {
 typedef struct entity {
 	unsigned home;
         /* const char *dialog; <- make this external to the struct (use object id) */
-	struct debuf debufs[8];
-	struct spell spells[8];
 	struct effect e[7];
 	unsigned target, sat;
 	unsigned flags;
-	unsigned short hp, mp, wtso, wtst;
+	unsigned short hp, wtso, wtst;
 	unsigned short huth[2];
-	unsigned char debuf_mask, combo, klock;
+	unsigned char klock;
 	unsigned lvl, spend, cxp;
 	unsigned attr[ATTR_MAX];
 	unsigned equipment[ES_MAX];
@@ -124,7 +122,7 @@ typedef struct entity {
 	/* tmp data? */
 	unsigned last_observed;
 	unsigned char select;
-	unsigned char huth_n[2];
+	unsigned char huth_n[2], aux;
 } ENT;
 
 typedef struct {
