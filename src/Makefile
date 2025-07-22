@@ -29,7 +29,7 @@ LDFLAGS := ${ldflags-${uname}} ${prefix:%=-L%/lib} \
 
 exe := ../nd
 obj-y := object.o entity.o spacetime.o mcp.o map.o \
-	noise.o view.o item.o spell.o \
+	noise.o view.o item.o \
 	look.o match.o speech.o wiz.o interface.o
 
 src = ${obj-y:%.o=%.c}

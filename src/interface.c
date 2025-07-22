@@ -78,7 +78,6 @@ void do_drop(int fd, int argc, char *argv[]);
 void do_examine(int fd, int argc, char *argv[]);
 void do_fight(int fd, int argc, char *argv[]);
 void do_get(int fd, int argc, char *argv[]);
-void do_heal(int fd, int argc, char *argv[]);
 void do_inventory(int fd, int argc, char *argv[]);
 void do_look_at(int fd, int argc, char *argv[]);
 void do_name(int fd, int argc, char *argv[]);
@@ -149,9 +148,6 @@ struct cmd_slot cmds[] = {
 	}, {
 		.name = "create",
 		.cb = &do_create,
-	}, {
-		.name = "heal",
-		.cb = &do_heal,
 	}, {
 		.name = "name",
 		.cb = &do_name,
@@ -445,12 +441,20 @@ SIC_DEF(int, sic_spawn, unsigned, player_ref, unsigned, loc_ref, struct bio, bio
 SIC_DEF(ENT, sic_fight_start, unsigned, player_ref, ENT, eplayer)
 SIC_DEF(ENT, sic_mob_recovered, unsigned, player_ref, ENT, eplayer)
 SIC_DEF(ENT, sic_mob_recovering, unsigned, player_ref, ENT, eplayer)
-SIC_DEF(ENT, sic_birth, ENT, eplayer)
+SIC_DEF(ENT, sic_birth, unsigned, ent_ref, ENT, ent)
+SIC_DEF(ENT, sic_death, unsigned, ent_ref, ENT, ent)
+SIC_DEF(int, sic_before_attack, unsigned, player_ref, ENT, eplayer)
 SIC_DEF(ENT, sic_attack, unsigned, player_ref, ENT, eplayer)
+SIC_DEF(struct hit, sic_hit, unsigned, ent_ref, ENT, ent, ENT, target, struct hit, hit)
+SIC_DEF(ENT, sic_after_attack, unsigned, player_ref, ENT, eplayer)
 SIC_DEF(int, sic_get, unsigned, player_ref, unsigned, ref)
+SIC_DEF(ENT, sic_dodge, unsigned, player_ref, ENT, eplayer)
+SIC_DEF(ENT, sic_ent_update, unsigned, player_ref, ENT, eplayer, double, dt)
+SIC_DEF(ENT, sic_ent_after_update, unsigned, player_ref, ENT, eplayer)
+SIC_DEF(ENT, sic_reroll, unsigned, player_ref, ENT, eplayer)
 
 SIC_DEF(struct bio, sic_noise, struct bio, bio, uint32_t, he, uint32_t, w, uint32_t, tm, uint32_t, cl)
-SIC_DEF(sic_small_str_t, sic_empty_tile, view_tile_t, t, unsigned, side)
+SIC_DEF(sic_str_t, sic_empty_tile, view_tile_t, t, unsigned, side, sic_str_t, ss)
 
 void sic_areg(char *name, sic_adapter_t *adapter) {
 	qdb_put(sica_hd, name, adapter);
@@ -470,6 +474,7 @@ void shared_init(void) {
 	nd.hds[HD_TYPE] = type_hd;
 	nd.hds[HD_RTYPE] = type_hd + 1;
 	nd.hds[HD_BCP] = bcp_hd;
+	nd.hds[HD_ELEMENT] = element_hd;
 
 	/* nd.fds_has = fds_has; */
 	nd.nd_close = nd_close;
@@ -516,13 +521,10 @@ void shared_init(void) {
 	nd.controls = controls;
 	nd.payfor = payfor;
 	nd.look_around = look_around;
-	nd.mask_element = mask_element;
 	nd.entity_damage = entity_damage;
 	nd.enter = enter;
-	nd.kill_dodge = kill_dodge;
-	nd.kill_dmg = kill_dmg;
-	nd.spell_cast = spell_cast;
-	nd.debufs_end = debufs_end;
+	nd.dodge = dodge;
+	nd.ent_dmg = ent_dmg;
 	nd.look_at = look_at;
 
 	nd.nd_put = shared_put;
@@ -553,6 +555,8 @@ void shared_init(void) {
 	nd.mcp_content_in = mcp_content_in;
 	nd.mcp_content_out = mcp_content_out;
 	nd.mcp_stats = mcp_stats;
+	nd.mcp_bar = mcp_bar;
+	nd.mcp_hp_bar = mcp_hp_bar;
 }
 
 void base_actions_register(void);
@@ -664,10 +668,11 @@ main(int argc, char **argv)
 	SIC_AREG(sic_leave);
 	SIC_AREG(sic_enter);
 	SIC_AREG(sic_spawn);
-	SIC_AREG(sic_fight_start);
+	SIC_AREG(sic_before_attack);
 	SIC_AREG(sic_mob_recovered);
 	SIC_AREG(sic_mob_recovering);
 	SIC_AREG(sic_birth);
+	SIC_AREG(sic_death);
 	SIC_AREG(sic_attack);
 	SIC_AREG(sic_get);
 
@@ -977,11 +982,10 @@ auth(unsigned fd)
 		player_put(user, player_ref);
 		qdb_put(fds_hd, &player_ref, &fd);
 
-		birth(&eplayer);
-		avatar(&player);
 		reroll(&eplayer);
+		birth(player_ref, &eplayer);
 		eplayer.hp = HP_MAX(&eplayer);
-		eplayer.mp = MP_MAX(&eplayer);
+		avatar(&player);
 		ent_set(player_ref, &eplayer);
 		qdb_put(obj_hd, &player_ref, &player);
 		st_start(player_ref);
@@ -1002,7 +1006,7 @@ auth(unsigned fd)
 	mcp_stats(player_ref);
 	mcp_auth_success(player_ref);
 	look_around(player_ref);
-	mcp_bars(player_ref);
+	mcp_hp_bar(player_ref);
 	do_view(fd, 0, NULL);
 	if (day_n)
 		mcp_tod(player_ref, 1);
@@ -1029,8 +1033,6 @@ ndc_update(unsigned long long dt)
 	qdb_commit();
 }
 
-int kill_v(unsigned player_ref, const char *cmdstr);
-
 void ndc_vim(int fd, int argc __attribute__((unused)), char *argv[]) {
 	if (!(ndc_flags(fd) & DF_AUTHENTICATED))
 		return;
@@ -1038,13 +1040,12 @@ void ndc_vim(int fd, int argc __attribute__((unused)), char *argv[]) {
 	unsigned player_ref = fd_player(fd);
 	int ofs = 1;
 	char const *s = argv[0];
+	sic_str_t ss = { .str = "" };
 
 	for (; *s && ofs > 0; s += ofs) {
-		ofs = st_v(player_ref, s);
-		if (ofs < 0)
-			ofs = - ofs;
+		SIC_CALL(&ofs, sic_vim, player_ref, ss, ofs);
 		s += ofs;
-		ofs = kill_v(player_ref, s);
+		ofs = st_v(player_ref, s);
 	}
 }
 

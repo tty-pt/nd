@@ -13,7 +13,7 @@
 
 enum bcp_type {
 	BCP_ATTR,
-	BCP_BARS,
+	BCP_HP_BAR,
 	BCP_STATS,
 	BCP_ITEM,
 	BCP_VIEW,
@@ -191,24 +191,24 @@ fbcp_stats(unsigned player_ref)
 	nd_wwrite(player_ref, bcp_buf, p - bcp_buf);
 }
 
-static void
-fbcp_bars(unsigned player_ref)
+void
+mcp_bar(unsigned char iden, unsigned player_ref, unsigned short val, unsigned short max)
 {
-	ENT eplayer = ent_get(player_ref);
-	unsigned char iden = BCP_BARS;
 	static char bcp_buf[2 + sizeof(iden) + sizeof(int) * 4];
 	char *p = bcp_buf;
 	unsigned short aux;
 	memcpy(p, "#b", 2);
 	memcpy(p += 2, &iden, sizeof(iden));
-	memcpy(p += sizeof(iden), &eplayer.hp, sizeof(eplayer.hp));
-	aux = HP_MAX(&eplayer);
-	memcpy(p += sizeof(eplayer.hp), &aux, sizeof(aux));
-	memcpy(p += sizeof(aux), &eplayer.mp, sizeof(eplayer.mp));
-	aux = MP_MAX(&eplayer);
-	memcpy(p += sizeof(eplayer.mp), &aux, sizeof(aux));
+	memcpy(p += sizeof(iden), &val, sizeof(val));
+	aux = max;
+	memcpy(p += sizeof(val), &aux, sizeof(aux));
 	p += sizeof(aux);
 	nd_wwrite(player_ref, bcp_buf, p - bcp_buf);
+}
+
+void mcp_hp_bar(unsigned player_ref) {
+	ENT eplayer = ent_get(player_ref);
+	mcp_bar(BCP_HP_BAR, player_ref, eplayer.hp, HP_MAX(&eplayer));
 }
 
 void
@@ -296,11 +296,6 @@ mcp_auth_success(unsigned player_ref) {
 void
 mcp_stats(unsigned player_ref) {
 	fbcp_stats(player_ref);
-}
-
-void
-mcp_bars(unsigned player_ref) {
-	fbcp_bars(player_ref);
 }
 
 void

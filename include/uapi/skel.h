@@ -51,12 +51,6 @@ typedef struct entity_skel {
 	unsigned biomes;
 } SENT;
 
-typedef struct spell_skeleton {
-	unsigned element;
-	unsigned char ms, ra, y, flags;
-	char *name, *description;
-} SSPE;
-
 enum type {
 	TYPE_ROOM,
 	TYPE_THING,
@@ -73,7 +67,6 @@ typedef struct object_skel {
                 struct {
 			const enum color bg;
                 } biome;
-		SSPE spell;
 		unsigned raw[8];
         } sp;
 } SKEL;
