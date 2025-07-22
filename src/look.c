@@ -16,9 +16,9 @@ do_examine(int fd, int argc __attribute__((unused)), char *argv[])
 	char *name = argv[1];
 	unsigned thing_ref;
 
-	if (*name == '\0') {
+	if (*name == '\0')
 		thing_ref = player.location;
-	} else if ((thing_ref = ematch_all(player_ref, name)) == NOTHING) {
+	else if ((thing_ref = ematch_all(player_ref, name)) == NOTHING) {
 		nd_writef(player_ref, NOMATCH_MESSAGE);
 		return;
 	}
@@ -49,11 +49,6 @@ do_examine(int fd, int argc __attribute__((unused)), char *argv[])
 			nd_writef(player_ref, "Exits: %hhx Doors: %hhx\n", rthing->exits, rthing->doors);
 		}
 		break;
-	case TYPE_THING:
-		/* print location if player can link to it */
-		if (thing.location != NOTHING && controls(player_ref, thing.location))
-			nd_writef(player_ref, "Location: %s\n", unparse(thing.location));
-		break;
 	case TYPE_ENTITY:
 		{
 			ENT ething = ent_get(thing_ref);
@@ -62,16 +57,13 @@ do_examine(int fd, int argc __attribute__((unused)), char *argv[])
 			nd_writef(player_ref, "hp: %d/%d entity flags: %d\n", ething.hp, HP_MAX(&ething), ething.flags);
 
 			/* print location if player can link to it */
-			if (thing.location != NOTHING && controls(player_ref, thing.location))
-				nd_writef(player_ref, "Location: %s\n", unparse(thing.location));
 		}
 		break;
-	default:
-		/* do nothing */
-		break;
+	default: break;
 	}
 
 	SIC_CALL(NULL, sic_examine, player_ref, thing_ref);
+	nd_writef(player_ref, "Location: %s\n", unparse(thing.location));
 }
 
 

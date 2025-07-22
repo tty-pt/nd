@@ -53,7 +53,6 @@ typedef struct entity_skel {
 
 enum type {
 	TYPE_ROOM,
-	TYPE_THING,
 	TYPE_ENTITY,
 };
 

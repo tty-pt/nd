@@ -134,9 +134,6 @@ object_add(OBJ *nu, unsigned skel_id, unsigned where_ref, uint64_t v)
 
 		break;
 
-	case TYPE_THING:
-		nu->art_id = skel.max_art ? 1 + (v & 0xf) % skel.max_art : 0;
-		break;
 	default:
 		 break;
 	}
@@ -167,10 +164,9 @@ object_art(unsigned thing_ref)
 		snprintf(art, sizeof(art), "%s/%s/%u.jpeg", type, thing.art_id && ent_get(thing_ref).flags & EF_PLAYER ? "avatar" : thing.name, thing.art_id);
 		return art;
 	case TYPE_ROOM: type = "biome"; break;
-	case TYPE_THING: type = "other"; break;
 	default:
-			 qdb_get(type_hd + 1, typestr, &thing.type);
-			 type = typestr; break;
+		 qdb_get(type_hd + 1, typestr, &thing.type);
+		 type = typestr; break;
 	}
 
 	snprintf(art, sizeof(art), "%s/%s/%u.jpeg", type, thing.name, thing.art_id);
@@ -405,10 +401,22 @@ do_clone(int fd, int argc __attribute__((unused)), char *argv[])
 void
 do_create(int fd, int argc __attribute__((unused)), char *argv[])
 {
-	unsigned player_ref = fd_player(fd), thing_ref;
-	unsigned pflags = ent_get(player_ref).flags;
-	char *name = argv[1];
-	int cost = 30;
+	unsigned player_ref = fd_player(fd),
+		 ref, pflags, skid;
+	uint64_t v;
+	char *name;
+	OBJ obj;
+
+	if (argc < 2) {
+		nd_writef(player_ref, "Syntax: create name skel_id [v]\n");
+		return;
+	}
+
+	pflags = ent_get(player_ref).flags;
+	name = argv[1];
+	skid = strtoull(argv[2], NULL, 10);
+	if (argc > 2)
+		v = strtoull(argv[3], NULL, 10);
 
 	if (!(pflags & EF_WIZARD) || *name == '\0' || !ok_name(name)) {
 		nd_writef(player_ref, "You can't do that.\n");
@@ -418,18 +426,13 @@ do_create(int fd, int argc __attribute__((unused)), char *argv[])
 	OBJ player;
 	qdb_get(obj_hd, &player, &player_ref);
 
-	OBJ thing;
-	thing_ref = object_new(&thing);
+	ref = object_add(&obj, skid, player_ref, v);
+	obj.owner = player.owner;
 
-	strlcpy(thing.name, name, sizeof(thing.name));
-	thing.location = player_ref;
-	thing.owner = player.owner;
-	thing.value = cost;
-	thing.type = TYPE_THING;
-
-	qdb_put(obj_hd, &thing_ref, &thing);
-	object_move(thing_ref, player_ref);
+	qdb_put(obj_hd, &ref, &obj);
+	nd_writef(player_ref, "Created.\n");
 }
+
 void
 do_name(int fd, int argc __attribute__((unused)), char *argv[])
 {
