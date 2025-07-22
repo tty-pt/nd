@@ -82,11 +82,8 @@ char *e_name(enum exit e);
 char *e_other(enum exit e);
 morton_t point_rel_idx(point_t p, point_t s, smorton_t w);
 
-unsigned room_clean(unsigned loc_ref);
-
 void st_update(double dt);
 int st_v(unsigned player_ref, const char *dir);
-void st_start(unsigned player_ref);
 
 void st_init(void);
 void st_dlclose(void);

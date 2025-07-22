@@ -42,10 +42,6 @@ void dnotify_wts_to(unsigned who_ref, unsigned tar_ref, char const *a, char cons
 	nd.dnotify_wts_to(who_ref, tar_ref, a, b, format, args);
 }
 
-void notify_attack(unsigned player_ref, unsigned target_ref, char *wts, short val, enum color color, short mval) {
-	nd.notify_attack(player_ref, target_ref, wts, val, color, mval);
-}
-
 void nd_tdwritef(unsigned player_ref, const char *fmt, va_list args) {
 	nd.nd_tdwritef(player_ref, fmt, args);
 }
@@ -78,8 +74,8 @@ unsigned map_get(pos_t at) {
 
 /* ST */
 
-int st_teleport(unsigned player_ref, struct cmd_dir cd) {
-	return nd.st_teleport(player_ref, cd);
+void st_teleport(unsigned player_ref, uint64_t pos) {
+	nd.st_teleport(player_ref, pos);
 }
 
 void st_run(unsigned player_ref, char *symbol) {
@@ -140,14 +136,6 @@ void ent_del(unsigned ref) {
 	nd.ent_del(ref);
 }
 
-void ent_reset(ENT *ent) {
-	nd.ent_reset(ent);
-}
-
-void birth(unsigned ent_ref, ENT *ent) {
-	nd.birth(ent_ref, ent);
-}
-
 int controls(unsigned who_ref, unsigned what_ref) {
 	return nd.controls(who_ref, what_ref);
 }
@@ -160,24 +148,16 @@ void look_around(unsigned player_ref) {
 	nd.look_around(player_ref);
 }
 
-int entity_damage(unsigned player_ref, ENT *eplayer, unsigned target_ref, ENT *etarget, short amt) {
-	return nd.entity_damage(player_ref, eplayer, target_ref, etarget, amt);
-}
-
 void enter(unsigned player_ref, unsigned loc_ref, enum exit e) {
 	nd.enter(player_ref, loc_ref, e);
 }
 
-int dodge(unsigned player_ref, char *wts) {
-	return nd.dodge(player_ref, wts);
-}
-
-short ent_dmg(unsigned dmg_type, short dmg, short def, unsigned def_type) {
-	return nd.ent_dmg(dmg_type, dmg, def, def_type);
-}
-
 void look_at(unsigned player_ref, unsigned thing_ref) {
 	nd.look_at(player_ref, thing_ref);
+}
+
+unsigned room_clean(unsigned loc_ref) {
+	return nd.room_clean(loc_ref);
 }
 
 inline static unsigned hd_get(unsigned hd) {
@@ -193,7 +173,9 @@ unsigned nd_get(unsigned hd, void *value, void *key) {
 }
 
 int nd_open(char *database, char *key_sip, char *value_sip, unsigned flags) {
-	return nd.nd_open(database, key_sip, value_sip, flags);
+	unsigned hd = nd.nd_open(database, key_sip, value_sip, flags);
+	nd.nd_put(nd.hd_hd, database, &hd);
+	return hd;
 }
 
 nd_cur_t nd_iter(unsigned hd, void *key) {
@@ -288,16 +270,8 @@ void mcp_content_in(unsigned loc_ref, unsigned thing_ref) {
 	nd.mcp_content_in(loc_ref, thing_ref);
 }
 
-void mcp_stats(unsigned player_ref) {
-	nd.mcp_stats(player_ref);
-}
-
 void mcp_bar(unsigned char iden, unsigned player_ref,
 		unsigned short val, unsigned short max)
 {
 	nd.mcp_bar(iden, player_ref, val, max);
-}
-
-void mcp_hp_bar(unsigned player_ref) {
-	nd.mcp_hp_bar(player_ref);
 }

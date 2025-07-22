@@ -46,7 +46,7 @@ typedef struct drop {
 } DROP;
 
 typedef struct entity_skel {
-	unsigned char y, stat, lvl, lvl_v, wt, flags;
+	unsigned char y, flags;
 	unsigned element;
 	unsigned biomes;
 } SENT;
@@ -56,18 +56,15 @@ enum type {
 	TYPE_ENTITY,
 };
 
+typedef struct {
+	const enum color bg;
+} biome_skel_t;
+
 typedef struct object_skel {
 	char const name[32];
         enum type type;
 	unsigned max_art;
-
-        union {
-                SENT entity;
-                struct {
-			const enum color bg;
-                } biome;
-		unsigned raw[8];
-        } sp;
+	unsigned data[8];
 } SKEL;
 
 typedef struct {

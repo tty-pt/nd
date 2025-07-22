@@ -1,12 +1,14 @@
 prefix := ${DESTDIR}/usr /usr/local /usr
 CFLAGS := ${prefix:%=-I%/include}
 LDFLAGS := -lnd ${prefix:%=-L%/lib}
-MODDIR := ${DESTDIR}/usr/share/nd
+MODDIR := ${DESTDIR}${PREFIX}/share/nd
 pwd != pwd
 bname != basename ${pwd}
-inc != ls ${DESTDIR}/usr/include/nd
+PREFIX ?= /usr
+inc != ls ${DESTDIR}${PREFIX}/include/nd
 inc := ${inc:%=${DESTDIR}/usr/include/nd/%}
 uapi != test -d include/uapi && ls include/uapi/ || echo -n ""
+uapi := ${uapi:%=${DESTDIR}${PREFIX}/include/nd/%}
 CC := ndcc
 .SUFFIXES: .so .d .c
 
@@ -19,10 +21,14 @@ CC := ndcc
 	@echo MKDEP $@
 	@${CC} -MM -o $@ ${CFLAGS} $<
 
-install: main.so ${uapi:%=${MODDIR}/include/%}
+install: main.so install-head
 	@install -m 755 main.so ${MODDIR}/lib/${bname}.so
 
-$(uapi:%=$(MODDIR)/include/%): ${uapi:%=include/uapi/%}
-	@test -z "$@" || install -m 644 ${@:${MODDIR}/include/%=include/uapi/%} ${MODDIR}/include/
+$(uapi): ${uapi:${DESTDIR}${PREFIX}/include/nd/%=include/uapi/%}
+	@test -z "$@" || install -m 644 \
+		${@:${DESTDIR}${PREFIX}/include/nd/%=include/uapi/%} \
+		${DESTDIR}${PREFIX}/include/nd/
 
-.PHONY: all install
+install-head: ${uapi}
+
+.PHONY: all install install-head

@@ -12,9 +12,6 @@
 #define SUPERBIGSIZ 80000 * 8192
 
 enum bcp_type {
-	BCP_ATTR,
-	BCP_HP_BAR,
-	BCP_STATS,
 	BCP_ITEM,
 	BCP_VIEW,
 	BCP_VIEW_BUFFER,
@@ -100,7 +97,7 @@ _fbcp_item(char *bcp_buf, unsigned obj_ref, unsigned char dynflags)
 	p += aux1;
 	switch (obj.type) {
 	case TYPE_ROOM: {
-		ROO *roo = &obj.sp.room;
+		ROO *roo = (ROO *) &obj.data;
 		memcpy(p, &roo->exits, sizeof(roo->exits));
 		p += sizeof(roo->exits);
 		break;
@@ -113,7 +110,7 @@ _fbcp_item(char *bcp_buf, unsigned obj_ref, unsigned char dynflags)
 	}
 	}
 
-	SIC_CALL(&p, sic_fbcp, p, obj_ref);
+	SIC_CALL(&p, on_fbcp, p, obj_ref);
 
 	return p - bcp_buf;
 }
@@ -170,27 +167,6 @@ fbcp_auth_failure(int fd, int reason)
 	ndc_write(fd, bcp_buf, p - bcp_buf);
 }
 
-static void
-fbcp_stats(unsigned player_ref)
-{
-	ENT eplayer = ent_get(player_ref);
-	unsigned char iden = BCP_STATS;
-	static char bcp_buf[2 + sizeof(iden) + sizeof(eplayer.attr) + sizeof(short) * 7];
-	char *p = bcp_buf;
-	memcpy(p, "#b", 2);
-	memcpy(p += 2, &iden, sizeof(iden));
-	memcpy(p += sizeof(iden), eplayer.attr, sizeof(eplayer.attr));
-	memcpy(p += sizeof(eplayer.attr), &eplayer.e[AF_HP].value, sizeof(short));
-	memcpy(p += sizeof(short), &eplayer.e[AF_MOV].value, sizeof(short));
-	memcpy(p += sizeof(short), &eplayer.e[AF_MDMG].value, sizeof(short));
-	memcpy(p += sizeof(short), &eplayer.e[AF_MDEF].value, sizeof(short));
-	memcpy(p += sizeof(short), &eplayer.e[AF_DODGE].value, sizeof(short));
-	memcpy(p += sizeof(short), &eplayer.e[AF_DMG].value, sizeof(short));
-	memcpy(p += sizeof(short), &eplayer.e[AF_DEF].value, sizeof(short));
-	p += sizeof(short);
-	nd_wwrite(player_ref, bcp_buf, p - bcp_buf);
-}
-
 void
 mcp_bar(unsigned char iden, unsigned player_ref, unsigned short val, unsigned short max)
 {
@@ -204,11 +180,6 @@ mcp_bar(unsigned char iden, unsigned player_ref, unsigned short val, unsigned sh
 	memcpy(p += sizeof(val), &aux, sizeof(aux));
 	p += sizeof(aux);
 	nd_wwrite(player_ref, bcp_buf, p - bcp_buf);
-}
-
-void mcp_hp_bar(unsigned player_ref) {
-	ENT eplayer = ent_get(player_ref);
-	mcp_bar(BCP_HP_BAR, player_ref, eplayer.hp, HP_MAX(&eplayer));
 }
 
 void
@@ -291,11 +262,6 @@ mcp_auth_fail(int descr, int reason) {
 void
 mcp_auth_success(unsigned player_ref) {
 	fbcp_auth_success(player_ref);
-}
-
-void
-mcp_stats(unsigned player_ref) {
-	fbcp_stats(player_ref);
 }
 
 void

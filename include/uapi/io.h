@@ -20,6 +20,7 @@ enum hd {
 	HD_RTYPE,
 	HD_BCP,
 	HD_ELEMENT,
+	HD_HD,
 	HD_MAX,
 };
 
@@ -84,9 +85,6 @@ notify_wts_to(unsigned who_ref, unsigned tar_ref, char const *a, char const *b, 
 	dnotify_wts_to(who_ref, tar_ref, a, b, format, args);
 	va_end(args);
 }
-
-typedef void notify_attack_t(unsigned player_ref, unsigned target_ref, char *wts, short val, enum color color, short mval);
-notify_attack_t notify_attack;
 
 typedef void nd_tdwritef_t(unsigned player_ref, const char *fmt, va_list args);
 nd_tdwritef_t nd_tdwritef;

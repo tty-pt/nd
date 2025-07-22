@@ -16,7 +16,8 @@ const sub = new Sub({
   me: null,
   authFail: true,
   stats: {},
-  bars: { hp: 1, hpMax: 1, mp: 1, mpMax: 1 },
+  hp: { val: 1, max: 1 },
+  mp: { val: 1, max: 1 },
   here: null,
   target: null,
   equipment: {},
@@ -37,8 +38,12 @@ const statsEmit = sub.makeEmit(
   (stats, current) => ({ ...current, stats }),
 );
 
-const barsEmit = sub.makeEmit(
-  (bars, current) => ({ ...current, bars })
+const hpEmit = sub.makeEmit(
+  (hp, current) => ({ ...current, hp })
+);
+
+const mpEmit = sub.makeEmit(
+  (mp, current) => ({ ...current, mp })
 );
 
 const hereEmit = sub.makeEmit(
@@ -111,10 +116,20 @@ const ACTION = {
 };
 
 const ACTION_INDEX = [
-  ACTION.INSPECT, ACTION.FIGHT, ACTION.SHOP, ACTION.DRINK, ACTION.OPEN,
-  ACTION.CHOP, ACTION.FILL, ACTION.GET, ACTION.TALK, ACTION.PUT,
-  ACTION.EQUIP, ACTION.DROP, ACTION.EAT, ACTION.DIE, ACTION.INVENTORY,
-  ACTION.K, ACTION.J, ACTION.WALK, ACTION.LOOK
+	ACTION.INSPECT,
+	ACTION.OPEN,
+	ACTION.GET,
+	ACTION.TALK,
+	ACTION.FILL,
+	ACTION.DRINK,
+	ACTION.EAT,
+	ACTION.FIGHT,
+	ACTION.EQUIP,
+	ACTION.SHOP,
+	ACTION.CHOP,
+  // ACTION.TALK, ACTION.PUT,
+  // ACTION.DROP, ACTION.DIE, ACTION.INVENTORY,
+  // ACTION.K, ACTION.J, ACTION.WALK, ACTION.LOOK
 ];
 
 const ACTION_MAP = {
@@ -358,18 +373,24 @@ function read_string(arr, start, ret = {}) {
 }
 
 const BCP = {
-  BARS: 1,
-  STATS: 2,
-  ITEM: 3,
-  VIEW_BUFFER: 5,
-  AUTH_FAILURE: 8,
-  AUTH_SUCCESS: 9,
-  OUT: 10,
-  TOD: 11,
-  EQUIPMENT: 12,
+  ITEM: 0,
+  VIEW: 1,
+  VIEW_BUFFER: 2,
+  ROOM: 3,
+  ENTITY: 4,
+  AUTH_FAILURE: 5,
+  AUTH_SUCCESS: 6,
+  OUT: 7,
+  TOD: 8,
+  HP: 9,
+  STATS: 10,
+  EQUIPMENT: 11,
+  MP: 12,
 };
 
 const BCP_MAP = {
+  [BCP.HP]: { label: "hp" },
+  [BCP.MP]: { label: "mp" },
   [BCP.BARS]: { label: "bars" },
   [BCP.STATS]: { label: "stats" },
   [BCP.ITEM]: { label: "item" },
@@ -391,14 +412,21 @@ ndc.setOnMessage(function onMessage(ev) {
   if (String.fromCharCode(arr[0]) == "#" && String.fromCharCode(arr[1]) == "b") {
     const iden = arr[2];
     console.log(iden, BCP_MAP[iden]);
+    // TODO remove repeate code in emits!!
     switch (iden) {
-    case BCP.BARS: {
+    case BCP.HP: {
       let aux;
-      barsEmit({
-        hp: read_u16(arr, aux = 3),
-        hpMax: read_u16(arr, aux += 2),
-        mp: read_u16(arr, aux += 2),
-        mpMax: read_u16(arr, aux += 2),
+      hpEmit({
+        val: read_u16(arr, aux = 3),
+        max: read_u16(arr, aux += 2),
+      });
+      return;
+
+    } case BCP.MP: {
+      let aux;
+      mpEmit({
+        val: read_u16(arr, aux = 3),
+        max: read_u16(arr, aux += 2),
       });
       return;
 
@@ -535,8 +563,8 @@ class Bar extends SubscribedElement {
 
   connectedCallback() {
     const type = this.getAttribute('type');
-    this.subscribe(sub, "value", "bars." + type);
-    this.subscribe(sub, "max", "bars." + type + "Max");
+    this.subscribe(sub, "value", type + ".val");
+    this.subscribe(sub, "max", type + ".max");
     this.render();
   }
 

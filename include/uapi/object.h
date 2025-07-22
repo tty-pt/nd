@@ -36,16 +36,9 @@ typedef struct {
 
 enum entity_flags {
 	EF_PLAYER = 1,
-	EF_AGGRO = 2,
-	EF_SITTING = 4,
-	EF_SHOP = 8,
-	EF_WIZARD = 16,
-	EF_BAN = 32,
-};
-
-enum huth {
-	HUTH_THIRST = 0,
-	HUTH_HUNGER = 1,
+	EF_SHOP = 4,
+	EF_WIZARD = 8,
+	EF_BAN = 16,
 };
 
 enum attribute {
@@ -58,82 +51,15 @@ enum attribute {
 	ATTR_MAX
 };
 
-enum equipment_slot {
-	ES_HEAD,
-	ES_NECK,
-	ES_CHEST,
-	ES_BACK,
-	ES_RHAND,
-	ES_LFINGER,
-	ES_RFINGER,
-	ES_PANTS,
-	ES_MAX
-};
-
-struct debuf {
-	int skel;
-	unsigned duration;
-	short val;
-};
-
-struct spell {
-	unsigned skel;
-	unsigned cost; 
-	unsigned short val;
-};
-
-// insert spells skels here
-
-enum spell_affects {
-	// these are changed by bufs
-	AF_HP,
-	AF_MOV,
-	AF_MDMG,
-	AF_MDEF,
-	AF_DODGE,
-
-	// these aren't.
-	AF_DMG,
-	AF_DEF,
-
-	// these are flags, not types of buf
-	AF_NEG = 0x10,
-	AF_BUF = 0x20,
-};
-
-struct effect {
-	short value;
-	unsigned char mask;
-};
-
 typedef struct entity {
 	unsigned home;
-        /* const char *dialog; <- make this external to the struct (use object id) */
-	struct effect e[7];
-	unsigned target, sat;
 	unsigned flags;
-	unsigned short hp, wtso, wtst;
-	unsigned short huth[2];
-	unsigned char klock;
-	unsigned lvl, spend, cxp;
-	unsigned attr[ATTR_MAX];
-	unsigned equipment[ES_MAX];
 
 	/* tmp data? */
 	unsigned last_observed;
 	unsigned char select;
-	unsigned char huth_n[2], aux;
+	unsigned char aux;
 } ENT;
-
-typedef struct {
-	short unsigned unused;
-} MIN;
-
-union specific {
-	ROO room;
-	MIN mineral;
-	unsigned raw[4];
-};
 
 typedef struct object {
 	unsigned location, owner;
@@ -143,10 +69,8 @@ typedef struct object {
 	unsigned char type;
 	unsigned value;
 	unsigned flags;
-
-	union specific sp;
-
 	char name[32];
+	unsigned data[8];
 } OBJ;
 
 struct icon {
@@ -156,7 +80,7 @@ struct icon {
 };
 
 /* FIXME: not for plugins */
-extern unsigned obj_hd, contents_hd, obs_hd, art_hd;
+extern unsigned obj_hd, contents_hd, obs_hd;
 
 typedef int obj_exists_t(unsigned ref);
 obj_exists_t obj_exists;

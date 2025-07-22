@@ -86,10 +86,8 @@ static inline unsigned
 art_idx(OBJ *obj) {
 	SKEL skel;
 	qdb_get(skel_hd, &skel, &obj->skid);
-	return 1 + (random() % skel.max_art);
+	return 1 + (random() % (skel.max_art ? skel.max_art : 1));
 }
-
-void stats_init(ENT *enu, SENT *sk);
 
 unsigned
 object_add(OBJ *nu, unsigned skel_id, unsigned where_ref, uint64_t v)
@@ -110,12 +108,8 @@ object_add(OBJ *nu, unsigned skel_id, unsigned where_ref, uint64_t v)
 		{
 			ENT ent;
 			memset(&ent, 0, sizeof(ent));
-			stats_init(&ent, &skel.sp.entity);
-			ent.flags = skel.sp.entity.flags;
-			ent.wtso = skel.sp.entity.wt;
-			ent.sat = NOTHING;
-			ent.last_observed = NOTHING;
-			birth(nu_ref, &ent);
+			ent.flags = ((SENT *) &skel.data)->flags;
+			ent.select = 0;
 			object_drop(nu_ref, skel_id);
 			ent.home = where_ref;
 			ent_set(nu_ref, &ent);
@@ -126,7 +120,7 @@ object_add(OBJ *nu, unsigned skel_id, unsigned where_ref, uint64_t v)
         case TYPE_ROOM:
 		{
 			struct bio *bio = (struct bio *) v;
-			ROO *rnu = &nu->sp.room;
+			ROO *rnu = (ROO *) &nu->data;
 			rnu->exits = rnu->doors = 0;
 			rnu->flags = RF_TEMP;
 			nu->art_id = biome_art_idx(bio);
@@ -139,7 +133,7 @@ object_add(OBJ *nu, unsigned skel_id, unsigned where_ref, uint64_t v)
 	}
 
 	qdb_put(obj_hd, &nu_ref, nu);
-	SIC_CALL(NULL, sic_add, nu_ref, v);
+	SIC_CALL(NULL, on_add, nu_ref, nu->type, v);
 
 	if (skel.type != TYPE_ROOM)
 		mcp_content_in(where_ref, nu_ref);
@@ -181,7 +175,8 @@ objects_init(void)
 	qdb_cur_t c = qdb_iter(obj_hd, NULL);
 	OBJ oi;
 	while (qdb_next(&ref, &oi, &c)) {
-		qdb_put(contents_hd, &oi.location, &ref);
+		if (oi.location != NOTHING)
+			qdb_put(contents_hd, &oi.location, &ref);
 		if (oi.type != TYPE_ENTITY)
 			continue;
 
@@ -205,22 +200,14 @@ object_copy(OBJ *nu, unsigned old_ref)
         return ref;
 }
 
-void entity_update(unsigned player_ref, double dt);
-
 void
 objects_update(double dt)
 {
 	OBJ obj;
 	unsigned obj_ref;
 	qdb_cur_t c = qdb_iter(obj_hd, NULL);
-	while (qdb_next(&obj_ref, &obj, &c)) {
-		if (!*obj.name)
-			continue;
-		else if (obj.type == TYPE_ENTITY)
-			entity_update(obj_ref, dt);
-
-		SIC_CALL(NULL, sic_update, obj_ref, dt);
-	}
+	while (qdb_next(&obj_ref, &obj, &c))
+		SIC_CALL(NULL, on_update, obj_ref, obj.type, dt);
 }
 
 void
@@ -243,7 +230,7 @@ object_move(unsigned what_ref, unsigned where_ref)
 		ent_set(first_ref, &efirst);
 	}
 
-	SIC_CALL(NULL, sic_leave, what_ref, last_loc);
+	SIC_CALL(NULL, on_leave, what_ref, last_loc);
 
 	/* test for special cases */
 	if (where_ref == NOTHING) {
@@ -263,7 +250,7 @@ object_move(unsigned what_ref, unsigned where_ref)
 		qdb_del(obj_hd, &what_ref, NULL);
 		mcp_content_out(last_loc, what_ref);
 
-		SIC_CALL(NULL, sic_del, what_ref);
+		SIC_CALL(NULL, on_del, what_ref);
 		return;
 	}
 
@@ -279,13 +266,12 @@ object_move(unsigned what_ref, unsigned where_ref)
 	}
 
 	qdb_put(contents_hd, &where_ref, &what_ref);
-	SIC_CALL(NULL, sic_enter, what_ref, where_ref);
+	SIC_CALL(NULL, on_enter, what_ref, where_ref);
 }
 
 void
 base_actions_register(void) {
 	act_look = action_register("look", "👁");
-	act_fight = action_register("fight", "⚔️");
 	act_open = action_register("open", "📦");
 	act_get = action_register("get", "🖐️");
 	act_talk = action_register("talk", "👄");
@@ -318,7 +304,7 @@ object_icon(unsigned what_ref)
                 break;
         }}
 
-	SIC_CALL(&ret, sic_icon, ret, what_ref);
+	SIC_CALL(&ret, on_icon, ret, what_ref);
 	return ret;
 }
 
@@ -378,7 +364,7 @@ do_clone(int fd, int argc __attribute__((unused)), char *argv[])
 	switch (thing.type) {
 		case TYPE_ROOM:
 			{
-				ROO *rclone = &clone.sp.room;
+				ROO *rclone = (ROO *) &clone.data;
 				rclone->exits = rclone->doors = 0;
 			}
 			break;
@@ -394,7 +380,7 @@ do_clone(int fd, int argc __attribute__((unused)), char *argv[])
 	clone.type = thing.type;
 
 	qdb_put(obj_hd, &clone_ref, &clone);
-	SIC_CALL(NULL, sic_clone, thing_ref, clone_ref);
+	SIC_CALL(NULL, on_clone, thing_ref, clone_ref);
 	object_move(clone_ref, player_ref);
 }
 
@@ -566,7 +552,7 @@ do_get(int fd, int argc __attribute__((unused)), char *argv[])
 	}
 
 	int ret;
-	SIC_CALL(&ret, sic_get, player_ref, thing_ref);
+	SIC_CALL(&ret, on_get, player_ref, thing_ref);
 	if (ret)
 		goto error;
 

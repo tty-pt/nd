@@ -22,7 +22,8 @@ static inline char * biome_bg(unsigned i) {
 
 	SKEL skel;
 	qdb_get(skel_hd, &skel, &biome_map[i]);
-	memcpy(ret, ansi_bg[skel.sp.biome.bg], sizeof(ret));
+	biome_skel_t *biome_skel = (biome_skel_t *) skel.data;
+	memcpy(ret, ansi_bg[biome_skel->bg], sizeof(ret));
 	return ret;
 }
 
@@ -39,7 +40,7 @@ void base_vtf_init(void) {
 static inline char *
 empty_tile(char *b, view_tile_t *t, unsigned side) {
 	sic_str_t ss = { .str = "" };
-	SIC_CALL(&ss, sic_empty_tile, *t, side, ss);
+	SIC_CALL(&ss, on_empty_tile, *t, side, ss);
 	b += sprintf(b, "%s", ss.str);
 	return b;
 }
@@ -99,7 +100,7 @@ static inline unsigned
 floor_get(unsigned what_ref) {
 	OBJ what;
 	qdb_get(obj_hd, &what, &what_ref);
-	ROO *rwhat = &what.sp.room;
+	ROO *rwhat = (ROO *) &what.data;
 	unsigned char floor = rwhat->floor;
 
 	if (floor > BIOME_VOLCANIC)
@@ -302,7 +303,7 @@ view_build_exit_s(view_tile_t *t, pos_t p, enum exit e) {
 
 	OBJ tmp;
 	qdb_get(obj_hd, &tmp, &tmp_ref);
-	ROO *rtmp = &tmp.sp.room;
+	ROO *rtmp = (ROO *) &tmp.data;
 
 	if (rtmp->exits & e_simm(e)) {
 		t->exits |= e;
@@ -330,7 +331,7 @@ view_build_flags(unsigned loc_ref) {
 			break;
 		}
 
-		SIC_CALL(&flags, sic_view_flags, flags, tmp_ref);
+		SIC_CALL(&flags, on_view_flags, flags, tmp_ref);
 	}
 
 	return flags;
@@ -343,7 +344,7 @@ view_build_tile(struct bio *n, unsigned loc_ref, view_tile_t *t, pos_t p)
 	if (loc_ref != NOTHING) {
 		OBJ loc;
 		qdb_get(obj_hd, &loc, &loc_ref);
-		ROO *rloc = &loc.sp.room;
+		ROO *rloc = (ROO *) &loc.data;
 		view_build_exit(t, rloc, E_EAST);
 		view_build_exit(t, rloc, E_NORTH);
 		view_build_exit(t, rloc, E_WEST);

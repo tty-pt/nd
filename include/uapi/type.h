@@ -1,6 +1,16 @@
 #ifndef UAPI_TYPES_H
 #define UAPI_TYPES_H
 
+/* RECOMMENDATIONS:
+ *
+ * - Avoid passing entire objects in SIC calls. It's not very
+ *   useful since getting / putting things by id can be fast.
+ *   Only when you really don't have another way because you
+ *   modify the object in the calling function and don't put
+ *   and set around the SIC_CALL. Usually mods will use their
+ *   custom object types, anyway.
+ */
+
 #include <stddef.h>
 #include <string.h>
 #include "./object.h"
@@ -98,10 +108,9 @@ typedef struct {
     struct fname##_args { \
         PAIR_GEN(__VA_ARGS__) \
     }; \
-    typedef ftype fname##_t(FUNC_ARGS(__VA_ARGS__)); \
-    fname##_t fname __attribute__((weak));
 
 #define SIC_DEF(ftype, fname, ...) \
+    typedef ftype fname##_t(FUNC_ARGS(__VA_ARGS__)); \
     void fname##_adapter_call(void *res, void *fname, void *arg) { \
         struct fname##_args args; \
 	memcpy(&args, arg, sizeof(args)); \
@@ -131,11 +140,6 @@ typedef struct {
 	int pos;
 } sic_str_t;
 
-struct hit {
-	enum color color;
-	short ndmg, cdmg;
-};
-
 typedef char small_buf_t[64];
 
 typedef void sic_areg_t(char *name, sic_adapter_t *adapter);
@@ -144,39 +148,30 @@ sic_areg_t sic_areg;
 typedef void sic_call_t(void *retp, char *symbol, void *args);
 sic_call_t sic_call;
 
-SIC_DECL(int, sic_examine, unsigned, player_ref, unsigned, ref)
-SIC_DECL(int, sic_fbcp, char *, p, unsigned, ref)
-SIC_DECL(int, sic_add, unsigned, ref, uint64_t, v)
-SIC_DECL(unsigned short, sic_view_flags, unsigned short, flags, unsigned, ref)
-SIC_DECL(struct icon, sic_icon, struct icon, i, unsigned, ref)
-SIC_DECL(int, sic_del, unsigned, ref)
-SIC_DECL(int, sic_clone, unsigned, orig_ref, unsigned, nu_ref)
-SIC_DECL(int, sic_update, unsigned, ref, double, dt)
-SIC_DECL(int, sic_status, unsigned, ref, ENT, ent)
+SIC_DECL(int, on_status, unsigned, player_ref)
+SIC_DECL(int, on_examine, unsigned, player_ref, unsigned, ref, unsigned, type)
+SIC_DECL(int, on_fbcp, char *, p, unsigned, ref) // FIXME
+SIC_DECL(int, on_add, unsigned, ref, unsigned, type, uint64_t, v)
+SIC_DECL(unsigned short, on_view_flags, unsigned short, flags, unsigned, ref)
+SIC_DECL(struct icon, on_icon, struct icon, i, unsigned, ref)
+SIC_DECL(int, on_del, unsigned, ref)
+SIC_DECL(int, on_clone, unsigned, orig_ref, unsigned, nu_ref)
+SIC_DECL(int, on_update, unsigned, ref, unsigned, type, double, dt)
+SIC_DECL(int, on_move, unsigned, ref, int, cant_move)
 
-SIC_DECL(int, sic_vim, unsigned, ref, sic_str_t, ss, int, ofs)
+SIC_DECL(int, on_vim, unsigned, ref, sic_str_t, ss, int, ofs)
 
-SIC_DECL(int, sic_auth, unsigned, player_ref)
-SIC_DECL(int, sic_leave, unsigned, player_ref, unsigned, loc_ref)
-SIC_DECL(int, sic_enter, unsigned, player_ref, unsigned, loc_ref)
-SIC_DECL(int, sic_spawn, unsigned, player_ref, unsigned, loc_ref, struct bio, bio, uint64_t, v)
-SIC_DECL(ENT, sic_fight_start, unsigned, player_ref, ENT, eplayer)
-SIC_DECL(ENT, sic_mob_recovered, unsigned, player_ref, ENT, eplayer)
-SIC_DECL(ENT, sic_mob_recovering, unsigned, player_ref, ENT, eplayer)
-SIC_DECL(ENT, sic_birth, unsigned, ent_ref, ENT, ent)
-SIC_DECL(ENT, sic_death, unsigned, ent_ref, ENT, ent)
-SIC_DECL(int, sic_before_attack, unsigned, player_ref, ENT, eplayer)
-SIC_DECL(ENT, sic_attack, unsigned, player_ref, ENT, eplayer)
-SIC_DECL(struct hit, sic_hit, unsigned, ent_ref, ENT, ent, ENT, target, struct hit, hit)
-SIC_DECL(ENT, sic_after_attack, unsigned, player_ref, ENT, eplayer)
-SIC_DECL(int, sic_get, unsigned, player_ref, unsigned, ref)
-SIC_DECL(ENT, sic_dodge, unsigned, player_ref, ENT, eplayer)
-SIC_DECL(ENT, sic_ent_update, unsigned, player_ref, ENT, eplayer, double, dt)
-SIC_DECL(ENT, sic_ent_after_update, unsigned, player_ref, ENT, eplayer)
-SIC_DECL(ENT, sic_reroll, unsigned, player_ref, ENT, eplayer)
+SIC_DECL(int, on_new_player, unsigned, player_ref)
+SIC_DECL(int, on_auth, unsigned, player_ref)
+SIC_DECL(int, on_before_leave, unsigned, ent_ref)
+SIC_DECL(int, on_leave, unsigned, player_ref, unsigned, loc_ref)
+SIC_DECL(int, on_enter, unsigned, player_ref, unsigned, loc_ref)
+SIC_DECL(int, on_after_enter, unsigned, player_ref)
+SIC_DECL(int, on_spawn, unsigned, player_ref, unsigned, loc_ref, struct bio, bio, uint64_t, v)
+SIC_DECL(int, on_get, unsigned, player_ref, unsigned, ref)
 
-SIC_DECL(struct bio, sic_noise, struct bio, bio, uint32_t, he, uint32_t, w, uint32_t, tm, uint32_t, cl)
-SIC_DECL(sic_str_t, sic_empty_tile, view_tile_t, t, unsigned, side, sic_str_t, ss)
+SIC_DECL(struct bio, on_noise, struct bio, bio, uint32_t, he, uint32_t, w, uint32_t, tm, uint32_t, cl)
+SIC_DECL(sic_str_t, on_empty_tile, view_tile_t, t, unsigned, side, sic_str_t, ss)
 
 extern unsigned type_hd, action_hd, vtf_hd, vtf_max;
 

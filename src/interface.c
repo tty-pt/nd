@@ -36,6 +36,13 @@ enum opts {
 	OPT_DETACH = 1,
 };
 
+ROO room_zero_room = {
+	.flags = RF_HAVEN,
+	.doors = 0,
+	.exits = 0,
+	.floor = 0,
+};
+
 struct object room_zero = {
 	.location = NOTHING,
 	.owner = 1,
@@ -43,31 +50,25 @@ struct object room_zero = {
 	.type = TYPE_ROOM,
 	.value = 9999999,
 	.flags = 0,
-	.sp.room = {
-		.flags = RF_HAVEN,
-		.doors = 0,
-		.exits = 0,
-		.floor = 0,
-	},
+};
+
+biome_skel_t void_biome_biome = {
+	.bg = BLACK,
 };
 
 SKEL void_biome = {
 	.name = "void",
 	.type = TYPE_ROOM,
-	.sp = { .biome = {
-		.bg = BLACK,
-	} },
 };
 
 unsigned dplayer_hd, skel_hd, drop_hd,
 	 adrop_hd, element_hd,
 	 wts_hd, awts_hd, biome_hd, mod_hd,
 	 mod_id_hd, type_hd, action_hd, vtf_hd,
-	 situc_hd, sica_hd, bcp_hd;
+	 situc_hd, sica_hd, bcp_hd, hd_hd;
 
 struct nd nd;
 
-void do_advitam(int fd, int argc, char *argv[]);
 void do_avatar(int fd, int argc, char *argv[]);
 void do_bio(int fd, int argc, char *argv[]);
 void do_ban(int fd, int argc, char *argv[]);
@@ -76,7 +77,6 @@ void do_clone(int fd, int argc, char *argv[]);
 void do_create(int fd, int argc, char *argv[]);
 void do_drop(int fd, int argc, char *argv[]);
 void do_examine(int fd, int argc, char *argv[]);
-void do_fight(int fd, int argc, char *argv[]);
 void do_get(int fd, int argc, char *argv[]);
 void do_inventory(int fd, int argc, char *argv[]);
 void do_look_at(int fd, int argc, char *argv[]);
@@ -84,14 +84,12 @@ void do_name(int fd, int argc, char *argv[]);
 void do_owned(int fd, int argc, char *argv[]);
 void do_pose(int fd, int argc, char *argv[]);
 void do_recycle(int fd, int argc, char *argv[]);
-void do_reroll(int fd, int argc, char *argv[]);
 void do_save(int fd, int argc, char *argv[]);
 void do_say(int fd, int argc, char *argv[]);
 void do_select(int fd, int argc, char *argv[]);
 void do_status(int fd, int argc, char *argv[]);
 void do_teleport(int fd, int argc, char *argv[]);
 void do_toad(int fd, int argc, char *argv[]);
-void do_train(int fd, int argc, char *argv[]);
 void do_view(int fd, int argc, char *argv[]);
 void do_wall(int fd, int argc, char *argv[]);
 
@@ -130,9 +128,6 @@ struct cmd_slot cmds[] = {
 	}, {
 		.name = "avatar",
 		.cb = &do_avatar,
-	}, {
-		.name = "advitam",
-		.cb = &do_advitam,
 	}, {
 		.name = "bio",
 		.cb = &do_bio,
@@ -176,9 +171,6 @@ struct cmd_slot cmds[] = {
 		.name = "inventory",
 		.cb = &do_inventory,
 	}, {
-		.name = "fight",
-		.cb = &do_fight,
-	}, {
 		.name = "look",
 		.cb = &do_look_at,
 	}, {
@@ -193,9 +185,6 @@ struct cmd_slot cmds[] = {
 	}, {
 		.name = "pose",
 		.cb = &do_pose,
-	}, {
-		.name = "reroll",
-		.cb = &do_reroll,
 	}, {
 		.name = "say",
 		.cb = &do_say,
@@ -214,9 +203,6 @@ struct cmd_slot cmds[] = {
 	}, {
 		.name = "status",
 		.cb = &do_status,
-	}, {
-		.name = "train",
-		.cb = &do_train,
 	}, {
 		.name = NULL,
 		.cb = NULL,
@@ -425,39 +411,30 @@ void sic_put(unsigned si_id, unsigned type, void *cb) {
 	qdb_put(situc_hd, key, &cb);
 }
 
-SIC_DEF(int, sic_examine, unsigned, player_ref, unsigned, ref)
-SIC_DEF(int, sic_fbcp, char *, p, unsigned, ref)
-SIC_DEF(int, sic_add, unsigned, ref, uint64_t, v)
-SIC_DEF(unsigned short, sic_view_flags, unsigned short, flags, unsigned, ref)
-SIC_DEF(struct icon, sic_icon, struct icon, i, unsigned, ref)
-SIC_DEF(int, sic_del, unsigned, ref)
-SIC_DEF(int, sic_clone, unsigned, orig_ref, unsigned, nu_ref)
-SIC_DEF(int, sic_update, unsigned, ref, double, dt)
-SIC_DEF(int, sic_status, unsigned, ref, ENT, ent)
+SIC_DEF(int, on_status, unsigned, player_ref)
+SIC_DEF(int, on_examine, unsigned, player_ref, unsigned, ref, unsigned, type)
+SIC_DEF(int, on_fbcp, char *, p, unsigned, ref)
+SIC_DEF(int, on_add, unsigned, ref, unsigned, type, uint64_t, v)
+SIC_DEF(unsigned short, on_view_flags, unsigned short, flags, unsigned, ref)
+SIC_DEF(struct icon, on_icon, struct icon, i, unsigned, ref)
+SIC_DEF(int, on_del, unsigned, ref)
+SIC_DEF(int, on_clone, unsigned, orig_ref, unsigned, nu_ref)
+SIC_DEF(int, on_update, unsigned, ref, unsigned, type, double, dt)
+SIC_DEF(int, on_move, unsigned, ref, int, cant_move)
 
-SIC_DEF(int, sic_vim, unsigned, ref, sic_str_t, ss, int, ofs)
+SIC_DEF(int, on_vim, unsigned, ref, sic_str_t, ss, int, ofs)
 
-SIC_DEF(int, sic_auth, unsigned, player_ref)
-SIC_DEF(int, sic_leave, unsigned, player_ref, unsigned, loc_ref)
-SIC_DEF(int, sic_enter, unsigned, player_ref, unsigned, loc_ref)
-SIC_DEF(int, sic_spawn, unsigned, player_ref, unsigned, loc_ref, struct bio, bio, uint64_t, v)
-SIC_DEF(ENT, sic_fight_start, unsigned, player_ref, ENT, eplayer)
-SIC_DEF(ENT, sic_mob_recovered, unsigned, player_ref, ENT, eplayer)
-SIC_DEF(ENT, sic_mob_recovering, unsigned, player_ref, ENT, eplayer)
-SIC_DEF(ENT, sic_birth, unsigned, ent_ref, ENT, ent)
-SIC_DEF(ENT, sic_death, unsigned, ent_ref, ENT, ent)
-SIC_DEF(int, sic_before_attack, unsigned, player_ref, ENT, eplayer)
-SIC_DEF(ENT, sic_attack, unsigned, player_ref, ENT, eplayer)
-SIC_DEF(struct hit, sic_hit, unsigned, ent_ref, ENT, ent, ENT, target, struct hit, hit)
-SIC_DEF(ENT, sic_after_attack, unsigned, player_ref, ENT, eplayer)
-SIC_DEF(int, sic_get, unsigned, player_ref, unsigned, ref)
-SIC_DEF(ENT, sic_dodge, unsigned, player_ref, ENT, eplayer)
-SIC_DEF(ENT, sic_ent_update, unsigned, player_ref, ENT, eplayer, double, dt)
-SIC_DEF(ENT, sic_ent_after_update, unsigned, player_ref, ENT, eplayer)
-SIC_DEF(ENT, sic_reroll, unsigned, player_ref, ENT, eplayer)
+SIC_DEF(int, on_new_player, unsigned, player_ref)
+SIC_DEF(int, on_auth, unsigned, player_ref)
+SIC_DEF(int, on_before_leave, unsigned, ent_ref)
+SIC_DEF(int, on_leave, unsigned, player_ref, unsigned, loc_ref)
+SIC_DEF(int, on_enter, unsigned, player_ref, unsigned, loc_ref)
+SIC_DEF(int, on_after_enter, unsigned, player_ref)
+SIC_DEF(int, on_spawn, unsigned, player_ref, unsigned, loc_ref, struct bio, bio, uint64_t, v)
+SIC_DEF(int, on_get, unsigned, player_ref, unsigned, ref)
 
-SIC_DEF(struct bio, sic_noise, struct bio, bio, uint32_t, he, uint32_t, w, uint32_t, tm, uint32_t, cl)
-SIC_DEF(sic_str_t, sic_empty_tile, view_tile_t, t, unsigned, side, sic_str_t, ss)
+SIC_DEF(struct bio, on_noise, struct bio, bio, uint32_t, he, uint32_t, w, uint32_t, tm, uint32_t, cl)
+SIC_DEF(sic_str_t, on_empty_tile, view_tile_t, t, unsigned, side, sic_str_t, ss)
 
 void sic_areg(char *name, sic_adapter_t *adapter) {
 	qdb_put(sica_hd, name, adapter);
@@ -478,6 +455,8 @@ void shared_init(void) {
 	nd.hds[HD_RTYPE] = type_hd + 1;
 	nd.hds[HD_BCP] = bcp_hd;
 	nd.hds[HD_ELEMENT] = element_hd;
+	nd.hds[HD_HD] = hd_hd + 1;
+	nd.hd_hd = hd_hd;
 
 	/* nd.fds_has = fds_has; */
 	nd.nd_close = nd_close;
@@ -487,7 +466,6 @@ void shared_init(void) {
 	nd.nd_dowritef = nd_dowritef;
 	nd.dnotify_wts = dnotify_wts;
 	nd.dnotify_wts_to = dnotify_wts_to;
-	nd.notify_attack = notify_attack;
 	nd.nd_tdwritef = nd_tdwritef;
 	nd.nd_wwrite = nd_wwrite;
 
@@ -519,16 +497,12 @@ void shared_init(void) {
 	nd.ent_get = ent_get;
 	nd.ent_set = ent_set;
 	nd.ent_del = ent_del;
-	nd.ent_reset = ent_reset;
-	nd.birth = birth;
 	nd.controls = controls;
 	nd.payfor = payfor;
 	nd.look_around = look_around;
-	nd.entity_damage = entity_damage;
 	nd.enter = enter;
-	nd.dodge = dodge;
-	nd.ent_dmg = ent_dmg;
 	nd.look_at = look_at;
+	nd.room_clean = room_clean;
 
 	nd.nd_put = shared_put;
 	nd.nd_get = shared_get;
@@ -552,6 +526,7 @@ void shared_init(void) {
 	nd.action_register = action_register;
 	nd.vtf_register = vtf_register;
 	nd.sic_areg = sic_areg;
+	nd.sic_call = sic_call;
 
 	nd.noise_point = noise_point;
 
@@ -559,9 +534,7 @@ void shared_init(void) {
 	nd.fbcp = fbcp;
 	nd.mcp_content_in = mcp_content_in;
 	nd.mcp_content_out = mcp_content_out;
-	nd.mcp_stats = mcp_stats;
 	nd.mcp_bar = mcp_bar;
-	nd.mcp_hp_bar = mcp_hp_bar;
 }
 
 void base_actions_register(void);
@@ -637,7 +610,8 @@ main(int argc, char **argv)
 	vtf_hd = qdb_open("vtf", "u", "vtf", QH_TMP | QH_AINDEX);
 	situc_hd = qdb_open("situc", "ul", "p", QH_TMP);
 	sica_hd = qdb_open("sica", "s", "sica", QH_TMP);
-	bcp_hd = qdb_open("bcp", "u", "sica", QH_TMP | QH_AINDEX);
+	bcp_hd = qdb_open("bcp", "u", "s", QH_TMP | QH_AINDEX);
+	hd_hd = qdb_open("hd", "u", "s", QH_TMP | QH_AINDEX | QH_THRICE);
 
 	ent_hd = qdb_open("entity", "u", "ent", 0);
 	player_hd = qdb_open("player", "s", "u", 0);
@@ -660,47 +634,34 @@ main(int argc, char **argv)
 	mod_id_hd = qdb_open("module_id", "u", "p", QH_AINDEX);
 	mod_hd = qdb_open("module", "s", "u", 0);
 
-	SIC_AREG(sic_examine);
-	SIC_AREG(sic_fbcp);
-	SIC_AREG(sic_add);
-	SIC_AREG(sic_view_flags);
-	SIC_AREG(sic_icon);
-	SIC_AREG(sic_del);
-	SIC_AREG(sic_clone);
-	SIC_AREG(sic_update);
-	SIC_AREG(sic_status);
+	SIC_AREG(on_status);
+	SIC_AREG(on_examine);
+	SIC_AREG(on_fbcp);
+	SIC_AREG(on_add);
+	SIC_AREG(on_view_flags);
+	SIC_AREG(on_icon);
+	SIC_AREG(on_del);
+	SIC_AREG(on_clone);
+	SIC_AREG(on_update);
+	SIC_AREG(on_move);
 
-	SIC_AREG(sic_vim);
+	SIC_AREG(on_vim);
 
-	SIC_AREG(sic_auth);
-	SIC_AREG(sic_leave);
-	SIC_AREG(sic_enter);
-	SIC_AREG(sic_spawn);
-	SIC_AREG(sic_fight_start);
-	SIC_AREG(sic_mob_recovered);
-	SIC_AREG(sic_mob_recovering);
-	SIC_AREG(sic_birth);
-	SIC_AREG(sic_death);
-	SIC_AREG(sic_before_attack);
-	SIC_AREG(sic_attack);
-	SIC_AREG(sic_hit);
-	SIC_AREG(sic_after_attack);
-	SIC_AREG(sic_get);
-	SIC_AREG(sic_dodge);
-	SIC_AREG(sic_ent_update);
-	SIC_AREG(sic_ent_after_update);
-	SIC_AREG(sic_reroll);
+	SIC_AREG(on_new_player);
+	SIC_AREG(on_auth);
+	SIC_AREG(on_before_leave);
+	SIC_AREG(on_leave);
+	SIC_AREG(on_enter);
+	SIC_AREG(on_after_enter);
+	SIC_AREG(on_spawn);
+	SIC_AREG(on_get);
 
-	SIC_AREG(sic_noise);
-	SIC_AREG(sic_empty_tile);
+	SIC_AREG(on_noise);
+	SIC_AREG(on_empty_tile);
 
 	qdb_put(type_hd, NULL, "room");
-	qdb_put(type_hd, NULL, "thing");
 	qdb_put(type_hd, NULL, "entity");
 
-	qdb_put(bcp_hd, NULL, "attr");
-	qdb_put(bcp_hd, NULL, "bars");
-	qdb_put(bcp_hd, NULL, "stats");
 	qdb_put(bcp_hd, NULL, "item");
 	qdb_put(bcp_hd, NULL, "view");
 	qdb_put(bcp_hd, NULL, "view_buffer");
@@ -717,6 +678,7 @@ main(int argc, char **argv)
 	unsigned zero = 0, existed = 1;
 	if (!qdb_exists(obj_hd, &zero)) {
 		existed = 0;
+		memcpy(room_zero.data, &room_zero_room, sizeof(room_zero_room));
 		qdb_put(obj_hd, NULL, &room_zero);
 
 		element_t spirit = {
@@ -746,19 +708,22 @@ main(int argc, char **argv)
 		qdb_put(element_hd, NULL, &earth);
 		qdb_put(element_hd, NULL, &physical); // 5
 
+		SENT adam_sent = {
+			.y = 255,
+		};
+
 		SKEL adam = {
 			.name = "human",
 			.type = TYPE_ENTITY,
 			.max_art = 300,
-			.sp.entity = {
-				.y = 255,
-			},
 		};
 
+		memcpy(adam.data, &adam_sent, sizeof(adam_sent));
 		qdb_put(skel_hd, NULL, &adam); // 0
 		qdb_put(wts_hd, NULL,  "punch"); // 0
 
 		unsigned biome_map[BIOME_MAX];
+		memcpy(void_biome.data, &void_biome_biome, sizeof(void_biome_biome));
 		unsigned void_ref = qdb_put(skel_hd, NULL, &void_biome);
 		for (unsigned i = 0; i < BIOME_MAX; i++)
 			biome_map[i] = void_ref;
@@ -781,7 +746,6 @@ main(int argc, char **argv)
 	qdb_commit();
 
 	srand(getpid());
-
 
 	qdb_checkpoint(0, 0, 0);
 
@@ -927,7 +891,7 @@ static inline void
 avatar(OBJ *player) {
 	SKEL skel;
 	qdb_get(skel_hd, &skel, &player->skid);
-	player->art_id = 1 + (random() % skel.max_art);
+	player->art_id = 1 + (random() % (skel.max_art ? skel.max_art : 1));
 }
 
 void
@@ -939,8 +903,6 @@ do_avatar(int fd, int argc __attribute__((unused)), char *argv[] __attribute__((
 	mcp_content_out(player.location, player_ref);
 	mcp_content_in(player.location, player_ref);
 }
-
-void reroll(unsigned player_ref, ENT *eplayer);
 
 char *ndc_auth_check(int fd) {
 	static char user[BUFSIZ];
@@ -984,27 +946,20 @@ auth(unsigned fd)
 	ndclog(LOG_INFO, "auth '%s' (%u/%u)\n", user, fd, player_ref);
 
 	if (player_ref == NOTHING) {
-		ENT eplayer;
-		memset(&eplayer, 0, sizeof(eplayer));
-		player_ref = object_new(&player);
+		ENT ent;
+		player_ref = object_add(&player, 0, 0, 0);
+		ent = ent_get(player_ref);
 		strlcpy(player.name, user, sizeof(player.name));
-		player.location = 0;
-		player.type = TYPE_ENTITY;
-		player.owner = player_ref;
 		player.value = 150;
-		eplayer.flags = EF_PLAYER;
-
+		ent.flags = EF_PLAYER;
 		player_put(user, player_ref);
-		qdb_put(fds_hd, &player_ref, &fd);
-
-		reroll(player_ref, &eplayer);
-		birth(player_ref, &eplayer);
-		eplayer.hp = HP_MAX(&eplayer);
 		avatar(&player);
-		ent_set(player_ref, &eplayer);
-		qdb_put(obj_hd, &player_ref, &player);
-		st_start(player_ref);
 
+		qdb_put(fds_hd, &player_ref, &fd);
+		ent_set(player_ref, &ent);
+		qdb_put(obj_hd, &player_ref, &player);
+		qdb_put(dplayer_hd, &fd, &player_ref);
+		SIC_CALL(NULL, on_new_player, player_ref);
 	} else {
 		ENT eplayer = ent_get(player_ref);
 
@@ -1014,14 +969,12 @@ auth(unsigned fd)
 		}
 
 		qdb_put(fds_hd, &player_ref, &fd);
+		qdb_put(dplayer_hd, &fd, &player_ref);
 	}
 
-	qdb_put(dplayer_hd, &fd, &player_ref);
 	ndc_auth(fd, user);
-	mcp_stats(player_ref);
 	mcp_auth_success(player_ref);
 	look_around(player_ref);
-	mcp_hp_bar(player_ref);
 	do_view(fd, 0, NULL);
 	if (day_n)
 		mcp_tod(player_ref, 1);
@@ -1029,7 +982,7 @@ auth(unsigned fd)
 		mcp_tod(player_ref, 0);
 
 	qdb_commit();
-	SIC_CALL(NULL, sic_auth, player_ref);
+	SIC_CALL(NULL, on_auth, player_ref);
 	return player_ref;
 }
 
@@ -1060,7 +1013,7 @@ void ndc_vim(int fd, int argc __attribute__((unused)), char *argv[]) {
 
 	for (; *s && ofs > 0; s += ofs) {
 		int ret = 0;
-		SIC_CALL(&ret, sic_vim, player_ref, ss, ofs);
+		SIC_CALL(&ret, on_vim, player_ref, ss, ofs);
 		s += ret;
 		ofs = st_v(player_ref, s);
 	}

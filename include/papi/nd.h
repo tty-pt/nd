@@ -7,7 +7,6 @@ struct nd {
 	/* io */
 	fd_player_t *fd_player;
 
-	/* fds_has_t *fds_has; */
 	nd_close_t *nd_close;
 	nd_write_t *nd_write;
 	nd_dwritef_t *nd_dwritef;
@@ -15,7 +14,6 @@ struct nd {
 	nd_dowritef_t *nd_dowritef;
 	dnotify_wts_t *dnotify_wts;
 	dnotify_wts_to_t *dnotify_wts_to;
-	notify_attack_t *notify_attack;
 	nd_tdwritef_t *nd_tdwritef;
 	nd_wwrite_t *nd_wwrite;
 
@@ -33,12 +31,7 @@ struct nd {
 	/* wts */
 	wts_plural_t *wts_plural;
 
-	/* skel */
-	/* skel_init_t *skel_init; */
-	/* drop_init_t *drop_init; */
-
 	/* object */
-	/* obj_init_t *obj_init; */
 	obj_exists_t *obj_exists;
 	object_new_t *object_new;
 	object_copy_t *object_copy;
@@ -55,15 +48,12 @@ struct nd {
 	ent_set_t *ent_set;
 	ent_del_t *ent_del;
 	ent_reset_t *ent_reset;
-	birth_t *birth;
 	controls_t *controls;
 	payfor_t *payfor;
 	look_around_t *look_around;
-	entity_damage_t *entity_damage;
 	enter_t *enter;
-	dodge_t *dodge;
-	ent_dmg_t *ent_dmg;
 	look_at_t *look_at;
+	room_clean_t *room_clean;
 
 	nd_put_t *nd_put, *nd_get;
 	nd_open_t *nd_open;
@@ -96,11 +86,10 @@ struct nd {
 	fbcp_t *fbcp;
 	mcp_content_in_t *mcp_content_in;
 	mcp_content_out_t *mcp_content_out;
-	mcp_stats_t *mcp_stats;
 	mcp_bar_t *mcp_bar;
-	mcp_hp_bar_t *mcp_hp_bar;
 
 	unsigned hds[HD_MAX];
+	unsigned hd_hd;
 	char ret[5096];
 };
 

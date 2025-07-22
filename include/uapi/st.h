@@ -6,6 +6,7 @@
 
 #define DIM 2
 #define NOISE_MAX ((uint32_t) -1)
+#define DAYTICK_Y	10
 
 typedef int16_t coord_t;
 typedef uint16_t ucoord_t;
@@ -39,7 +40,7 @@ typedef struct view_tile {
 	unsigned raw[16];
 } view_tile_t;
 
-typedef int st_teleport_t(unsigned player_ref, struct cmd_dir cd);
+typedef void st_teleport_t(unsigned player_ref, uint64_t pos);
 st_teleport_t st_teleport;
 
 typedef void st_run_t(unsigned player_ref, char *symbol);
@@ -53,6 +54,9 @@ struct spawn_arg {
 	void *arg;
 	coord_t *pos;
 };
+
+typedef unsigned room_clean_t(unsigned loc_ref);
+room_clean_t room_clean;
 
 #endif
 

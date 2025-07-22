@@ -145,7 +145,7 @@ noise_full(size_t i, point_t s, ucoord_t obits)
 		r.tmp = temp(obits, _he, _tm, s[Y_COORD] + (j >> CHUNK_Y));
 		r.rn = rain(obits, w, _he, _cl, r.tmp);
 		r.bio_idx = _he < w ? 0 : bio_idx(r.rn, r.tmp);
-		SIC_CALL(&r, sic_noise, r, _he, w, _tm, _cl);
+		SIC_CALL(&r, on_noise, r, _he, w, _tm, _cl);
 		chunks_bio_raw[i + j] = r;
 	}
 }

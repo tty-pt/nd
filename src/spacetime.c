@@ -372,7 +372,7 @@ fee_fail(unsigned player_ref, OBJ *player, char *desc, char *info, unsigned cost
 
 static int
 st_claim(unsigned player_ref, OBJ *room) {
-	ROO *rroom = &room->sp.room;
+	ROO *rroom = (ROO *) &room->data;
 
 	if (!(rroom->flags & RF_TEMP)) {
 		if (room->owner != player_ref) {
@@ -400,7 +400,7 @@ exits_fix(unsigned there_ref, enum exit e)
 {
 	OBJ there;
 	qdb_get(obj_hd, &there, &there_ref);
-	ROO *rthere = &there.sp.room;
+	ROO *rthere = (ROO *) &there.data;
 	const char *s;
 
 	for (s = e_other(e); *s; s++) {
@@ -412,7 +412,7 @@ exits_fix(unsigned there_ref, enum exit e)
 
 		OBJ othere;
 		qdb_get(obj_hd, &othere, &othere_ref);
-		ROO *rothere = &othere.sp.room;
+		ROO *rothere = (ROO *) &othere.data;
 
 		if (rothere->flags & RF_TEMP) {
 			continue;
@@ -450,7 +450,7 @@ exits_infer(unsigned here_ref, ROO *rhere)
 
 		OBJ there;
 		qdb_get(obj_hd, &there, &there_ref);
-		ROO *rthere = &there.sp.room;
+		ROO *rthere = (ROO *) &there.data;
 
 		if (rthere->exits & e_simm(e)) {
 			rhere->exits |= e;
@@ -468,7 +468,7 @@ st_room_at(unsigned player_ref, pos_t pos)
 	OBJ there;
 	biome_map = biome_map_get(* (uint64_t *) pos);
 	unsigned there_ref = object_add(&there, biome_map[bio.bio_idx], NOTHING, (uint64_t) &bio);
-	ROO *rthere = &there.sp.room;
+	ROO *rthere = (ROO *) &there.data;
 	map_put(pos, there_ref, DB_NOOVERWRITE);
 	exits_infer(there_ref, rthere);
 
@@ -480,7 +480,7 @@ st_room_at(unsigned player_ref, pos_t pos)
 	rthere->floor = bio.bio_idx;
 	qdb_put(obj_hd, &there_ref, &there);
 	uint32_t v = XXH32((const char *) pos, sizeof(pos_t), 1);
-	SIC_CALL(NULL, sic_spawn, player_ref, there_ref, bio, v);
+	SIC_CALL(NULL, on_spawn, player_ref, there_ref, bio, v);
 	return there_ref;
 }
 
@@ -512,18 +512,17 @@ static unsigned
 e_move(unsigned player_ref, enum exit e) {
 	OBJ player;
 	qdb_get(obj_hd, &player, &player_ref);
-	ENT eplayer = ent_get(player_ref);
 	OBJ loc;
 	qdb_get(obj_hd, &loc, &player.location);
 	unsigned dest_ref;
-	ROO *rloc = &loc.sp.room;
+	ROO *rloc = (ROO *) &loc.data;
 	char const *dwts = "door";
 	int door = 0;
 
-	if (eplayer.klock) {
-		nd_writef(player_ref, "You can't move while being targeted.\n");
+	int cant_move = 0;
+	SIC_CALL(&cant_move, on_move, player_ref, cant_move);
+	if (cant_move)
 		return NOTHING;
-	}
 
 	if (!map_has(player.location) || !(rloc->exits & e)) {
 		nd_writef(player_ref, "You can't go that way.\n");
@@ -560,7 +559,7 @@ room_clean(unsigned here_ref)
 
 	qdb_get(obj_hd, &here, &here_ref);
 
-	if (!(here.sp.room.flags & RF_TEMP))
+	if (!(((ROO *) here.data)->flags & RF_TEMP))
 		return here_ref;
 
 	qdb_cur_t c = qdb_iter(contents_hd, &here_ref);
@@ -594,7 +593,7 @@ carve(unsigned player_ref, enum exit e)
 	unsigned here_ref = player.location, there_ref = here_ref;
 	OBJ here;
 	qdb_get(obj_hd, &here, &here_ref);
-	ROO *rhere = &here.sp.room;
+	ROO *rhere = (ROO *) &here.data;
 	int wall = 0;
 
 	if (!e_ground(here_ref, e)) {
@@ -619,7 +618,7 @@ carve(unsigned player_ref, enum exit e)
 	st_claim(player_ref, &there); // FIXME check success in advance
 
 	if (wall) {
-		ROO *rthere = &there.sp.room;
+		ROO *rthere = (ROO *) &there.data;
 		const char *s;
 		for (s = e_other(e_simm(e)); *s; s++) {
 			enum exit e2 = dir_e(*s);
@@ -643,7 +642,7 @@ uncarve(unsigned player_ref, enum exit e)
 	unsigned here_ref = player.location, there_ref;
 	OBJ here;
 	qdb_get(obj_hd, &here, &here_ref);
-	ROO *rhere = &here.sp.room;
+	ROO *rhere = (ROO *) &here.data;
 	int ht, cd = e_ground(here_ref, e);
 
 	if (cd) {
@@ -668,7 +667,7 @@ uncarve(unsigned player_ref, enum exit e)
 
 	OBJ there;
 	qdb_get(obj_hd, &there, &there_ref);
-	ROO *rthere = &there.sp.room;
+	ROO *rthere = (ROO *) &there.data;
 
 	if ((rthere->flags & RF_TEMP) || there.owner != player_ref) {
 		nd_writef(player_ref, "You don't own th%s room.\n", s0);
@@ -699,7 +698,7 @@ unwall(unsigned player_ref, enum exit e)
 	unsigned there_ref, here_ref = player.location;
 	OBJ here;
 	qdb_get(obj_hd, &here, &here_ref);
-	ROO *rhere = &here.sp.room;
+	ROO *rhere = (ROO *) &here.data;
 
 	a = here.owner == player_ref;
 	b = rhere->flags & RF_TEMP;
@@ -707,7 +706,7 @@ unwall(unsigned player_ref, enum exit e)
 
 	OBJ there;
 	qdb_get(obj_hd, &there, &there_ref);
-	ROO *rthere = &there.sp.room;
+	ROO *rthere = (ROO *) &there.data;
 
 	if (there_ref != NOTHING) {
 		c = there.owner == player_ref;
@@ -734,7 +733,7 @@ unwall(unsigned player_ref, enum exit e)
 		return;
 
 	qdb_get(obj_hd, &there, &there_ref);
-	rthere = &there.sp.room;
+	rthere = (ROO *) &there.data;
 	rthere->exits |= e_simm(e);
 	qdb_put(obj_hd, &there_ref, &there);
 	nd_writef(player_ref, "You tear down the wall.\n");
@@ -750,7 +749,7 @@ gexit_claim(unsigned player_ref, enum exit e)
 	      there_ref = st_there(player.location, e);
 	qdb_get(obj_hd, &here, &here_ref);
 	qdb_get(obj_hd, &there, &there_ref);
-	ROO *rthere = &there.sp.room;
+	ROO *rthere = (ROO *) &there.data;
 
 	a = here_ref != NOTHING && here.owner == player_ref;
 	c = rthere->flags & RF_TEMP;
@@ -760,7 +759,7 @@ gexit_claim(unsigned player_ref, enum exit e)
 	if (a && (b || c))
 		return 0;
 
-	if (here_ref != NOTHING || (here.sp.room.flags & RF_TEMP)) {
+	if (here_ref != NOTHING || (((ROO *) here.data)->flags & RF_TEMP)) {
 		if (b)
 			return 0;
 		if (d || c) // FIXME
@@ -778,7 +777,7 @@ gexit_claim_walk(unsigned player_ref, enum exit e)
 	qdb_get(obj_hd, &player, &player_ref);
 	unsigned here_ref = player.location;
 	qdb_get(obj_hd, &here, &here_ref);
-	ROO *rhere = &here.sp.room;
+	ROO *rhere = (ROO *) &here.data;
 
 	if (!(rhere->exits & e)) {
 		nd_writef(player_ref, "No exit here.\n");
@@ -805,7 +804,7 @@ e_wall(unsigned player_ref, enum exit e)
 	qdb_get(obj_hd, &player, &player_ref);
 	unsigned here_ref = player.location;
 	qdb_get(obj_hd, &here, &here_ref);
-	ROO *rhere = &here.sp.room;
+	ROO *rhere = (ROO *) &here.data;
 
 	rhere->exits &= ~e_simm(e);
 	qdb_put(obj_hd, &here_ref, &here);
@@ -815,7 +814,7 @@ e_wall(unsigned player_ref, enum exit e)
 	if (there_ref != NOTHING) {
 		OBJ there;
 		qdb_get(obj_hd, &there, &there_ref);
-		ROO *rthere = &there.sp.room;
+		ROO *rthere = (ROO *) &there.data;
 		rthere->exits &= ~e;
 		qdb_put(obj_hd, &there_ref, &there);
 	}
@@ -833,7 +832,7 @@ door(unsigned player_ref, enum exit e)
 	qdb_get(obj_hd, &player, &player_ref);
 	unsigned where_ref = player.location;
 	qdb_get(obj_hd, &where, &where_ref);
-	ROO *rwhere = &where.sp.room;
+	ROO *rwhere = (ROO *) &where.data;
 	rwhere->doors |= e_simm(e);
 	qdb_put(obj_hd, &where_ref, &where);
 
@@ -841,7 +840,7 @@ door(unsigned player_ref, enum exit e)
 
 	if (where_ref == NOTHING) {
 		qdb_get(obj_hd, &where, &where_ref);
-		rwhere = &where.sp.room;
+		rwhere = (ROO *) &where.data;
 		rwhere->doors |= e;
 		qdb_put(obj_hd, &where_ref, &where);
 	}
@@ -859,7 +858,7 @@ undoor(unsigned player_ref, enum exit e)
 	qdb_get(obj_hd, &player, &player_ref);
 	unsigned where_ref = player.location;
 	qdb_get(obj_hd, &where, &where_ref);
-	ROO *rwhere = &where.sp.room;
+	ROO *rwhere = (ROO *) &where.data;
 	rwhere->doors &= ~e_simm(e);
 	qdb_put(obj_hd, &where_ref, &where);
 
@@ -867,7 +866,7 @@ undoor(unsigned player_ref, enum exit e)
 
 	if (where_ref != NOTHING) {
 		qdb_get(obj_hd, &where, &where_ref);
-		rwhere = &where.sp.room;
+		rwhere = (ROO *) &where.data;
 		rwhere->doors &= ~e;
 		qdb_put(obj_hd, &where_ref, &where);
 	}
@@ -893,8 +892,19 @@ tell_pos(unsigned player_ref, struct cmd_dir cd) {
 	return ret;
 }
 
+void
+st_teleport(unsigned player_ref, uint64_t mpos) {
+	pos_t pos;
+	memcpy(pos, &mpos, sizeof(mpos));
+	unsigned there_ref = map_get(pos);
+	biome_map = biome_map_get(* (uint16_t *) pos);
+	if (there_ref == NOTHING)
+		there_ref = st_room_at(player_ref, pos);
+	enter(player_ref, there_ref, E_NULL);
+}
+
 int
-st_teleport(unsigned player_ref, struct cmd_dir cd)
+vim_teleport(unsigned player_ref, struct cmd_dir cd)
 {
 	pos_t pos;
 	int ret = 0;
@@ -909,22 +919,11 @@ st_teleport(unsigned player_ref, struct cmd_dir cd)
 			map_where(pos, target.location);
 			ret = 1;
 		}
-	} else
-		memcpy(pos, &cd.rep, sizeof(cd.rep));
+		memcpy(&cd.rep, pos, sizeof(cd.rep));
+	}
 
-	unsigned there_ref = map_get(pos);
-	biome_map = biome_map_get(* (uint16_t *) pos);
-	if (there_ref == NOTHING)
-		there_ref = st_room_at(player_ref, pos);
-
-	/* if (!eplayer->gpt) */
-	enter(player_ref, there_ref, E_NULL);
+	st_teleport(player_ref, cd.rep);
 	return ret;
-}
-
-void st_start(unsigned player_ref) {
-	struct cmd_dir cmd_dir = { .rep = 0 };
-	st_teleport(player_ref, cmd_dir);
 }
 
 static int
@@ -949,7 +948,7 @@ pull(unsigned player_ref, struct cmd_dir cd)
 	OBJ what, here;
 	qdb_get(obj_hd, &what, &what_ref);
 	qdb_get(obj_hd, &here, &here_ref);
-	ROO *rhere = &here.sp.room;
+	ROO *rhere = (ROO *) &here.data;
 
 	if (!(rhere->exits & e)
 	    || what.type != TYPE_ROOM
@@ -976,7 +975,7 @@ op_t op_map[] = {
 	['w'] = { .op.a = &e_wall },
 	['W'] = { .op.a = &unwall },
 	['x'] = { .op.b = &tell_pos, .type = 1 },
-	['X'] = { .op.b = &st_teleport, .type = 1 },
+	['X'] = { .op.b = &vim_teleport, .type = 1 },
 	['#'] = { .op.b = &pull, .type = 1 },
 };
 

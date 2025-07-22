@@ -45,7 +45,7 @@ do_examine(int fd, int argc __attribute__((unused)), char *argv[])
 	switch (thing.type) {
 	case TYPE_ROOM:
 		{
-			ROO *rthing = &thing.sp.room;
+			ROO *rthing = (ROO *) &thing.data;
 			nd_writef(player_ref, "Exits: %hhx Doors: %hhx\n", rthing->exits, rthing->doors);
 		}
 		break;
@@ -53,8 +53,7 @@ do_examine(int fd, int argc __attribute__((unused)), char *argv[])
 		{
 			ENT ething = ent_get(thing_ref);
 
-			nd_writef(player_ref, "Home: %s\n", unparse(ething.home));
-			nd_writef(player_ref, "hp: %d/%d entity flags: %d\n", ething.hp, HP_MAX(&ething), ething.flags);
+			nd_writef(player_ref, "Home: %s, Flags: %d\n", unparse(ething.home), ething.flags);
 
 			/* print location if player can link to it */
 		}
@@ -62,7 +61,7 @@ do_examine(int fd, int argc __attribute__((unused)), char *argv[])
 	default: break;
 	}
 
-	SIC_CALL(NULL, sic_examine, player_ref, thing_ref);
+	SIC_CALL(NULL, on_examine, player_ref, thing_ref, thing.type);
 	nd_writef(player_ref, "Location: %s\n", unparse(thing.location));
 }
 
