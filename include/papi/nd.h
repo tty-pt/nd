@@ -59,13 +59,10 @@ struct nd {
 	controls_t *controls;
 	payfor_t *payfor;
 	look_around_t *look_around;
-	mask_element_t *mask_element;
 	entity_damage_t *entity_damage;
 	enter_t *enter;
-	kill_dodge_t *kill_dodge;
-	kill_dmg_t *kill_dmg;
-	spell_cast_t *spell_cast;
-	debufs_end_t *debufs_end;
+	dodge_t *dodge;
+	ent_dmg_t *ent_dmg;
 	look_at_t *look_at;
 
 	nd_put_t *nd_put, *nd_get;
@@ -73,6 +70,8 @@ struct nd {
 	nd_iter_t *nd_iter;
 	nd_next_t *nd_next;
 	nd_fin_t *nd_fin;
+	nd_len_reg_t *nd_len_reg;
+
 	nd_register_t *nd_register;
 
 	ematch_at_t *ematch_at;
@@ -98,6 +97,8 @@ struct nd {
 	mcp_content_in_t *mcp_content_in;
 	mcp_content_out_t *mcp_content_out;
 	mcp_stats_t *mcp_stats;
+	mcp_bar_t *mcp_bar;
+	mcp_hp_bar_t *mcp_hp_bar;
 
 	unsigned hds[HD_MAX];
 	char ret[5096];

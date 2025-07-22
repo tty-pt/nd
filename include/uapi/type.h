@@ -7,6 +7,8 @@
 #include "./skel.h"
 #include "./st.h"
 
+#define ND_AINDEX 32
+
 typedef struct {
 	size_t arg_size;
 	size_t ret_size;
@@ -125,8 +127,14 @@ typedef struct {
 	sic_areg(XSTR(fname), &fname##_adapter)
 
 typedef struct {
-	char str[64];
-} sic_small_str_t;
+	char str[256];
+	int pos;
+} sic_str_t;
+
+struct hit {
+	enum color color;
+	short ndmg, cdmg;
+};
 
 typedef char small_buf_t[64];
 
@@ -144,6 +152,9 @@ SIC_DECL(struct icon, sic_icon, struct icon, i, unsigned, ref)
 SIC_DECL(int, sic_del, unsigned, ref)
 SIC_DECL(int, sic_clone, unsigned, orig_ref, unsigned, nu_ref)
 SIC_DECL(int, sic_update, unsigned, ref, double, dt)
+SIC_DECL(int, sic_status, unsigned, ref, ENT, ent)
+
+SIC_DECL(int, sic_vim, unsigned, ref, sic_str_t, ss, int, ofs)
 
 SIC_DECL(int, sic_auth, unsigned, player_ref)
 SIC_DECL(int, sic_leave, unsigned, player_ref, unsigned, loc_ref)
@@ -152,12 +163,20 @@ SIC_DECL(int, sic_spawn, unsigned, player_ref, unsigned, loc_ref, struct bio, bi
 SIC_DECL(ENT, sic_fight_start, unsigned, player_ref, ENT, eplayer)
 SIC_DECL(ENT, sic_mob_recovered, unsigned, player_ref, ENT, eplayer)
 SIC_DECL(ENT, sic_mob_recovering, unsigned, player_ref, ENT, eplayer)
-SIC_DECL(ENT, sic_birth, ENT, eplayer)
+SIC_DECL(ENT, sic_birth, unsigned, ent_ref, ENT, ent)
+SIC_DECL(ENT, sic_death, unsigned, ent_ref, ENT, ent)
+SIC_DECL(int, sic_before_attack, unsigned, player_ref, ENT, eplayer)
 SIC_DECL(ENT, sic_attack, unsigned, player_ref, ENT, eplayer)
+SIC_DECL(struct hit, sic_hit, unsigned, ent_ref, ENT, ent, ENT, target, struct hit, hit)
+SIC_DECL(ENT, sic_after_attack, unsigned, player_ref, ENT, eplayer)
 SIC_DECL(int, sic_get, unsigned, player_ref, unsigned, ref)
+SIC_DECL(ENT, sic_dodge, unsigned, player_ref, ENT, eplayer)
+SIC_DECL(ENT, sic_ent_update, unsigned, player_ref, ENT, eplayer, double, dt)
+SIC_DECL(ENT, sic_ent_after_update, unsigned, player_ref, ENT, eplayer)
+SIC_DECL(ENT, sic_reroll, unsigned, player_ref, ENT, eplayer)
 
 SIC_DECL(struct bio, sic_noise, struct bio, bio, uint32_t, he, uint32_t, w, uint32_t, tm, uint32_t, cl)
-SIC_DECL(sic_small_str_t, sic_empty_tile, view_tile_t, t, unsigned, side)
+SIC_DECL(sic_str_t, sic_empty_tile, view_tile_t, t, unsigned, side, sic_str_t, ss)
 
 extern unsigned type_hd, action_hd, vtf_hd, vtf_max;
 

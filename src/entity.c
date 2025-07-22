@@ -51,24 +51,15 @@ void ent_reset(ENT *ent) {
 	ent->huth[HUTH_THIRST] = ent->huth[HUTH_HUNGER] = 0;
 }
 
-void spells_birth(ENT *entity);
-
-void birth(ENT *eplayer)
+void birth(unsigned player_ref, ENT *eplayer)
 {
 	eplayer->huth[HUTH_THIRST] = eplayer->huth[HUTH_HUNGER] = eplayer->select =
 		eplayer->huth_n[HUTH_THIRST] = eplayer->huth_n[HUTH_HUNGER] = 0;
-	eplayer->combo = 0;
 	eplayer->hp = HP_MAX(eplayer);
-	eplayer->mp = MP_MAX(eplayer);
 	eplayer->target = NOTHING;
 	eplayer->sat = NOTHING;
 
-	EFFECT(eplayer, DMG).value = DMG_BASE(eplayer);
-	EFFECT(eplayer, DODGE).value = DODGE_BASE(eplayer);
-
-	SIC_CALL(eplayer, sic_birth, *eplayer);
-
-	spells_birth(eplayer);
+	SIC_CALL(eplayer, sic_birth, player_ref, *eplayer);
 }
 
 static inline int
@@ -349,13 +340,12 @@ entity_kill(unsigned player_ref, ENT *eplayer, unsigned target_ref, ENT *etarget
 	}
 
 	etarget->hp = 1;
-	etarget->mp = 1;
 	ent_reset(etarget);
 	ent_set(target_ref, etarget);
-	debufs_end(etarget);
 	st_start(target_ref);
+	SIC_CALL(etarget, sic_death, target_ref, *etarget);
 	look_around(target_ref);
-	mcp_bars(target_ref);
+	mcp_hp_bar(target_ref);
 	view(target_ref);
 
 	return target_ref;
@@ -381,7 +371,7 @@ entity_damage(unsigned player_ref, ENT *eplayer, unsigned target_ref, ENT *etarg
 
 	etarget->hp = hp;
 	ent_set(target_ref, etarget);
-	mcp_bars(target_ref);
+	mcp_hp_bar(target_ref);
 
 	return 0;
 }
@@ -519,11 +509,14 @@ dodge_get(ENT *eplayer)
 }
 
 int
-kill_dodge(unsigned player_ref, char *wts)
+dodge(unsigned player_ref, char *wts)
 {
 	ENT eplayer = ent_get(player_ref);
-	ENT etarget = ent_get(eplayer.target);
-	if (!EFFECT(&etarget, MOV).value && dodge_get(&eplayer)) {
+	eplayer.aux = 1;
+
+	SIC_CALL(&eplayer, sic_dodge, player_ref, eplayer);
+
+	if (eplayer.aux && dodge_get(&eplayer)) {
 		notify_wts_to(eplayer.target, player_ref, "dodge", "dodges", "'s %s", wts);
 		return 1;
 	} else
@@ -538,7 +531,7 @@ randd_dmg(short dmg)
 }
 
 short
-kill_dmg(unsigned dmg_type, short dmg,
+ent_dmg(unsigned dmg_type, short dmg,
 	short def, unsigned def_type)
 {
 	if (dmg > 0) {
@@ -563,20 +556,11 @@ kill_dmg(unsigned dmg_type, short dmg,
 }
 
 void debuf_notify(unsigned player_ref, struct debuf *d, short val);
-int spells_cast(unsigned player_ref, ENT *eplayer, unsigned target_ref);
 
 static inline void
 attack(unsigned player_ref, ENT *eplayer)
 {
-	register unsigned char mask;
-
-	mask = EFFECT(eplayer, MOV).mask;
-
-	if (mask) {
-		register unsigned i = __builtin_ffs(mask) - 1;
-		debuf_notify(player_ref, &eplayer->debufs[i], 0);
-		return;
-	}
+	SIC_CALL(eplayer, sic_attack, player_ref, *eplayer);
 
 	if (eplayer->target == NOTHING)
 		return;
@@ -585,25 +569,19 @@ attack(unsigned player_ref, ENT *eplayer)
 	char wts[BUFSIZ];
 	extern unsigned wts_hd;
 	eplayer->wtst = eplayer->wtso;
-	SIC_CALL(NULL, sic_attack, player_ref, *eplayer);
-
 	qdb_get(wts_hd, wts, &eplayer->wtst);
 
-	if (spells_cast(player_ref, eplayer, eplayer->target) && !kill_dodge(player_ref, wts)) {
-		unsigned at = STAT_ELEMENT(eplayer, MDMG);
-		unsigned dt = STAT_ELEMENT(&etarget, MDEF);
-		short aval = -kill_dmg(ELM_PHYSICAL, EFFECT(eplayer, DMG).value, EFFECT(&etarget, DEF).value + EFFECT(&etarget, MDEF).value, dt);
-		short bval = -kill_dmg(at, EFFECT(eplayer, MDMG).value, EFFECT(&etarget, MDEF).value, dt);
-		element_t element;
-		qdb_get(element_hd, &element, &at);
-		notify_attack(player_ref, eplayer->target, wts, aval, element.color, bval);
-		if (!entity_damage(player_ref, eplayer, eplayer->target, &etarget, aval + bval))
+	if (!dodge(player_ref, wts)) {
+		struct hit hit = { .ndmg = 0, };
+		SIC_CALL(&hit, sic_hit, player_ref, *eplayer, etarget, hit);
+		notify_attack(player_ref, eplayer->target, wts, hit.ndmg, hit.color, hit.cdmg);
+		if (!entity_damage(player_ref, eplayer, eplayer->target, &etarget, hit.ndmg + hit.cdmg))
 			ent_set(eplayer->target, &etarget);
 	}
 }
 
 static inline void
-kill_update(unsigned player_ref, ENT *eplayer, double dt __attribute__((unused)))
+fight_update(unsigned player_ref, ENT *eplayer, double dt __attribute__((unused)))
 {
 	if (eplayer->target == NOTHING)
 		return;
@@ -616,19 +594,18 @@ kill_update(unsigned player_ref, ENT *eplayer, double dt __attribute__((unused))
 		ent_set(target_ref, &etarget);
 	}
 
-	SIC_CALL(eplayer, sic_fight_start, player_ref, *eplayer);
+	SIC_CALL(NULL, sic_before_attack, player_ref, *eplayer);
 
 	unsigned short ohp = etarget.hp;
-	unsigned short omp = eplayer->mp;
 	attack(player_ref, eplayer);
-	if (eplayer->mp != omp)
-		mcp_bars(player_ref);
-	if (etarget.hp != ohp)
-		mcp_bars(target_ref);
+
+	SIC_CALL(eplayer, sic_after_attack, player_ref, *eplayer);
+
+	if (eplayer->hp != ohp)
+		mcp_hp_bar(target_ref);
+
 	ent_set(player_ref, eplayer);
 }
-
-int debufs_process(unsigned player_ref, ENT *eplayer);
 
 void
 entity_update(unsigned player_ref, double dt)
@@ -637,7 +614,6 @@ entity_update(unsigned player_ref, double dt)
 	qdb_get(obj_hd, &player, &player_ref);
 	ENT eplayer = ent_get(player_ref);
 	unsigned short ohp = eplayer.hp;
-	unsigned short omp = eplayer.mp;
 
 	if (!(eplayer.flags & EF_PLAYER)) {
 		if (eplayer.hp == HP_MAX(&eplayer)) {
@@ -654,28 +630,19 @@ entity_update(unsigned player_ref, double dt)
 
 	int damage = 0;
 
-	if (eplayer.flags & EF_SITTING) {
-		int div = 100;
-		int max, cur;
-		damage += dt * HP_MAX(&eplayer) / div;
-		max = MP_MAX(&eplayer);
-		cur = eplayer.mp + (max / div);
-		eplayer.mp = cur > max ? max : cur;
-	}
-
-	if (player.location == 0)
-		return;
-
 	damage -= huth_notify(player_ref, &eplayer, HUTH_THIRST);
 	damage -= huth_notify(player_ref, &eplayer, HUTH_HUNGER);
-	damage += debufs_process(player_ref, &eplayer);
+	eplayer.aux = damage;
+	SIC_CALL(&eplayer, sic_ent_update, player_ref, eplayer, dt);
 
 	if (!entity_damage(NOTHING, NULL, player_ref, &eplayer, damage))
-		kill_update(player_ref, &eplayer, dt);
+		fight_update(player_ref, &eplayer, dt);
 
+	SIC_CALL(&eplayer, sic_ent_after_update, player_ref, eplayer);
 	ent_set(player_ref, &eplayer);
-	if (eplayer.hp != ohp || eplayer.mp != omp)
-		mcp_bars(player_ref);
+
+	if (eplayer.hp != ohp)
+		mcp_hp_bar(player_ref);
 
 	nd_flush(player_ref);
 }
@@ -703,14 +670,13 @@ stats_init(ENT *enu, SENT *sk)
 }
 
 void
-reroll(ENT *eplayer) {
+reroll(unsigned player_ref, ENT *eplayer) {
 	int i;
 
 	for (i = 0; i < ATTR_MAX; i++)
 		eplayer->attr[i] = d20();
 
-	EFFECT(eplayer, DMG).value = DMG_BASE(eplayer);
-	EFFECT(eplayer, DODGE).value = DODGE_BASE(eplayer);
+	SIC_CALL(eplayer, sic_reroll, player_ref, *eplayer);
 }
 
 void
@@ -731,10 +697,10 @@ do_reroll(int fd, int argc, char *argv[])
 	}
 
 	ENT eplayer = ent_get(player_ref);
-	reroll(&eplayer);
+	reroll(player_ref, &eplayer);
 	ent_set(player_ref, &eplayer);
 	mcp_stats(player_ref);
-	mcp_bars(player_ref);
+	mcp_hp_bar(player_ref);
 }
 
 void
@@ -798,42 +764,16 @@ do_status(int fd, int argc __attribute__((unused)), char *argv[] __attribute__((
 	unsigned player_ref = fd_player(fd);
 	ENT eplayer = ent_get(player_ref);
 	// TODO optimize MOB_EV / MOB_EM
-	nd_writef(player_ref, "hp %u/%u\tmp %u/%u\tstuck 0x%x\n"
-		"dodge %d\tcombo 0x%x \tdebuf_mask 0x%x\n"
+	SIC_CALL(NULL, sic_status, player_ref, eplayer);
+	nd_writef(player_ref, "hp %u/%u\tstuck 0x%x\tdodge %d\n"
 		"damage %d\tmdamage %d\tmdmg_mask 0x%x\n"
 		"defense %d\tmdefense %d\tmdef_mask 0x%x\n"
 		"klock   %u\thunger %u\tthirst %u\n",
-		eplayer.hp, HP_MAX(&eplayer), eplayer.mp, MP_MAX(&eplayer), EFFECT(&eplayer, MOV).mask,
-		EFFECT(&eplayer, DODGE).value, eplayer.combo, eplayer.debuf_mask,
+		eplayer.hp, HP_MAX(&eplayer), EFFECT(&eplayer, MOV).mask,
+		EFFECT(&eplayer, DODGE).value,
 		EFFECT(&eplayer, DMG).value, EFFECT(&eplayer, MDMG).value, EFFECT(&eplayer, MDMG).mask,
 		EFFECT(&eplayer, DEF).value, EFFECT(&eplayer, MDEF).value, EFFECT(&eplayer, MDEF).mask,
 		eplayer.klock, eplayer.huth[HUTH_HUNGER], eplayer.huth[HUTH_THIRST]);
-}
-
-void
-do_heal(int fd, int argc __attribute__((unused)), char *argv[])
-{
-	char *name = argv[1];
-	unsigned player_ref = fd_player(fd), target_ref;
-
-	if (strcmp(name, "me")) {
-		target_ref = ematch_near(player_ref, name);
-	} else
-		target_ref = player_ref;
-
-	if (target_ref == NOTHING || !(ent_get(player_ref).flags & EF_WIZARD)) {
-                nd_writef(player_ref, CANTDO_MESSAGE);
-		return;
-	}
-
-	ENT etarget = ent_get(target_ref);
-	etarget.hp = HP_MAX(&etarget);
-	etarget.mp = MP_MAX(&etarget);
-	etarget.huth[HUTH_THIRST] = etarget.huth[HUTH_HUNGER] = 0;
-	debufs_end(&etarget);
-	ent_set(target_ref, &etarget);
-	notify_wts_to(player_ref, target_ref, "heal", "heals", "");
-	mcp_bars(target_ref);
 }
 
 void
@@ -857,7 +797,7 @@ do_advitam(int fd, int argc __attribute__((unused)), char *argv[])
 	}
 
 	ENT etarget;
-	birth(&etarget);
+	birth(target_ref, &etarget);
 	ent_set(target_ref, &etarget);
 	target.type = TYPE_ENTITY;
 	qdb_put(obj_hd, &target_ref, &target);
@@ -907,30 +847,4 @@ do_train(int fd, int argc __attribute__((unused)), char *argv[]) {
 	ent_set(player_ref, &eplayer);
 	nd_writef(player_ref, "Your %s increases %d time(s).\n", attrib, amount);
         mcp_stats(player_ref);
-}
-
-int
-kill_v(unsigned player_ref, char const *opcs)
-{
-	ENT eplayer = ent_get(player_ref);
-	char *end;
-	if (isdigit(*opcs)) {
-		unsigned combo = strtol(opcs, &end, 0);
-		eplayer.combo = combo;
-		ent_set(player_ref, &eplayer);
-		nd_writef(player_ref, "Set combo to 0x%x.\n", combo);
-		return end - opcs;
-	} else if (*opcs == 'c' && isdigit(opcs[1])) {
-		unsigned slot = strtol(opcs + 1, &end, 0);
-		OBJ player;
-		qdb_get(obj_hd, &player, &player_ref);
-		if (player.location == 0)
-			nd_writef(player_ref, "You may not cast spells in room 0.\n");
-		else {
-			spell_cast(player_ref, &eplayer, eplayer.target, slot);
-			ent_set(player_ref, &eplayer);
-		}
-		return end - opcs;
-	} else
-		return 0;
 }

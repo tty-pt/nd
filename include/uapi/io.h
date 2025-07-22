@@ -19,6 +19,7 @@ enum hd {
 	HD_TYPE,
 	HD_RTYPE,
 	HD_BCP,
+	HD_ELEMENT,
 	HD_MAX,
 };
 
@@ -105,8 +106,11 @@ extern unsigned fds_hd;
 typedef unsigned (nd_put_t)(unsigned, void *, void *);
 nd_put_t nd_put, nd_get;
 
-typedef unsigned (nd_open_t)(char *, char *, char *, unsigned);
+typedef int (nd_open_t)(char *, char *, char *, unsigned);
 nd_open_t nd_open;
+
+typedef void nd_len_reg_t(char *iden, size_t len);
+nd_len_reg_t nd_len_reg;
 
 typedef struct {
 	int flags;

@@ -115,7 +115,7 @@ object_add(OBJ *nu, unsigned skel_id, unsigned where_ref, uint64_t v)
 			ent.wtso = skel.sp.entity.wt;
 			ent.sat = NOTHING;
 			ent.last_observed = NOTHING;
-			birth(&ent);
+			birth(nu_ref, &ent);
 			object_drop(nu_ref, skel_id);
 			ent.home = where_ref;
 			ent_set(nu_ref, &ent);
