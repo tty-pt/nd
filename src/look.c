@@ -61,7 +61,7 @@ do_examine(int fd, int argc __attribute__((unused)), char *argv[])
 	default: break;
 	}
 
-	SIC_CALL(NULL, on_examine, player_ref, thing_ref, thing.type);
+	call_on_examine(player_ref, thing_ref, thing.type);
 	nd_writef(player_ref, "Location: %s\n", unparse(thing.location));
 }
 

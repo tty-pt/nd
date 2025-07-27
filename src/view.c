@@ -331,7 +331,7 @@ view_build_flags(unsigned loc_ref) {
 			break;
 		}
 
-		SIC_CALL(&flags, on_view_flags, flags, tmp_ref);
+		call_on_view_flags(flags, tmp_ref);
 	}
 
 	return flags;

@@ -23,6 +23,7 @@ typedef struct {
 	size_t arg_size;
 	size_t ret_size;
 	void (*call)(void *, void *, void *);
+	char ret[5096];
 } sic_adapter_t;
 
 #define CAT(a, ...) PRIMITIVE_CAT(a, __VA_ARGS__)
@@ -103,11 +104,34 @@ typedef struct {
 #define CALL_NARGS_15(a, b, ...)  args.b, CALL_NARGS_14(__VA_ARGS__)
 #define CALL_NARGS_16(a, b, ...)  args.b, CALL_NARGS_15(__VA_ARGS__)
 
+#define CALL_DARGS(...) CAT(CALL_DARGS_, PAIR_COUNT(__VA_ARGS__))( __VA_ARGS__)
+#define CALL_DARGS_1(a, b)        b
+#define CALL_DARGS_2(a, b, ...)   b, CALL_DARGS_1(__VA_ARGS__)
+#define CALL_DARGS_3(a, b, ...)   b, CALL_DARGS_2(__VA_ARGS__)
+#define CALL_DARGS_4(a, b, ...)   b, CALL_DARGS_3(__VA_ARGS__)
+#define CALL_DARGS_5(a, b, ...)   b, CALL_DARGS_4(__VA_ARGS__)
+#define CALL_DARGS_6(a, b, ...)   b, CALL_DARGS_5(__VA_ARGS__)
+#define CALL_DARGS_7(a, b, ...)   b, CALL_DARGS_6(__VA_ARGS__)
+#define CALL_DARGS_8(a, b, ...)   b, CALL_DARGS_7(__VA_ARGS__)
+#define CALL_DARGS_9(a, b, ...)   b, CALL_DARGS_8(__VA_ARGS__)
+#define CALL_DARGS_10(a, b, ...)  b, CALL_DARGS_9(__VA_ARGS__)
+#define CALL_DARGS_11(a, b, ...)  b, CALL_DARGS_10(__VA_ARGS__)
+#define CALL_DARGS_12(a, b, ...)  b, CALL_DARGS_11(__VA_ARGS__)
+#define CALL_DARGS_13(a, b, ...)  b, CALL_DARGS_12(__VA_ARGS__)
+#define CALL_DARGS_14(a, b, ...)  b, CALL_DARGS_13(__VA_ARGS__)
+#define CALL_DARGS_15(a, b, ...)  b, CALL_DARGS_14(__VA_ARGS__)
+#define CALL_DARGS_16(a, b, ...)  b, CALL_DARGS_15(__VA_ARGS__)
+
 /* the callee uses this to be called */
 #define SIC_DECL(ftype, fname, ...) \
     struct fname##_args { \
         PAIR_GEN(__VA_ARGS__) \
     }; \
+    static inline ftype call_##fname(FUNC_ARGS(__VA_ARGS__)) { \
+	    ftype ret; \
+	    SIC_CALL(&ret, fname, CALL_DARGS(__VA_ARGS__)); \
+	    return ret; \
+    }
 
 #define SIC_DEF(ftype, fname, ...) \
     typedef ftype fname##_t(FUNC_ARGS(__VA_ARGS__)); \
@@ -148,12 +172,15 @@ sic_areg_t sic_areg;
 typedef void sic_call_t(void *retp, char *symbol, void *args);
 sic_call_t sic_call;
 
+typedef void sic_last_t(void *ret);
+sic_last_t sic_last;
+
 SIC_DECL(int, on_status, unsigned, player_ref)
 SIC_DECL(int, on_examine, unsigned, player_ref, unsigned, ref, unsigned, type)
 SIC_DECL(int, on_fbcp, char *, p, unsigned, ref) // FIXME
 SIC_DECL(int, on_add, unsigned, ref, unsigned, type, uint64_t, v)
 SIC_DECL(unsigned short, on_view_flags, unsigned short, flags, unsigned, ref)
-SIC_DECL(struct icon, on_icon, struct icon, i, unsigned, ref)
+SIC_DECL(struct icon, on_icon, struct icon, i, unsigned, ref, unsigned, type)
 SIC_DECL(int, on_del, unsigned, ref)
 SIC_DECL(int, on_clone, unsigned, orig_ref, unsigned, nu_ref)
 SIC_DECL(int, on_update, unsigned, ref, unsigned, type, double, dt)

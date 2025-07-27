@@ -44,7 +44,7 @@ enter(unsigned player_ref, unsigned loc_ref, enum exit e)
 	qdb_get(obj_hd, &player, &player_ref);
 	unsigned old_loc_ref = player.location;
 
-	SIC_CALL(NULL, on_before_leave, player_ref);
+	call_on_before_leave(player_ref);
 
 	if (e == E_NULL)
 		nd_owritef(player_ref, "%s teleports out.\n", player.name);
@@ -60,7 +60,7 @@ enter(unsigned player_ref, unsigned loc_ref, enum exit e)
 	} else
 		nd_owritef(player_ref, "%s comes in from the %s.\n", player.name, e_name(e_simm(e)));
 
-	SIC_CALL(NULL, on_after_enter, player_ref);
+	call_on_after_enter(player_ref);
 }
 
 int
@@ -216,6 +216,6 @@ int
 do_status(int fd, int argc __attribute__((unused)), char *argv[] __attribute__((unused)))
 {
 	unsigned player_ref = fd_player(fd);
-	SIC_CALL(NULL, on_status, player_ref);
+	call_on_status(player_ref);
 	return 0;
 }

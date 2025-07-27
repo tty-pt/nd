@@ -19,10 +19,6 @@
 #include "uapi/type.h"
 #include "papi/nd.h"
 
-unsigned act_look, act_fight, act_shop,
-	 act_open, act_chop,
-	 act_get, act_talk;
-
 char std_db[BUFSIZ];
 char std_db_ok[BUFSIZ];
 unsigned obj_hd, contents_hd, obs_hd;
@@ -34,9 +30,11 @@ int obj_exists(unsigned ref) {
 unsigned
 object_new(OBJ *newobj)
 {
+	unsigned flags = newobj->flags;
 	memset(newobj, 0, sizeof(OBJ));
 	newobj->location = NOTHING;
 	newobj->owner = ROOT;
+	newobj->flags = flags;
 	return qdb_put(obj_hd, NULL, newobj);
 }
 
@@ -133,7 +131,7 @@ object_add(OBJ *nu, unsigned skel_id, unsigned where_ref, uint64_t v)
 	}
 
 	qdb_put(obj_hd, &nu_ref, nu);
-	SIC_CALL(NULL, on_add, nu_ref, nu->type, v);
+	call_on_add(nu_ref, nu->type, v);
 
 	if (skel.type != TYPE_ROOM)
 		mcp_content_in(where_ref, nu_ref);
@@ -155,7 +153,7 @@ object_art(unsigned thing_ref)
 	switch (thing.type) {
 	case TYPE_ENTITY:
 		type = "entity";
-		snprintf(art, sizeof(art), "%s/%s/%u.jpeg", type, thing.art_id && ent_get(thing_ref).flags & EF_PLAYER ? "avatar" : thing.name, thing.art_id);
+		snprintf(art, sizeof(art), "%s/%s/%u.jpeg", type, thing.art_id && thing.flags & OF_PLAYER ? "avatar" : thing.name, thing.art_id);
 		return art;
 	case TYPE_ROOM: type = "biome"; break;
 	default:
@@ -183,7 +181,7 @@ objects_init(void)
 		ENT ent = ent_get(ref);
 		ent.last_observed = NOTHING;
 		qdb_put(ent_hd, &ref, &ent);
-		if (ent.flags & EF_PLAYER)
+		if (oi.flags & OF_PLAYER)
 			player_put(oi.name, ref);
 	}
 }
@@ -207,7 +205,7 @@ objects_update(double dt)
 	unsigned obj_ref;
 	qdb_cur_t c = qdb_iter(obj_hd, NULL);
 	while (qdb_next(&obj_ref, &obj, &c))
-		SIC_CALL(NULL, on_update, obj_ref, obj.type, dt);
+		call_on_update(obj_ref, obj.type, dt);
 }
 
 void
@@ -230,7 +228,7 @@ object_move(unsigned what_ref, unsigned where_ref)
 		ent_set(first_ref, &efirst);
 	}
 
-	SIC_CALL(NULL, on_leave, what_ref, last_loc);
+	call_on_leave(what_ref, last_loc);
 
 	/* test for special cases */
 	if (where_ref == NOTHING) {
@@ -250,7 +248,7 @@ object_move(unsigned what_ref, unsigned where_ref)
 		qdb_del(obj_hd, &what_ref, NULL);
 		mcp_content_out(last_loc, what_ref);
 
-		SIC_CALL(NULL, on_del, what_ref);
+		call_on_del(what_ref);
 		return;
 	}
 
@@ -266,15 +264,15 @@ object_move(unsigned what_ref, unsigned where_ref)
 	}
 
 	qdb_put(contents_hd, &where_ref, &what_ref);
-	SIC_CALL(NULL, on_enter, what_ref, where_ref);
+	call_on_enter(what_ref, where_ref);
 }
 
 void
 base_actions_register(void) {
-	act_look = action_register("look", "👁");
-	act_open = action_register("open", "📦");
-	act_get = action_register("get", "🖐️");
-	act_talk = action_register("talk", "👄");
+	action_register("look", "👁");
+	action_register("open", "📦");
+	action_register("get", "🖐️");
+	action_register("talk", "👄");
 }
 
 struct icon
@@ -284,7 +282,7 @@ object_icon(unsigned what_ref)
 	qdb_get(obj_hd, &what, &what_ref);
 
         struct icon ret = {
-                .actions = act_look,
+                .actions = ACT_LOOK,
                 .ch = '?',
                 .pi = { .fg = WHITE, .flags = BOLD, },
         };
@@ -294,18 +292,16 @@ object_icon(unsigned what_ref)
                 ret.pi.fg = YELLOW;
                 break;
         case TYPE_ENTITY:
-		ret.actions |= act_fight;
 		ret.pi.flags = BOLD;
 		ret.ch = '!';
 		ret.pi.fg = YELLOW;
                 break;
 	default: {
-                ret.actions |= act_get;
+                ret.actions |= ACT_GET;
                 break;
         }}
 
-	SIC_CALL(&ret, on_icon, ret, what_ref);
-	return ret;
+	return call_on_icon(ret, what_ref, what.type);
 }
 
 static inline int
@@ -380,7 +376,7 @@ do_clone(int fd, int argc __attribute__((unused)), char *argv[])
 	clone.type = thing.type;
 
 	qdb_put(obj_hd, &clone_ref, &clone);
-	SIC_CALL(NULL, on_clone, thing_ref, clone_ref);
+	call_on_clone(thing_ref, clone_ref);
 	object_move(clone_ref, player_ref);
 }
 
@@ -551,9 +547,7 @@ do_get(int fd, int argc __attribute__((unused)), char *argv[])
 	default: break;
 	}
 
-	int ret;
-	SIC_CALL(&ret, on_get, player_ref, thing_ref);
-	if (ret)
+	if (call_on_get(player_ref, thing_ref))
 		goto error;
 
 	object_move(thing_ref, player_ref);

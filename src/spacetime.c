@@ -480,7 +480,7 @@ st_room_at(unsigned player_ref, pos_t pos)
 	rthere->floor = bio.bio_idx;
 	qdb_put(obj_hd, &there_ref, &there);
 	uint32_t v = XXH32((const char *) pos, sizeof(pos_t), 1);
-	SIC_CALL(NULL, on_spawn, player_ref, there_ref, bio, v);
+	call_on_spawn(player_ref, there_ref, bio, v);
 	return there_ref;
 }
 
@@ -519,8 +519,7 @@ e_move(unsigned player_ref, enum exit e) {
 	char const *dwts = "door";
 	int door = 0;
 
-	int cant_move = 0;
-	SIC_CALL(&cant_move, on_move, player_ref, cant_move);
+	int cant_move = call_on_move(player_ref, 0);
 	if (cant_move)
 		return NOTHING;
 
@@ -570,7 +569,7 @@ room_clean(unsigned here_ref)
 		if (tmp.type != TYPE_ENTITY)
 			continue;
 
-		if (ent_get(tmp_ref).flags & EF_PLAYER) {
+		if (tmp.flags & OF_PLAYER) {
 			qdb_fin(&c);
 			return here_ref;
 		}
@@ -1216,7 +1215,7 @@ do_stchown(int fd, int argc, char *argv[]) {
 	OBJ who;
 	qdb_get(obj_hd, &who, &who_ref);
 
-	if (who.type != TYPE_ENTITY || !(ent_get(who_ref).flags & EF_PLAYER)) {
+	if (!(who.flags & OF_PLAYER)) {
 		nd_writef(player_ref, "Invalid target\n");
 		return;
 	}

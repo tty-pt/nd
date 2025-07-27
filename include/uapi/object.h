@@ -8,6 +8,7 @@
 #define NOTHING ((unsigned) -1)
 
 enum object_flags {
+	OF_PLAYER = 1,
 	OF_INF = 1,
 };
 
@@ -35,20 +36,16 @@ typedef struct {
 } ROO;
 
 enum entity_flags {
-	EF_PLAYER = 1,
 	EF_SHOP = 4,
 	EF_WIZARD = 8,
 	EF_BAN = 16,
 };
 
-enum attribute {
-	ATTR_STR,
-	ATTR_CON,
-	ATTR_DEX,
-	ATTR_INT,
-	ATTR_WIZ,
-	ATTR_CHA,
-	ATTR_MAX
+enum base_actions {
+	ACT_LOOK = 1,
+	ACT_OPEN = 2,
+	ACT_GET = 4,
+	ACT_TALK = 8,
 };
 
 typedef struct entity {

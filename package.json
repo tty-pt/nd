@@ -41,8 +41,8 @@
   },
   "dependencies": {
     "@popperjs/core": "^2.11.8",
-    "@tty-pt/ndc": "^0.11.0",
-    "@tty-pt/qdb": "^0.1.0",
+    "@tty-pt/ndc": "^0.11.4",
+    "@tty-pt/qdb": "^0.1.9",
     "@tty-pt/sub": "^2.3.2",
     "@xterm/addon-fit": "^0.10.0",
     "@xterm/addon-web-links": "^0.11.0",

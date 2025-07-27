@@ -174,7 +174,7 @@ unsigned nd_get(unsigned hd, void *value, void *key) {
 
 int nd_open(char *database, char *key_sip, char *value_sip, unsigned flags) {
 	unsigned hd = nd.nd_open(database, key_sip, value_sip, flags);
-	nd.nd_put(nd.hd_hd, database, &hd);
+	nd.nd_put(nd.hds[HD_HD], database, &hd);
 	return hd;
 }
 
@@ -268,6 +268,10 @@ void mcp_content_out(unsigned loc_ref, unsigned thing_ref) {
 
 void mcp_content_in(unsigned loc_ref, unsigned thing_ref) {
 	nd.mcp_content_in(loc_ref, thing_ref);
+}
+
+void sic_last(void *ret) {
+	memcpy(ret, nd.adapter->ret, nd.adapter->ret_size);
 }
 
 void mcp_bar(unsigned char iden, unsigned player_ref,

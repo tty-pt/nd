@@ -344,6 +344,10 @@ void mod_load_all(void) {
 		_mod_load(buf);
 }
 
+void sic_last(void *ret) {
+	memcpy(ret, nd.adapter->ret, nd.adapter->ret_size);
+}
+
 void sic_call(void *retp, char *symbol, void *arg) {
 	unsigned mod_id;
 	void *ptr = NULL;
@@ -356,13 +360,15 @@ void sic_call(void *retp, char *symbol, void *arg) {
 	}
 
 	while (qdb_next(&mod_id, &ptr, &c)) {
-		struct nd *ndr = (struct nd *) dlsym(ptr, "nd");
-		if (!ndr)
+		void *cb = dlsym(ptr, symbol);
+		if (!cb)
 			continue;
 
-		void *cb = dlsym(ptr, symbol);
-		if (cb)
-			adapter.call(retp, cb, arg);
+		struct nd *ndr = (void *) dlsym(ptr, "nd");
+		ndr->adapter = &adapter;
+		adapter.call(retp, cb, arg);
+
+		memcpy(adapter.ret, retp, adapter.ret_size);
 	}
 }
 
@@ -416,7 +422,7 @@ SIC_DEF(int, on_examine, unsigned, player_ref, unsigned, ref, unsigned, type)
 SIC_DEF(int, on_fbcp, char *, p, unsigned, ref)
 SIC_DEF(int, on_add, unsigned, ref, unsigned, type, uint64_t, v)
 SIC_DEF(unsigned short, on_view_flags, unsigned short, flags, unsigned, ref)
-SIC_DEF(struct icon, on_icon, struct icon, i, unsigned, ref)
+SIC_DEF(struct icon, on_icon, struct icon, i, unsigned, ref, unsigned, type)
 SIC_DEF(int, on_del, unsigned, ref)
 SIC_DEF(int, on_clone, unsigned, orig_ref, unsigned, nu_ref)
 SIC_DEF(int, on_update, unsigned, ref, unsigned, type, double, dt)
@@ -455,8 +461,7 @@ void shared_init(void) {
 	nd.hds[HD_RTYPE] = type_hd + 1;
 	nd.hds[HD_BCP] = bcp_hd;
 	nd.hds[HD_ELEMENT] = element_hd;
-	nd.hds[HD_HD] = hd_hd + 1;
-	nd.hd_hd = hd_hd;
+	nd.hds[HD_HD] = hd_hd;
 
 	/* nd.fds_has = fds_has; */
 	nd.nd_close = nd_close;
@@ -611,7 +616,7 @@ main(int argc, char **argv)
 	situc_hd = qdb_open("situc", "ul", "p", QH_TMP);
 	sica_hd = qdb_open("sica", "s", "sica", QH_TMP);
 	bcp_hd = qdb_open("bcp", "u", "s", QH_TMP | QH_AINDEX);
-	hd_hd = qdb_open("hd", "u", "s", QH_TMP | QH_AINDEX | QH_THRICE);
+	hd_hd = qdb_open("hd", "s", "u", QH_TMP);
 
 	ent_hd = qdb_open("entity", "u", "ent", 0);
 	player_hd = qdb_open("player", "s", "u", 0);
@@ -946,20 +951,17 @@ auth(unsigned fd)
 	ndclog(LOG_INFO, "auth '%s' (%u/%u)\n", user, fd, player_ref);
 
 	if (player_ref == NOTHING) {
-		ENT ent;
+		player.flags = OF_PLAYER;
 		player_ref = object_add(&player, 0, 0, 0);
-		ent = ent_get(player_ref);
 		strlcpy(player.name, user, sizeof(player.name));
 		player.value = 150;
-		ent.flags = EF_PLAYER;
 		player_put(user, player_ref);
 		avatar(&player);
 
 		qdb_put(fds_hd, &player_ref, &fd);
-		ent_set(player_ref, &ent);
 		qdb_put(obj_hd, &player_ref, &player);
 		qdb_put(dplayer_hd, &fd, &player_ref);
-		SIC_CALL(NULL, on_new_player, player_ref);
+		call_on_new_player(player_ref);
 	} else {
 		ENT eplayer = ent_get(player_ref);
 
@@ -982,7 +984,7 @@ auth(unsigned fd)
 		mcp_tod(player_ref, 0);
 
 	qdb_commit();
-	SIC_CALL(NULL, on_auth, player_ref);
+	call_on_auth(player_ref);
 	return player_ref;
 }
 
@@ -1012,8 +1014,7 @@ void ndc_vim(int fd, int argc __attribute__((unused)), char *argv[]) {
 	strlcpy(ss.str, argv[0], sizeof(ss.str));
 
 	for (; *s && ofs > 0; s += ofs) {
-		int ret = 0;
-		SIC_CALL(&ret, on_vim, player_ref, ss, ofs);
+		int ret = call_on_vim(player_ref, ss, ofs);
 		s += ret;
 		ofs = st_v(player_ref, s);
 	}

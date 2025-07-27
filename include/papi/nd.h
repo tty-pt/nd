@@ -89,8 +89,7 @@ struct nd {
 	mcp_bar_t *mcp_bar;
 
 	unsigned hds[HD_MAX];
-	unsigned hd_hd;
-	char ret[5096];
+	sic_adapter_t *adapter;
 };
 
 extern struct nd nd;
