@@ -41,6 +41,7 @@ install: src/libnd.a ${uapi}
 	install -m 0644 module.mk ${SHARE}/mk/module.mk
 	install -m 0755 ndcc ${DESTDIR}${PREFIX}/bin/
 	install -m 0644 src/libnd.a ${DESTDIR}${PREFIX}/lib/
+	install -m 0644 module.ld ${SHARE}/nd/
 
 $(uapi): ${uapi:${DESTDIR}${PREFIX}/include/nd/%=include/uapi/%}
 	@install -d ${DESTDIR}${PREFIX}/include

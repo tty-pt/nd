@@ -20,6 +20,7 @@
 #define ND_AINDEX 32
 
 typedef struct {
+	char name[64];
 	size_t arg_size;
 	size_t ret_size;
 	void (*call)(void *, void *, void *);
@@ -122,16 +123,32 @@ typedef struct {
 #define CALL_DARGS_15(a, b, ...)  b, CALL_DARGS_14(__VA_ARGS__)
 #define CALL_DARGS_16(a, b, ...)  b, CALL_DARGS_15(__VA_ARGS__)
 
+#define STR(x) #x
+#define XSTR(x) STR(x)
+
+typedef void (*mod_cb_t)(void);
+
+#ifndef __ID_MARKER__
+#define __ID_MARKER__ static
+#endif
+
 /* the callee uses this to be called */
 #define SIC_DECL(ftype, fname, ...) \
     struct fname##_args { \
         PAIR_GEN(__VA_ARGS__) \
     }; \
+    __ID_MARKER__ unsigned fname##_id; \
     static inline ftype call_##fname(FUNC_ARGS(__VA_ARGS__)) { \
 	    ftype ret; \
 	    SIC_CALL(&ret, fname, CALL_DARGS(__VA_ARGS__)); \
 	    return ret; \
-    }
+    } \
+    __attribute__((used)) \
+    static void fname##_init_id(void) { \
+	    fname##_id = sic_get(XSTR(fname)); \
+    } \
+    __attribute__((used, section(".sic_auto_init"))) \
+    static mod_cb_t fname##_init_id_p = &fname##_init_id; \
 
 #define SIC_DEF(ftype, fname, ...) \
     typedef ftype fname##_t(FUNC_ARGS(__VA_ARGS__)); \
@@ -142,22 +159,22 @@ typedef struct {
 	if (res) memcpy(res, &result, sizeof(ftype)); \
     } \
     sic_adapter_t fname##_adapter  __attribute__((visibility("default"))) = { \
+	    .name = XSTR(fname), \
 	    .arg_size = sizeof(struct fname##_args), \
 	    .ret_size = sizeof(ftype), \
 	    .call = &fname##_adapter_call, \
-    };
-
-#define STR(x) #x
-#define XSTR(x) STR(x)
+    }; \
+    void fname##_adapter_reg(void) { \
+	    fname##_id = sic_areg(XSTR(fname), &fname##_adapter); \
+    } \
+    __attribute__((used, section(".sic_auto_init"))) \
+    void (*fname##_adapter_reg_p)(void) = fname##_adapter_reg;
 
 /* the caller uses this to call */
 #define SIC_CALL(retp, fname, ...) { \
 	struct fname##_args args = { __VA_ARGS__ }; \
-	sic_call(retp, XSTR(fname), &args); \
+	sic_call(retp, fname##_id, &args); \
 }
-
-#define SIC_AREG(fname) \
-	sic_areg(XSTR(fname), &fname##_adapter)
 
 typedef struct {
 	char str[256];
@@ -166,14 +183,17 @@ typedef struct {
 
 typedef char small_buf_t[64];
 
-typedef void sic_areg_t(char *name, sic_adapter_t *adapter);
+typedef unsigned sic_areg_t(char *name, sic_adapter_t *adapter);
 sic_areg_t sic_areg;
 
-typedef void sic_call_t(void *retp, char *symbol, void *args);
+typedef void sic_call_t(void *retp, unsigned id, void *args);
 sic_call_t sic_call;
 
 typedef void sic_last_t(void *ret);
 sic_last_t sic_last;
+
+typedef unsigned sic_get_t(char *name);
+sic_get_t sic_get;
 
 SIC_DECL(int, on_status, unsigned, player_ref)
 SIC_DECL(int, on_examine, unsigned, player_ref, unsigned, ref, unsigned, type)
@@ -186,7 +206,7 @@ SIC_DECL(int, on_clone, unsigned, orig_ref, unsigned, nu_ref)
 SIC_DECL(int, on_update, unsigned, ref, unsigned, type, double, dt)
 SIC_DECL(int, on_move, unsigned, ref, int, cant_move)
 
-SIC_DECL(int, on_vim, unsigned, ref, sic_str_t, ss, int, ofs)
+SIC_DECL(sic_str_t, on_vim, unsigned, ref, sic_str_t, ss)
 
 SIC_DECL(int, on_new_player, unsigned, player_ref)
 SIC_DECL(int, on_auth, unsigned, player_ref)

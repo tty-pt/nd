@@ -16,7 +16,7 @@ modpath := /usr/share/nd
 CFLAGS := -g -O0 -Wall -Wpedantic -Wextra \
 	  -Wno-initializer-overrides ${cflags-${uname}} \
 	  ${config} ${prefix:%=-I%/include} \
-	  -D_GNU_SOURCE
+	  -D_GNU_SOURCE -D__ID_MARKER__=extern
 CFLAGS += -std=c99 -Wno-gnu-designator
 
 ldlibs-Linux := -lbsd -lrt

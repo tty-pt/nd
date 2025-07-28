@@ -79,6 +79,7 @@ struct nd {
 	vtf_register_t *vtf_register;
 	sic_call_t *sic_call;
 	sic_areg_t *sic_areg;
+	sic_get_t *sic_get;
 
 	noise_point_t *noise_point;
 

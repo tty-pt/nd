@@ -1087,7 +1087,10 @@ st_open(struct st_key st_key, int owner)
 		dlerror();
 		syslog(LOG_INFO, "dlopen %d, %s", owner, filename);
 		struct nd *ind = dlsym(sl, "nd");
-		*ind = nd;
+		if (ind) {
+			fprintf(stderr, "%u's st module didn't link agains libnd\n", owner);
+			*ind = nd;
+		}
 		qdb_put(sl_hd, &st_key, &sl);
 	}
 

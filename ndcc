@@ -2,9 +2,16 @@
 mod_name="$2"
 shift 2
 cc -include /usr/include/nd/nd.h \
+	-Wl,--gc-sections -Wl,-T/usr/share/nd/module.ld \
+	-Wl,--no-execute-only \
+	-I/usr/include/nd $@
+exit $?
+cc -include /usr/include/nd/nd.h \
 	`test ! -f include/uapi/$mod_name.h || \
 		echo -include ./include/uapi/$mod_name.h` \
 	`ls /usr/share/nd/include | while read inc; do
 		echo -include nd/$inc
 	done` \
+	-Wl,--gc-sections -Wl,-T/usr/share/nd/module.ld \
+	-Wl,--no-execute-only \
 	-I/usr/include/nd $@

@@ -22,6 +22,9 @@
 
 #include "papi/nd.h"
 
+#define SIC_AREG(fname) \
+	fname##_id = sic_areg(XSTR(fname), &fname##_adapter)
+
 struct ioc {
 	char buf[BUFSIZ];
 	size_t len;
@@ -65,7 +68,7 @@ unsigned dplayer_hd, skel_hd, drop_hd,
 	 adrop_hd, element_hd,
 	 wts_hd, awts_hd, biome_hd, mod_hd,
 	 mod_id_hd, type_hd, action_hd, vtf_hd,
-	 situc_hd, sica_hd, bcp_hd, hd_hd;
+	 situc_hd, sican_hd, sica_hd, bcp_hd, hd_hd;
 
 struct nd nd;
 
@@ -292,12 +295,12 @@ void close_all(int i) {
 		exit(i);
 }
 
-typedef void (*mod_cb_t)(void);
-
 int _mod_run(void *sl, char *symbol) {
 	mod_cb_t cb = (mod_cb_t) dlsym(sl, symbol);
-	if (!cb)
+	if (!cb) {
+		fprintf(stderr, "couldn't find %s\n", symbol);
 		return 1;
+	}
 	cb();
 	return 0;
 }
@@ -324,6 +327,11 @@ void _mod_load(char *fname) {
 	ndclog(LOG_INFO, "%s: '%s'\n", symbol, fname);
 	unsigned id = qdb_put(mod_id_hd, NULL, &sl);
 	qdb_put(mod_hd, fname, &id);
+
+	mod_cb_t auto_init = (mod_cb_t) dlsym(sl, "mod_auto_init");
+	if (auto_init)
+		auto_init();
+
 	_mod_run(sl, symbol);
 }
 
@@ -348,19 +356,19 @@ void sic_last(void *ret) {
 	memcpy(ret, nd.adapter->ret, nd.adapter->ret_size);
 }
 
-void sic_call(void *retp, char *symbol, void *arg) {
+void sic_call(void *retp, unsigned id, void *arg) {
 	unsigned mod_id;
 	void *ptr = NULL;
 	qdb_cur_t c = qdb_iter(mod_id_hd, NULL);
 	sic_adapter_t adapter;
 
-	if (qdb_get(sica_hd, &adapter, symbol)) {
-		fprintf(stderr, "No adapter registered for symbol '%s'\n", symbol);
+	if (qdb_get(sica_hd, &adapter, &id)) {
+		fprintf(stderr, "No adapter registered for symbol id '%u'\n", id);
 		return;
 	}
 
 	while (qdb_next(&mod_id, &ptr, &c)) {
-		void *cb = dlsym(ptr, symbol);
+		void *cb = dlsym(ptr, adapter.name);
 		if (!cb)
 			continue;
 
@@ -417,6 +425,13 @@ void sic_put(unsigned si_id, unsigned type, void *cb) {
 	qdb_put(situc_hd, key, &cb);
 }
 
+unsigned on_status_id, on_examine_id, on_fbcp_id, on_add_id,
+	 on_view_flags_id, on_icon_id, on_del_id, on_clone_id,
+	 on_update_id, on_move_id, on_vim_id, on_new_player_id,
+	 on_auth_id, on_before_leave_id, on_leave_id,
+	 on_enter_id, on_after_enter_id, on_spawn_id,
+	 on_get_id, on_noise_id, on_empty_tile_id;
+
 SIC_DEF(int, on_status, unsigned, player_ref)
 SIC_DEF(int, on_examine, unsigned, player_ref, unsigned, ref, unsigned, type)
 SIC_DEF(int, on_fbcp, char *, p, unsigned, ref)
@@ -428,7 +443,7 @@ SIC_DEF(int, on_clone, unsigned, orig_ref, unsigned, nu_ref)
 SIC_DEF(int, on_update, unsigned, ref, unsigned, type, double, dt)
 SIC_DEF(int, on_move, unsigned, ref, int, cant_move)
 
-SIC_DEF(int, on_vim, unsigned, ref, sic_str_t, ss, int, ofs)
+SIC_DEF(sic_str_t, on_vim, unsigned, ref, sic_str_t, ss)
 
 SIC_DEF(int, on_new_player, unsigned, player_ref)
 SIC_DEF(int, on_auth, unsigned, player_ref)
@@ -442,8 +457,17 @@ SIC_DEF(int, on_get, unsigned, player_ref, unsigned, ref)
 SIC_DEF(struct bio, on_noise, struct bio, bio, uint32_t, he, uint32_t, w, uint32_t, tm, uint32_t, cl)
 SIC_DEF(sic_str_t, on_empty_tile, view_tile_t, t, unsigned, side, sic_str_t, ss)
 
-void sic_areg(char *name, sic_adapter_t *adapter) {
-	qdb_put(sica_hd, name, adapter);
+unsigned sic_areg(char *name, sic_adapter_t *adapter) {
+	unsigned id = qdb_put(sica_hd, NULL, adapter);
+	qdb_put(sican_hd, name, &id);
+	fprintf(stderr, "sic_areg %s, %u\n", name, id);
+	return id;
+}
+
+unsigned sic_get(char *name) {
+	unsigned ret = NOTHING;
+	qdb_get(sican_hd, &ret, name);
+	return ret;
 }
 
 void shared_init(void) {
@@ -531,6 +555,7 @@ void shared_init(void) {
 	nd.action_register = action_register;
 	nd.vtf_register = vtf_register;
 	nd.sic_areg = sic_areg;
+	nd.sic_get = sic_get;
 	nd.sic_call = sic_call;
 
 	nd.noise_point = noise_point;
@@ -605,7 +630,6 @@ main(int argc, char **argv)
 	env = qdb_env_create();
 	qdb_env_open(env, "/var/nd/env", QH_TXN);
 #endif
-
 	qdb_begin();
 	owner_hd = qdb_open("st", "st", "u", 0);
 	sl_hd = qdb_open("sl", "st", "p", 0);
@@ -614,7 +638,8 @@ main(int argc, char **argv)
 	type_hd = qdb_open("ndt", "u", "s", QH_TMP | QH_AINDEX | QH_THRICE);
 	vtf_hd = qdb_open("vtf", "u", "vtf", QH_TMP | QH_AINDEX);
 	situc_hd = qdb_open("situc", "ul", "p", QH_TMP);
-	sica_hd = qdb_open("sica", "s", "sica", QH_TMP);
+	sica_hd = qdb_open("sica", "u", "sica", QH_TMP | QH_AINDEX);
+	sican_hd = qdb_open("sican", "s", "u", QH_TMP);
 	bcp_hd = qdb_open("bcp", "u", "s", QH_TMP | QH_AINDEX);
 	hd_hd = qdb_open("hd", "s", "u", QH_TMP);
 
@@ -1008,15 +1033,14 @@ void ndc_vim(int fd, int argc __attribute__((unused)), char *argv[]) {
 		return;
 
 	unsigned player_ref = fd_player(fd);
-	int ofs = 1;
 	char const *s = argv[0];
 	sic_str_t ss = { .str = "", .pos = 0 };
 	strlcpy(ss.str, argv[0], sizeof(ss.str));
 
-	for (; *s && ofs > 0; s += ofs) {
-		int ret = call_on_vim(player_ref, ss, ofs);
-		s += ret;
-		ofs = st_v(player_ref, s);
+	for (; s[ss.pos]; ) {
+		int ret = st_v(player_ref, s);
+		ss.pos += ret;
+		ss = call_on_vim(player_ref, ss);
 	}
 }
 

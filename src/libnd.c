@@ -242,12 +242,12 @@ unsigned vtf_register(char emp, enum color fg, unsigned flags) {
 	return nd.vtf_register(emp, fg, flags);
 }
 
-void sic_areg(char *name, sic_adapter_t *adapter) {
-	nd.sic_areg(name, adapter);
+unsigned sic_areg(char *name, sic_adapter_t *adapter) {
+	return nd.sic_areg(name, adapter);
 }
 
-void sic_call(void *retp, char *symbol, void *args) {
-	nd.sic_call(retp, symbol, args);
+void sic_call(void *retp, unsigned id, void *args) {
+	nd.sic_call(retp, id, args);
 }
 
 struct bio noise_point(pos_t pos) {
@@ -278,4 +278,16 @@ void mcp_bar(unsigned char iden, unsigned player_ref,
 		unsigned short val, unsigned short max)
 {
 	nd.mcp_bar(iden, player_ref, val, max);
+}
+
+unsigned sic_get(char *name) {
+	return nd.sic_get(name);
+}
+
+void mod_auto_init(void) {
+    extern void (*__start_sic_auto_init)(void);
+    extern void (*__stop_sic_auto_init)(void);
+
+    for (void (**fn)(void) = &__start_sic_auto_init; fn < &__stop_sic_auto_init; ++fn)
+        (*fn)();
 }
