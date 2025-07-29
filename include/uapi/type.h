@@ -12,6 +12,7 @@
  */
 
 #include <stddef.h>
+#include <stdio.h>
 #include <string.h>
 #include "./object.h"
 #include "./skel.h"
@@ -129,16 +130,18 @@ typedef struct {
 typedef void (*mod_cb_t)(void);
 
 #ifndef __ID_MARKER__
-#define __ID_MARKER__ static
+#define __ID_MARKER__
 #endif
 
 /* the callee uses this to be called */
 #define SIC_DECL(ftype, fname, ...) \
+    typedef ftype fname##_t(FUNC_ARGS(__VA_ARGS__)); \
     struct fname##_args { \
         PAIR_GEN(__VA_ARGS__) \
     }; \
     __ID_MARKER__ unsigned fname##_id; \
-    static inline ftype call_##fname(FUNC_ARGS(__VA_ARGS__)) { \
+    static inline __attribute__((unused)) \
+    ftype call_##fname(FUNC_ARGS(__VA_ARGS__)) { \
 	    ftype ret; \
 	    SIC_CALL(&ret, fname, CALL_DARGS(__VA_ARGS__)); \
 	    return ret; \
@@ -148,13 +151,18 @@ typedef void (*mod_cb_t)(void);
 	    fname##_id = sic_get(XSTR(fname)); \
     } \
     __attribute__((used, section(".sic_auto_init"))) \
-    static mod_cb_t fname##_init_id_p = &fname##_init_id; \
+    static mod_cb_t fname##_init_id_p = &fname##_init_id // note lack of semicolon
 
 #define SIC_DEF(ftype, fname, ...) \
-    typedef ftype fname##_t(FUNC_ARGS(__VA_ARGS__)); \
+    fname##_t fname; \
     void fname##_adapter_call(void *res, void *fname, void *arg) { \
         struct fname##_args args; \
 	memcpy(&args, arg, sizeof(args)); \
+	if (!fname) { \
+		fprintf(stderr, "%s_adapter_call: '%s' wasn't defined\n", \
+				XSTR(fname), XSTR(fname)); \
+		return; \
+	} \
         ftype result = ((fname##_t *) fname)(CALL_NARGS(__VA_ARGS__)); \
 	if (res) memcpy(res, &result, sizeof(ftype)); \
     } \
@@ -168,11 +176,13 @@ typedef void (*mod_cb_t)(void);
 	    fname##_id = sic_areg(XSTR(fname), &fname##_adapter); \
     } \
     __attribute__((used, section(".sic_auto_init"))) \
-    void (*fname##_adapter_reg_p)(void) = fname##_adapter_reg;
+    void (*fname##_adapter_reg_p)(void) = fname##_adapter_reg // note lack of semicolon
 
 /* the caller uses this to call */
 #define SIC_CALL(retp, fname, ...) { \
 	struct fname##_args args = { __VA_ARGS__ }; \
+	if (fname##_id == NOTHING) \
+		fprintf(stderr, "SIC_CALL BAD %s\n", XSTR(fname)); \
 	sic_call(retp, fname##_id, &args); \
 }
 
@@ -195,30 +205,30 @@ sic_last_t sic_last;
 typedef unsigned sic_get_t(char *name);
 sic_get_t sic_get;
 
-SIC_DECL(int, on_status, unsigned, player_ref)
-SIC_DECL(int, on_examine, unsigned, player_ref, unsigned, ref, unsigned, type)
-SIC_DECL(int, on_fbcp, char *, p, unsigned, ref) // FIXME
-SIC_DECL(int, on_add, unsigned, ref, unsigned, type, uint64_t, v)
-SIC_DECL(unsigned short, on_view_flags, unsigned short, flags, unsigned, ref)
-SIC_DECL(struct icon, on_icon, struct icon, i, unsigned, ref, unsigned, type)
-SIC_DECL(int, on_del, unsigned, ref)
-SIC_DECL(int, on_clone, unsigned, orig_ref, unsigned, nu_ref)
-SIC_DECL(int, on_update, unsigned, ref, unsigned, type, double, dt)
-SIC_DECL(int, on_move, unsigned, ref, int, cant_move)
+SIC_DECL(int, on_status, unsigned, player_ref);
+SIC_DECL(int, on_examine, unsigned, player_ref, unsigned, ref, unsigned, type);
+SIC_DECL(int, on_fbcp, char *, p, unsigned, ref); // FIXME
+SIC_DECL(int, on_add, unsigned, ref, unsigned, type, uint64_t, v);
+SIC_DECL(unsigned short, on_view_flags, unsigned short, flags, unsigned, ref);
+SIC_DECL(struct icon, on_icon, struct icon, i, unsigned, ref, unsigned, type);
+SIC_DECL(int, on_del, unsigned, ref);
+SIC_DECL(int, on_clone, unsigned, orig_ref, unsigned, nu_ref);
+SIC_DECL(int, on_update, unsigned, ref, unsigned, type, double, dt);
+SIC_DECL(int, on_move, unsigned, ref);
 
-SIC_DECL(sic_str_t, on_vim, unsigned, ref, sic_str_t, ss)
+SIC_DECL(sic_str_t, on_vim, unsigned, ref, sic_str_t, ss);
 
-SIC_DECL(int, on_new_player, unsigned, player_ref)
-SIC_DECL(int, on_auth, unsigned, player_ref)
-SIC_DECL(int, on_before_leave, unsigned, ent_ref)
-SIC_DECL(int, on_leave, unsigned, player_ref, unsigned, loc_ref)
-SIC_DECL(int, on_enter, unsigned, player_ref, unsigned, loc_ref)
-SIC_DECL(int, on_after_enter, unsigned, player_ref)
-SIC_DECL(int, on_spawn, unsigned, player_ref, unsigned, loc_ref, struct bio, bio, uint64_t, v)
-SIC_DECL(int, on_get, unsigned, player_ref, unsigned, ref)
+SIC_DECL(int, on_new_player, unsigned, player_ref);
+SIC_DECL(int, on_auth, unsigned, player_ref);
+SIC_DECL(int, on_before_leave, unsigned, ent_ref);
+SIC_DECL(int, on_leave, unsigned, player_ref, unsigned, loc_ref);
+SIC_DECL(int, on_enter, unsigned, player_ref, unsigned, loc_ref);
+SIC_DECL(int, on_after_enter, unsigned, player_ref);
+SIC_DECL(int, on_spawn, unsigned, player_ref, unsigned, loc_ref, struct bio, bio, uint64_t, v);
+SIC_DECL(int, on_get, unsigned, player_ref, unsigned, ref);
 
-SIC_DECL(struct bio, on_noise, struct bio, bio, uint32_t, he, uint32_t, w, uint32_t, tm, uint32_t, cl)
-SIC_DECL(sic_str_t, on_empty_tile, view_tile_t, t, unsigned, side, sic_str_t, ss)
+SIC_DECL(struct bio, on_noise, struct bio, bio, uint32_t, he, uint32_t, w, uint32_t, tm, uint32_t, cl);
+SIC_DECL(sic_str_t, on_empty_tile, view_tile_t, t, unsigned, side, sic_str_t, ss);
 
 extern unsigned type_hd, action_hd, vtf_hd, vtf_max;
 

@@ -129,6 +129,12 @@ look_at(unsigned player_ref, unsigned loc_ref)
 {
 	ENT eplayer = ent_get(player_ref);
 	OBJ loc;
+
+	if (loc_ref == NOTHING) {
+		nd_writef(player_ref, "You see nothing...\n");
+		return;
+	}
+
 	qdb_get(obj_hd, &loc, &loc_ref);
 	unsigned thing_ref;
 

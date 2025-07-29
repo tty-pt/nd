@@ -432,30 +432,30 @@ unsigned on_status_id, on_examine_id, on_fbcp_id, on_add_id,
 	 on_enter_id, on_after_enter_id, on_spawn_id,
 	 on_get_id, on_noise_id, on_empty_tile_id;
 
-SIC_DEF(int, on_status, unsigned, player_ref)
-SIC_DEF(int, on_examine, unsigned, player_ref, unsigned, ref, unsigned, type)
-SIC_DEF(int, on_fbcp, char *, p, unsigned, ref)
-SIC_DEF(int, on_add, unsigned, ref, unsigned, type, uint64_t, v)
-SIC_DEF(unsigned short, on_view_flags, unsigned short, flags, unsigned, ref)
-SIC_DEF(struct icon, on_icon, struct icon, i, unsigned, ref, unsigned, type)
-SIC_DEF(int, on_del, unsigned, ref)
-SIC_DEF(int, on_clone, unsigned, orig_ref, unsigned, nu_ref)
-SIC_DEF(int, on_update, unsigned, ref, unsigned, type, double, dt)
-SIC_DEF(int, on_move, unsigned, ref, int, cant_move)
+SIC_DEF(int, on_status, unsigned, player_ref);
+SIC_DEF(int, on_examine, unsigned, player_ref, unsigned, ref, unsigned, type);
+SIC_DEF(int, on_fbcp, char *, p, unsigned, ref);
+SIC_DEF(int, on_add, unsigned, ref, unsigned, type, uint64_t, v);
+SIC_DEF(unsigned short, on_view_flags, unsigned short, flags, unsigned, ref);
+SIC_DEF(struct icon, on_icon, struct icon, i, unsigned, ref, unsigned, type);
+SIC_DEF(int, on_del, unsigned, ref);
+SIC_DEF(int, on_clone, unsigned, orig_ref, unsigned, nu_ref);
+SIC_DEF(int, on_update, unsigned, ref, unsigned, type, double, dt);
+SIC_DEF(int, on_move, unsigned, ref);
 
-SIC_DEF(sic_str_t, on_vim, unsigned, ref, sic_str_t, ss)
+SIC_DEF(sic_str_t, on_vim, unsigned, ref, sic_str_t, ss);
 
-SIC_DEF(int, on_new_player, unsigned, player_ref)
-SIC_DEF(int, on_auth, unsigned, player_ref)
-SIC_DEF(int, on_before_leave, unsigned, ent_ref)
-SIC_DEF(int, on_leave, unsigned, player_ref, unsigned, loc_ref)
-SIC_DEF(int, on_enter, unsigned, player_ref, unsigned, loc_ref)
-SIC_DEF(int, on_after_enter, unsigned, player_ref)
-SIC_DEF(int, on_spawn, unsigned, player_ref, unsigned, loc_ref, struct bio, bio, uint64_t, v)
-SIC_DEF(int, on_get, unsigned, player_ref, unsigned, ref)
+SIC_DEF(int, on_new_player, unsigned, player_ref);
+SIC_DEF(int, on_auth, unsigned, player_ref);
+SIC_DEF(int, on_before_leave, unsigned, ent_ref);
+SIC_DEF(int, on_leave, unsigned, player_ref, unsigned, loc_ref);
+SIC_DEF(int, on_enter, unsigned, player_ref, unsigned, loc_ref);
+SIC_DEF(int, on_after_enter, unsigned, player_ref);
+SIC_DEF(int, on_spawn, unsigned, player_ref, unsigned, loc_ref, struct bio, bio, uint64_t, v);
+SIC_DEF(int, on_get, unsigned, player_ref, unsigned, ref);
 
-SIC_DEF(struct bio, on_noise, struct bio, bio, uint32_t, he, uint32_t, w, uint32_t, tm, uint32_t, cl)
-SIC_DEF(sic_str_t, on_empty_tile, view_tile_t, t, unsigned, side, sic_str_t, ss)
+SIC_DEF(struct bio, on_noise, struct bio, bio, uint32_t, he, uint32_t, w, uint32_t, tm, uint32_t, cl);
+SIC_DEF(sic_str_t, on_empty_tile, view_tile_t, t, unsigned, side, sic_str_t, ss);
 
 unsigned sic_areg(char *name, sic_adapter_t *adapter) {
 	unsigned id = qdb_put(sica_hd, NULL, adapter);

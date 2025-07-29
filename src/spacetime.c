@@ -519,7 +519,7 @@ e_move(unsigned player_ref, enum exit e) {
 	char const *dwts = "door";
 	int door = 0;
 
-	int cant_move = call_on_move(player_ref, 0);
+	int cant_move = call_on_move(player_ref);
 	if (cant_move)
 		return NOTHING;
 
@@ -1005,6 +1005,7 @@ static void may_look(unsigned player_ref, morton_t old_loc) {
 		return;
 	look_around(player_ref);
 	view(player_ref);
+	nd_flush(player_ref);
 }
 
 int
