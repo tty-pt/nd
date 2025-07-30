@@ -21,6 +21,7 @@ enum bcp_type {
 	BCP_AUTH_SUCCESS,
 	BCP_OUT,
 	BCP_TOD,
+	BCP_ACTION,
 };
 
 int
@@ -66,6 +67,27 @@ fbcp(unsigned player_ref, size_t len, unsigned char iden, void *data)
 	memcpy(bcp_buf + 2, &iden, sizeof(iden));
 	memcpy(bcp_buf + 2 + sizeof(iden), data, len);
 	nd_wwrite(player_ref, bcp_buf, 1 + sizeof(iden) + len);
+}
+
+void
+mcp_action(unsigned player_ref, unsigned id,
+		char *label, char *icon)
+{
+	unsigned char iden = BCP_ACTION;
+	size_t label_len = strlen(label) + 1,
+	       icon_len = strlen(icon) + 1,
+	       pos = 2;
+	char bcp_buf[2 + sizeof(iden) + sizeof(id) + label_len + icon_len];
+	memcpy(bcp_buf, "#b", 2);
+	memcpy(bcp_buf + pos, &iden, sizeof(iden));
+	pos += sizeof(iden);
+	memcpy(bcp_buf + pos, &id, sizeof(id));
+	pos += sizeof(id);
+	memcpy(bcp_buf + pos, label, label_len);
+	pos += label_len;
+	memcpy(bcp_buf + pos, icon, icon_len);
+	pos += icon_len;
+	nd_wwrite(player_ref, bcp_buf, pos);
 }
 
 static int

@@ -45,7 +45,6 @@ enum base_actions {
 	ACT_LOOK = 1,
 	ACT_OPEN = 2,
 	ACT_GET = 4,
-	ACT_TALK = 8,
 };
 
 typedef struct entity {

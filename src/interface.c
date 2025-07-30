@@ -33,7 +33,7 @@ struct ioc {
 
 typedef struct {
 	char *label, *icon;
-} action_info;
+} action_t;
 
 enum opts {
 	OPT_DETACH = 1,
@@ -393,7 +393,7 @@ void nd_register(char *str, nd_cb_t *cb, unsigned flags) {
 }
 
 unsigned action_register(char *label, char *icon) {
-	action_info ai = { .label = label, .icon = icon };
+	action_t ai = { .label = label, .icon = icon };
 	return 1 << (qdb_put(action_hd, NULL, &ai));
 }
 
@@ -567,7 +567,6 @@ void shared_init(void) {
 	nd.mcp_bar = mcp_bar;
 }
 
-void base_actions_register(void);
 void base_vtf_init(void);
 
 int
@@ -600,7 +599,7 @@ main(int argc, char **argv)
 	qdb_reg("element", sizeof(element_t));
 	qdb_reg("biome_map", sizeof(unsigned) * BIOME_MAX);
 	qdb_reg("st", sizeof(struct st_key));
-	qdb_reg("ai", sizeof(action_info));
+	qdb_reg("ai", sizeof(action_t));
 	qdb_reg("vtf", sizeof(vtf_t));
 	qdb_reg("sica", sizeof(sic_adapter_t));
 
@@ -702,7 +701,11 @@ main(int argc, char **argv)
 	qdb_put(bcp_hd, NULL, "out");
 	qdb_put(bcp_hd, NULL, "tod");
 
-	base_actions_register();
+	action_register("look", "🔍");
+	action_register("open", "📦");
+	action_register("get", "🖐️");
+	action_register("talk", "👄");
+
 	base_vtf_init();
 
 	unsigned zero = 0, existed = 1;
@@ -959,6 +962,15 @@ char *ndc_auth_check(int fd) {
 	return user;
 }
 
+static inline void mcp_actions(unsigned player_ref) {
+	qdb_cur_t c = qdb_iter(action_hd, NULL);
+	unsigned id;
+	action_t ai;
+
+	while (qdb_next(&id, &ai, &c))
+		mcp_action(player_ref, id, ai.label, ai.icon);
+}
+
 unsigned
 auth(unsigned fd)
 {
@@ -1001,6 +1013,7 @@ auth(unsigned fd)
 
 	ndc_auth(fd, user);
 	mcp_auth_success(player_ref);
+	mcp_actions(player_ref);
 	look_around(player_ref);
 	do_view(fd, 0, NULL);
 	if (day_n)

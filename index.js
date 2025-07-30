@@ -94,20 +94,9 @@ const dbEmit = sub.makeEmit((obj, current) => {
 
 // actions {{{
 const ACTION = {
-  LOOK: "👁",
-  INSPECT: "🔍",
-  FIGHT: "⚔️",
-  SHOP: "💰",
-  DRINK: "🧪",
-  OPEN: "📦",
-  CHOP: "🪓",
-  FILL: "💧",
-  GET: "🖐️",
-  TALK: "👄",
+  // TALK: "👄",
   PUT: "👐",
-  EQUIP: "👕",
   DROP: "🪣",
-  EAT: "🥄 ",
   DIE: "☠️",
   INVENTORY: "🎒",
   K: "↗",
@@ -115,44 +104,15 @@ const ACTION = {
   WALK: "🗺️",
 };
 
-const ACTION_INDEX = [
-	ACTION.INSPECT,
-	ACTION.OPEN,
-	ACTION.GET,
-	ACTION.TALK,
-	ACTION.FILL,
-	ACTION.DRINK,
-	ACTION.EAT,
-	ACTION.FIGHT,
-	ACTION.EQUIP,
-	ACTION.SHOP,
-	ACTION.CHOP,
-  // ACTION.TALK, ACTION.PUT,
-  // ACTION.DROP, ACTION.DIE, ACTION.INVENTORY,
-  // ACTION.K, ACTION.J, ACTION.WALK, ACTION.LOOK
-];
-
 const ACTION_MAP = {
-  [ACTION.LOOK]: { label: "look" },
-  [ACTION.INSPECT]: {
-	  label: "inspect",
-	  callback: ref => sendCmd(`look #${ref}`),
-  },
-  [ACTION.FIGHT]: { label: "fight" },
-  [ACTION.SHOP]: { label: "shop" },
-  [ACTION.DRINK]: { label: "drink" },
   [ACTION.OPEN]: { label: "open" },
-  [ACTION.CHOP]: { label: "chop" },
-  [ACTION.FILL]: { label: "fill" },
   [ACTION.GET]: {
     label: "get",
     callback: ref => sendCmd(sub.value.target ? `get #${sub.value.target} #${ref}` : `get #${ref}`),
   },
   [ACTION.TALK]: { label: "talk" },
   [ACTION.PUT]: { label: "put" },
-  [ACTION.EQUIP]: { label: "equip" },
   [ACTION.DROP]: { label: "drop" },
-  [ACTION.EAT]: { label: "eat" },
   [ACTION.DIE]: { label: "die" },
   [ACTION.INVENTORY]: { label: "inventory" },
   [ACTION.K]: { label: "K" },
@@ -366,7 +326,10 @@ function read_string(arr, start, ret = {}) {
     else
       len ++;
 
-  const rret = String.fromCharCode.apply(null, slice.slice(0, len));
+
+  const utf8slice = slice.slice(0, len);
+  const decoder = new TextDecoder('utf-8');
+  const rret = decoder.decode(new Uint8Array(utf8slice));
 
   ret[start] = len;
   return rret;
@@ -382,16 +345,16 @@ const BCP = {
   AUTH_SUCCESS: 6,
   OUT: 7,
   TOD: 8,
-  HP: 9,
-  STATS: 10,
-  EQUIPMENT: 11,
-  MP: 12,
+  ACTION: 9,
+  HP: 10,
+  STATS: 11,
+  EQUIPMENT: 12,
+  MP: 13,
 };
 
 const BCP_MAP = {
   [BCP.HP]: { label: "hp" },
   [BCP.MP]: { label: "mp" },
-  [BCP.BARS]: { label: "bars" },
   [BCP.STATS]: { label: "stats" },
   [BCP.ITEM]: { label: "item" },
   [BCP.VIEW_BUFFER]: { label: "view_buffer" },
@@ -399,6 +362,7 @@ const BCP_MAP = {
   [BCP.AUTH_SUCCESS]: { label: "auth_success" },
   [BCP.OUT]: { label: "out" },
   [BCP.TOD]: { label: "tod" },
+  [BCP.ACTION]: { label: "action" },
   [BCP.EQUIPMENT]: { label: "equipment" },
 };
 
@@ -819,13 +783,13 @@ class ContentActions extends SubscribedElement {
 
     for (let p = 0; p < 9; p++)
       if ((parseInt(item.actions) & (1 << p)))
-        actions.push(ACTION_INDEX[p]);
+        actions.push(p);
 
     const actionsEl = actions.map(action => (`<nd-button
       ref="${this.active}"
       onclick="actionCallback('${action}', ${this.active})"
       ontouchend="actionCallback('${action}', ${this.active})"
-    >${action}</nd-button>`)).join("\n");
+    >${ACTION_MAP[action].icon}</nd-button>`)).join("\n");
 
     this.innerHTML = `
     <div class="mr8 popper">
