@@ -34,6 +34,6 @@ fun >> $DOCUMENT_ROOT/tmp/fun
 cat $PWD/htdocs/index.html
 cat <<!
 <style>
-`cat styles.css node_modules/@tty-pt/ndc/ndc.css node_modules/@xterm/xterm/css/xterm.css`
+`cat styles.css node_modules/@tty-pt/ndc/htdocs/ndc.css node_modules/@xterm/xterm/css/xterm.css`
 </style>
 !

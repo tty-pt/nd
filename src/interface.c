@@ -32,7 +32,8 @@ struct ioc {
 } ioc[FD_SETSIZE];
 
 typedef struct {
-	char *label, *icon;
+	char label[32], icon[32];
+	unsigned flags;
 } action_t;
 
 enum opts {
@@ -265,13 +266,22 @@ void close_all(int i) {
 	st_dlclose();
 	qdb_close(owner_hd, flags);
 	qdb_close(sl_hd, flags);
-	map_close(flags);
+
+	qdb_close(vtf_hd, flags);
+	qdb_close(situc_hd, flags);
+	qdb_close(sica_hd, flags);
+	qdb_close(sican_hd, flags);
+	qdb_close(bcp_hd, flags);
+	qdb_close(hd_hd, flags);
+
+	qdb_close(action_hd, flags);
+	qdb_close(type_hd, flags);
 	qdb_close(ent_hd, flags);
 	qdb_close(player_hd, flags);
-
 	qdb_close(obj_hd, flags);
 	qdb_close(contents_hd, flags);
 	qdb_close(obs_hd, flags);
+	map_close(flags);
 
 	// skel (permanent)
 	qdb_close(skel_hd, flags);
@@ -352,8 +362,11 @@ void mod_load_all(void) {
 		_mod_load(buf);
 }
 
-void sic_last(void *ret) {
+int sic_last(void *ret) {
+	if (!nd.adapter->ran)
+		return 1;
 	memcpy(ret, nd.adapter->ret, nd.adapter->ret_size);
+	return 0;
 }
 
 void sic_call(void *retp, unsigned id, void *arg) {
@@ -361,6 +374,7 @@ void sic_call(void *retp, unsigned id, void *arg) {
 	void *ptr = NULL;
 	qdb_cur_t c = qdb_iter(mod_id_hd, NULL);
 	sic_adapter_t adapter;
+	adapter.ran = 0;
 
 	if (qdb_get(sica_hd, &adapter, &id)) {
 		fprintf(stderr, "No adapter registered for symbol id '%u'\n", id);
@@ -375,6 +389,7 @@ void sic_call(void *retp, unsigned id, void *arg) {
 		struct nd *ndr = (void *) dlsym(ptr, "nd");
 		ndr->adapter = &adapter;
 		adapter.call(retp, cb, arg);
+		adapter.ran++;
 
 		memcpy(adapter.ret, retp, adapter.ret_size);
 	}
@@ -393,7 +408,9 @@ void nd_register(char *str, nd_cb_t *cb, unsigned flags) {
 }
 
 unsigned action_register(char *label, char *icon) {
-	action_t ai = { .label = label, .icon = icon };
+	action_t ai = { .flags = 0 };
+	strlcpy(ai.label, label, sizeof(ai.label));
+	strlcpy(ai.icon, icon, sizeof(ai.icon));
 	return 1 << (qdb_put(action_hd, NULL, &ai));
 }
 
@@ -437,8 +454,8 @@ SIC_DEF(int, on_examine, unsigned, player_ref, unsigned, ref, unsigned, type);
 SIC_DEF(int, on_fbcp, char *, p, unsigned, ref);
 SIC_DEF(int, on_add, unsigned, ref, unsigned, type, uint64_t, v);
 SIC_DEF(unsigned short, on_view_flags, unsigned short, flags, unsigned, ref);
-SIC_DEF(struct icon, on_icon, struct icon, i, unsigned, ref, unsigned, type);
-SIC_DEF(int, on_del, unsigned, ref);
+SIC_DEF(struct icon, on_icon, unsigned, ref, unsigned, type, unsigned, player_ref);
+SIC_DEF(int, on_del, unsigned, ref, unsigned, type);
 SIC_DEF(int, on_clone, unsigned, orig_ref, unsigned, nu_ref);
 SIC_DEF(int, on_update, unsigned, ref, unsigned, type, double, dt);
 SIC_DEF(int, on_move, unsigned, ref);
@@ -460,7 +477,7 @@ SIC_DEF(sic_str_t, on_empty_tile, view_tile_t, t, unsigned, side, sic_str_t, ss)
 unsigned sic_areg(char *name, sic_adapter_t *adapter) {
 	unsigned id = qdb_put(sica_hd, NULL, adapter);
 	qdb_put(sican_hd, name, &id);
-	fprintf(stderr, "sic_areg %s, %u\n", name, id);
+	/* fprintf(stderr, "sic_areg %s, %u\n", name, id); */
 	return id;
 }
 
@@ -477,12 +494,12 @@ void shared_init(void) {
 	nd.hds[HD_ADROP] = adrop_hd;
 	nd.hds[HD_BIOME] = biome_hd;
 	nd.hds[HD_WTS] = wts_hd;
-	nd.hds[HD_RWTS] = wts_hd + 1;
+	nd.hds[HD_RWTS] = wts_hd + 2;
 	nd.hds[HD_OBJ] = obj_hd;
 	nd.hds[HD_OBS] = obs_hd;
 	nd.hds[HD_CONTENTS] = contents_hd;
 	nd.hds[HD_TYPE] = type_hd;
-	nd.hds[HD_RTYPE] = type_hd + 1;
+	nd.hds[HD_RTYPE] = type_hd + 2;
 	nd.hds[HD_BCP] = bcp_hd;
 	nd.hds[HD_ELEMENT] = element_hd;
 	nd.hds[HD_HD] = hd_hd;
@@ -493,8 +510,6 @@ void shared_init(void) {
 	nd.nd_dwritef = nd_dwritef;
 	nd.nd_rwrite = nd_rwrite;
 	nd.nd_dowritef = nd_dowritef;
-	nd.dnotify_wts = dnotify_wts;
-	nd.dnotify_wts_to = dnotify_wts_to;
 	nd.nd_tdwritef = nd_tdwritef;
 	nd.nd_wwrite = nd_wwrite;
 
@@ -509,7 +524,7 @@ void shared_init(void) {
 	nd.st_teleport = st_teleport;
 	nd.st_run = st_run;
 
-	nd.wts_plural = wts_plural;
+	nd.plural = plural;
 
 	nd.obj_exists = obj_exists;
 	nd.object_new = object_new;
@@ -528,7 +543,6 @@ void shared_init(void) {
 	nd.ent_del = ent_del;
 	nd.controls = controls;
 	nd.payfor = payfor;
-	nd.look_around = look_around;
 	nd.enter = enter;
 	nd.look_at = look_at;
 	nd.room_clean = room_clean;
@@ -546,6 +560,7 @@ void shared_init(void) {
 	nd.ematch_player = ematch_player;
 	nd.ematch_absolute = ematch_absolute;
 	nd.ematch_me = ematch_me;
+	nd.ematch_here = ematch_here;
 	nd.ematch_mine = ematch_mine;
 	nd.ematch_near = ematch_near;
 	nd.ematch_all = ematch_all;
@@ -633,8 +648,6 @@ main(int argc, char **argv)
 	owner_hd = qdb_open("st", "st", "u", 0);
 	sl_hd = qdb_open("sl", "st", "p", 0);
 
-	action_hd = qdb_open("action", "u", "ai", QH_TMP | QH_AINDEX);
-	type_hd = qdb_open("ndt", "u", "s", QH_TMP | QH_AINDEX | QH_THRICE);
 	vtf_hd = qdb_open("vtf", "u", "vtf", QH_TMP | QH_AINDEX);
 	situc_hd = qdb_open("situc", "ul", "p", QH_TMP);
 	sica_hd = qdb_open("sica", "u", "sica", QH_TMP | QH_AINDEX);
@@ -642,6 +655,8 @@ main(int argc, char **argv)
 	bcp_hd = qdb_open("bcp", "u", "s", QH_TMP | QH_AINDEX);
 	hd_hd = qdb_open("hd", "s", "u", QH_TMP);
 
+	action_hd = qdb_open("action", "u", "ai", QH_AINDEX);
+	type_hd = qdb_open("ndt", "u", "s", QH_AINDEX | QH_THRICE);
 	ent_hd = qdb_open("entity", "u", "ent", 0);
 	player_hd = qdb_open("player", "s", "u", 0);
 	obj_hd = qdb_open("obj", "u", "obj", QH_AINDEX);
@@ -700,11 +715,12 @@ main(int argc, char **argv)
 	qdb_put(bcp_hd, NULL, "auth_success");
 	qdb_put(bcp_hd, NULL, "out");
 	qdb_put(bcp_hd, NULL, "tod");
+	qdb_put(bcp_hd, NULL, "action");
 
 	action_register("look", "🔍");
 	action_register("open", "📦");
 	action_register("get", "🖐️");
-	action_register("talk", "👄");
+	action_register("drop", "🪣");
 
 	base_vtf_init();
 
@@ -988,8 +1004,7 @@ auth(unsigned fd)
 	ndclog(LOG_INFO, "auth '%s' (%u/%u)\n", user, fd, player_ref);
 
 	if (player_ref == NOTHING) {
-		player.flags = OF_PLAYER;
-		player_ref = object_add(&player, 0, 0, 0);
+		player_ref = object_add(&player, 0, 0, 0, OF_PLAYER);
 		strlcpy(player.name, user, sizeof(player.name));
 		player.value = 150;
 		player_put(user, player_ref);
@@ -1014,7 +1029,7 @@ auth(unsigned fd)
 	ndc_auth(fd, user);
 	mcp_auth_success(player_ref);
 	mcp_actions(player_ref);
-	look_around(player_ref);
+	look_at(player_ref, NOTHING);
 	do_view(fd, 0, NULL);
 	if (day_n)
 		mcp_tod(player_ref, 1);
@@ -1079,7 +1094,7 @@ void ndc_disconnect(int fd) {
 	qdb_del(fds_hd, &player_ref, &fd);
 }
 
-char *wts_plural(char *singular) {
+char *plural(char *singular) {
 	static char plural[BUFSIZ], *last;
 	char *space = strchr(singular, ' ');
 	size_t len = space ? space - singular : strlen(singular);
