@@ -62,30 +62,6 @@ nd_owritef(unsigned player_ref, char *format, ...)
 	va_end(args);
 }
 
-typedef void dnotify_wts_t(unsigned who_ref, char const *a, char const *b, char *format, va_list args);
-dnotify_wts_t dnotify_wts;
-
-static inline void
-notify_wts(unsigned who_ref, char const *a, char const *b, char *format, ...)
-{
-	va_list args;
-	va_start(args, format);
-	dnotify_wts(who_ref, a, b, format, args);
-	va_end(args);
-}
-
-typedef void dnotify_wts_to_t(unsigned who_ref, unsigned tar_ref, char const *a, char const *b, char *format, va_list args);
-dnotify_wts_to_t dnotify_wts_to;
-
-static inline void
-notify_wts_to(unsigned who_ref, unsigned tar_ref, char const *a, char const *b, char *format, ...)
-{
-	va_list args;
-	va_start(args, format);
-	dnotify_wts_to(who_ref, tar_ref, a, b, format, args);
-	va_end(args);
-}
-
 typedef void nd_tdwritef_t(unsigned player_ref, const char *fmt, va_list args);
 nd_tdwritef_t nd_tdwritef;
 
@@ -130,5 +106,12 @@ nd_register_t nd_register;
 
 typedef void mod_load_t(char *fname);
 mod_load_t mod_load;
+
+typedef char *plural_t(char *singular);
+plural_t plural;
+
+static inline char *plural_maybe(char *singular, int number) {
+	return number == 1 || number == -1 ? singular : plural(singular);
+}
 
 #endif

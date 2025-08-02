@@ -11,7 +11,6 @@
 #include "st.h"
 #include "uapi/io.h"
 #include "uapi/match.h"
-#include "uapi/wts.h"
 #include "view.h"
 
 #include "papi/nd.h"
@@ -127,27 +126,30 @@ unparse(unsigned loc_ref)
 void
 look_at(unsigned player_ref, unsigned loc_ref)
 {
+	OBJ player;
 	ENT eplayer = ent_get(player_ref);
 	OBJ loc;
 
 	if (loc_ref == NOTHING) {
-		nd_writef(player_ref, "You see nothing...\n");
-		return;
+		qdb_get(obj_hd, &player, &player_ref);
+		loc_ref = player.location;
+		if (loc_ref == NOTHING) {
+			nd_writef(player_ref, "You see nothing...\n");
+			return;
+		}
 	}
+
+	eplayer.last_observed = loc_ref;
+	ent_set(player_ref, &eplayer);
+	qdb_put(obs_hd, &loc_ref, &player_ref);
 
 	qdb_get(obj_hd, &loc, &loc_ref);
 	unsigned thing_ref;
 
 	fbcp_item(player_ref, loc_ref, 1);
-	switch (loc.type) {
-	case TYPE_ROOM:
-		break;
-	case TYPE_ENTITY: // falls through
-	default:
-		eplayer.last_observed = loc_ref;
-		ent_set(player_ref, &eplayer);
-		qdb_put(obs_hd, &loc_ref, &player_ref);
-	}
+
+	if (loc.type == TYPE_ROOM)
+		view(player_ref);
 
         if (loc_ref != player_ref && loc.type == TYPE_ENTITY && !(eplayer.flags & EF_WIZARD))
                 return;
@@ -173,15 +175,6 @@ look_at(unsigned player_ref, unsigned loc_ref)
 
         buf[buf_l] = '\0';
         nd_twritef(player_ref, "Contents: %s", buf);
-}
-
-void
-look_around(unsigned player_ref)
-{
-	OBJ player;
-	qdb_get(obj_hd, &player, &player_ref);
-	look_at(player_ref, player.location);
-	view(player_ref);
 }
 
 #define ADAM_SKEL_REF 0
@@ -213,9 +206,9 @@ do_look_at(int fd, int argc __attribute__((unused)), char *argv[] __attribute__(
 	case TYPE_ROOM:
 		view(player_ref);
 	default:
-		look_at(player_ref, thing_ref);
 		break;
 	}
+	look_at(player_ref, thing_ref);
 }
 
 int

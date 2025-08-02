@@ -231,7 +231,7 @@ object_drop(unsigned where_ref, unsigned skel_id)
 
                         if (!yield) {
 				OBJ obj;
-				unsigned obj_ref = object_add(&obj, drop.skel, where_ref, v2);
+				unsigned obj_ref = object_add(&obj, drop.skel, where_ref, v2, 0);
 				qdb_put(obj_hd, &obj_ref, &obj);
                                 continue;
                         }
@@ -241,7 +241,7 @@ object_drop(unsigned where_ref, unsigned skel_id)
                         for (i = 0; i < yield; i++) {
 				v2 = XXH32((const char *) pos, sizeof(pos_t), 4 + i);
 				OBJ obj;
-                                unsigned obj_ref = object_add(&obj, drop.skel, where_ref, v2);
+                                unsigned obj_ref = object_add(&obj, drop.skel, where_ref, v2, 0);
 				qdb_put(obj_hd, &obj_ref, &obj);
 			}
                 }
@@ -467,7 +467,7 @@ st_room_at(unsigned player_ref, pos_t pos)
 	struct bio bio = noise_point(pos);
 	OBJ there;
 	biome_map = biome_map_get(* (uint64_t *) pos);
-	unsigned there_ref = object_add(&there, biome_map[bio.bio_idx], NOTHING, (uint64_t) &bio);
+	unsigned there_ref = object_add(&there, biome_map[bio.bio_idx], NOTHING, (uint64_t) &bio, 0);
 	ROO *rthere = (ROO *) &there.data;
 	map_put(pos, there_ref, DB_NOOVERWRITE);
 	exits_infer(there_ref, rthere);
@@ -999,11 +999,15 @@ st_cmd_dir(struct cmd_dir *res, const char *cmd)
 
 static void may_look(unsigned player_ref, morton_t old_loc) {
 	OBJ player;
+	morton_t new_loc;
+
 	qdb_get(obj_hd, &player, &player_ref);
-	morton_t new_loc = map_mwhere(player.location);
+	new_loc = map_mwhere(player.location);
+
 	if (old_loc == new_loc)
 		return;
-	look_around(player_ref);
+
+	look_at(player_ref, NOTHING);
 	view(player_ref);
 	nd_flush(player_ref);
 }
@@ -1088,10 +1092,10 @@ st_open(struct st_key st_key, int owner)
 		dlerror();
 		syslog(LOG_INFO, "dlopen %d, %s", owner, filename);
 		struct nd *ind = dlsym(sl, "nd");
-		if (ind) {
-			fprintf(stderr, "%u's st module didn't link agains libnd\n", owner);
+		if (ind)
 			*ind = nd;
-		}
+		else
+			fprintf(stderr, "%u's st module didn't link agains libnd\n", owner);
 		qdb_put(sl_hd, &st_key, &sl);
 	}
 

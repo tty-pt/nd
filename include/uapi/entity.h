@@ -17,17 +17,11 @@ ent_set_t ent_set;
 typedef void ent_del_t(unsigned ref);
 ent_del_t ent_del;
 
-typedef void ent_reset_t(ENT *ent);
-ent_reset_t ent_reset;
-
 typedef int controls_t(unsigned who_ref, unsigned what_ref);
 controls_t controls;
 
 typedef int payfor_t(unsigned who_ref, OBJ *who, unsigned cost);
 payfor_t payfor;
-
-typedef void look_around_t(unsigned player_ref);
-look_around_t look_around;
 
 typedef void enter_t(unsigned player_ref, unsigned loc_ref, enum exit e);
 enter_t enter;

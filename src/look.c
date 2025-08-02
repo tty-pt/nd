@@ -4,7 +4,6 @@
 #include "player.h"
 #include "uapi/entity.h"
 #include "uapi/match.h"
-#include "uapi/wts.h"
 #include "uapi/type.h"
 
 void
@@ -75,7 +74,7 @@ do_inventory(int fd, int argc __attribute__((unused)), char *argv[] __attribute_
 	look_at(player_ref, player_ref);
 	qdb_get(obj_hd, &player, &player_ref);
 	nd_writef(player_ref, "You have %d %s.\n", player.value,
-			wts_cond("shekel", player.value));
+			plural_maybe("shekel", player.value));
 }
 
 void
