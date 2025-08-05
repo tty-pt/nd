@@ -222,7 +222,7 @@ SIC_DECL(int, on_clone, unsigned, orig_ref, unsigned, nu_ref);
 SIC_DECL(int, on_update, unsigned, ref, unsigned, type, double, dt);
 SIC_DECL(int, on_move, unsigned, ref);
 
-SIC_DECL(sic_str_t, on_vim, unsigned, ref, sic_str_t, ss);
+SIC_DECL(int, on_vim, unsigned, ref, sic_str_t, ss);
 
 SIC_DECL(int, on_new_player, unsigned, player_ref);
 SIC_DECL(int, on_auth, unsigned, player_ref);

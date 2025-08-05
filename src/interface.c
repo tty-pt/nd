@@ -463,7 +463,7 @@ SIC_DEF(int, on_clone, unsigned, orig_ref, unsigned, nu_ref);
 SIC_DEF(int, on_update, unsigned, ref, unsigned, type, double, dt);
 SIC_DEF(int, on_move, unsigned, ref);
 
-SIC_DEF(sic_str_t, on_vim, unsigned, ref, sic_str_t, ss);
+SIC_DEF(int, on_vim, unsigned, ref, sic_str_t, ss);
 
 SIC_DEF(int, on_new_player, unsigned, player_ref);
 SIC_DEF(int, on_auth, unsigned, player_ref);
@@ -968,10 +968,10 @@ do_avatar(int fd, int argc __attribute__((unused)), char *argv[] __attribute__((
 char *ndc_auth_check(int fd) {
 	static char user[BUFSIZ];
 	char cookie[BUFSIZ], *eq;
-	int headers = ndc_headers(fd);
+	int headers = ndc_env(fd);
 	FILE *fp;
 
-	if (qdb_get(headers, cookie, "Cookie"))
+	if (qdb_get(headers, cookie, "HTTP_COOKIE"))
 		return NULL;
 
 	eq = strchr(cookie, '=');
@@ -1074,13 +1074,16 @@ void ndc_vim(int fd, int argc __attribute__((unused)), char *argv[]) {
 
 	unsigned player_ref = fd_player(fd);
 	char const *s = argv[0];
+	unsigned pos = 0;
 	sic_str_t ss = { .str = "", .pos = 0 };
 	strlcpy(ss.str, argv[0], sizeof(ss.str));
 
-	for (; s[ss.pos]; ) {
+	for (; s[pos]; ) {
 		int ret = st_v(player_ref, s);
-		ss.pos += ret;
-		ss = call_on_vim(player_ref, ss);
+		pos += ret < 0 ? - ret : ret;
+		ss.pos = pos;
+		ret = call_on_vim(player_ref, ss);
+		pos += ret < 0 ? - ret : ret;
 	}
 }
 
@@ -1107,11 +1110,13 @@ void ndc_disconnect(int fd) {
 }
 
 char *plural(char *singular) {
-	static char plural[BUFSIZ], *last;
+	static char plural[BUFSIZ], *last, *prev;
 	char *space = strchr(singular, ' ');
 	size_t len = space ? space - singular : strlen(singular);
-	last = singular + len - 1;
-	strncpy(plural, singular, len + 1);
+	memset(plural, 0, sizeof(plural));
+	strncpy(plural, singular, len);
+	last = plural + len - 1;
+	prev = last - 1;
 
 	switch (*last) {
 		case 'y':
@@ -1119,13 +1124,19 @@ char *plural(char *singular) {
 		case 's':
 		case 'x':
 		case 'z':
-		case 'h':
-			strlcat(plural, "es", BUFSIZ);
+			last = plural + strlcat(plural, "es", sizeof(plural));
 			break;
+		case 'h':
+			if (*prev != 'g') {
+				last = plural + strlcat(plural, "es", sizeof(plural));
+				break;
+			}
+
 		default:
-			strlcat(plural, "s", BUFSIZ);
+			last = plural + strlcat(plural, "s", sizeof(plural));
 	}
 
+	strlcat(last, singular + len, sizeof(plural) - len);
 	return plural;
 }
 
