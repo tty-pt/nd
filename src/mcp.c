@@ -134,8 +134,6 @@ _fbcp_item(char *bcp_buf, unsigned player_ref, unsigned obj_ref, unsigned char d
 	}
 	}
 
-	SIC_CALL(&p, on_fbcp, p, obj_ref);
-
 	return p - bcp_buf;
 }
 
@@ -234,7 +232,6 @@ fbcp_observers(unsigned loc_ref, unsigned thing_ref, unsigned dynflags)
 	hd = obs_hd;
 
 	if (dynflags & 4) {
-		fprintf(stderr, "out confirmed\n");
 		dynflags &= ~4;
 		callback = &_fbcp_out;
 	}
@@ -251,7 +248,6 @@ fbcp_observers(unsigned loc_ref, unsigned thing_ref, unsigned dynflags)
 			continue;
 
 		len = callback(bcp_buf, tmp_ref, thing_ref, dynflags);
-		fprintf(stderr, "notify_observers %u\n", tmp_ref);
 		nd_wwrite(tmp_ref, bcp_buf, len);
 	}
 }

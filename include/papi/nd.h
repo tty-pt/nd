@@ -52,6 +52,7 @@ struct nd {
 	room_clean_t *room_clean;
 
 	nd_put_t *nd_put, *nd_get;
+	nd_assoc_t *nd_assoc;
 	nd_open_t *nd_open;
 	nd_iter_t *nd_iter;
 	nd_next_t *nd_next;

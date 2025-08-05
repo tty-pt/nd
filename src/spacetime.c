@@ -467,7 +467,7 @@ st_room_at(unsigned player_ref, pos_t pos)
 	struct bio bio = noise_point(pos);
 	OBJ there;
 	biome_map = biome_map_get(* (uint64_t *) pos);
-	unsigned there_ref = object_add(&there, biome_map[bio.bio_idx], NOTHING, (uint64_t) &bio, 0);
+	unsigned there_ref = object_add(&there, biome_map[bio.bio_idx], 0, (uint64_t) &bio, 0);
 	ROO *rthere = (ROO *) &there.data;
 	map_put(pos, there_ref, DB_NOOVERWRITE);
 	exits_infer(there_ref, rthere);

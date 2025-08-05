@@ -3,6 +3,7 @@ import { createPopper } from "@popperjs/core";
 import ndcMaker from "@tty-pt/ndc";
 // import "@xterm/xterm/css/xterm.css";
 // import "@tty-pt/ndc/ndc.css";
+// import "@tty-pt/ndc/ndc.css";
 
 const term = document.getElementById("term");
 const ndc = ndcMaker.create(term);
@@ -21,7 +22,7 @@ const sub = new Sub({
   target: null,
   equipment: {},
   db: {
-    "-1": { contents: {} },
+    "0": { contents: {} },
     "1": { art: "mineral/gold/1.jpeg" },
     [null]: {},
   },

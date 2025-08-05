@@ -282,3 +282,7 @@ void mod_auto_init(void) {
     for (void (**fn)(void) = &__start_sic_auto_init; fn < &__stop_sic_auto_init; ++fn)
         (*fn)();
 }
+
+void nd_assoc(unsigned hd, unsigned link, nd_assoc_cb_t assoc) {
+	nd.nd_assoc(hd, link, assoc);
+}

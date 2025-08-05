@@ -235,8 +235,6 @@ object_move(unsigned what_ref, unsigned where_ref)
 		ent_set(first_ref, &efirst);
 	}
 
-	call_on_leave(what_ref, last_loc);
-
 	/* test for special cases */
 	if (where_ref == NOTHING) {
 		unsigned first_ref;
@@ -261,7 +259,7 @@ object_move(unsigned what_ref, unsigned where_ref)
 
 	what.location = where_ref;
 	qdb_put(obj_hd, &what_ref, &what);
-	mcp_content_in(where_ref, what_ref);
+
 	if (what.type == TYPE_ENTITY) {
 		ENT ewhat = ent_get(what_ref);
 		if (ewhat.last_observed != NOTHING)
@@ -269,7 +267,9 @@ object_move(unsigned what_ref, unsigned where_ref)
 	}
 
 	qdb_put(contents_hd, &where_ref, &what_ref);
+	call_on_leave(what_ref, last_loc);
 	call_on_enter(what_ref, where_ref);
+	mcp_content_in(where_ref, what_ref);
 }
 
 struct icon

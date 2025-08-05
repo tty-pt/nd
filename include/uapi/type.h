@@ -18,7 +18,11 @@
 #include "./skel.h"
 #include "./st.h"
 
-#define ND_AINDEX 32
+enum nd_db_flags {
+	ND_SEC = 2,
+	ND_AINDEX = 32,
+	ND_PGET = 1024,
+};
 
 typedef struct {
 	char name[64];
@@ -210,7 +214,6 @@ sic_get_t sic_get;
 
 SIC_DECL(int, on_status, unsigned, player_ref);
 SIC_DECL(int, on_examine, unsigned, player_ref, unsigned, ref, unsigned, type);
-SIC_DECL(int, on_fbcp, char *, p, unsigned, ref); // FIXME
 SIC_DECL(int, on_add, unsigned, ref, unsigned, type, uint64_t, v);
 SIC_DECL(unsigned short, on_view_flags, unsigned short, flags, unsigned, ref);
 SIC_DECL(struct icon, on_icon, unsigned, ref, unsigned, type, unsigned, player_ref);

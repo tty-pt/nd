@@ -403,6 +403,10 @@ unsigned shared_get(unsigned hd, void *value, void *key) {
 	return qdb_get(hd, value, key);
 }
 
+void shared_assoc(unsigned hd, unsigned link, qdb_assoc_t assoc) {
+	qdb_assoc(hd, link, assoc);
+}
+
 void nd_register(char *str, nd_cb_t *cb, unsigned flags) {
 	ndc_register(str, cb, flags);
 }
@@ -442,7 +446,7 @@ void sic_put(unsigned si_id, unsigned type, void *cb) {
 	qdb_put(situc_hd, key, &cb);
 }
 
-unsigned on_status_id, on_examine_id, on_fbcp_id, on_add_id,
+unsigned on_status_id, on_examine_id, on_add_id,
 	 on_view_flags_id, on_icon_id, on_del_id, on_clone_id,
 	 on_update_id, on_move_id, on_vim_id, on_new_player_id,
 	 on_auth_id, on_before_leave_id, on_leave_id,
@@ -451,7 +455,6 @@ unsigned on_status_id, on_examine_id, on_fbcp_id, on_add_id,
 
 SIC_DEF(int, on_status, unsigned, player_ref);
 SIC_DEF(int, on_examine, unsigned, player_ref, unsigned, ref, unsigned, type);
-SIC_DEF(int, on_fbcp, char *, p, unsigned, ref);
 SIC_DEF(int, on_add, unsigned, ref, unsigned, type, uint64_t, v);
 SIC_DEF(unsigned short, on_view_flags, unsigned short, flags, unsigned, ref);
 SIC_DEF(struct icon, on_icon, unsigned, ref, unsigned, type, unsigned, player_ref);
@@ -549,6 +552,7 @@ void shared_init(void) {
 
 	nd.nd_put = shared_put;
 	nd.nd_get = shared_get;
+	nd.nd_assoc = shared_assoc;
 	nd.nd_iter = (nd_iter_t *) qdb_iter;
 	nd.nd_next = (nd_next_t *) qdb_next;
 	nd.nd_fin = (nd_fin_t *) qdb_fin;
@@ -583,6 +587,14 @@ void shared_init(void) {
 }
 
 void base_vtf_init(void);
+
+void test_handler(int fd,
+		char *body __attribute__((unused)),
+		unsigned env __attribute__((unused)))
+{
+	ndc_writef(fd, "HTTP/1.1 200 OK\r\n\r\nTest ok\r\n");
+	ndc_close(fd);
+}
 
 int
 main(int argc, char **argv)
@@ -680,7 +692,6 @@ main(int argc, char **argv)
 
 	SIC_AREG(on_status);
 	SIC_AREG(on_examine);
-	SIC_AREG(on_fbcp);
 	SIC_AREG(on_add);
 	SIC_AREG(on_view_flags);
 	SIC_AREG(on_icon);
@@ -718,7 +729,6 @@ main(int argc, char **argv)
 	qdb_put(bcp_hd, NULL, "action");
 
 	action_register("look", "🔍");
-	action_register("open", "📦");
 	action_register("get", "🖐️");
 	action_register("drop", "🪣");
 
@@ -805,6 +815,8 @@ main(int argc, char **argv)
 
 	setenv("TERM", "xterm-256color", 1);
 	st_init();
+
+	ndc_register_handler("/test", &test_handler);
 
 	ndclog(LOG_INFO, "Done.\n");
 
