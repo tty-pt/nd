@@ -216,7 +216,7 @@ struct cmd_slot cmds[] = {
 short optflags = 0;
 int euid = 0;
 struct ndc_config nd_config = {
-	.flags = 0,
+	.flags = NDC_SSL_ONLY,
 };
 unsigned fds_hd = -1;
 unsigned player_hd = -1;
@@ -325,7 +325,8 @@ void _mod_load(char *fname) {
 	    return;
 	}
 
-	unsigned existed = qdb_exists(mod_hd, fname);
+	void *esl;
+	unsigned existed = !qdb_get(mod_hd, &esl, fname);
 	struct nd *ind = dlsym(sl, "nd");
 	if (ind)
 		*ind = nd;
@@ -346,7 +347,8 @@ void _mod_load(char *fname) {
 }
 
 void mod_load(char *fname) {
-	if (qdb_exists(mod_hd, fname)) {
+	void *esl;
+	if (qdb_get(mod_hd, &esl, fname)) {
 		ndclog(LOG_ERR, "mod_load: module '%s' already present\n", fname);
 		return;
 	}
@@ -588,9 +590,7 @@ void shared_init(void) {
 
 void base_vtf_init(void);
 
-void test_handler(int fd,
-		char *body __attribute__((unused)),
-		unsigned env __attribute__((unused)))
+void test_handler(int fd, char *body __attribute__((unused)))
 {
 	ndc_writef(fd, "HTTP/1.1 200 OK\r\n\r\nTest ok\r\n");
 	ndc_close(fd);
@@ -735,7 +735,8 @@ main(int argc, char **argv)
 	base_vtf_init();
 
 	unsigned zero = 0, existed = 1;
-	if (!qdb_exists(obj_hd, &zero)) {
+	OBJ tmp;
+	if (qdb_get(obj_hd, &tmp, &zero)) {
 		existed = 0;
 		memcpy(room_zero.data, &room_zero_room, sizeof(room_zero_room));
 		qdb_put(obj_hd, NULL, &room_zero);
@@ -967,11 +968,10 @@ do_avatar(int fd, int argc __attribute__((unused)), char *argv[] __attribute__((
 
 char *ndc_auth_check(int fd) {
 	static char user[BUFSIZ];
-	char cookie[BUFSIZ], *eq;
-	int headers = ndc_env(fd);
+	char cookie[ENV_VALUE_LEN], *eq;
 	FILE *fp;
 
-	if (qdb_get(headers, cookie, "HTTP_COOKIE"))
+	if (ndc_env_get(fd, cookie, "HTTP_COOKIE"))
 		return NULL;
 
 	eq = strchr(cookie, '=');
@@ -1038,7 +1038,9 @@ auth(unsigned fd)
 		qdb_put(dplayer_hd, &fd, &player_ref);
 	}
 
-	ndc_auth(fd, user);
+	if (ndc_auth(fd, user))
+		return NOTHING;
+
 	mcp_auth_success(player_ref);
 	mcp_actions(player_ref);
 	look_at(player_ref, NOTHING);

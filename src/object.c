@@ -24,7 +24,8 @@ char std_db_ok[BUFSIZ];
 unsigned obj_hd, contents_hd, obs_hd;
 
 int obj_exists(unsigned ref) {
-	return qdb_exists(obj_hd, &ref);
+	OBJ tmp;
+	return !qdb_get(obj_hd, &tmp, &ref);
 }
 
 unsigned
