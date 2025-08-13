@@ -8,6 +8,7 @@
 #include <unistd.h>
 
 #include <ndc.h>
+#include <qsys.h>
 
 #include "config.h"
 #include "mcp.h"
@@ -99,7 +100,7 @@ void do_wall(int fd, int argc, char *argv[]);
 
 unsigned fd_player(unsigned fd) {
 	unsigned ret;
-	qdb_get(dplayer_hd, &ret, &fd);
+	qmap_get(dplayer_hd, &ret, &fd);
 	return ret;
 }
 
@@ -247,9 +248,9 @@ DB_ENV *env;
 void mod_close(void) {
 	char buf[BUFSIZ];
 	void *sl;
-	qdb_cur_t c = qdb_iter(mod_id_hd, NULL);
+	unsigned c = qmap_iter(mod_id_hd, NULL);
 
-	while (qdb_next(buf, &sl, &c))
+	while (qmap_next(buf, &sl, c))
 		dlclose(sl);
 }
 
@@ -259,20 +260,20 @@ void close_all(int i) {
 	mod_close();
 
 	// temporary
-	qdb_close(dplayer_hd, flags);
-	qdb_close(fds_hd, flags);
+	qmap_close(dplayer_hd);
+	qmap_close(fds_hd);
 
 	// permanent
 	st_dlclose();
 	qdb_close(owner_hd, flags);
 	qdb_close(sl_hd, flags);
 
-	qdb_close(vtf_hd, flags);
-	qdb_close(situc_hd, flags);
-	qdb_close(sica_hd, flags);
-	qdb_close(sican_hd, flags);
-	qdb_close(bcp_hd, flags);
-	qdb_close(hd_hd, flags);
+	qmap_close(vtf_hd);
+	qmap_close(situc_hd);
+	qmap_close(sica_hd);
+	qmap_close(sican_hd);
+	qmap_close(bcp_hd);
+	qmap_close(hd_hd);
 
 	qdb_close(action_hd, flags);
 	qdb_close(type_hd, flags);
@@ -321,12 +322,12 @@ void _mod_load(char *fname) {
 	sl = dlopen(fname, RTLD_NOW | RTLD_LOCAL | RTLD_NODELETE);
 
 	if (!sl) {
-	    ndclog(LOG_ERR, "_mod_load failed loading '%s': %s\n", fname, dlerror());
+	    ERR("_mod_load failed loading '%s': %s\n", fname, dlerror());
 	    return;
 	}
 
 	void *esl;
-	unsigned existed = !qdb_get(mod_hd, &esl, fname);
+	unsigned existed = !qmap_get(mod_hd, &esl, fname);
 	struct nd *ind = dlsym(sl, "nd");
 	if (ind)
 		*ind = nd;
@@ -335,9 +336,9 @@ void _mod_load(char *fname) {
 	// and module so files and stuff like that
 	char *symbol = existed ? "mod_open" : "mod_install";
 
-	ndclog(LOG_INFO, "%s: '%s'\n", symbol, fname);
-	unsigned id = qdb_put(mod_id_hd, NULL, &sl);
-	qdb_put(mod_hd, fname, &id);
+	WARN("%s: '%s'\n", symbol, fname);
+	unsigned id = qmap_put(mod_id_hd, NULL, &sl);
+	qmap_put(mod_hd, fname, &id);
 
 	mod_cb_t auto_init = (mod_cb_t) dlsym(sl, "mod_auto_init");
 	if (auto_init)
@@ -348,8 +349,8 @@ void _mod_load(char *fname) {
 
 void mod_load(char *fname) {
 	void *esl;
-	if (qdb_get(mod_hd, &esl, fname)) {
-		ndclog(LOG_ERR, "mod_load: module '%s' already present\n", fname);
+	if (qmap_get(mod_hd, &esl, fname)) {
+		WARN("module '%s' already present\n", fname);
 		return;
 	}
 
@@ -359,8 +360,9 @@ void mod_load(char *fname) {
 void mod_load_all(void) {
 	char buf[BUFSIZ];
 	void *ptr;
-	qdb_cur_t c = qdb_iter(mod_id_hd, NULL);
-	while (qdb_next(buf, &ptr, &c)) 
+	unsigned c = qmap_iter(mod_id_hd, NULL);
+
+	while (qmap_next(buf, &ptr, c)) 
 		_mod_load(buf);
 }
 
@@ -374,16 +376,18 @@ int sic_last(void *ret) {
 void sic_call(void *retp, unsigned id, void *arg) {
 	unsigned mod_id;
 	void *ptr = NULL;
-	qdb_cur_t c = qdb_iter(mod_id_hd, NULL);
+	unsigned c;
+
 	sic_adapter_t adapter;
 	adapter.ran = 0;
 
-	if (qdb_get(sica_hd, &adapter, &id)) {
+	if (qmap_get(sica_hd, &adapter, &id)) {
 		fprintf(stderr, "No adapter registered for symbol id '%u'\n", id);
 		return;
 	}
 
-	while (qdb_next(&mod_id, &ptr, &c)) {
+	c = qmap_iter(mod_id_hd, NULL);
+	while (qmap_next(&mod_id, &ptr, c)) {
 		void *cb = dlsym(ptr, adapter.name);
 		if (!cb)
 			continue;
@@ -398,15 +402,15 @@ void sic_call(void *retp, unsigned id, void *arg) {
 }
 
 unsigned shared_put(unsigned hd, void *key, void *data) {
-	return qdb_put(hd, key, data);
+	return qmap_put(hd, key, data);
 }
 
 unsigned shared_get(unsigned hd, void *value, void *key) {
-	return qdb_get(hd, value, key);
+	return qmap_get(hd, value, key);
 }
 
-void shared_assoc(unsigned hd, unsigned link, qdb_assoc_t assoc) {
-	qdb_assoc(hd, link, assoc);
+void shared_assoc(unsigned hd, unsigned link, qmap_assoc_t assoc) {
+	qmap_assoc(hd, link, assoc);
 }
 
 void nd_register(char *str, nd_cb_t *cb, unsigned flags) {
@@ -417,7 +421,7 @@ unsigned action_register(char *label, char *icon) {
 	action_t ai = { .flags = 0 };
 	strlcpy(ai.label, label, sizeof(ai.label));
 	strlcpy(ai.icon, icon, sizeof(ai.icon));
-	return 1 << (qdb_put(action_hd, NULL, &ai));
+	return 1 << (qmap_put(action_hd, NULL, &ai));
 }
 
 unsigned vtf_register(char emp, enum color fg, unsigned flags) {
@@ -426,26 +430,26 @@ unsigned vtf_register(char emp, enum color fg, unsigned flags) {
 		.emp = emp,
 	};
 
-	unsigned id = 1 << (qdb_put(vtf_hd, NULL, &vtf));
+	unsigned id = 1 << (qmap_put(vtf_hd, NULL, &vtf));
 	vtf_max = id;
 	return id;;
 }
 
-void *sic_iter(unsigned si_id, unsigned type) {
-	static qdb_cur_t c;
+unsigned sic_iter(unsigned si_id, unsigned type) {
+	static unsigned c;
 	unsigned key[2] = { si_id, type };
-	c = qdb_iter(situc_hd, key);
-	return &c;
+	c = qmap_iter(situc_hd, key);
+	return c;
 }
 
-int sic_next(void **cb, void *c) {
+int sic_next(void **cb, unsigned c) {
 	unsigned key[2];
-	return qdb_next(key, cb, c);
+	return qmap_next(key, cb, c);
 }
 
 void sic_put(unsigned si_id, unsigned type, void *cb) {
 	unsigned key[2] = { si_id, type };
-	qdb_put(situc_hd, key, &cb);
+	qmap_put(situc_hd, key, &cb);
 }
 
 unsigned on_status_id, on_examine_id, on_add_id,
@@ -480,15 +484,15 @@ SIC_DEF(struct bio, on_noise, struct bio, bio, uint32_t, he, uint32_t, w, uint32
 SIC_DEF(sic_str_t, on_empty_tile, view_tile_t, t, unsigned, side, sic_str_t, ss);
 
 unsigned sic_areg(char *name, sic_adapter_t *adapter) {
-	unsigned id = qdb_put(sica_hd, NULL, adapter);
-	qdb_put(sican_hd, name, &id);
+	unsigned id = qmap_put(sica_hd, NULL, adapter);
+	qmap_put(sican_hd, name, &id);
 	/* fprintf(stderr, "sic_areg %s, %u\n", name, id); */
 	return id;
 }
 
 unsigned sic_get(char *name) {
 	unsigned ret = NOTHING;
-	qdb_get(sican_hd, &ret, name);
+	qmap_get(sican_hd, &ret, name);
 	return ret;
 }
 
@@ -555,10 +559,10 @@ void shared_init(void) {
 	nd.nd_put = shared_put;
 	nd.nd_get = shared_get;
 	nd.nd_assoc = shared_assoc;
-	nd.nd_iter = (nd_iter_t *) qdb_iter;
-	nd.nd_next = (nd_next_t *) qdb_next;
-	nd.nd_fin = (nd_fin_t *) qdb_fin;
-	nd.nd_len_reg = qdb_reg;
+	nd.nd_iter = (nd_iter_t *) qmap_iter;
+	nd.nd_next = (nd_next_t *) qmap_next;
+	nd.nd_fin = (nd_fin_t *) qmap_fin;
+	nd.nd_len_reg = qmap_reg;
 	nd.nd_open = qdb_open;
 	nd.nd_register = nd_register;
 
@@ -618,20 +622,21 @@ main(int argc, char **argv)
 		case '?': show_program_usage(*argv); return 0;
 	}
 
+	qmap_init();
 	qdb_init();
-	qdb_reg("obj", sizeof(OBJ));
-	qdb_reg("ent", sizeof(ENT));
-	qdb_reg("skel", sizeof(SKEL));
-	qdb_reg("drop", sizeof(DROP));
-	qdb_reg("element", sizeof(element_t));
-	qdb_reg("biome_map", sizeof(unsigned) * BIOME_MAX);
-	qdb_reg("st", sizeof(struct st_key));
-	qdb_reg("ai", sizeof(action_t));
-	qdb_reg("vtf", sizeof(vtf_t));
-	qdb_reg("sica", sizeof(sic_adapter_t));
+	qmap_reg("obj", sizeof(OBJ));
+	qmap_reg("ent", sizeof(ENT));
+	qmap_reg("skel", sizeof(SKEL));
+	qmap_reg("drop", sizeof(DROP));
+	qmap_reg("element", sizeof(element_t));
+	qmap_reg("biome_map", sizeof(unsigned) * BIOME_MAX);
+	qmap_reg("st", sizeof(struct st_key));
+	qmap_reg("ai", sizeof(action_t));
+	qmap_reg("vtf", sizeof(vtf_t));
+	qmap_reg("sica", sizeof(sic_adapter_t));
 
 	ndc_pre_init(&nd_config);
-	ndclog(LOG_INFO, "nd booting.\n");
+	WARN("booting.\n");
 
 	optind = 1;
 	while ((c = getopt(argc, argv, "p:K:k:dvC:")) != -1) switch (c) {
@@ -644,31 +649,24 @@ main(int argc, char **argv)
 	if (euid && !nd_config.chroot)
 		nd_config.chroot = ".";
 
-	dplayer_hd = qdb_open(NULL, "u", "u", 0); // keys are ints, actually
-	fds_hd = qdb_open(NULL, "u", "u", QH_DUP); // a
+	dplayer_hd = qmap_open("u", "u", 0, 0); // keys are ints, actually
+	fds_hd = qmap_open("u", "u", 0, QMAP_DUP); // a
 	signal(SIGSEGV, close_all);
 
 	qdb_config.file = STD_DB;
 
-#if ENABLE_TRANSACTIONS
-	qdb_config.flags = QH_TXN;
-
-	env = qdb_env_create();
-	qdb_env_open(env, "/var/nd/env", QH_TXN);
-#endif
-	qdb_begin();
 	owner_hd = qdb_open("st", "st", "u", 0);
 	sl_hd = qdb_open("sl", "st", "p", 0);
 
-	vtf_hd = qdb_open("vtf", "u", "vtf", QH_TMP | QH_AINDEX);
-	situc_hd = qdb_open("situc", "ul", "p", QH_TMP);
-	sica_hd = qdb_open("sica", "u", "sica", QH_TMP | QH_AINDEX);
-	sican_hd = qdb_open("sican", "s", "u", QH_TMP);
-	bcp_hd = qdb_open("bcp", "u", "s", QH_TMP | QH_AINDEX);
-	hd_hd = qdb_open("hd", "s", "u", QH_TMP);
+	vtf_hd = qmap_open("u", "vtf", 0, QMAP_AINDEX);
+	situc_hd = qmap_open("u", "p", 0, 0);
+	sica_hd = qmap_open("u", "sica", 0, QMAP_AINDEX);
+	sican_hd = qmap_open("s", "u", 0, 0);
+	bcp_hd = qmap_open("u", "s", 0, QMAP_AINDEX);
+	hd_hd = qmap_open("s", "u", 0, 0);
 
 	action_hd = qdb_open("action", "u", "ai", QH_AINDEX);
-	type_hd = qdb_open("ndt", "u", "s", QH_AINDEX | QH_THRICE);
+	type_hd = qdb_open("ndt", "u", "s", QH_AINDEX | QH_TWO_WAY);
 	ent_hd = qdb_open("entity", "u", "ent", 0);
 	player_hd = qdb_open("player", "s", "u", 0);
 	obj_hd = qdb_open("obj", "u", "obj", QH_AINDEX);
@@ -681,7 +679,7 @@ main(int argc, char **argv)
 	drop_hd = qdb_open("drop", "u", "drop", QH_AINDEX);
 	adrop_hd = qdb_open("adrop", "u", "u", QH_DUP);
 	element_hd = qdb_open("element", "u", "element", QH_AINDEX);
-	wts_hd = qdb_open("wts", "u", "s", QH_AINDEX | QH_THRICE);
+	wts_hd = qdb_open("wts", "u", "s", QH_AINDEX | QH_TWO_WAY);
 	awts_hd = qdb_open("awts", "u", "u", QH_DUP); // a
 	biome_hd = qdb_open("biome", "u", "biome_map", 0);
 	
@@ -714,19 +712,19 @@ main(int argc, char **argv)
 	SIC_AREG(on_noise);
 	SIC_AREG(on_empty_tile);
 
-	qdb_put(type_hd, NULL, "room");
-	qdb_put(type_hd, NULL, "entity");
+	qmap_put(type_hd, NULL, "room");
+	qmap_put(type_hd, NULL, "entity");
 
-	qdb_put(bcp_hd, NULL, "item");
-	qdb_put(bcp_hd, NULL, "view");
-	qdb_put(bcp_hd, NULL, "view_buffer");
-	qdb_put(bcp_hd, NULL, "room");
-	qdb_put(bcp_hd, NULL, "entity");
-	qdb_put(bcp_hd, NULL, "auth_failure");
-	qdb_put(bcp_hd, NULL, "auth_success");
-	qdb_put(bcp_hd, NULL, "out");
-	qdb_put(bcp_hd, NULL, "tod");
-	qdb_put(bcp_hd, NULL, "action");
+	qmap_put(bcp_hd, NULL, "item");
+	qmap_put(bcp_hd, NULL, "view");
+	qmap_put(bcp_hd, NULL, "view_buffer");
+	qmap_put(bcp_hd, NULL, "room");
+	qmap_put(bcp_hd, NULL, "entity");
+	qmap_put(bcp_hd, NULL, "auth_failure");
+	qmap_put(bcp_hd, NULL, "auth_success");
+	qmap_put(bcp_hd, NULL, "out");
+	qmap_put(bcp_hd, NULL, "tod");
+	qmap_put(bcp_hd, NULL, "action");
 
 	action_register("look", "🔍");
 	action_register("get", "🖐️");
@@ -736,10 +734,10 @@ main(int argc, char **argv)
 
 	unsigned zero = 0, existed = 1;
 	OBJ tmp;
-	if (qdb_get(obj_hd, &tmp, &zero)) {
+	if (qmap_get(obj_hd, &tmp, &zero)) {
 		existed = 0;
 		memcpy(room_zero.data, &room_zero_room, sizeof(room_zero_room));
-		qdb_put(obj_hd, NULL, &room_zero);
+		qmap_put(obj_hd, NULL, &room_zero);
 
 		element_t spirit = {
 			.color = MAGENTA,
@@ -761,12 +759,12 @@ main(int argc, char **argv)
 			.weakness = ELM_SPIRIT,
 		};
 
-		qdb_put(element_hd, NULL, &spirit);
-		qdb_put(element_hd, NULL, &fire);
-		qdb_put(element_hd, NULL, &water);
-		qdb_put(element_hd, NULL, &air);
-		qdb_put(element_hd, NULL, &earth);
-		qdb_put(element_hd, NULL, &physical); // 5
+		qmap_put(element_hd, NULL, &spirit);
+		qmap_put(element_hd, NULL, &fire);
+		qmap_put(element_hd, NULL, &water);
+		qmap_put(element_hd, NULL, &air);
+		qmap_put(element_hd, NULL, &earth);
+		qmap_put(element_hd, NULL, &physical); // 5
 
 		SENT adam_sent = {
 			.y = 255,
@@ -779,16 +777,16 @@ main(int argc, char **argv)
 		};
 
 		memcpy(adam.data, &adam_sent, sizeof(adam_sent));
-		qdb_put(skel_hd, NULL, &adam); // 0
-		qdb_put(wts_hd, NULL,  "punch"); // 0
+		qmap_put(skel_hd, NULL, &adam); // 0
+		qmap_put(wts_hd, NULL,  "punch"); // 0
 
 		unsigned biome_map[BIOME_MAX];
 		memcpy(void_biome.data, &void_biome_biome, sizeof(void_biome_biome));
-		unsigned void_ref = qdb_put(skel_hd, NULL, &void_biome);
+		unsigned void_ref = qmap_put(skel_hd, NULL, &void_biome);
 		for (unsigned i = 0; i < BIOME_MAX; i++)
 			biome_map[i] = void_ref;
 		void_ref = 16;
-		qdb_put(biome_hd, &void_ref, biome_map);
+		qmap_put(biome_hd, &void_ref, biome_map);
 
 		unsigned owner = 1;
 		sthd_put(owner_hd, 0, 0, &owner);
@@ -803,11 +801,7 @@ main(int argc, char **argv)
 		st_run(-1, "mod_init");
 	}
 
-	qdb_commit();
-
 	srand(getpid());
-
-	qdb_checkpoint(0, 0, 0);
 
 	qdb_config.file = NULL;
 	qdb_config.flags = 0;
@@ -819,7 +813,7 @@ main(int argc, char **argv)
 
 	ndc_register_handler("/test", &test_handler);
 
-	ndclog(LOG_INFO, "Done.\n");
+	WARN("Done.\n");
 
 	ndc_main();
 
@@ -848,19 +842,17 @@ ndc_flush(int fd, int argc __attribute__((unused)), char *argv[] __attribute__((
 
 void
 nd_flush(unsigned player_ref) {
-	qdb_cur_t c = qdb_iter(fds_hd, &player_ref);
-	unsigned fd;
+	unsigned c = qmap_iter(fds_hd, &player_ref), fd;
 
-	while (qdb_next(&player_ref, &fd, &c))
+	while (qmap_next(&player_ref, &fd, c))
 		ndc_flush(fd, 0, NULL);
 }
 
 void
 nd_write(unsigned player_ref, char *str, size_t len) {
-	qdb_cur_t c = qdb_iter(fds_hd, &player_ref);
-	unsigned fd;
+	unsigned c = qmap_iter(fds_hd, &player_ref), fd;
 
-	while (qdb_next(&player_ref, &fd, &c)) {
+	while (qmap_next(&player_ref, &fd, c)) {
 		if (memcmp(str, ioc[fd].buf, len)) {
 			ndc_flush(fd, 0, NULL);
 			memcpy(ioc[fd].buf, str, len);
@@ -881,13 +873,14 @@ nd_dwritef(unsigned player_ref, const char *fmt, va_list args) {
 void
 nd_rwrite(unsigned room_ref, unsigned exception_ref, char *str, size_t len) {
 	unsigned tmp_ref;
-	qdb_cur_t c = qdb_iter(contents_hd, &room_ref);
-	while (qdb_next(&room_ref, &tmp_ref, &c))
+	unsigned c = qmap_iter(contents_hd, &room_ref);
+
+	while (qmap_next(&room_ref, &tmp_ref, c))
 		if (tmp_ref == exception_ref)
 			continue;
 		else {
 			OBJ tmp;
-			qdb_get(obj_hd, &tmp, &tmp_ref);
+			qmap_get(obj_hd, &tmp, &tmp_ref);
 			if (tmp.type == TYPE_ENTITY)
 				nd_write(tmp_ref, str, len);
 		}
@@ -899,36 +892,36 @@ nd_dowritef(unsigned player_ref, const char *fmt, va_list args) {
 	size_t len;
 	OBJ player;
 	len = vsnprintf(buf, sizeof(buf), fmt, args);
-	qdb_get(obj_hd, &player, &player_ref);
+	qmap_get(obj_hd, &player, &player_ref);
 	nd_rwrite(player.location, player_ref, buf, len);
 }
 
 void nd_tdwritef(unsigned player_ref, const char *fmt, va_list args) {
 	static char buf[BUFSIZ];
 	ssize_t len = vsnprintf(buf, sizeof(buf), fmt, args);
-	qdb_cur_t c = qdb_iter(fds_hd, &player_ref);
+	unsigned c = qmap_iter(fds_hd, &player_ref);
 	unsigned fd;
 
-	while (qdb_next(&player_ref, &fd, &c))
+	while (qmap_next(&player_ref, &fd, c))
 		if (!(ndc_flags(fd) & DF_WEBSOCKET))
 			ndc_write(fd, buf, len);
 }
 
 void nd_wwrite(unsigned player_ref, void *msg, size_t len) {
-	qdb_cur_t c = qdb_iter(fds_hd, &player_ref);
+	unsigned c = qmap_iter(fds_hd, &player_ref);
 	unsigned fd;
 
-	while (qdb_next(&player_ref, &fd, &c))
+	while (qmap_next(&player_ref, &fd, c))
 		if ((ndc_flags(fd) & DF_WEBSOCKET))
 			ndc_write(fd, msg, len);
 }
 
 void
 nd_close(unsigned player_ref) {
-	qdb_cur_t c = qdb_iter(fds_hd, &player_ref);
+	unsigned c = qmap_iter(fds_hd, &player_ref);
 	unsigned fd;
 
-	while (qdb_next(&player_ref, &fd, &c))
+	while (qmap_next(&player_ref, &fd, c))
 		ndc_close(fd);
 }
 
@@ -952,7 +945,7 @@ do_save(int fd, int argc __attribute__((unused)), char *argv[] __attribute__((un
 static inline void
 avatar(OBJ *player) {
 	SKEL skel;
-	qdb_get(skel_hd, &skel, &player->skid);
+	qmap_get(skel_hd, &skel, &player->skid);
 	player->art_id = 1 + (random() % (skel.max_art ? skel.max_art : 1));
 }
 
@@ -960,7 +953,7 @@ void
 do_avatar(int fd, int argc __attribute__((unused)), char *argv[] __attribute__((unused))) {
 	unsigned player_ref = fd_player(fd);
 	OBJ player;
-	qdb_get(obj_hd, &player, &player_ref);
+	qmap_get(obj_hd, &player, &player_ref);
 	avatar(&player);
 	mcp_content_out(player.location, player_ref);
 	mcp_content_in(player.location, player_ref);
@@ -991,11 +984,11 @@ char *ndc_auth_check(int fd) {
 }
 
 static inline void mcp_actions(unsigned player_ref) {
-	qdb_cur_t c = qdb_iter(action_hd, NULL);
+	unsigned c = qmap_iter(action_hd, NULL);
 	unsigned id;
 	action_t ai;
 
-	while (qdb_next(&id, &ai, &c))
+	while (qmap_next(&id, &ai, c))
 		mcp_action(player_ref, id, ai.label, ai.icon);
 }
 
@@ -1010,10 +1003,9 @@ auth(unsigned fd)
 		return 0;
 	}
 
-	qdb_begin();
 	unsigned player_ref = player_get(user);
 
-	ndclog(LOG_INFO, "auth '%s' (%u/%u)\n", user, fd, player_ref);
+	WARN("'%s' (%u/%u)\n", user, fd, player_ref);
 
 	if (player_ref == NOTHING) {
 		player_ref = object_add(&player, 0, 0, 0, OF_PLAYER);
@@ -1022,9 +1014,9 @@ auth(unsigned fd)
 		player_put(user, player_ref);
 		avatar(&player);
 
-		qdb_put(fds_hd, &player_ref, &fd);
-		qdb_put(obj_hd, &player_ref, &player);
-		qdb_put(dplayer_hd, &fd, &player_ref);
+		qmap_put(fds_hd, &player_ref, &fd);
+		qmap_put(obj_hd, &player_ref, &player);
+		qmap_put(dplayer_hd, &fd, &player_ref);
 		call_on_new_player(player_ref);
 	} else {
 		ENT eplayer = ent_get(player_ref);
@@ -1034,8 +1026,8 @@ auth(unsigned fd)
 			return 0;
 		}
 
-		qdb_put(fds_hd, &player_ref, &fd);
-		qdb_put(dplayer_hd, &fd, &player_ref);
+		qmap_put(fds_hd, &player_ref, &fd);
+		qmap_put(dplayer_hd, &fd, &player_ref);
 	}
 
 	if (ndc_auth(fd, user))
@@ -1050,7 +1042,6 @@ auth(unsigned fd)
 	else
 		mcp_tod(player_ref, 0);
 
-	qdb_commit();
 	call_on_auth(player_ref);
 	return player_ref;
 }
@@ -1061,13 +1052,11 @@ ndc_update(unsigned long long dt)
 	double mul = 2.0;
 	double fdt = dt / 1000000.0;
 	tick += fdt;
-	qdb_begin();
 	if (tick > 1.0) {
 		tick -= 1.0;
 		objects_update(1.0 * mul);
 		st_update(1.0 * mul);
 	}
-	qdb_commit();
 }
 
 void ndc_vim(int fd, int argc __attribute__((unused)), char *argv[]) {
@@ -1104,11 +1093,11 @@ void ndc_disconnect(int fd) {
 
 	unsigned player_ref = fd_player(fd);
 	OBJ player;
-	qdb_get(obj_hd, &player, &player_ref);
-	ndclog(LOG_INFO, "%s(%u) disconnects on fd %d\n",
+	qmap_get(obj_hd, &player, &player_ref);
+	WARN("%s(%u) on fd %d\n",
 			player.name, player_ref, fd);
-	qdb_del(dplayer_hd, &fd, NULL);
-	qdb_del(fds_hd, &player_ref, &fd);
+	qmap_del(dplayer_hd, &fd, NULL);
+	qmap_del(fds_hd, &player_ref, &fd);
 }
 
 char *plural(char *singular) {
@@ -1148,11 +1137,11 @@ unsigned *biome_map_get(uint64_t position) {
 
 	for (int i = 0; i < 16; i++) {
 		ref = ((position >> (48 + i)) << 4) | i;
-		if (!qdb_get(biome_hd, biome_map, &ref))
+		if (!qmap_get(biome_hd, biome_map, &ref))
 			return biome_map;
 	}
 
 	ref = 16;
-	qdb_get(biome_hd, biome_map, &ref);
+	qmap_get(biome_hd, biome_map, &ref);
 	return biome_map;
 }

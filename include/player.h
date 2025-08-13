@@ -16,20 +16,20 @@ static inline unsigned
 player_get(char *name)
 {
 	unsigned res = NOTHING;
-	qdb_get(player_hd, &res, name);
+	qmap_get(player_hd, &res, name);
 	return res;
 }
 
 static inline void
 player_put(char *name, unsigned player_ref)
 {
-	qdb_put(player_hd, name, &player_ref);
+	qmap_put(player_hd, name, &player_ref);
 }
 
 static inline void
 player_delete(char *name)
 {
-	qdb_del(player_hd, name, NULL);
+	qmap_del(player_hd, name, NULL);
 }
 
 #endif

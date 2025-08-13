@@ -11,7 +11,7 @@ do_examine(int fd, int argc __attribute__((unused)), char *argv[])
 {
 	unsigned player_ref = fd_player(fd);
 	OBJ player;
-	qdb_get(obj_hd, &player, &player_ref);
+	qmap_get(obj_hd, &player, &player_ref);
 	char *name = argv[1];
 	unsigned thing_ref;
 
@@ -23,8 +23,8 @@ do_examine(int fd, int argc __attribute__((unused)), char *argv[])
 	}
 
 	OBJ thing, owner;
-	qdb_get(obj_hd, &thing, &thing_ref);
-	qdb_get(obj_hd, &owner, &thing.owner);
+	qmap_get(obj_hd, &thing, &thing_ref);
+	qmap_get(obj_hd, &owner, &thing.owner);
 
 	if (!controls(player_ref, thing_ref)) {
 		nd_writef(player_ref, "Owner: %s\n", owner.name);
@@ -35,10 +35,10 @@ do_examine(int fd, int argc __attribute__((unused)), char *argv[])
 			unparse(thing_ref), thing_ref, owner.name, thing.value);
 
 	/* show him the contents */
-	qdb_cur_t c = qdb_iter(contents_hd, &thing_ref);
+	unsigned c = qmap_iter(contents_hd, &thing_ref);
 	unsigned content_ref;
 
-	while (qdb_next(&thing_ref, &content_ref, &c))
+	while (qmap_next(&thing_ref, &content_ref, c))
 		nd_writef(player_ref, unparse(content_ref));
 
 	switch (thing.type) {
@@ -72,7 +72,7 @@ do_inventory(int fd, int argc __attribute__((unused)), char *argv[] __attribute_
 	OBJ player;
 
 	look_at(player_ref, player_ref);
-	qdb_get(obj_hd, &player, &player_ref);
+	qmap_get(obj_hd, &player, &player_ref);
 	nd_writef(player_ref, "You have %d %s.\n", player.value,
 			plural_maybe("shekel", player.value));
 }
@@ -94,9 +94,9 @@ do_owned(int fd, int argc __attribute__((unused)), char *argv[])
 		victim_ref = player_ref;
 
 	OBJ victim, oi;
-	qdb_get(obj_hd, &victim, &victim_ref);
-	qdb_cur_t c = qdb_iter(obj_hd, NULL);
-	while (qdb_next(&oi_ref, &oi, &c))
+	qmap_get(obj_hd, &victim, &victim_ref);
+	unsigned c = qmap_iter(obj_hd, NULL);
+	while (qmap_next(&oi_ref, &oi, c))
 		if (oi.owner == victim.owner) {
 			nd_writef(player_ref, "%s\n", unparse(oi_ref));
 			total++;

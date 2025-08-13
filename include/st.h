@@ -104,12 +104,12 @@ st_key_new(uint64_t key, unsigned shift) {
 
 static inline int sthd_get(unsigned hd, void *value, uint64_t key, unsigned shift) {
 	struct st_key st_key = st_key_new(key, shift);
-	return qdb_get(hd, value, &st_key);
+	return qmap_get(hd, value, &st_key);
 }
 
 static inline void sthd_put(unsigned hd, uint64_t key, unsigned shift, void *value) {
 	struct st_key st_key = st_key_new(key, shift);
-	qdb_put(hd, &st_key, value);
+	qmap_put(hd, &st_key, value);
 }
 
 void st_put(unsigned owner_ref, uint64_t key, unsigned shift);

@@ -21,7 +21,7 @@ static inline char * biome_bg(unsigned i) {
 		return ANSI_RESET;
 
 	SKEL skel;
-	qdb_get(skel_hd, &skel, &biome_map[i]);
+	qmap_get(skel_hd, &skel, &biome_map[i]);
 	biome_skel_t *biome_skel = (biome_skel_t *) skel.data;
 	memcpy(ret, ansi_bg[biome_skel->bg], sizeof(ret));
 	return ret;
@@ -65,7 +65,7 @@ dr_room(char *buf, view_tile_t *t, const char *bg)
 		if (!(t->flags & ref))
 			continue;
 
-		if (!qdb_get(vtf_hd, &vtf, &i)) {
+		if (!qmap_get(vtf_hd, &vtf, &i)) {
 			got = 1;
 			break;
 		}
@@ -99,7 +99,7 @@ dr_room(char *buf, view_tile_t *t, const char *bg)
 static inline unsigned
 floor_get(unsigned what_ref) {
 	OBJ what;
-	qdb_get(obj_hd, &what, &what_ref);
+	qmap_get(obj_hd, &what, &what_ref);
 	ROO *rwhat = (ROO *) &what.data;
 	unsigned char floor = rwhat->floor;
 
@@ -302,7 +302,7 @@ view_build_exit_s(view_tile_t *t, pos_t p, enum exit e) {
 	}
 
 	OBJ tmp;
-	qdb_get(obj_hd, &tmp, &tmp_ref);
+	qmap_get(obj_hd, &tmp, &tmp_ref);
 	ROO *rtmp = (ROO *) &tmp.data;
 
 	if (rtmp->exits & e_simm(e)) {
@@ -314,13 +314,13 @@ view_build_exit_s(view_tile_t *t, pos_t p, enum exit e) {
 
 static inline ucoord_t
 view_build_flags(unsigned loc_ref) {
-	qdb_cur_t c = qdb_iter(contents_hd, &loc_ref);
+	unsigned c = qmap_iter(contents_hd, &loc_ref);
 	unsigned tmp_ref;
 	ucoord_t flags = 0;
 
-	while (qdb_next(&loc_ref, &tmp_ref, &c)) {
+	while (qmap_next(&loc_ref, &tmp_ref, c)) {
 		OBJ tmp;
-		qdb_get(obj_hd, &tmp, &tmp_ref);
+		qmap_get(obj_hd, &tmp, &tmp_ref);
 		switch (tmp.type) {
 		case TYPE_ENTITY:
 			flags |= vtf_entity;
@@ -343,7 +343,7 @@ view_build_tile(struct bio *n, unsigned loc_ref, view_tile_t *t, pos_t p)
 	t->room = loc_ref;
 	if (loc_ref != NOTHING) {
 		OBJ loc;
-		qdb_get(obj_hd, &loc, &loc_ref);
+		qmap_get(obj_hd, &loc, &loc_ref);
 		ROO *rloc = (ROO *) &loc.data;
 		view_build_exit(t, rloc, E_EAST);
 		view_build_exit(t, rloc, E_NORTH);
@@ -390,7 +390,7 @@ view(unsigned player_ref)
 		   *n_max = &bd[VIEW_BDI + 1];
 	pos_t pos, opos;
 	OBJ player;
-	qdb_get(obj_hd, &player, &player_ref);
+	qmap_get(obj_hd, &player, &player_ref);
 	map_where(opos, player.location);
 	view_t view;
         view_tile_t *p = view;

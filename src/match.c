@@ -21,7 +21,7 @@ ematch_here(unsigned player_ref, char *str)
 {
 	if (!strcmp(str, "here")) {
 		OBJ player;
-		qdb_get(obj_hd, &player, &player_ref);
+		qmap_get(obj_hd, &player, &player_ref);
 		return player.location;
 	} else
 		return NOTHING;
@@ -37,7 +37,7 @@ unsigned
 ematch_near(unsigned player_ref, char *str)
 {
 	OBJ player;
-	qdb_get(obj_hd, &player, &player_ref);
+	qmap_get(obj_hd, &player, &player_ref);
 	return ematch_at(player_ref, player.location, str);
 }
 
@@ -139,7 +139,7 @@ ematch_at(unsigned player_ref, unsigned where_ref, char *name) {
 	      absolute_ref, tmp_ref = NOTHING;
 	OBJ what;
 
-	qdb_get(obj_hd, &what, &what_ref);
+	qmap_get(obj_hd, &what, &what_ref);
 	if (what_ref != NOTHING && what.location == where_ref)
 		return what_ref;
 
@@ -153,18 +153,18 @@ ematch_at(unsigned player_ref, unsigned where_ref, char *name) {
 	if (absolute_ref != NOTHING && !controls(player_ref, absolute_ref))
 		absolute_ref = NOTHING;
 
-	qdb_cur_t c = qdb_iter(contents_hd, &where_ref);
-	while (qdb_next(&where_ref, &tmp_ref, &c)) {
+	unsigned c = qmap_iter(contents_hd, &where_ref);
+	while (qmap_next(&where_ref, &tmp_ref, c)) {
 		if (tmp_ref == absolute_ref) {
-			qdb_fin(&c);
+			qmap_fin(c);
 			break;
 		}
 
 		OBJ tmp;
-		qdb_get(obj_hd, &tmp, &tmp_ref);
+		qmap_get(obj_hd, &tmp, &tmp_ref);
 		if (string_match(tmp.name, name)) {
 			if (nth <= 0) {
-				qdb_fin(&c);
+				qmap_fin(c);
 				break;
 			}
 			nth--;

@@ -97,7 +97,7 @@ _fbcp_item(char *bcp_buf, unsigned player_ref, unsigned obj_ref, unsigned char d
 {
 	int aux, aux1;
 	OBJ obj;
-	qdb_get(obj_hd, &obj, &obj_ref);
+	qmap_get(obj_hd, &obj, &obj_ref);
 	struct icon ico = object_icon(player_ref, obj_ref);
 	unsigned char iden = BCP_ITEM;
 	char *p = bcp_buf, *aux2;
@@ -159,7 +159,7 @@ _fbcp_out(char *bcp_buf,
 	aux = obj_ref;
 	memcpy(p += sizeof(iden), &aux, sizeof(aux));
 	OBJ obj;
-	qdb_get(obj_hd, &obj, &obj_ref);
+	qmap_get(obj_hd, &obj, &obj_ref);
 	aux = obj.location;
 	memcpy(p += sizeof(aux), &aux, sizeof(aux));
 	p += sizeof(aux);
@@ -225,8 +225,7 @@ extern unsigned fds_hd;
 static void
 fbcp_observers(unsigned loc_ref, unsigned thing_ref, unsigned dynflags)
 {
-	qdb_cur_t c;
-	unsigned hd, tmp_ref = 0;
+	unsigned hd, tmp_ref = 0, c;
 	_fbcp_item_t *callback = &_fbcp_item;
 
 	hd = obs_hd;
@@ -236,14 +235,14 @@ fbcp_observers(unsigned loc_ref, unsigned thing_ref, unsigned dynflags)
 		callback = &_fbcp_out;
 	}
 
-	c = qdb_iter(hd, &loc_ref);;
+	c = qmap_iter(hd, &loc_ref);;
 
-	while (qdb_next(&loc_ref, &tmp_ref, &c)) {
+	while (qmap_next(&loc_ref, &tmp_ref, c)) {
 		static char bcp_buf[SUPERBIGSIZ];
 		OBJ tmp;
 		size_t len;
 
-		qdb_get(obj_hd, &tmp, &tmp_ref);
+		qmap_get(obj_hd, &tmp, &tmp_ref);
 		if (tmp.type != TYPE_ENTITY)
 			continue;
 

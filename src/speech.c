@@ -32,7 +32,7 @@ do_say(int fd, int argc, char *argv[])
 	OBJ player;
 
 	nd_writef(player_ref, "You say:%s.\n", message);
-	qdb_get(obj_hd, &player, &player_ref);
+	qmap_get(obj_hd, &player, &player_ref);
 	nd_owritef(player_ref, "%s says:%s\n", player.name, message);
 }
 
@@ -44,7 +44,7 @@ do_pose(int fd, int argc, char *argv[])
 	OBJ player;
 
 	nd_writef(player_ref, "You %s\n", message);
-	qdb_get(obj_hd, &player, &player_ref);
+	qmap_get(obj_hd, &player, &player_ref);
 	nd_owritef(player_ref, "%s%s\n", player.name, message);
 }
 
@@ -62,10 +62,10 @@ do_wall(int fd, int argc, char *argv[])
 		return;
 	}
 
-	qdb_get(obj_hd, &player, &player_ref);
+	qmap_get(obj_hd, &player, &player_ref);
 	snprintf(buf, sizeof(buf), "%s shouts: %s", player.name, message);
-	qdb_cur_t c = qdb_iter(obj_hd, NULL);
+	unsigned c = qmap_iter(obj_hd, NULL);
 	OBJ oi;
-	while (qdb_next(&oi_ref, &oi, &c))
+	while (qmap_next(&oi_ref, &oi, c))
 		nd_writef(oi_ref, buf);
 }

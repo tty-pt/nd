@@ -25,7 +25,7 @@ unsigned obj_hd, contents_hd, obs_hd;
 
 int obj_exists(unsigned ref) {
 	OBJ tmp;
-	return !qdb_get(obj_hd, &tmp, &ref);
+	return !qmap_get(obj_hd, &tmp, &ref);
 }
 
 unsigned
@@ -36,7 +36,7 @@ object_new(OBJ *newobj)
 	newobj->location = NOTHING;
 	newobj->owner = ROOT;
 	newobj->flags = flags;
-	return qdb_put(obj_hd, NULL, newobj);
+	return qmap_put(obj_hd, NULL, newobj);
 }
 
 ucoord_t biome_rain_floor[16] = {
@@ -84,7 +84,7 @@ biome_art_idx(struct bio *bio) {
 static inline unsigned
 art_idx(OBJ *obj) {
 	SKEL skel;
-	qdb_get(skel_hd, &skel, &obj->skid);
+	qmap_get(skel_hd, &skel, &obj->skid);
 	return 1 + (random() % (skel.max_art ? skel.max_art : 1));
 }
 
@@ -92,7 +92,7 @@ unsigned
 object_add(OBJ *nu, unsigned skel_id, unsigned where_ref, uint64_t v, unsigned flags)
 {
 	SKEL skel;
-	qdb_get(skel_hd, &skel, &skel_id);
+	qmap_get(skel_hd, &skel, &skel_id);
 	unsigned nu_ref = object_new(nu);
 	memset(nu, 0, sizeof(OBJ));
 	strlcpy(nu->name, skel.name, sizeof(nu->name));
@@ -101,7 +101,7 @@ object_add(OBJ *nu, unsigned skel_id, unsigned where_ref, uint64_t v, unsigned f
 	nu->owner = ROOT;
 	nu->type = skel.type;
 	if (where_ref != NOTHING)
-		qdb_put(contents_hd, &nu->location, &nu_ref);
+		qmap_put(contents_hd, &nu->location, &nu_ref);
 
 	switch (skel.type) {
 	case TYPE_ENTITY:
@@ -134,14 +134,14 @@ object_add(OBJ *nu, unsigned skel_id, unsigned where_ref, uint64_t v, unsigned f
 		 break;
 	}
 
-	qdb_put(obj_hd, &nu_ref, nu);
+	qmap_put(obj_hd, &nu_ref, nu);
 	call_on_add(nu_ref, nu->type, v);
 
 	if (skel.type != TYPE_ROOM)
 		mcp_content_in(where_ref, nu_ref);
 
 	// needed for retrieval (FIXME)
-	qdb_get(obj_hd, nu, &nu_ref);
+	qmap_get(obj_hd, nu, &nu_ref);
 	return nu_ref;
 }
 
@@ -149,7 +149,7 @@ char *
 object_art(unsigned thing_ref)
 {
 	OBJ thing;
-	qdb_get(obj_hd, &thing, &thing_ref);
+	qmap_get(obj_hd, &thing, &thing_ref);
 	static char art[BUFSIZ];
 	char typestr[BUFSIZ];
 	char *type = NULL;
@@ -161,7 +161,7 @@ object_art(unsigned thing_ref)
 		return art;
 	case TYPE_ROOM: type = "biome"; break;
 	default:
-		 qdb_get(type_hd + 1, typestr, &thing.type);
+		 qmap_get(type_hd + 1, typestr, &thing.type);
 		 type = typestr; break;
 	}
 
@@ -173,18 +173,18 @@ void
 objects_init(void)
 {
 	unsigned ref;
-
-	qdb_cur_t c = qdb_iter(obj_hd, NULL);
+	unsigned c = qmap_iter(obj_hd, NULL);
 	OBJ oi;
-	while (qdb_next(&ref, &oi, &c)) {
+
+	while (qmap_next(&ref, &oi, c)) {
 		if (oi.location != NOTHING)
-			qdb_put(contents_hd, &oi.location, &ref);
+			qmap_put(contents_hd, &oi.location, &ref);
 		if (oi.type != TYPE_ENTITY)
 			continue;
 
 		ENT ent = ent_get(ref);
 		ent.last_observed = NOTHING;
-		qdb_put(ent_hd, &ref, &ent);
+		qmap_put(ent_hd, &ref, &ent);
 		if (oi.flags & OF_PLAYER)
 			player_put(oi.name, ref);
 	}
@@ -194,7 +194,7 @@ unsigned
 object_copy(OBJ *nu, unsigned old_ref)
 {
 	OBJ old;
-	qdb_get(obj_hd, &old, &old_ref);
+	qmap_get(obj_hd, &old, &old_ref);
 	unsigned ref = object_new(nu);
 	strlcpy(nu->name, old.name, sizeof(nu->name));
 	nu->location = NOTHING;
@@ -207,8 +207,9 @@ objects_update(double dt)
 {
 	OBJ obj;
 	unsigned obj_ref;
-	qdb_cur_t c = qdb_iter(obj_hd, NULL);
-	while (qdb_next(&obj_ref, &obj, &c))
+	unsigned c = qmap_iter(obj_hd, NULL);
+
+	while (qmap_next(&obj_ref, &obj, c))
 		call_on_update(obj_ref, obj.type, dt);
 }
 
@@ -217,7 +218,7 @@ object_move(unsigned what_ref, unsigned where_ref)
 {
 	unsigned last_loc;
 	OBJ what;
-	qdb_get(obj_hd, &what, &what_ref);
+	qmap_get(obj_hd, &what, &what_ref);
 
 	last_loc = what.location;
 	if (last_loc == where_ref)
@@ -225,14 +226,14 @@ object_move(unsigned what_ref, unsigned where_ref)
 
 	mcp_content_out(last_loc, what_ref);
         if (last_loc != NOTHING)
-		qdb_del(contents_hd, &what.location, &what_ref);
+		qmap_del(contents_hd, &what.location, &what_ref);
 
-	qdb_cur_t c = qdb_iter(obs_hd, &what_ref);
+	unsigned c = qmap_iter(obs_hd, &what_ref);
 	unsigned first_ref;
-	while (qdb_next(&what_ref, &first_ref, &c)) {
+	while (qmap_next(&what_ref, &first_ref, c)) {
 		ENT efirst = ent_get(first_ref);
 		efirst.last_observed = what.location;
-		qdb_cdel(&c);
+		qmap_cdel(c);
 		ent_set(first_ref, &efirst);
 	}
 
@@ -240,8 +241,8 @@ object_move(unsigned what_ref, unsigned where_ref)
 	if (where_ref == NOTHING) {
 		unsigned first_ref;
 
-		qdb_cur_t c = qdb_iter(contents_hd, &what_ref);
-		while (qdb_next(&what_ref, &first_ref, &c))
+		unsigned c = qmap_iter(contents_hd, &what_ref);
+		while (qmap_next(&what_ref, &first_ref, c))
 			object_move(first_ref, NOTHING);
 
 		switch (what.type) {
@@ -252,22 +253,22 @@ object_move(unsigned what_ref, unsigned where_ref)
 			map_delete(what_ref);
 		}
 		mcp_content_out(last_loc, what_ref);
-		qdb_del(obj_hd, &what_ref, NULL);
+		qmap_del(obj_hd, &what_ref, NULL);
 
 		call_on_del(what_ref, what.type);
 		return;
 	}
 
 	what.location = where_ref;
-	qdb_put(obj_hd, &what_ref, &what);
+	qmap_put(obj_hd, &what_ref, &what);
 
 	if (what.type == TYPE_ENTITY) {
 		ENT ewhat = ent_get(what_ref);
 		if (ewhat.last_observed != NOTHING)
-			qdb_del(obs_hd, &ewhat.last_observed, &what_ref);
+			qmap_del(obs_hd, &ewhat.last_observed, &what_ref);
 	}
 
-	qdb_put(contents_hd, &where_ref, &what_ref);
+	qmap_put(contents_hd, &where_ref, &what_ref);
 	call_on_leave(what_ref, last_loc);
 	call_on_enter(what_ref, where_ref);
 	mcp_content_in(where_ref, what_ref);
@@ -277,7 +278,7 @@ struct icon
 object_icon(unsigned player_ref, unsigned what_ref)
 {
 	OBJ what;
-	qdb_get(obj_hd, &what, &what_ref);
+	qmap_get(obj_hd, &what, &what_ref);
 	return call_on_icon(what_ref, what.type, player_ref);
 }
 
@@ -317,7 +318,7 @@ do_clone(int fd, int argc __attribute__((unused)), char *argv[])
 	}
 
 	OBJ thing;
-	qdb_get(obj_hd, &thing, &thing_ref);
+	qmap_get(obj_hd, &thing, &thing_ref);
 
 	if(!controls(player_ref, thing_ref)) {
 		nd_writef(player_ref, CANTDO_MESSAGE);
@@ -325,7 +326,7 @@ do_clone(int fd, int argc __attribute__((unused)), char *argv[])
 	}
 
 	OBJ player;
-	qdb_get(obj_hd, &player, &player_ref);
+	qmap_get(obj_hd, &player, &player_ref);
 	OBJ clone;
 	unsigned clone_ref = object_new(&clone);
 
@@ -352,7 +353,7 @@ do_clone(int fd, int argc __attribute__((unused)), char *argv[])
 
 	clone.type = thing.type;
 
-	qdb_put(obj_hd, &clone_ref, &clone);
+	qmap_put(obj_hd, &clone_ref, &clone);
 	call_on_clone(thing_ref, clone_ref);
 	object_move(clone_ref, player_ref);
 }
@@ -383,12 +384,12 @@ do_create(int fd, int argc __attribute__((unused)), char *argv[])
 	}
 
 	OBJ player;
-	qdb_get(obj_hd, &player, &player_ref);
+	qmap_get(obj_hd, &player, &player_ref);
 
 	ref = object_add(&obj, skid, player_ref, v, 0);
 	obj.owner = player.owner;
 
-	qdb_put(obj_hd, &ref, &obj);
+	qmap_put(obj_hd, &ref, &obj);
 	nd_writef(player_ref, "Created.\n");
 }
 
@@ -411,9 +412,9 @@ do_name(int fd, int argc __attribute__((unused)), char *argv[])
 	}
 
 	OBJ thing;
-	qdb_get(obj_hd, &thing, &thing_ref);
+	qmap_get(obj_hd, &thing, &thing_ref);
 	strlcpy(thing.name, newname, sizeof(thing.name));
-	qdb_put(obj_hd, &thing_ref, &thing);
+	qmap_put(obj_hd, &thing_ref, &thing);
 }
 
 void
@@ -430,13 +431,13 @@ do_chown(int fd, int argc __attribute__((unused)), char *argv[])
 	}
 
 	OBJ player, thing;
-	qdb_get(obj_hd, &player, &player_ref);
+	qmap_get(obj_hd, &player, &player_ref);
 
 	owner_ref = *newowner && strcmp(newowner, "me") ? player_get(newowner) : player.owner;
 	if (owner_ref == NOTHING)
 		goto error;
 
-	qdb_get(obj_hd, &thing, &thing_ref);
+	qmap_get(obj_hd, &thing, &thing_ref);
 
 	if (thing.type == TYPE_ENTITY ||
 			(!wizard && ((thing.type == TYPE_ROOM && player.location != thing_ref)
@@ -444,7 +445,7 @@ do_chown(int fd, int argc __attribute__((unused)), char *argv[])
 		goto error;
 
 	thing.owner = owner_ref;
-	qdb_put(obj_hd, &thing_ref, &thing);
+	qmap_put(obj_hd, &thing_ref, &thing);
 	return;
 
 error:
@@ -469,7 +470,7 @@ do_recycle(int fd, int argc __attribute__((unused)), char *argv[])
 		return;
 	}
 
-	qdb_get(obj_hd, &thing, &thing_ref);
+	qmap_get(obj_hd, &thing, &thing_ref);
 
 	if (!controls(player_ref, thing_ref) || thing.owner != player_ref) {
 		nd_writef(player_ref, CANTDO_MESSAGE);
@@ -497,8 +498,8 @@ do_get(int fd, int argc __attribute__((unused)), char *argv[])
 
 	cont_ref = thing_ref;
 	OBJ player, thing, cont;
-	qdb_get(obj_hd, &player, &player_ref);
-	qdb_get(obj_hd, &thing, &cont_ref);
+	qmap_get(obj_hd, &player, &player_ref);
+	qmap_get(obj_hd, &thing, &cont_ref);
 	cont = thing;
 
 	if (obj && *obj) {
@@ -507,7 +508,7 @@ do_get(int fd, int argc __attribute__((unused)), char *argv[])
 			nd_writef(player_ref, NOMATCH_MESSAGE);
 			return;
 		}
-		qdb_get(obj_hd, &thing, &thing_ref);
+		qmap_get(obj_hd, &thing, &thing_ref);
 		if (cont.type == TYPE_ENTITY)
 			goto error;
 	}
@@ -538,7 +539,7 @@ do_drop(int fd, int argc __attribute__((unused)), char *argv[])
 {
 	unsigned player_ref = fd_player(fd), thing_ref, cont_ref;
 	OBJ player, cont, thing;
-	qdb_get(obj_hd, &player, &player_ref);
+	qmap_get(obj_hd, &player, &player_ref);
 	char *name = argv[1];
 	char *obj = argv[2];
 
@@ -561,10 +562,10 @@ do_drop(int fd, int argc __attribute__((unused)), char *argv[])
 	if (thing_ref == cont_ref)
 		goto error;
 
-	qdb_get(obj_hd, &cont, &cont_ref);
+	qmap_get(obj_hd, &cont, &cont_ref);
 
 	object_move(thing_ref, cont_ref);
-	qdb_get(obj_hd, &thing, &thing_ref);
+	qmap_get(obj_hd, &thing, &thing_ref);
 
 	if (cont.type == TYPE_ENTITY) {
 		nd_writef(cont_ref, "%s hands you %s.\n", player.name, thing.name);

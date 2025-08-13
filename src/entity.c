@@ -24,23 +24,23 @@ unsigned me_get(void) {
 
 ENT ent_get(unsigned ref) {
 	ENT ent;
-	qdb_get(ent_hd, &ent, &ref);
+	qmap_get(ent_hd, &ent, &ref);
 	return ent;
 }
 
 void ent_set(unsigned ref, ENT *tmp) {
-	qdb_put(ent_hd, &ref, tmp);
+	qmap_put(ent_hd, &ref, tmp);
 }
 
 void ent_del(unsigned ref) {
-	qdb_del(ent_hd, &ref, NULL);
+	qmap_del(ent_hd, &ref, NULL);
 }
 
 void
 enter(unsigned player_ref, unsigned loc_ref, enum exit e)
 {
 	OBJ player;
-	qdb_get(obj_hd, &player, &player_ref);
+	qmap_get(obj_hd, &player, &player_ref);
 	unsigned old_loc_ref = player.location;
 
 	call_on_before_leave(player_ref);
@@ -85,11 +85,11 @@ controls(unsigned who_ref, unsigned what_ref)
 	/* Zombies and puppets use the permissions of their owner */
 	OBJ who, what;
 
-	qdb_get(obj_hd, &who, &who_ref);
+	qmap_get(obj_hd, &who, &who_ref);
 	if (who.type != TYPE_ENTITY)
 		who_ref = who.owner;
 
-	qdb_get(obj_hd, &what, &what_ref);
+	qmap_get(obj_hd, &what, &what_ref);
 
 	/* Wizard controls everything */
 	if (ent_get(who_ref).flags & EF_WIZARD) {
@@ -115,7 +115,7 @@ unparse(unsigned loc_ref)
 		return "*NOTHING*";
 
 	OBJ loc;
-	qdb_get(obj_hd, &loc, &loc_ref);
+	qmap_get(obj_hd, &loc, &loc_ref);
 
 	BUFF("%s(#%u)", loc.name, loc_ref);
 
@@ -131,7 +131,7 @@ look_at(unsigned player_ref, unsigned loc_ref)
 	OBJ loc;
 
 	if (loc_ref == NOTHING) {
-		qdb_get(obj_hd, &player, &player_ref);
+		qmap_get(obj_hd, &player, &player_ref);
 		loc_ref = player.location;
 		if (loc_ref == NOTHING) {
 			nd_writef(player_ref, "You see nothing...\n");
@@ -141,9 +141,9 @@ look_at(unsigned player_ref, unsigned loc_ref)
 
 	eplayer.last_observed = loc_ref;
 	ent_set(player_ref, &eplayer);
-	qdb_put(obs_hd, &loc_ref, &player_ref);
+	qmap_put(obs_hd, &loc_ref, &player_ref);
 
-	qdb_get(obj_hd, &loc, &loc_ref);
+	qmap_get(obj_hd, &loc, &loc_ref);
 	unsigned thing_ref;
 
 	fbcp_item(player_ref, loc_ref, 1);
@@ -155,8 +155,8 @@ look_at(unsigned player_ref, unsigned loc_ref)
                 return;
 
 	// use callbacks for mcp like this versus telnet
-	qdb_cur_t c = qdb_iter(contents_hd, &loc_ref);
-	while (qdb_next(&loc_ref, &thing_ref, &c))
+	unsigned c = qmap_iter(contents_hd, &loc_ref);
+	while (qmap_next(&loc_ref, &thing_ref, c))
 		fbcp_item(player_ref, thing_ref, 0);
 
 	nd_twritef(player_ref, "%s\n", unparse(loc_ref));
@@ -164,8 +164,8 @@ look_at(unsigned player_ref, unsigned loc_ref)
         char buf[BUFSIZ];
         size_t buf_l = 0;
 
-	qdb_cur_t c2 = qdb_iter(contents_hd, &loc_ref);
-	while (qdb_next(&loc_ref, &thing_ref, &c2)) {
+	unsigned c2 = qmap_iter(contents_hd, &loc_ref);
+	while (qmap_next(&loc_ref, &thing_ref, c2)) {
 	/* check to see if there is anything there */
 			if (thing_ref == player_ref)
 				continue;
@@ -187,7 +187,7 @@ do_look_at(int fd, int argc __attribute__((unused)), char *argv[] __attribute__(
 	char *name = argv[1];
 
 	if (*name == '\0') {
-		qdb_get(obj_hd, &player, &player_ref);
+		qmap_get(obj_hd, &player, &player_ref);
 		thing_ref = player.location;
 	} else if (
 			(thing_ref = ematch_absolute(name)) == NOTHING
@@ -201,7 +201,7 @@ do_look_at(int fd, int argc __attribute__((unused)), char *argv[] __attribute__(
 		return;
 	}
 
-	qdb_get(obj_hd, &thing, &thing_ref);
+	qmap_get(obj_hd, &thing, &thing_ref);
 	switch (thing.type) {
 	case TYPE_ROOM:
 		view(player_ref);

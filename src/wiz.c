@@ -27,7 +27,7 @@ do_teleport(int fd, int argc __attribute__((unused)), char *argv[]) {
 		to = arg2;
 
 	OBJ victim;
-	qdb_get(obj_hd, &victim, &victim_ref);
+	qmap_get(obj_hd, &victim, &victim_ref);
 
 	destination_ref = ematch_all(player_ref, to);
 
@@ -37,7 +37,7 @@ do_teleport(int fd, int argc __attribute__((unused)), char *argv[]) {
 	}
 
 	OBJ destination;
-	qdb_get(obj_hd, &destination, &destination_ref);
+	qmap_get(obj_hd, &destination, &destination_ref);
 
 	if (victim_ref == destination_ref || destination.location == victim_ref)
 		goto error;
@@ -86,7 +86,7 @@ do_ban(int fd, int argc __attribute__((unused)), char *argv[]) {
 		goto error;
 
 	OBJ victim;
-	qdb_get(obj_hd, &victim, &victim_ref);
+	qmap_get(obj_hd, &victim, &victim_ref);
 
 	if (victim.type != TYPE_ENTITY)
 		goto error;

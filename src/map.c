@@ -2,6 +2,8 @@
 
 #include <stdlib.h>
 
+#include <qsys.h>
+
 #include "config.h"
 #include "nddb.h"
 #include "st.h"
@@ -112,7 +114,7 @@ map_range_unsafe(map_range_t *res,
 	int ret = 0;
 	int dbflags;
 
-	if (pdb->cursor(pdb, txnl_peek(&qdb_config.txnl), &cur, 0))
+	if (pdb->cursor(pdb, NULL, &cur, 0))
 		return -1;
 
 	memset(&data, 0, sizeof(DBT));
@@ -250,28 +252,16 @@ map_mki_code(
 void
 map_init(void) {
 	int ret = 0;
-	DB_TXN *txn = qdb_begin();
 
-	if ((ret = db_create(&ipdb, qdb_config.env, 0))
-	    || (ret = ipdb->open(ipdb, txn, STD_DB, "map_dp", DB_HASH, DB_CREATE, 0644))) {
-		qdb_abort();
-		ndclog(LOG_ERR, "map_init %s\n", db_strerror(ret));
-		exit(EXIT_FAILURE);
-		return;
-	}
+	CBUG((ret = db_create(&ipdb, NULL, 0))
+	    || (ret = ipdb->open(ipdb, NULL, STD_DB, "map_dp", DB_HASH, DB_CREATE, 0644)),
+	    "db_create or open\n");
 
-	if ((ret = db_create(&pdb, qdb_config.env, 0))
+	CBUG((ret = db_create(&pdb, NULL, 0))
 	    || (ret = pdb->set_bt_compare(pdb, map_cmp))
-	    || (ret = pdb->open(pdb, txn, STD_DB, "map_pd", DB_BTREE, DB_CREATE, 0644))
-	    || (ret = ipdb->associate(ipdb, txn, pdb, map_mki_code, DB_CREATE)))
-	{
-		pdb->close(pdb, 0);
-		qdb_abort();
-		ndclog(LOG_ERR, "map_init2 %s\n", db_strerror(ret));
-		exit(EXIT_FAILURE);
-	}
-
-	qdb_commit();
+	    || (ret = pdb->open(pdb, NULL, STD_DB, "map_pd", DB_BTREE, DB_CREATE, 0644))
+	    || (ret = ipdb->associate(ipdb, NULL, pdb, map_mki_code, DB_CREATE)),
+	    "second part\n");
 }
 
 int
@@ -302,7 +292,7 @@ _map_put(morton_t code, unsigned thing_ref, int flags)
 	data.data = &code;
 	data.size = sizeof(code);
 
-	ipdb->put(ipdb, txnl_peek(&qdb_config.txnl), &key, &data, flags);
+	ipdb->put(ipdb, NULL, &key, &data, flags);
 }
 
 void
@@ -326,7 +316,7 @@ map_mwhere(unsigned where)
 	key.size = sizeof(room);
 	data.flags = DB_DBT_MALLOC;
 
-	if ((bad = ipdb->get(ipdb, txnl_peek(&qdb_config.txnl), &key, &data, 0))) {
+	if ((bad = ipdb->get(ipdb, NULL, &key, &data, 0))) {
 		static morton_t code = 130056652770671ULL;
 		return code;
 	}
@@ -357,7 +347,7 @@ map_get(pos_t p)
 	unsigned ref;
 	int res;
 
-	if (pdb->cursor(pdb, txnl_peek(&qdb_config.txnl), &cur, 0))
+	if (pdb->cursor(pdb, NULL, &cur, 0))
 		return NOTHING;
 
 	memset(&pkey, 0, sizeof(DBT));
@@ -397,5 +387,5 @@ map_delete(unsigned what)
 	memset(&key, 0, sizeof(key));
 	key.data = &code;
 	key.size = sizeof(code);
-	return pdb->del(pdb, txnl_peek(&qdb_config.txnl), &key, 0);
+	return pdb->del(pdb, NULL, &key, 0);
 }

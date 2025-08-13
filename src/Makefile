@@ -20,7 +20,7 @@ CFLAGS := -g -O0 -Wall -Wpedantic -Wextra \
 CFLAGS += -std=c99 -Wno-gnu-designator
 
 ldlibs-Linux := -lbsd -lrt
-LDLIBS := -lxxhash -lpcre -lm -lc -lqdb -ldb -lndc -lcrypto -lssl ${ldlibs-${uname}}
+LDLIBS := -lxxhash -lpcre -lm -lc -lqdb -lqmap -lqsys -ldb -lndc -lcrypto -lssl ${ldlibs-${uname}}
 ldflags-Darwin += -L/usr/local/opt/berkeley-db@4/lib
 
 LDFLAGS := ${ldflags-${uname}} ${prefix:%=-L%/lib} \

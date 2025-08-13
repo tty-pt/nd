@@ -83,7 +83,10 @@ nd_put_t nd_put, nd_get;
 typedef int (nd_open_t)(char *, char *, char *, unsigned);
 nd_open_t nd_open;
 
-typedef int nd_assoc_cb_t(void **skey, void *key, void *data);
+typedef int nd_assoc_cb_t(const void ** const skey,
+		const void * const key,
+		const void * const data);
+
 typedef void nd_assoc_t(unsigned hd, unsigned link, nd_assoc_cb_t assoc);
 nd_assoc_t nd_assoc;
 
