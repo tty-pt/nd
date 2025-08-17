@@ -472,6 +472,8 @@ st_room_at(unsigned player_ref, pos_t pos)
 	map_put(pos, there_ref, DB_NOOVERWRITE);
 	exits_infer(there_ref, rthere);
 
+	fprintf(stderr, "st_room_at %u\n", player_ref);
+
 	if (pos[2] != 0) {
 		qmap_put(obj_hd, &there_ref, &there);
 		return there_ref;

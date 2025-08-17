@@ -166,15 +166,15 @@ int nd_open(char *database, char *key_sip, char *value_sip, unsigned flags) {
 	return hd;
 }
 
-nd_cur_t nd_iter(unsigned hd, void *key) {
+unsigned nd_iter(unsigned hd, void *key) {
 	return nd.nd_iter(hd_get(hd), key);
 }
 
-int nd_next(void *key, void *value, nd_cur_t *cur) {
+int nd_next(void *key, void *value, unsigned cur) {
 	return nd.nd_next(key, value, cur);
 }
 
-void nd_fin(nd_cur_t *cur) {
+void nd_fin(unsigned cur) {
 	nd.nd_fin(cur);
 }
 

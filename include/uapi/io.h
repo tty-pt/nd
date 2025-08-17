@@ -93,18 +93,13 @@ nd_assoc_t nd_assoc;
 typedef void nd_len_reg_t(char *iden, size_t len);
 nd_len_reg_t nd_len_reg;
 
-typedef struct {
-	int flags;
-	void *internal;
-} nd_cur_t;
-
-typedef nd_cur_t (nd_iter_t)(unsigned, void *);
+typedef unsigned (nd_iter_t)(unsigned, void *);
 nd_iter_t nd_iter;
 
-typedef int (nd_next_t)(void *, void *, nd_cur_t *cur);
+typedef int (nd_next_t)(void *, void *, unsigned cur);
 nd_next_t nd_next;
 
-typedef void (nd_fin_t)(nd_cur_t *cur);
+typedef void (nd_fin_t)(unsigned cur);
 nd_fin_t nd_fin;
 
 typedef void nd_cb_t(int fd, int argc, char *argv[]);

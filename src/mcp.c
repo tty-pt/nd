@@ -95,8 +95,11 @@ typedef int _fbcp_item_t(char *, unsigned, unsigned, unsigned char);
 int
 _fbcp_item(char *bcp_buf, unsigned player_ref, unsigned obj_ref, unsigned char dynflags)
 {
-	int aux, aux1;
-	OBJ obj;
+	int aux, aux1, exists;
+	OBJ obj = {
+		.location = -1,
+		.name = "**NOTHING!**",
+	};
 	qmap_get(obj_hd, &obj, &obj_ref);
 	struct icon ico = object_icon(player_ref, obj_ref);
 	unsigned char iden = BCP_ITEM;
@@ -225,17 +228,15 @@ extern unsigned fds_hd;
 static void
 fbcp_observers(unsigned loc_ref, unsigned thing_ref, unsigned dynflags)
 {
-	unsigned hd, tmp_ref = 0, c;
+	unsigned tmp_ref = 0, c;
 	_fbcp_item_t *callback = &_fbcp_item;
-
-	hd = obs_hd;
 
 	if (dynflags & 4) {
 		dynflags &= ~4;
 		callback = &_fbcp_out;
 	}
 
-	c = qmap_iter(hd, &loc_ref);;
+	c = qmap_iter(obs_hd, &loc_ref);;
 
 	while (qmap_next(&loc_ref, &tmp_ref, c)) {
 		static char bcp_buf[SUPERBIGSIZ];

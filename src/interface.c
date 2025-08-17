@@ -64,6 +64,7 @@ biome_skel_t void_biome_biome = {
 SKEL void_biome = {
 	.name = "void",
 	.type = TYPE_ROOM,
+	.max_art = 1,
 };
 
 unsigned dplayer_hd, skel_hd, drop_hd,
@@ -293,7 +294,7 @@ void close_all(int i) {
 	qdb_close(awts_hd, flags);
 	qdb_close(biome_hd, flags);
 
-	qdb_close(mod_hd, flags);
+	qmap_close(mod_hd);
 	qdb_close(mod_id_hd, flags);
 
 #if ENABLE_TRANSACTIONS
@@ -349,7 +350,7 @@ void _mod_load(char *fname) {
 
 void mod_load(char *fname) {
 	void *esl;
-	if (qmap_get(mod_hd, &esl, fname)) {
+	if (!qmap_get(mod_hd, &esl, fname)) {
 		WARN("module '%s' already present\n", fname);
 		return;
 	}
@@ -362,6 +363,7 @@ void mod_load_all(void) {
 	void *ptr;
 	unsigned c = qmap_iter(mod_id_hd, NULL);
 
+	WARN("Existed! Loading all modules\n");
 	while (qmap_next(buf, &ptr, c)) 
 		_mod_load(buf);
 }
@@ -665,28 +667,28 @@ main(int argc, char **argv)
 	bcp_hd = qmap_open("u", "s", 0, QMAP_AINDEX);
 	hd_hd = qmap_open("s", "u", 0, 0);
 
-	action_hd = qdb_open("action", "u", "ai", QH_AINDEX);
-	type_hd = qdb_open("ndt", "u", "s", QH_AINDEX | QH_TWO_WAY);
+	action_hd = qdb_open("action", "u", "ai", QMAP_AINDEX);
+	type_hd = qdb_open("ndt", "u", "s", QMAP_AINDEX | QMAP_TWO_WAY);
 	ent_hd = qdb_open("entity", "u", "ent", 0);
 	player_hd = qdb_open("player", "s", "u", 0);
-	obj_hd = qdb_open("obj", "u", "obj", QH_AINDEX);
+	obj_hd = qmap_open("u", "obj", 0, QMAP_AINDEX);
 	contents_hd = qdb_open("contents", "u", "u", QH_DUP);
-	obs_hd = qdb_open("obs", "u", "u", QH_DUP);
+	obs_hd = qdb_open("obs", "u", "u", QMAP_DUP);
 	map_init();
 
 	// skel init
-	skel_hd = qdb_open("skel", "u", "skel", QH_AINDEX);
-	drop_hd = qdb_open("drop", "u", "drop", QH_AINDEX);
-	adrop_hd = qdb_open("adrop", "u", "u", QH_DUP);
-	element_hd = qdb_open("element", "u", "element", QH_AINDEX);
-	wts_hd = qdb_open("wts", "u", "s", QH_AINDEX | QH_TWO_WAY);
-	awts_hd = qdb_open("awts", "u", "u", QH_DUP); // a
+	skel_hd = qdb_open("skel", "u", "skel", QMAP_AINDEX);
+	drop_hd = qdb_open("drop", "u", "drop", QMAP_AINDEX);
+	adrop_hd = qdb_open("adrop", "u", "u", QMAP_DUP);
+	element_hd = qdb_open("element", "u", "element", QMAP_AINDEX);
+	wts_hd = qdb_open("wts", "u", "s", QMAP_AINDEX | QMAP_TWO_WAY);
+	awts_hd = qdb_open("awts", "u", "u", QMAP_DUP); // a
 	biome_hd = qdb_open("biome", "u", "biome_map", 0);
 	
 	shared_init();
 
-	mod_id_hd = qdb_open("module_id", "u", "p", QH_AINDEX);
-	mod_hd = qdb_open("module", "s", "u", 0);
+	mod_id_hd = qdb_open("module_id", "u", "p", QMAP_AINDEX);
+	mod_hd = qmap_open("s", "u", 0, 0);
 
 	SIC_AREG(on_status);
 	SIC_AREG(on_examine);
@@ -1008,7 +1010,7 @@ auth(unsigned fd)
 	WARN("'%s' (%u/%u)\n", user, fd, player_ref);
 
 	if (player_ref == NOTHING) {
-		player_ref = object_add(&player, 0, 0, 0, OF_PLAYER);
+		player_ref = object_add(&player, 0, NOTHING, 0, OF_PLAYER);
 		strlcpy(player.name, user, sizeof(player.name));
 		player.value = 150;
 		player_put(user, player_ref);
@@ -1016,6 +1018,7 @@ auth(unsigned fd)
 
 		qmap_put(fds_hd, &player_ref, &fd);
 		qmap_put(obj_hd, &player_ref, &player);
+
 		qmap_put(dplayer_hd, &fd, &player_ref);
 		call_on_new_player(player_ref);
 	} else {

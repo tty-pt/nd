@@ -134,7 +134,8 @@ look_at(unsigned player_ref, unsigned loc_ref)
 		qmap_get(obj_hd, &player, &player_ref);
 		loc_ref = player.location;
 		if (loc_ref == NOTHING) {
-			nd_writef(player_ref, "You see nothing...\n");
+			fbcp_item(player_ref, loc_ref, 1);
+			nd_writef(player_ref, "You see both nothing and everything...\n");
 			return;
 		}
 	}
@@ -214,7 +215,10 @@ do_look_at(int fd, int argc __attribute__((unused)), char *argv[] __attribute__(
 int
 do_status(int fd, int argc __attribute__((unused)), char *argv[] __attribute__((unused)))
 {
+	OBJ obj;
 	unsigned player_ref = fd_player(fd);
+	qmap_get(obj_hd, &obj, &player_ref);
+	nd_writef(player_ref, "%s (%u) type %u owner %u flags %u at %u\n", obj.name, player_ref, obj.type, obj.owner, obj.flags, obj.location);
 	call_on_status(player_ref);
 	return 0;
 }

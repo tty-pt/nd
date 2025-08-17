@@ -97,11 +97,14 @@ object_add(OBJ *nu, unsigned skel_id, unsigned where_ref, uint64_t v, unsigned f
 	memset(nu, 0, sizeof(OBJ));
 	strlcpy(nu->name, skel.name, sizeof(nu->name));
 	nu->skid = skel_id;
+	if (where_ref == NOTHING)
+		where_ref = nu_ref;
 	nu->location = where_ref;
 	nu->owner = ROOT;
 	nu->type = skel.type;
 	if (where_ref != NOTHING)
 		qmap_put(contents_hd, &nu->location, &nu_ref);
+	fprintf(stderr, "object_add %u -> %u\n", nu_ref, where_ref);
 
 	switch (skel.type) {
 	case TYPE_ENTITY:
@@ -113,7 +116,7 @@ object_add(OBJ *nu, unsigned skel_id, unsigned where_ref, uint64_t v, unsigned f
 				nu->flags |= OF_PLAYER;
 			ent.select = 0;
 			object_drop(nu_ref, skel_id);
-			ent.home = where_ref;
+			ent.home = 1;
 			ent_set(nu_ref, &ent);
 			nu->art_id = art_idx(nu);
 		}
@@ -149,17 +152,26 @@ char *
 object_art(unsigned thing_ref)
 {
 	OBJ thing;
-	qmap_get(obj_hd, &thing, &thing_ref);
 	static char art[BUFSIZ];
 	char typestr[BUFSIZ];
 	char *type = NULL;
+	char *void_art = "biome/void/1.jpeg";
 
+	if (thing_ref == NOTHING)
+		return void_art;
+
+	qmap_get(obj_hd, &thing, &thing_ref);
 	switch (thing.type) {
 	case TYPE_ENTITY:
 		type = "entity";
 		snprintf(art, sizeof(art), "%s/%s/%u.jpeg", type, thing.art_id && thing.flags & OF_PLAYER ? "avatar" : thing.name, thing.art_id);
 		return art;
-	case TYPE_ROOM: type = "biome"; break;
+	case TYPE_ROOM:
+			if (!map_has(thing_ref))
+				return void_art;
+
+			type = "biome";
+			break;
 	default:
 		 qmap_get(type_hd + 1, typestr, &thing.type);
 		 type = typestr; break;
@@ -221,9 +233,10 @@ object_move(unsigned what_ref, unsigned where_ref)
 	qmap_get(obj_hd, &what, &what_ref);
 
 	last_loc = what.location;
-	if (last_loc == where_ref)
-		return;
+	/* if (last_loc == where_ref) */
+	/* 	return; */
 
+	fprintf(stderr, "object_move %u %s -> %u\n", what_ref, what.name, where_ref);
 	mcp_content_out(last_loc, what_ref);
         if (last_loc != NOTHING)
 		qmap_del(contents_hd, &what.location, &what_ref);
