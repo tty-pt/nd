@@ -90,13 +90,15 @@ mcp_action(unsigned player_ref, unsigned id,
 	nd_wwrite(player_ref, bcp_buf, pos);
 }
 
-static int
-_fbcp_item(char *bcp_buf, unsigned obj_ref, unsigned char dynflags)
+typedef int _fbcp_item_t(char *, unsigned, unsigned, unsigned char);
+
+int
+_fbcp_item(char *bcp_buf, unsigned player_ref, unsigned obj_ref, unsigned char dynflags)
 {
 	int aux, aux1;
 	OBJ obj;
 	qdb_get(obj_hd, &obj, &obj_ref);
-	struct icon ico = object_icon(obj_ref);
+	struct icon ico = object_icon(player_ref, obj_ref);
 	unsigned char iden = BCP_ITEM;
 	char *p = bcp_buf, *aux2;
 	memcpy(p, "#b", 2);
@@ -132,8 +134,6 @@ _fbcp_item(char *bcp_buf, unsigned obj_ref, unsigned char dynflags)
 	}
 	}
 
-	SIC_CALL(&p, on_fbcp, p, obj_ref);
-
 	return p - bcp_buf;
 }
 
@@ -141,12 +141,15 @@ void
 fbcp_item(unsigned player_ref, unsigned obj_ref, unsigned char dynflags)
 {
 	static char bcp_buf[SUPERBIGSIZ];
-	int ret = _fbcp_item(bcp_buf, obj_ref, dynflags);
+	int ret = _fbcp_item(bcp_buf, player_ref, obj_ref, dynflags);
 	nd_wwrite(player_ref, bcp_buf, ret);
 }
 
 static int // 2 + sizeof(iden) + sizeof(int) * 2
-_fbcp_out(char *bcp_buf, unsigned obj_ref)
+_fbcp_out(char *bcp_buf,
+		unsigned player_ref __attribute__((unused)),
+		unsigned obj_ref,
+		unsigned char dynflags __attribute__((unused)))
 {
 	int aux;
 	unsigned char iden = BCP_OUT;
@@ -220,60 +223,43 @@ fbcp_view_buf(unsigned player_ref, char *view_buf)
 extern unsigned fds_hd;
 
 static void
-fbcp_room(unsigned room_ref, char *msg, size_t len)
+fbcp_observers(unsigned loc_ref, unsigned thing_ref, unsigned dynflags)
 {
-	qdb_cur_t c = qdb_iter(contents_hd, &room_ref);
-	unsigned tmp_ref;
+	qdb_cur_t c;
+	unsigned hd, tmp_ref = 0;
+	_fbcp_item_t *callback = &_fbcp_item;
 
-	while (qdb_next(&room_ref, &tmp_ref, &c)) {
-		OBJ tmp;
-		qdb_get(obj_hd, &tmp, &tmp_ref);
-		if (tmp.type != TYPE_ENTITY)
-			continue;
+	hd = obs_hd;
 
-		nd_wwrite(tmp_ref, msg, len);
+	if (dynflags & 4) {
+		dynflags &= ~4;
+		callback = &_fbcp_out;
 	}
-}
 
-static void
-fbcp_observers(unsigned thing_ref, char *msg, size_t len)
-{
-	qdb_cur_t c = qdb_iter(obs_hd, &thing_ref);;
-	unsigned tmp_ref = 0;
+	c = qdb_iter(hd, &loc_ref);;
 
-	while (qdb_next(&thing_ref, &tmp_ref, &c)) {
+	while (qdb_next(&loc_ref, &tmp_ref, &c)) {
+		static char bcp_buf[SUPERBIGSIZ];
 		OBJ tmp;
+		size_t len;
+
 		qdb_get(obj_hd, &tmp, &tmp_ref);
 		if (tmp.type != TYPE_ENTITY)
 			continue;
-		nd_wwrite(tmp_ref, msg, len);
+
+		len = callback(bcp_buf, tmp_ref, thing_ref, dynflags);
+		nd_wwrite(tmp_ref, bcp_buf, len);
 	}
 }
 
 void
 mcp_content_out(unsigned loc_ref, unsigned thing_ref) {
-	char bcp_buf[2 + sizeof(unsigned char) + sizeof(int) * 2];
-	size_t len = _fbcp_out(bcp_buf, thing_ref);
-	OBJ loc;
-	qdb_get(obj_hd, &loc, &loc_ref);
-
-	if (loc.type == TYPE_ROOM)
-		fbcp_room(loc_ref, bcp_buf, len);
-	else
-		fbcp_observers(loc_ref, bcp_buf, len);
+	fbcp_observers(loc_ref, thing_ref, 2 | 4);
 }
 
 void
 mcp_content_in(unsigned loc_ref, unsigned thing_ref) {
-	static char bcp_buf[SUPERBIGSIZ];
-	size_t len = _fbcp_item(bcp_buf, thing_ref, 2);
-	OBJ loc;
-	qdb_get(obj_hd, &loc, &loc_ref);
-
-	if (loc.type == TYPE_ROOM)
-		fbcp_room(loc_ref, bcp_buf, len);
-	else
-		fbcp_observers(loc_ref, bcp_buf, len);
+	fbcp_observers(loc_ref, thing_ref, 2);
 }
 
 void

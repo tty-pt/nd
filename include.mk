@@ -37,7 +37,7 @@ usr/lib/libnd.a: usr/lib FORCE
 
 -include items/nd/man/include.mk
 
-all: items/nd/nd var/nd/std.db.ok mounts dev/ nods etc/vim/vimrc.local \
+all: items/nd/nd var/nd/std.db.ok mounts dev/ etc/vim/vimrc.local \
 	${pages:%=usr/share/man/man10/%} usr/share/man/mandoc.db \
 	${uapi:%=usr/include/nd/%} usr/lib/libnd.a var/nd/env certs.txt
 

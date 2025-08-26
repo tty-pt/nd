@@ -88,11 +88,12 @@ art_idx(OBJ *obj) {
 }
 
 unsigned
-object_add(OBJ *nu, unsigned skel_id, unsigned where_ref, uint64_t v)
+object_add(OBJ *nu, unsigned skel_id, unsigned where_ref, uint64_t v, unsigned flags)
 {
 	SKEL skel;
 	qdb_get(skel_hd, &skel, &skel_id);
 	unsigned nu_ref = object_new(nu);
+	memset(nu, 0, sizeof(OBJ));
 	strlcpy(nu->name, skel.name, sizeof(nu->name));
 	nu->skid = skel_id;
 	nu->location = where_ref;
@@ -107,6 +108,8 @@ object_add(OBJ *nu, unsigned skel_id, unsigned where_ref, uint64_t v)
 			ENT ent;
 			memset(&ent, 0, sizeof(ent));
 			ent.flags = ((SENT *) &skel.data)->flags;
+			if (flags & OF_PLAYER)
+				nu->flags |= OF_PLAYER;
 			ent.select = 0;
 			object_drop(nu_ref, skel_id);
 			ent.home = where_ref;
@@ -216,6 +219,10 @@ object_move(unsigned what_ref, unsigned where_ref)
 	qdb_get(obj_hd, &what, &what_ref);
 
 	last_loc = what.location;
+	if (last_loc == where_ref)
+		return;
+
+	mcp_content_out(last_loc, what_ref);
         if (last_loc != NOTHING)
 		qdb_del(contents_hd, &what.location, &what_ref);
 
@@ -227,8 +234,6 @@ object_move(unsigned what_ref, unsigned where_ref)
 		qdb_cdel(&c);
 		ent_set(first_ref, &efirst);
 	}
-
-	call_on_leave(what_ref, last_loc);
 
 	/* test for special cases */
 	if (where_ref == NOTHING) {
@@ -245,17 +250,15 @@ object_move(unsigned what_ref, unsigned where_ref)
 		case TYPE_ROOM:
 			map_delete(what_ref);
 		}
-		qdb_del(obj_hd, &what_ref, NULL);
 		mcp_content_out(last_loc, what_ref);
+		qdb_del(obj_hd, &what_ref, NULL);
 
-		call_on_del(what_ref);
+		call_on_del(what_ref, what.type);
 		return;
 	}
 
 	what.location = where_ref;
 	qdb_put(obj_hd, &what_ref, &what);
-	mcp_content_in(where_ref, what_ref);
-	mcp_content_out(last_loc, what_ref);
 
 	if (what.type == TYPE_ENTITY) {
 		ENT ewhat = ent_get(what_ref);
@@ -264,44 +267,17 @@ object_move(unsigned what_ref, unsigned where_ref)
 	}
 
 	qdb_put(contents_hd, &where_ref, &what_ref);
+	call_on_leave(what_ref, last_loc);
 	call_on_enter(what_ref, where_ref);
-}
-
-void
-base_actions_register(void) {
-	action_register("look", "👁");
-	action_register("open", "📦");
-	action_register("get", "🖐️");
-	action_register("talk", "👄");
+	mcp_content_in(where_ref, what_ref);
 }
 
 struct icon
-object_icon(unsigned what_ref)
+object_icon(unsigned player_ref, unsigned what_ref)
 {
 	OBJ what;
 	qdb_get(obj_hd, &what, &what_ref);
-
-        struct icon ret = {
-                .actions = ACT_LOOK,
-                .ch = '?',
-                .pi = { .fg = WHITE, .flags = BOLD, },
-        };
-        switch (what.type) {
-        case TYPE_ROOM:
-                ret.ch = '-';
-                ret.pi.fg = YELLOW;
-                break;
-        case TYPE_ENTITY:
-		ret.pi.flags = BOLD;
-		ret.ch = '!';
-		ret.pi.fg = YELLOW;
-                break;
-	default: {
-                ret.actions |= ACT_GET;
-                break;
-        }}
-
-	return call_on_icon(ret, what_ref, what.type);
+	return call_on_icon(what_ref, what.type, player_ref);
 }
 
 static inline int
@@ -408,7 +384,7 @@ do_create(int fd, int argc __attribute__((unused)), char *argv[])
 	OBJ player;
 	qdb_get(obj_hd, &player, &player_ref);
 
-	ref = object_add(&obj, skid, player_ref, v);
+	ref = object_add(&obj, skid, player_ref, v, 0);
 	obj.owner = player.owner;
 
 	qdb_put(obj_hd, &ref, &obj);

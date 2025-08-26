@@ -12,8 +12,6 @@ struct nd {
 	nd_dwritef_t *nd_dwritef;
 	nd_rwrite_t *nd_rwrite;
 	nd_dowritef_t *nd_dowritef;
-	dnotify_wts_t *dnotify_wts;
-	dnotify_wts_to_t *dnotify_wts_to;
 	nd_tdwritef_t *nd_tdwritef;
 	nd_wwrite_t *nd_wwrite;
 
@@ -29,7 +27,7 @@ struct nd {
 	st_run_t *st_run;
 
 	/* wts */
-	wts_plural_t *wts_plural;
+	plural_t *plural;
 
 	/* object */
 	obj_exists_t *obj_exists;
@@ -47,15 +45,14 @@ struct nd {
 	ent_get_t *ent_get;
 	ent_set_t *ent_set;
 	ent_del_t *ent_del;
-	ent_reset_t *ent_reset;
 	controls_t *controls;
 	payfor_t *payfor;
-	look_around_t *look_around;
 	enter_t *enter;
 	look_at_t *look_at;
 	room_clean_t *room_clean;
 
 	nd_put_t *nd_put, *nd_get;
+	nd_assoc_t *nd_assoc;
 	nd_open_t *nd_open;
 	nd_iter_t *nd_iter;
 	nd_next_t *nd_next;

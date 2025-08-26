@@ -18,7 +18,11 @@
 #include "./skel.h"
 #include "./st.h"
 
-#define ND_AINDEX 32
+enum nd_db_flags {
+	ND_SEC = 2,
+	ND_AINDEX = 32,
+	ND_PGET = 1024,
+};
 
 typedef struct {
 	char name[64];
@@ -26,6 +30,7 @@ typedef struct {
 	size_t ret_size;
 	void (*call)(void *, void *, void *);
 	char ret[5096];
+	unsigned ran;
 } sic_adapter_t;
 
 #define CAT(a, ...) PRIMITIVE_CAT(a, __VA_ARGS__)
@@ -136,6 +141,7 @@ typedef void (*mod_cb_t)(void);
 /* the callee uses this to be called */
 #define SIC_DECL(ftype, fname, ...) \
     typedef ftype fname##_t(FUNC_ARGS(__VA_ARGS__)); \
+    fname##_t fname __attribute__((weak)); \
     struct fname##_args { \
         PAIR_GEN(__VA_ARGS__) \
     }; \
@@ -143,6 +149,7 @@ typedef void (*mod_cb_t)(void);
     static inline __attribute__((unused)) \
     ftype call_##fname(FUNC_ARGS(__VA_ARGS__)) { \
 	    ftype ret; \
+	    memset(&ret, 0, sizeof(ret)); \
 	    SIC_CALL(&ret, fname, CALL_DARGS(__VA_ARGS__)); \
 	    return ret; \
     } \
@@ -199,7 +206,7 @@ sic_areg_t sic_areg;
 typedef void sic_call_t(void *retp, unsigned id, void *args);
 sic_call_t sic_call;
 
-typedef void sic_last_t(void *ret);
+typedef int sic_last_t(void *ret);
 sic_last_t sic_last;
 
 typedef unsigned sic_get_t(char *name);
@@ -207,16 +214,15 @@ sic_get_t sic_get;
 
 SIC_DECL(int, on_status, unsigned, player_ref);
 SIC_DECL(int, on_examine, unsigned, player_ref, unsigned, ref, unsigned, type);
-SIC_DECL(int, on_fbcp, char *, p, unsigned, ref); // FIXME
 SIC_DECL(int, on_add, unsigned, ref, unsigned, type, uint64_t, v);
 SIC_DECL(unsigned short, on_view_flags, unsigned short, flags, unsigned, ref);
-SIC_DECL(struct icon, on_icon, struct icon, i, unsigned, ref, unsigned, type);
-SIC_DECL(int, on_del, unsigned, ref);
+SIC_DECL(struct icon, on_icon, unsigned, ref, unsigned, type, unsigned, player_ref);
+SIC_DECL(int, on_del, unsigned, ref, unsigned, type);
 SIC_DECL(int, on_clone, unsigned, orig_ref, unsigned, nu_ref);
 SIC_DECL(int, on_update, unsigned, ref, unsigned, type, double, dt);
 SIC_DECL(int, on_move, unsigned, ref);
 
-SIC_DECL(sic_str_t, on_vim, unsigned, ref, sic_str_t, ss);
+SIC_DECL(int, on_vim, unsigned, ref, sic_str_t, ss);
 
 SIC_DECL(int, on_new_player, unsigned, player_ref);
 SIC_DECL(int, on_auth, unsigned, player_ref);

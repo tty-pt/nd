@@ -7,21 +7,8 @@ shift
 
 case "$1" in
 	"") ;;
-	art)
-		shift
-		urld="`urldecode $DOCUMENT_URI`"
-		Static "../$urld" | Fin
-		;;
-
 	*)
-		path="`echo $@ | tr ' ' '/'`"
-		if test "$1" = "node_modules"; then
-			# for when we want to test
-			# modified libraries
-			Static $path
-		else
-			Static htdocs/$1
-		fi | Fin
+		Fatal 500 "This should be handled by NDC"
 		;;
 esac
 
@@ -33,7 +20,7 @@ touch $DOCUMENT_ROOT/tmp/full-size
 fun >> $DOCUMENT_ROOT/tmp/fun
 cat $PWD/htdocs/index.html
 cat <<!
-<style>
-`cat styles.css node_modules/@tty-pt/ndc/ndc.css node_modules/@xterm/xterm/css/xterm.css`
-</style>
+<link rel="stylesheet" href="/nd/styles.css">
+<link rel="stylesheet" href="/nd/node_modules/@tty-pt/ndc/htdocs/ndc.css">
+<link rel="stylesheet" href="/nd/node_modules/@xterm/xterm/css/xterm.css">
 !

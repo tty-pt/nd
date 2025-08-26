@@ -36,14 +36,14 @@
   },
   "homepage": "https://github.com/tty-pt/neverdark#readme",
   "devDependencies": {
-    "@tty-pt/scripts": "^0.6.9",
+    "@tty-pt/scripts": "^0.7.2",
     "webpack": "^5.97.1"
   },
   "dependencies": {
     "@popperjs/core": "^2.11.8",
-    "@tty-pt/ndc": "^0.11.4",
-    "@tty-pt/qdb": "^0.1.9",
-    "@tty-pt/sub": "^2.3.2",
+    "@tty-pt/ndc": "^0.13.2",
+    "@tty-pt/qdb": "^0.2.6",
+    "@tty-pt/sub": "^2.3.8",
     "@xterm/addon-fit": "^0.10.0",
     "@xterm/addon-web-links": "^0.11.0",
     "@xterm/xterm": "^5.5.0",

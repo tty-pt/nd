@@ -1,15 +1,15 @@
 import { Sub, SubscribedElement } from "@tty-pt/sub";
 import { createPopper } from "@popperjs/core";
-import ndc from "@tty-pt/ndc";
+import ndcMaker from "@tty-pt/ndc";
 // import "@xterm/xterm/css/xterm.css";
 // import "@tty-pt/ndc/ndc.css";
+// import "@tty-pt/ndc/ndc.css";
 
-const ws = ndc.connect();
-ndc.open(document.getElementById("term"));
+const term = document.getElementById("term");
+const ndc = ndcMaker.create(term);
 
-globalThis.sendCmd = text => {
-  ws.send(text + "\n");
-};
+globalThis.ndc = ndc;
+globalThis.sendCmd = msg => ndc.send(msg + "\n");
 
 // sub {{{
 const sub = new Sub({
@@ -22,7 +22,7 @@ const sub = new Sub({
   target: null,
   equipment: {},
   db: {
-    "-1": { contents: {} },
+    "0": { contents: {} },
     "1": { art: "mineral/gold/1.jpeg" },
     [null]: {},
   },
@@ -96,12 +96,10 @@ const dbEmit = sub.makeEmit((obj, current) => {
 const ACTION = {
   // TALK: "👄",
   PUT: "👐",
-  DROP: "🪣",
   DIE: "☠️",
   INVENTORY: "🎒",
   K: "↗",
   J: "↘",
-  WALK: "🗺️",
 };
 
 const ACTION_MAP = {
@@ -110,14 +108,13 @@ const ACTION_MAP = {
     label: "get",
     callback: ref => sendCmd(sub.value.target ? `get #${sub.value.target} #${ref}` : `get #${ref}`),
   },
-  [ACTION.TALK]: { label: "talk" },
+  // [ACTION.TALK]: { label: "talk" },
   [ACTION.PUT]: { label: "put" },
   [ACTION.DROP]: { label: "drop" },
   [ACTION.DIE]: { label: "die" },
   [ACTION.INVENTORY]: { label: "inventory" },
   [ACTION.K]: { label: "K" },
   [ACTION.J]: { label: "J" },
-  [ACTION.WALK]: { label: "walk" },
 };
 // }}}
 
@@ -371,13 +368,22 @@ title.parentNode.removeChild(title);
 
 const bg = document.getElementById("main");
 
-ndc.setOnMessage(function onMessage(ev) {
+ndc.onMessage = function onMessage(ev) {
   const arr = new Uint8Array(ev.data);
   if (String.fromCharCode(arr[0]) == "#" && String.fromCharCode(arr[1]) == "b") {
     const iden = arr[2];
-    console.log(iden, BCP_MAP[iden]);
-    // TODO remove repeate code in emits!!
+    // console.log(iden, BCP_MAP[iden]);
+    // TODO remove repeated code in emits!!
     switch (iden) {
+    case BCP.ACTION: {
+      let aux, ret = {};
+      const action = {
+	      id: read_32(arr, aux = 3),
+	      label: read_string(arr, aux += 4, ret),
+	      icon: read_string(arr, aux += ret[aux] + 1, ret)
+      };
+      ACTION_MAP[action.id] = action;
+    }
     case BCP.HP: {
       let aux;
       hpEmit({
@@ -465,7 +471,7 @@ ndc.setOnMessage(function onMessage(ev) {
         } else
           targetEmit(base.dbref);
 
-        ndc.term.write(base.description ? "You see: " + base.description + "\r\n" : "");
+        ndc.write(base.description ? "You see: " + base.description + "\r\n" : "");
       }
 
       return;
@@ -509,7 +515,8 @@ ndc.setOnMessage(function onMessage(ev) {
     }}
   } else
     return true;
-});
+};
+
 // }}}
 
 function mayDash(str) {
@@ -598,7 +605,7 @@ class Avatar extends Button {
 
   connectedCallback() {
     const ref = this.getAttribute('ref');
-    this.subscribe(sub, this.setImageClass, "db." + ref ?? "");
+    this.subscribe(sub, this.setImageClass, "db." + (ref ?? ""));
     this.setAttribute("fit", "");
     this.render();
   }
@@ -617,7 +624,7 @@ class Equipment extends Avatar {
   connectedCallback() {
     const location = this.getAttribute('location');
     if (location) {
-      this.subscribe(sub, "ref", "equipment/" + location ?? "");
+      this.subscribe(sub, "ref", "equipment/" + (location ?? ""));
       this.setAttribute("ref", "unknown");
     } else
       this.setAttribute("ref", null);
@@ -780,11 +787,13 @@ class ContentActions extends SubscribedElement {
   render() {
     const actions = [];
     const item = this.db[this.active];
+    const mask = parseInt(item.actions);
 
-    for (let p = 0; p < 9; p++)
-      if ((parseInt(item.actions) & (1 << p)))
+    for (let p = 0; p < 32; p++)
+      if ((mask & (1 << p)))
         actions.push(p);
 
+    console.log("actions", item.actions, ACTION_MAP, actions);
     const actionsEl = actions.map(action => (`<nd-button
       ref="${this.active}"
       onclick="actionCallback('${action}', ${this.active})"
@@ -901,7 +910,7 @@ function keyUpHandler(e) {
       break;
     case 73: // i
       if (e.shiftKey)
-        term.value.focus();
+        ndc.term.focus();
       else
         sendCmd("inventory");
       break;
@@ -938,10 +947,12 @@ globalThis.modal_close = () => {
   modalParent.classList.add("dn");
 };
 
-ndc.term.element.addEventListener("focusin", () => {
-	holder.classList.add("terminal-mode");
-});
+ndc.onOpen = function () {
+	term.addEventListener("focusin", () => {
+		holder.classList.add("terminal-mode");
+	});
 
-ndc.term.element.addEventListener("focusout", () => {
-	holder.classList.remove("terminal-mode");
-});
+	term.addEventListener("focusout", () => {
+		holder.classList.remove("terminal-mode");
+	});
+};

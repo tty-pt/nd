@@ -45,6 +45,7 @@ enum base_actions {
 	ACT_LOOK = 1,
 	ACT_OPEN = 2,
 	ACT_GET = 4,
+	ACT_DROP = 8,
 };
 
 typedef struct entity {
@@ -70,7 +71,7 @@ typedef struct object {
 } OBJ;
 
 struct icon {
-	int actions;
+	unsigned actions;
 	struct print_info pi;
 	char ch;
 };
@@ -90,13 +91,13 @@ object_copy_t object_copy;
 typedef void object_move_t(unsigned what_ref, unsigned where_ref);
 object_move_t object_move;
 
-typedef unsigned object_add_t(OBJ *nu, unsigned skel_id, unsigned where, uint64_t v);
+typedef unsigned object_add_t(OBJ *nu, unsigned skel_id, unsigned where, uint64_t v, unsigned flags);
 object_add_t object_add;
 
 typedef void object_drop_t(unsigned where_ref, unsigned skel_id);
 object_drop_t object_drop;
 
-typedef struct icon object_icon_t(unsigned thing_ref);
+typedef struct icon object_icon_t(unsigned player_ref, unsigned thing_ref);
 object_icon_t object_icon;
 
 typedef char *object_art_t(unsigned ref);

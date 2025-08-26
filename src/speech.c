@@ -69,26 +69,3 @@ do_wall(int fd, int argc, char *argv[])
 	while (qdb_next(&oi_ref, &oi, &c))
 		nd_writef(oi_ref, buf);
 }
-
-void
-dnotify_wts(unsigned who_ref, char const *a, char const *b, char *format, va_list args)
-{
-	char buf[BUFFER_LEN];
-	OBJ who;
-	vsnprintf(buf, sizeof(buf), format, args);
-	nd_writef(who_ref, "You %s%s.\n", a, buf);
-	qdb_get(obj_hd, &who, &who_ref);
-	nd_owritef(who_ref, "%s %s%s.\n", who.name, b, buf);
-}
-
-void
-dnotify_wts_to(unsigned who_ref, unsigned tar_ref, char const *a, char const *b, char *format, va_list args)
-{
-	char buf[BUFFER_LEN];
-	vsnprintf(buf, sizeof(buf), format, args);
-	OBJ who, tar;
-	qdb_get(obj_hd, &who, &who_ref);
-	qdb_get(obj_hd, &tar, &tar_ref);
-	nd_writef(who_ref, "You %s %s%s.\n", a, tar.name, buf);
-	nd_owritef(who_ref, "%s %s %s%s.\n", who.name, b, tar.name, buf);
-}

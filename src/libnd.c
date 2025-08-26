@@ -34,14 +34,6 @@ void nd_dowritef(unsigned player_ref, const char *fmt, va_list args) {
 	nd.nd_dowritef(player_ref, fmt, args);
 }
 
-void dnotify_wts(unsigned player_ref, char const *a, char const *b, char *format, va_list args) {
-	nd.dnotify_wts(player_ref, a, b, format, args);
-}
-
-void dnotify_wts_to(unsigned who_ref, unsigned tar_ref, char const *a, char const *b, char *format, va_list args) {
-	nd.dnotify_wts_to(who_ref, tar_ref, a, b, format, args);
-}
-
 void nd_tdwritef(unsigned player_ref, const char *fmt, va_list args) {
 	nd.nd_tdwritef(player_ref, fmt, args);
 }
@@ -84,8 +76,8 @@ void st_run(unsigned player_ref, char *symbol) {
 
 /* WTS */
 
-char *wts_plural(char *singular) {
-	return nd.wts_plural(singular);
+char *plural(char *singular) {
+	return nd.plural(singular);
 }
 
 /* SKEL */
@@ -110,8 +102,8 @@ void object_move(unsigned what_ref, unsigned where_ref) {
 	nd.object_move(what_ref, where_ref);
 }
 
-unsigned object_add(OBJ *nu, unsigned skel_id, unsigned where, uint64_t v) {
-	return nd.object_add(nu, skel_id, where, v);
+unsigned object_add(OBJ *nu, unsigned skel_id, unsigned where, uint64_t v, unsigned flags) {
+	return nd.object_add(nu, skel_id, where, v, flags);
 }
 
 void object_drop(unsigned where_ref, unsigned skel_id) {
@@ -142,10 +134,6 @@ int controls(unsigned who_ref, unsigned what_ref) {
 
 int payfor(unsigned who_ref, OBJ *who, unsigned cost) {
 	return nd.payfor(who_ref, who, cost);
-}
-
-void look_around(unsigned player_ref) {
-	nd.look_around(player_ref);
 }
 
 void enter(unsigned player_ref, unsigned loc_ref, enum exit e) {
@@ -270,8 +258,11 @@ void mcp_content_in(unsigned loc_ref, unsigned thing_ref) {
 	nd.mcp_content_in(loc_ref, thing_ref);
 }
 
-void sic_last(void *ret) {
+int sic_last(void *ret) {
+	if (!nd.adapter->ran)
+		return 1;
 	memcpy(ret, nd.adapter->ret, nd.adapter->ret_size);
+	return 0;
 }
 
 void mcp_bar(unsigned char iden, unsigned player_ref,
@@ -290,4 +281,8 @@ void mod_auto_init(void) {
 
     for (void (**fn)(void) = &__start_sic_auto_init; fn < &__stop_sic_auto_init; ++fn)
         (*fn)();
+}
+
+void nd_assoc(unsigned hd, unsigned link, nd_assoc_cb_t assoc) {
+	nd.nd_assoc(hd, link, assoc);
 }
