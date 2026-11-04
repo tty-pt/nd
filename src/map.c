@@ -2,7 +2,7 @@
 
 #include <stdlib.h>
 
-#include <qsys.h>
+#include <ttypt/stele.h>
 
 #include "config.h"
 #include "nddb.h"

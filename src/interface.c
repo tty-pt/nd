@@ -8,7 +8,7 @@
 #include <unistd.h>
 
 #include <ndc.h>
-#include <qsys.h>
+#include <ttypt/stele.h>
 
 #include "config.h"
 #include "mcp.h"

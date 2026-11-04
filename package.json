@@ -44,7 +44,7 @@
     "@tty-pt/mk": "^0.1.12",
     "@tty-pt/ndc": "^0.14.0-beta.3",
     "@tty-pt/qdb": "^0.3.0-beta.8",
-    "@tty-pt/qsys": "^0.0.10",
+    "@tty-pt/stele": "^1.5.2",
     "@tty-pt/qmap": "^0.0.15",
     "@tty-pt/sub": "^2.3.8",
     "@xterm/addon-fit": "^0.10.0",
